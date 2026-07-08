@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OMNIPLAY 客服系統</title>
+  <title>OMNIPLAY 客服系統-1</title>
   <style>
     :root {
       --bg: #eef3f9;
@@ -195,6 +195,25 @@
 
     .menu { padding: 18px 12px 28px; }
 
+    .home-link {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      border-radius: 14px;
+      color: var(--sidebar-text);
+      background: transparent;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    .home-link:hover,
+    .home-link.is-active {
+      color: white;
+      background: rgba(37, 99, 235, .42);
+    }
+    
     .menu-section { margin-bottom: 12px; }
 
     .section-button {
@@ -249,6 +268,7 @@
     .sidebar.is-collapsed .label,
     .sidebar.is-collapsed .chevron { display: none; }
     .sidebar.is-collapsed .sidebar-header { justify-content: center; flex-direction: column; }
+    .sidebar.is-collapsed .home-link { justify-content: center; }
     .sidebar.is-collapsed .submenu { padding-left: 0; }
     .sidebar.is-collapsed .submenu a { text-align: center; font-size: 12px; }
     .sidebar.is-collapsed .section-button { justify-content: center; }
@@ -369,26 +389,28 @@
         <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
         <button class="toggle-btn" id="sidebarToggle" type="button" aria-label="收合左側功能表">☰</button>
       </div>
-      <nav class="menu" aria-label="主功能表" id="menu"></nav>
+      <nav class="menu" aria-label="主功能表" id="menu">
+        <a class="home-link is-active" href="#" id="homeLink"><span class="icon">🏠</span><span class="label">首頁</span></a>
+      </nav>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div>
-          <h1 id="pageTitle">客服總覽</h1>
+          <h1 id="pageTitle">首頁</h1>
           <p id="pageDescription">快速查看今日客服營運重點與待辦作業。</p>
         </div>
         <div class="user-pill">● 已登入 <span id="loginUser">客服人員</span></div>
       </header>
 
-      <section class="dashboard-grid" aria-label="客服統計">
+      <section class="dashboard-grid home-panel" aria-label="客服統計">
         <article class="stat-card"><span>今日上班</span><strong>12</strong></article>
         <article class="stat-card"><span>待交接</span><strong>8</strong></article>
         <article class="stat-card"><span>提報追蹤</span><strong>5</strong></article>
         <article class="stat-card"><span>知識庫文章</span><strong>128</strong></article>
       </section>
 
-      <section class="content-card">
+      <section class="content-card home-panel">
         <h2>今日待辦</h2>
         <ul class="task-list">
           <li><span>確認當日上班人員與休假表</span><span class="status">進行中</span></li>
@@ -408,6 +430,7 @@
     ];
 
     const menu = document.querySelector('#menu');
+    const homeLink = document.querySelector('#homeLink');
     const sidebar = document.querySelector('#sidebar');
     const sidebarToggle = document.querySelector('#sidebarToggle');
     const loginForm = document.querySelector('#loginForm');
@@ -416,6 +439,20 @@
     const loginUser = document.querySelector('#loginUser');
     const pageTitle = document.querySelector('#pageTitle');
     const pageDescription = document.querySelector('#pageDescription');
+    const homePanels = document.querySelectorAll('.home-panel');
+
+    const activateHome = () => {
+      document.querySelectorAll('.submenu a, .home-link').forEach((anchor) => anchor.classList.remove('is-active'));
+      homeLink.classList.add('is-active');
+      pageTitle.textContent = '首頁';
+      pageDescription.textContent = '快速查看今日客服營運重點與待辦作業。';
+      homePanels.forEach((panel) => { panel.hidden = false; });
+    };
+
+    homeLink.addEventListener('click', (event) => {
+      event.preventDefault();
+      activateHome();
+    });
 
     menuData.forEach((section, index) => {
       const wrapper = document.createElement('section');
@@ -434,13 +471,13 @@
         const link = document.createElement('a');
         link.href = '#';
         link.textContent = item;
-        if (index === 0 && itemIndex === 0) link.classList.add('is-active');
         link.addEventListener('click', (event) => {
           event.preventDefault();
-          document.querySelectorAll('.submenu a').forEach((anchor) => anchor.classList.remove('is-active'));
+          document.querySelectorAll('.submenu a, .home-link').forEach((anchor) => anchor.classList.remove('is-active'));
           link.classList.add('is-active');
           pageTitle.textContent = item;
           pageDescription.textContent = `${section.title} / ${item} 的資料維護與查詢作業。`;
+          homePanels.forEach((panel) => { panel.hidden = true; });
         });
         li.appendChild(link);
         list.appendChild(li);
