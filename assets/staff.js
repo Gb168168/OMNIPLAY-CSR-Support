@@ -11,6 +11,7 @@ const closeButton = document.querySelector('#closeStaffModal');
 const submitButton = document.querySelector('#saveStaffButton');
 const passwordInput = document.querySelector('#staffPassword');
 const passwordToggle = document.querySelector('#staffPasswordToggle');
+const staffShiftInput = document.querySelector('#staffShift');
 
 let editingStaffId = null;
 let visiblePasswordRows = new Set();
@@ -43,6 +44,9 @@ const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => (
   '"': '&quot;'
 }[char]));
 
+const fixedStaffOrder = ['中魁', '佳臻', '晴心', '澄希', '茗雅'];
+const fixedStaffOrderMap = fixedStaffOrder.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
+const getDefaultSortOrder = (name) => fixedStaffOrderMap[name] ?? 999;
 const maskPassword = (password = '') => password ? '**' : '—';
 
 const renderStaff = (staffList) => {
@@ -65,6 +69,7 @@ const renderStaff = (staffList) => {
             <button class="icon-button" type="button" data-action="toggle-password" data-id="${staff.id}" aria-label="切換密碼顯示">${passwordVisible ? '🙈' : '👁️'}</button>
           </div>
         </td>
+        <td>${escapeHtml(staff.shift || '早班')}</td>
         <td><span class="status-badge ${staff.status === '停用' ? 'is-disabled' : 'is-enabled'}">${escapeHtml(staff.status || '啟用')}</span></td>
         <td>
           <div class="table-actions">
@@ -96,6 +101,7 @@ const openEditModal = (staffId) => {
   document.querySelector('#staffName').value = staff.name || '';
   document.querySelector('#staffAccount').value = staff.account || '';
   document.querySelector('#staffPassword').value = staff.password || '';
+  if (staffShiftInput) staffShiftInput.value = staff.shift || '早班';
   toggleModal(true);
 };
 
@@ -125,6 +131,8 @@ staffForm?.addEventListener('submit', async (event) => {
     name: document.querySelector('#staffName').value.trim(),
     account: document.querySelector('#staffAccount').value.trim(),
     password: document.querySelector('#staffPassword').value.trim(),
+    shift: staffShiftInput?.value || '早班',
+    sortOrder: getDefaultSortOrder(document.querySelector('#staffName').value.trim()),
     status: '啟用',
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -142,7 +150,8 @@ staffForm?.addEventListener('submit', async (event) => {
       const currentStaff = staffCache.find((item) => item.id === editingStaffId);
       await staffCollection.doc(editingStaffId).update({
         ...payload,
-        status: currentStaff?.status || '啟用'
+        status: currentStaff?.status || '啟用',
+        sortOrder: currentStaff?.sortOrder ?? payload.sortOrder
       });
     } else {
       await staffCollection.add({
