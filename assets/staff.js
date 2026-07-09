@@ -43,7 +43,7 @@ const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => (
   '"': '&quot;'
 }[char]));
 
-const maskPassword = (password = '') => password ? '••' : '—';
+const maskPassword = (password = '') => password ? '**' : '—';
 
 const renderStaff = (staffList) => {
   staffCache = staffList;
@@ -55,7 +55,7 @@ const renderStaff = (staffList) => {
     const passwordText = passwordVisible ? staff.password : maskPassword(staff.password);
 
     return `
-      <tr>
+      <tr class="${staff.status === '停用' ? 'is-disabled' : ''}">
         <td>${escapeHtml(staff.code)}</td>
         <td>${escapeHtml(staff.name)}</td>
         <td>${escapeHtml(staff.account)}</td>
@@ -65,8 +65,10 @@ const renderStaff = (staffList) => {
             <button class="icon-button" type="button" data-action="toggle-password" data-id="${staff.id}" aria-label="切換密碼顯示">${passwordVisible ? '🙈' : '👁️'}</button>
           </div>
         </td>
+        <td><span class="status-badge ${staff.status === '停用' ? 'is-disabled' : 'is-enabled'}">${escapeHtml(staff.status || '啟用')}</span></td>
         <td>
           <div class="table-actions">
+            <button class="secondary-button" type="button" data-action="toggle-status" data-id="${staff.id}">${staff.status === '停用' ? '啟用' : '停用'}</button>
             <button class="secondary-button" type="button" data-action="edit" data-id="${staff.id}">編輯</button>
             <button class="danger-button" type="button" data-action="delete" data-id="${staff.id}">刪除</button>
           </div>
@@ -104,7 +106,7 @@ const loadStaff = () => {
     return;
   }
 
-  staffCollection.orderBy('code').onSnapshot((snapshot) => {
+  staffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
     const staffList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     renderStaff(staffList);
   }, (error) => {
@@ -123,6 +125,7 @@ staffForm?.addEventListener('submit', async (event) => {
     name: document.querySelector('#staffName').value.trim(),
     account: document.querySelector('#staffAccount').value.trim(),
     password: document.querySelector('#staffPassword').value.trim(),
+    status: '啟用',
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -136,7 +139,11 @@ staffForm?.addEventListener('submit', async (event) => {
 
   try {
     if (editingStaffId) {
-      await staffCollection.doc(editingStaffId).update(payload);
+      const currentStaff = staffCache.find((item) => item.id === editingStaffId);
+      await staffCollection.doc(editingStaffId).update({
+        ...payload,
+        status: currentStaff?.status || '啟用'
+      });
     } else {
       await staffCollection.add({
         ...payload,
@@ -166,6 +173,22 @@ staffTableBody?.addEventListener('click', async (event) => {
 
   if (action === 'edit') {
     openEditModal(id);
+    return;
+  }
+
+  if (action === 'toggle-status' && staffCollection) {
+    const staff = staffCache.find((item) => item.id === id);
+    if (!staff) return;
+
+    try {
+      await staffCollection.doc(id).update({
+        status: staff.status === '停用' ? '啟用' : '停用',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (error) {
+      console.error('更新人員狀態失敗：', error);
+      alert('更新狀態失敗，請稍後再試。');
+    }
     return;
   }
 
