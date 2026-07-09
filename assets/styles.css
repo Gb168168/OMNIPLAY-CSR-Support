@@ -546,6 +546,32 @@ button:hover { transform: translateY(-1px); }
   text-align: center;
 }
 
+
+.global-quota-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid rgba(203, 213, 225, .24);
+  border-radius: 14px;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, .22);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.global-quota-field input {
+  width: 72px;
+  min-height: 28px;
+  border: 1px solid rgba(203, 213, 225, .28);
+  border-radius: 10px;
+  color: white;
+  background: rgba(71, 85, 105, .98);
+  font: inherit;
+  text-align: center;
+}
+
 .leave-meta {
   display: flex;
   align-items: center;
@@ -622,6 +648,7 @@ button:hover { transform: translateY(-1px); }
 .day-col.is-holiday { background: rgba(253, 224, 71, .42); }
 
 .leave-cell-button {
+  position: relative;
   width: 100%;
   min-height: 34px;
   display: grid;
@@ -636,6 +663,13 @@ button:hover { transform: translateY(-1px); }
 .leave-cell-button:hover,
 .leave-table.is-special-mode .leave-cell-button:hover { background: rgba(59, 130, 246, .32); }
 
+.leave-cell-button .leave-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .leave-marker {
   color: #020617;
   font-size: 24px;
@@ -644,7 +678,14 @@ button:hover { transform: translateY(-1px); }
 }
 
 .leave-marker.is-required { color: #ef4444; text-shadow: none; }
-.special-icons { min-height: 18px; font-size: 15px; line-height: 1; }
+.special-icons {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  min-height: 18px;
+  font-size: 15px;
+  line-height: 1;
+}
 
 .special-mode-button.is-active {
   color: #0f172a;
@@ -652,8 +693,7 @@ button:hover { transform: translateY(-1px); }
   box-shadow: 0 0 0 3px rgba(250, 204, 21, .24);
 }
 
-.leave-shift-select,
-.quota-field input {
+.leave-shift-select {
   width: 100%;
   min-height: 32px;
   border: 1px solid rgba(203, 213, 225, .2);
@@ -665,15 +705,6 @@ button:hover { transform: translateY(-1px); }
   font-weight: 800;
 }
 
-.quota-field {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-  color: #cbd5e1;
-  font-size: 11px;
-}
 
 .quota-count.is-warning,
 tr.is-over-quota .name-col { color: #fca5a5; }
@@ -732,7 +763,8 @@ tr.is-over-quota .name-col { color: #fca5a5; }
   .leave-heading,
   .leave-toolbar { align-items: stretch; flex-direction: column; }
   .leave-toolbar .secondary-button,
-  .leave-toolbar .ghost-button { width: 100%; }
+  .leave-toolbar .ghost-button,
+  .global-quota-field { width: 100%; justify-content: center; }
   .leave-table-wrap { max-height: calc(100vh - 330px); }
   .day-col { min-width: 58px; }
   .shift-col { width: 76px; }
