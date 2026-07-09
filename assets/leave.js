@@ -12,7 +12,7 @@ const leaveTableHead = document.querySelector('#leaveTableHead');
 const leaveTableBody = document.querySelector('#leaveTableBody');
 const leaveStatus = document.querySelector('#leaveStatus');
 const leaveLegend = document.querySelector('#leaveLegend');
-const specialMenu = document.querySelector('#leaveSpecialMenu');
+const specialModeButtons = document.querySelectorAll('.special-mode-button');
 
 const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
 const fixedTaiwanHolidays = {
@@ -42,7 +42,7 @@ let scheduleByDay = {};
 let unsubscribeStaff = null;
 let unsubscribeLeave = null;
 let unsubscribeSchedule = null;
-let activeSpecialCell = null;
+let activeSpecialMode = null
 let saveTimer = null;
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -58,10 +58,22 @@ const setStatus = (message, type = 'info') => {
   if (!leaveStatus) return;
   leaveStatus.textContent = message;
   leaveStatus.dataset.type = type;
+  leaveStatus.hidden = !message || type !== 'error';
 };
 
 const normalizeStaff = (doc) => ({ id: doc.id, ...doc.data() });
+const fixedStaffOrder = ['中魁', '佳臻', '晴心', '澄希', '茗雅'];
+const fixedStaffOrderMap = fixedStaffOrder.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
 const activeStaff = (staff) => (staff.status || '啟用') === '啟用';
+const getStaffSortOrder = (staff) => Number(staff.sortOrder ?? fixedStaffOrderMap[staff.name] ?? 999);
+const getStaffShift = (staff) => staff.shift || leaveData.shifts?.[staff.id] || '早班';
+const sortStaffForLeave = (items) => [...items].sort((a, b) => {
+  const shiftCompare = (getStaffShift(a) === '晚班' ? 1 : 0) - (getStaffShift(b) === '晚班' ? 1 : 0);
+  if (shiftCompare) return shiftCompare;
+  const orderCompare = getStaffSortOrder(a) - getStaffSortOrder(b);
+  if (orderCompare) return orderCompare;
+  return String(a.name || a.code || '').localeCompare(String(b.name || b.code || ''), 'zh-Hant');
+});
 
 const getHolidayName = (day) => {
   const key = `${pad(currentMonth.getMonth() + 1)}-${pad(day)}`;
@@ -70,7 +82,7 @@ const getHolidayName = (day) => {
 
 const getRecord = (staffId, day) => leaveData.records?.[`${staffId}_${dayKey(day)}`] || { type: '', specials: [] };
 const getQuota = (staffId) => Number(leaveData.quotas?.[staffId] ?? 8);
-const getShift = (staffId) => leaveData.shifts?.[staffId] || '早班';
+const getShift = (staff) => getStaffShift(staff);
 const leaveCount = (staffId) => Object.entries(leaveData.records || {}).filter(([key, record]) => key.startsWith(`${staffId}_`) && ['leave', 'required'].includes(record?.type)).length;
 const isWorking = (staffId, day) => !['leave', 'required'].includes(getRecord(staffId, day).type);
 
@@ -105,7 +117,7 @@ const renderHeader = () => {
     const holiday = getHolidayName(day);
     return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}</small></th>`;
   }).join('');
-  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col name-col">姓名</th>${dayHeaders}</tr>`;
+  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col name-col">姓名 / 可休</th>${dayHeaders}</tr>`;
 };
 
 const renderBody = () => {
@@ -118,8 +130,8 @@ const renderBody = () => {
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
       <td class="sticky-col shift-col">
         <select class="leave-shift-select" data-action="shift" aria-label="${escapeHtml(staff.name)} 班別">
-          <option value="早班" ${getShift(staff.id) === '早班' ? 'selected' : ''}>早班</option>
-          <option value="晚班" ${getShift(staff.id) === '晚班' ? 'selected' : ''}>晚班</option>
+          <option value="早班" ${getShift(staff) === '早班' ? 'selected' : ''}>早班</option>
+          <option value="晚班" ${getShift(staff) === '晚班' ? 'selected' : ''}>晚班</option>
         </select>
       </td>
       <th class="sticky-col name-col" scope="row">
@@ -153,7 +165,6 @@ const renderDayCell = (staff, day) => {
   const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : '🎰').join('');
   return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
     <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(staff.name)} ${day} 號休假狀態">${marker}<span class="special-icons">${specials}</span></button>
-    <button type="button" class="special-button" data-action="special" aria-label="設定特殊標記">＋</button>
   </td>`;
 };
 
@@ -170,8 +181,9 @@ const subscribeMonth = () => {
   setStatus('載入休假表資料中...', 'info');
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
     leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {} };
+    staffList = sortStaffForLeave(staffList);
     render();
-    setStatus('休假表已載入，點擊日期格可切換休假狀態。', 'success');
+    setStatus('', 'success');
   }, (error) => {
     console.error('讀取休假表失敗：', error);
     setStatus('讀取休假表失敗，請稍後再試。', 'error');
@@ -198,7 +210,7 @@ const subscribeSchedule = () => {
 
 const changeMonth = (offset) => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
-  closeSpecialMenu();
+  setSpecialMode(null);
   subscribeMonth();
 };
 
@@ -214,20 +226,27 @@ const toggleLeave = (staffId, day) => {
   queueSave();
 };
 
-const openSpecialMenu = (cell) => {
-  activeSpecialCell = cell;
-  const record = getRecord(cell.dataset.staffId, cell.dataset.day);
-  specialMenu.querySelector('[value="phone"]').checked = (record.specials || []).includes('phone');
-  specialMenu.querySelector('[value="event"]').checked = (record.specials || []).includes('event');
-  const rect = cell.getBoundingClientRect();
-  specialMenu.style.left = `${Math.min(rect.left, window.innerWidth - 190)}px`;
-  specialMenu.style.top = `${rect.bottom + 6}px`;
-  specialMenu.hidden = false;
+const setSpecialMode = (mode) => {
+  activeSpecialMode = activeSpecialMode === mode ? null : mode;
+  if (!mode) activeSpecialMode = null;
+  specialModeButtons.forEach((button) => {
+    const isActive = button.dataset.special === activeSpecialMode;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+  leaveTable?.classList.toggle('is-special-mode', Boolean(activeSpecialMode));
 };
 
-const closeSpecialMenu = () => {
-  specialMenu.hidden = true;
-  activeSpecialCell = null;
+const toggleSpecial = (staffId, day, specialType) => {
+  const key = `${staffId}_${dayKey(day)}`;
+  const record = getRecord(staffId, day);
+  const specials = new Set(record.specials || []);
+  specials.has(specialType) ? specials.delete(specialType) : specials.add(specialType);
+  const nextSpecials = [...specials];
+  leaveData.records[key] = { ...record, specials: nextSpecials };
+  if (!record.type && !nextSpecials.length) delete leaveData.records[key];
+  render();
+  queueSave();
 };
 
 leaveTableBody?.addEventListener('click', (event) => {
@@ -235,8 +254,11 @@ leaveTableBody?.addEventListener('click', (event) => {
   if (!button) return;
   const cell = button.closest('.leave-day');
   if (!cell) return;
+  if (activeSpecialMode) {
+    toggleSpecial(cell.dataset.staffId, cell.dataset.day, activeSpecialMode);
+    return;
+  }
   if (button.dataset.action === 'toggle-leave') toggleLeave(cell.dataset.staffId, cell.dataset.day);
-  if (button.dataset.action === 'special') openSpecialMenu(cell);
 });
 
 leaveTableBody?.addEventListener('change', (event) => {
@@ -247,36 +269,32 @@ leaveTableBody?.addEventListener('change', (event) => {
     leaveData.quotas[row.dataset.staffId] = Number(target.value || 0);
     if (leaveCount(row.dataset.staffId) > getQuota(row.dataset.staffId)) alert('已排休天數超過此人員當月可排休天數！');
   }
-  if (target.dataset.action === 'shift') leaveData.shifts[row.dataset.staffId] = target.value;
+  if (target.dataset.action === 'shift') {
+    const staff = staffList.find((item) => item.id === row.dataset.staffId);
+    if (staff) staff.shift = target.value;
+    leaveData.shifts ||= {};
+    leaveData.shifts[row.dataset.staffId] = target.value;
+    leaveStaffCollection?.doc(row.dataset.staffId).update({
+      shift: target.value,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch((error) => console.error('更新班別失敗：', error));
+  }
+  staffList = sortStaffForLeave(staffList);
   render();
   queueSave();
 });
 
-specialMenu?.addEventListener('change', () => {
-  if (!activeSpecialCell) return;
-  const key = `${activeSpecialCell.dataset.staffId}_${dayKey(activeSpecialCell.dataset.day)}`;
-  const record = getRecord(activeSpecialCell.dataset.staffId, activeSpecialCell.dataset.day);
-  const specials = [...specialMenu.querySelectorAll('input:checked')].map((input) => input.value);
-  leaveData.records[key] = { ...record, specials };
-  if (!record.type && !specials.length) delete leaveData.records[key];
-  render();
-  queueSave();
-});
-
-document.addEventListener('click', (event) => {
-  if (!specialMenu || specialMenu.hidden) return;
-  if (!specialMenu.contains(event.target) && !event.target.closest('[data-action="special"]')) closeSpecialMenu();
-});
 
 prevMonthButton?.addEventListener('click', () => changeMonth(-1));
 nextMonthButton?.addEventListener('click', () => changeMonth(1));
-todayMonthButton?.addEventListener('click', () => { currentMonth = new Date(); currentMonth.setDate(1); subscribeMonth(); });
+todayMonthButton?.addEventListener('click', () => { currentMonth = new Date(); currentMonth.setDate(1); setSpecialMode(null); subscribeMonth(); });
+specialModeButtons.forEach((button) => button.addEventListener('click', () => setSpecialMode(button.dataset.special)));
 
 if (!leaveDb) {
   setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
 } else {
   unsubscribeStaff = leaveStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-    staffList = snapshot.docs.map(normalizeStaff).filter(activeStaff);
+    staffList = sortStaffForLeave(snapshot.docs.map(normalizeStaff).filter(activeStaff));
     render();
   }, (error) => {
     console.error('讀取人員資料失敗：', error);
