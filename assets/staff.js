@@ -237,7 +237,7 @@ const cancelPermissionButton = document.querySelector('#cancelPermissionButton')
 const savePermissionButton = document.querySelector('#savePermissionButton');
 const pageDefinitions = [
   ['home', '首頁'], ['staff', '人員管理'], ['leave', '休假表'], ['schedule', '排程表'], ['kpi', 'KPI'],
-  ['log', '日誌'], ['handover', '交接'], ['report', '提報'], ['tracking', '對接追蹤'],
+  ['log', '日誌'], ['handover', '交接'], ['report', '提報'], ['tracking', '對接追蹤'], ['alert', 'PROD告警紀錄'],
   ['meeting', '會議紀錄'], ['knowledge', '知識庫'], ['ai_database', 'AI 資料庫']
 ];
 let permissionCache = {};
