@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OMNIPLAY 客服系統-1</title>
+  <title>OMNIPLAY 客服系統-2</title>
   <style>
     :root {
       --bg: #eef3f9;
@@ -340,6 +340,82 @@
     .task-list li:first-child { border-top: 0; }
     .status { color: var(--success); font-weight: 800; }
 
+    .page-data-panel {
+      margin-top: 18px;
+      display: none;
+    }
+
+    .page-data-panel.is-active { display: block; }
+
+    .data-form {
+      display: grid;
+      grid-template-columns: minmax(180px, 280px) 1fr auto;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+
+    .data-form textarea {
+      width: 100%;
+      min-height: 54px;
+      padding: 15px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      resize: vertical;
+      transition: border .2s, box-shadow .2s;
+    }
+
+    .data-form textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, .14);
+    }
+
+    .save-btn, .delete-btn {
+      padding: 15px 18px;
+      color: white;
+      background: var(--primary);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, .22);
+    }
+
+    .delete-btn {
+      padding: 9px 12px;
+      background: #dc2626;
+      box-shadow: none;
+      font-size: 14px;
+    }
+
+    .data-status {
+      min-height: 24px;
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .data-list {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .data-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #f8fafc;
+    }
+
+    .data-item strong { display: block; margin-bottom: 6px; }
+    .data-item p { margin: 0; color: #334155; white-space: pre-wrap; }
+    .data-item time { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
+    
     @media (max-width: 900px) {
       .login-card { grid-template-columns: 1fr; }
       .brand-panel, .login-form-wrap { padding: 36px; }
@@ -347,6 +423,7 @@
       .sidebar { position: relative; height: auto; }
       .sidebar.is-collapsed { width: auto; }
       .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .data-form { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 560px) {
@@ -418,10 +495,51 @@
           <li><span>整理會議紀錄並同步 AI 資料庫</span><span class="status">待處理</span></li>
         </ul>
       </section>
+      
+      <section class="content-card page-data-panel" id="pageDataPanel" aria-live="polite">
+        <h2 id="dataPanelTitle">分頁資料庫</h2>
+        <p class="data-status" id="dataStatus">請選擇左側分頁以載入該分頁的專屬資料庫。</p>
+        <form class="data-form" id="dataForm">
+          <input id="dataTitle" name="title" type="text" placeholder="資料標題" required />
+          <textarea id="dataContent" name="content" placeholder="輸入這個分頁要保存的內容" required></textarea>
+          <button class="save-btn" type="submit">新增資料</button>
+        </form>
+        <ul class="data-list" id="dataList"></ul>
+      </section>
     </main>
   </section>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAnalytics, isSupported as isAnalyticsSupported } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
+    import {
+      addDoc,
+      collection,
+      deleteDoc,
+      doc,
+      getFirestore,
+      onSnapshot,
+      orderBy,
+      query,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB5GdlMKz809ITGf7fMpDsYPVFnDAdnh-0",
+      authDomain: "omniplay-csr-support.firebaseapp.com",
+      projectId: "omniplay-csr-support",
+      storageBucket: "omniplay-csr-support.firebasestorage.app",
+      messagingSenderId: "248758412651",
+      appId: "1:248758412651:web:d417fb1956442170bc182e",
+      measurementId: "G-RSCV4ZGTQH"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    isAnalyticsSupported().then((supported) => {
+      if (supported) getAnalytics(app);
+    });
+
     const menuData = [
       { title: '客服內部', icon: '👥', items: ['人員管理', '當日上班人員', '休假表', '排程表'] },
       { title: '作業管理', icon: '🗂️', items: ['日誌', '交接', '提報', '對接追蹤'] },
@@ -440,6 +558,88 @@
     const pageTitle = document.querySelector('#pageTitle');
     const pageDescription = document.querySelector('#pageDescription');
     const homePanels = document.querySelectorAll('.home-panel');
+    const pageDataPanel = document.querySelector('#pageDataPanel');
+    const dataPanelTitle = document.querySelector('#dataPanelTitle');
+    const dataStatus = document.querySelector('#dataStatus');
+    const dataForm = document.querySelector('#dataForm');
+    const dataTitle = document.querySelector('#dataTitle');
+    const dataContent = document.querySelector('#dataContent');
+    const dataList = document.querySelector('#dataList');
+    let activePage = null;
+    let unsubscribePageData = null;
+
+
+    const pageKey = (sectionTitle, itemTitle) => `${sectionTitle}-${itemTitle}`
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\p{Letter}\p{Number}-]+/gu, '');
+
+    const formatDate = (timestamp) => {
+      if (!timestamp) return '剛剛建立';
+      return timestamp.toDate().toLocaleString('zh-TW', { hour12: false });
+    };
+
+    const setDataStatus = (message) => {
+      dataStatus.textContent = message;
+    };
+
+    const renderPageData = (docs) => {
+      dataList.replaceChildren();
+      if (!docs.length) {
+        const empty = document.createElement('li');
+        empty.className = 'data-item';
+        empty.innerHTML = '<div><strong>尚無資料</strong><p>新增第一筆資料後，會儲存在這個分頁自己的 Firestore 集合。</p></div>';
+        dataList.appendChild(empty);
+        return;
+      }
+
+      docs.forEach((snapshot) => {
+        const data = snapshot.data();
+        const item = document.createElement('li');
+        item.className = 'data-item';
+
+        const body = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = data.title || '未命名資料';
+        const content = document.createElement('p');
+        content.textContent = data.content || '';
+        const time = document.createElement('time');
+        time.textContent = `更新時間：${formatDate(data.createdAt)}`;
+        body.append(title, content, time);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-btn';
+        deleteButton.type = 'button';
+        deleteButton.textContent = '刪除';
+        deleteButton.addEventListener('click', async () => {
+          await deleteDoc(doc(db, activePage.collectionPath, snapshot.id));
+        });
+
+        item.append(body, deleteButton);
+        dataList.appendChild(item);
+      });
+    };
+
+    const activatePageDatabase = (sectionTitle, itemTitle) => {
+      activePage = {
+        title: itemTitle,
+        collectionPath: `pageDatabases/${pageKey(sectionTitle, itemTitle)}/records`
+      };
+      pageDataPanel.classList.add('is-active');
+      dataPanelTitle.textContent = `${itemTitle}｜專屬資料庫`;
+      dataForm.reset();
+      setDataStatus(`正在載入 ${itemTitle} 的專屬資料庫...`);
+
+      if (unsubscribePageData) unsubscribePageData();
+      const recordsQuery = query(collection(db, activePage.collectionPath), orderBy('createdAt', 'desc'));
+      unsubscribePageData = onSnapshot(recordsQuery, (snapshot) => {
+        setDataStatus(`目前共有 ${snapshot.size} 筆資料，儲存在 ${activePage.collectionPath}`);
+        renderPageData(snapshot.docs);
+      }, (error) => {
+        setDataStatus(`資料庫讀取失敗：${error.message}`);
+      });
+    };
 
     const activateHome = () => {
       document.querySelectorAll('.submenu a, .home-link').forEach((anchor) => anchor.classList.remove('is-active'));
@@ -447,6 +647,12 @@
       pageTitle.textContent = '首頁';
       pageDescription.textContent = '快速查看今日客服營運重點與待辦作業。';
       homePanels.forEach((panel) => { panel.hidden = false; });
+      pageDataPanel.classList.remove('is-active');
+      activePage = null;
+      if (unsubscribePageData) {
+        unsubscribePageData();
+        unsubscribePageData = null;
+      }
     };
 
     homeLink.addEventListener('click', (event) => {
@@ -478,6 +684,7 @@
           pageTitle.textContent = item;
           pageDescription.textContent = `${section.title} / ${item} 的資料維護與查詢作業。`;
           homePanels.forEach((panel) => { panel.hidden = true; });
+          activatePageDatabase(section.title, item);
         });
         li.appendChild(link);
         list.appendChild(li);
@@ -490,6 +697,28 @@
 
       wrapper.append(button, list);
       menu.appendChild(wrapper);
+    });
+
+    dataForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!activePage) return;
+
+      const title = dataTitle.value.trim();
+      const content = dataContent.value.trim();
+      if (!title || !content) return;
+
+      setDataStatus('正在儲存資料...');
+      try {
+        await addDoc(collection(db, activePage.collectionPath), {
+          title,
+          content,
+          createdAt: serverTimestamp(),
+          pageTitle: activePage.title
+        });
+        dataForm.reset();
+      } catch (error) {
+        setDataStatus(`資料儲存失敗：${error.message}`);
+      }
     });
 
     sidebarToggle.addEventListener('click', () => {
