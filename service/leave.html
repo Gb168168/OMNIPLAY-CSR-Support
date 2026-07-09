@@ -56,12 +56,38 @@
         </div>
         <div class="user-pill">● 已連線 Firebase</div>
       </header>
-      <section class="placeholder-card" aria-label="休假表 空白骨架">
-        <div>
-          <h2>休假表</h2>
-          <p>此頁面已建立多頁架構、共用側邊欄與 Firebase compat CDN 連線。後續可在此加入對應功能模組。</p>
+      <section class="leave-panel" aria-label="休假表">
+        <div class="panel-heading leave-heading">
+          <div>
+            <h2>月休假表</h2>
+            <p>資料自動儲存至 Firestore；人員來源為啟用中的 staff collection。</p>
+          </div>
+          <div class="leave-toolbar" aria-label="月份切換">
+            <button class="secondary-button" id="prevLeaveMonth" type="button">← 上個月</button>
+            <strong id="leaveMonthLabel">—</strong>
+            <button class="secondary-button" id="nextLeaveMonth" type="button">下個月 →</button>
+            <button class="ghost-button" id="todayLeaveMonth" type="button">本月</button>
+          </div>
+        </div>
+
+        <div class="leave-meta">
+          <p id="leaveLegend"><span class="leave-marker">▲</span> 休假　<span class="leave-marker is-required">▲</span> 必休　📱 值公務機　🎰 公司活動</p>
+          <p class="leave-status" id="leaveStatus" data-type="info">載入資料中...</p>
+        </div>
+
+        <div class="leave-table-wrap" aria-label="可左右滑動的休假表">
+          <table class="leave-table" id="leaveTable">
+            <thead id="leaveTableHead"></thead>
+            <tbody id="leaveTableBody"></tbody>
+          </table>
         </div>
       </section>
+      
+      <div class="leave-special-menu" id="leaveSpecialMenu" hidden>
+        <strong>特殊標記</strong>
+        <label><input type="checkbox" value="phone" /> <span>📱 值公務機</span></label>
+        <label><input type="checkbox" value="event" /> <span>🎰 公司活動</span></label>
+      </div>
     </main>
   </section>
 
@@ -70,5 +96,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js"></script>
+  <script src="../assets/leave.js"></script>
 </body>
 </html>
