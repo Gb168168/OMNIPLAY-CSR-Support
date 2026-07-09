@@ -7,7 +7,29 @@
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
-  <section class="app-shell" aria-label="客服系統主畫面">
+  <section class="login-view" id="loginView" aria-label="登入畫面">
+    <form class="login-card" id="loginForm">
+      <div class="login-brand">
+        <span class="logo-mark">OP</span>
+        <div>
+          <h1>OMNIPLAY 客服系統</h1>
+          <p>請登入以進入主控台</p>
+        </div>
+      </div>
+      <label>
+        <span>帳號</span>
+        <input id="loginAccount" name="account" type="text" autocomplete="username" required />
+      </label>
+      <label>
+        <span>密碼</span>
+        <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+      </label>
+      <p class="form-message" id="loginMessage" hidden></p>
+      <button class="primary-button" type="submit">登入</button>
+    </form>
+  </section>
+
+  <section class="app-shell is-hidden" aria-label="客服系統主畫面">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
