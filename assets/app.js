@@ -4,6 +4,8 @@ const appShell = document.querySelector('.app-shell');
 const loginView = document.querySelector('#loginView');
 const loginForm = document.querySelector('#loginForm');
 const loginMessage = document.querySelector('#loginMessage');
+const setupForm = document.querySelector('#setupForm');
+const setupMessage = document.querySelector('#setupMessage');
 
 const SESSION_KEYS = {
   id: 'omniplayStaffId',
@@ -26,6 +28,42 @@ const showLoginMessage = (message) => {
   if (!loginMessage) return;
   loginMessage.textContent = message;
   loginMessage.hidden = !message;
+};
+
+const showSetupMessage = (message, type = '') => {
+  if (!setupMessage) return;
+  setupMessage.textContent = message;
+  setupMessage.hidden = !message;
+  setupMessage.dataset.type = type;
+};
+
+const setInitialSetupVisibility = (showSetup) => {
+  if (!isIndexPage || isLoggedIn()) return;
+  loginForm?.classList.toggle('is-hidden', showSetup);
+  setupForm?.classList.toggle('is-hidden', !showSetup);
+};
+
+const checkInitialSetupRequired = async () => {
+  if (!isIndexPage || isLoggedIn() || !setupForm) return;
+
+  const staffCollection = window.omniplayDb?.collection('staff');
+  if (!staffCollection) {
+    setInitialSetupVisibility(false);
+    showLoginMessage('Firebase 尚未完成初始化，請稍後再試');
+    return;
+  }
+
+  try {
+    const snapshot = await staffCollection.limit(1).get();
+    setInitialSetupVisibility(snapshot.empty);
+    if (snapshot.empty) {
+      showSetupMessage('偵測到尚未建立任何人員資料，請先建立管理員帳號。', 'info');
+    }
+  } catch (error) {
+    console.error('首次設定檢查失敗：', error);
+    setInitialSetupVisibility(false);
+    showLoginMessage('無法檢查首次設定狀態，請稍後再試');
+  }
 };
 
 const setAppVisibility = () => {
@@ -74,6 +112,58 @@ document.querySelectorAll('.section-button').forEach((button) => {
     button.classList.toggle('is-open');
     list?.classList.toggle('is-open');
   });
+});
+
+
+setupForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  showSetupMessage('');
+
+  const code = document.querySelector('#setupCode')?.value.trim();
+  const name = document.querySelector('#setupName')?.value.trim();
+  const account = document.querySelector('#setupAccount')?.value.trim();
+  const password = document.querySelector('#setupPassword')?.value.trim();
+  const staffCollection = window.omniplayDb?.collection('staff');
+
+  if (!code || !name || !account || !password) return showSetupMessage('請完整填寫所有欄位');
+  if (!staffCollection) return showSetupMessage('Firebase 尚未完成初始化，請稍後再試');
+
+  const submitButton = setupForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = '建立中...';
+
+  try {
+    const existingStaff = await staffCollection.limit(1).get();
+    if (!existingStaff.empty) {
+      showSetupMessage('已存在人員資料，請使用正常登入。');
+      setInitialSetupVisibility(false);
+      return;
+    }
+
+    const docRef = await staffCollection.add({
+      code,
+      name,
+      account,
+      password,
+      status: '啟用',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    sessionStorage.setItem(SESSION_KEYS.id, docRef.id);
+    sessionStorage.setItem(SESSION_KEYS.code, code);
+    sessionStorage.setItem(SESSION_KEYS.name, name);
+    setupForm.reset();
+    setInitialSetupVisibility(false);
+    setAppVisibility();
+    renderSidebarUser();
+  } catch (error) {
+    console.error('建立管理員帳號失敗：', error);
+    showSetupMessage('建立失敗，請稍後再試');
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = '建立第一個帳號';
+  }
 });
 
 loginForm?.addEventListener('submit', async (event) => {
@@ -129,3 +219,4 @@ document.addEventListener('click', (event) => {
 
 setAppVisibility();
 renderSidebarUser();
+checkInitialSetupRequired();
