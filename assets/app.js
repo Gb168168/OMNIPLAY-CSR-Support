@@ -10,7 +10,8 @@ const setupMessage = document.querySelector('#setupMessage');
 const SESSION_KEYS = {
   id: 'omniplayStaffId',
   code: 'omniplayStaffCode',
-  name: 'omniplayStaffName'
+  name: 'omniplayStaffName',
+  account: 'omniplayStaffAccount'
 };
 
 const isIndexPage = /(^|\/)index\.html$/.test(window.location.pathname) || window.location.pathname.endsWith('/');
@@ -19,10 +20,68 @@ const loginPath = isIndexPage ? 'index.html' : '../index.html';
 const getCurrentStaff = () => ({
   id: sessionStorage.getItem(SESSION_KEYS.id),
   code: sessionStorage.getItem(SESSION_KEYS.code),
-  name: sessionStorage.getItem(SESSION_KEYS.name)
+  name: sessionStorage.getItem(SESSION_KEYS.name),
+  account: sessionStorage.getItem(SESSION_KEYS.account)
 });
 
 const isLoggedIn = () => Boolean(getCurrentStaff().code && getCurrentStaff().name);
+const isOmniplayAdmin = () => {
+  const staff = getCurrentStaff();
+  return [staff.account, staff.code, staff.name].some((value) => String(value || '').toUpperCase() === 'OMNIPLAY');
+};
+
+const PAGE_KEYS = {
+  'index.html': 'home',
+  'staff.html': 'staff',
+  'leave.html': 'leave',
+  'schedule.html': 'schedule',
+  'kpi.html': 'kpi',
+  'log.html': 'log',
+  'handover.html': 'handover',
+  'report.html': 'report',
+  'tracking.html': 'tracking',
+  'meeting.html': 'meeting',
+  'knowledge.html': 'knowledge',
+  'ai-database.html': 'ai_database'
+};
+
+const currentPageKey = () => PAGE_KEYS[window.location.pathname.split('/').pop() || 'index.html'] || 'home';
+const getStoredPermissions = () => {
+  try { return JSON.parse(sessionStorage.getItem('omniplayPermissions') || '{}'); } catch { return {}; }
+};
+const getPagePermission = (page = currentPageKey()) => {
+  if (isOmniplayAdmin()) return { view: true, edit: true, delete: true, design: true };
+  return getStoredPermissions().pages?.[page] || { view: true, edit: true, delete: true, design: true };
+};
+
+const applyPermissionUi = () => {
+  if (!isLoggedIn()) return;
+  const permissions = getStoredPermissions();
+  const restrict = !isOmniplayAdmin() && permissions.pages;
+  document.querySelectorAll('.menu a[href]').forEach((link) => {
+    const page = PAGE_KEYS[link.getAttribute('href').split('/').pop()];
+    if (page && restrict && !permissions.pages?.[page]?.view) link.closest('li')?.remove();
+  });
+  document.querySelectorAll('.submenu').forEach((list) => {
+    if (!list.querySelector('li')) list.closest('.menu-section')?.remove();
+  });
+  if (restrict && !getPagePermission().view && !isIndexPage) window.location.href = loginPath;
+};
+
+window.getPagePermission = getPagePermission;
+window.isOmniplayAdmin = isOmniplayAdmin;
+
+const loadCurrentPermissions = async () => {
+  if (!isLoggedIn() || isOmniplayAdmin()) { sessionStorage.removeItem('omniplayPermissions'); applyPermissionUi(); return; }
+  const staffId = getCurrentStaff().id;
+  const permissionsCollection = window.omniplayDb?.collection('permissions');
+  if (!staffId || !permissionsCollection) { applyPermissionUi(); return; }
+  try {
+    const doc = await permissionsCollection.doc(staffId).get();
+    if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
+  } catch (error) { console.error('讀取權限失敗：', error); }
+  applyPermissionUi();
+};
 
 const showLoginMessage = (message) => {
   if (!loginMessage) return;
@@ -153,9 +212,11 @@ setupForm?.addEventListener('submit', async (event) => {
     sessionStorage.setItem(SESSION_KEYS.id, docRef.id);
     sessionStorage.setItem(SESSION_KEYS.code, code);
     sessionStorage.setItem(SESSION_KEYS.name, name);
+    sessionStorage.setItem(SESSION_KEYS.account, account);
     setupForm.reset();
     setInitialSetupVisibility(false);
     setAppVisibility();
+    loadCurrentPermissions();
     renderSidebarUser();
   } catch (error) {
     console.error('建立管理員帳號失敗：', error);
@@ -202,6 +263,8 @@ loginForm?.addEventListener('submit', async (event) => {
     sessionStorage.setItem(SESSION_KEYS.id, doc.id);
     sessionStorage.setItem(SESSION_KEYS.code, staff.code || '');
     sessionStorage.setItem(SESSION_KEYS.name, staff.name || '');
+    sessionStorage.setItem(SESSION_KEYS.account, staff.account || '');
+    await loadCurrentPermissions();
     setAppVisibility();
     renderSidebarUser();
   } catch (error) {
@@ -218,5 +281,6 @@ document.addEventListener('click', (event) => {
 });
 
 setAppVisibility();
+loadCurrentPermissions();
 renderSidebarUser();
 checkInitialSetupRequired();
