@@ -73,6 +73,7 @@
                 <th scope="col">姓名</th>
                 <th scope="col">帳號</th>
                 <th scope="col">密碼</th>
+                <th scope="col">班別</th>
                 <th scope="col">狀態</th>
                 <th scope="col">操作</th>
               </tr>
@@ -108,6 +109,13 @@
                 <input id="staffPassword" name="password" type="password" autocomplete="new-password" required />
                 <button class="icon-button" id="staffPasswordToggle" type="button" aria-label="切換表單密碼顯示">👁️</button>
               </div>
+            </label>
+            <label>
+              <span>班別</span>
+              <select id="staffShift" name="shift" required>
+                <option value="早班">早班</option>
+                <option value="晚班">晚班</option>
+              </select>
             </label>
             <p class="form-message" id="staffFormMessage" hidden></p>
             <div class="form-actions">
