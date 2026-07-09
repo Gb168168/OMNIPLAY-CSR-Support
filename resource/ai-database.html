@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 資料庫｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
+        <button class="toggle-btn" id="sidebarToggle" type="button" aria-label="收合左側功能表">☰</button>
+      </div>
+      <nav class="menu" aria-label="主功能表">
+        <a class="home-link" href="../index.html"><span class="icon">🏠</span><span class="label">首頁</span></a>
+        <section class="menu-section">
+          <button class="section-button" type="button"><span class="section-title"><span class="icon">👥</span><span class="label">客服內部</span></span><span class="chevron">›</span></button>
+          <ul class="submenu">
+            <li><a class="" href="../service/staff.html">人員管理</a></li>
+            <li><a class="" href="../service/leave.html">休假表</a></li>
+            <li><a class="" href="../service/schedule.html">排程表</a></li>
+          </ul>
+        </section>
+        <section class="menu-section">
+          <button class="section-button" type="button"><span class="section-title"><span class="icon">🗂️</span><span class="label">作業管理</span></span><span class="chevron">›</span></button>
+          <ul class="submenu">
+            <li><a class="" href="../work/log.html">日誌</a></li>
+            <li><a class="" href="../work/handover.html">交接</a></li>
+            <li><a class="" href="../work/report.html">提報</a></li>
+            <li><a class="" href="../work/tracking.html">對接追蹤</a></li>
+          </ul>
+        </section>
+        <section class="menu-section">
+          <button class="section-button" type="button"><span class="section-title"><span class="icon">📝</span><span class="label">會議歷程</span></span><span class="chevron">›</span></button>
+          <ul class="submenu">
+            <li><a class="" href="../meeting/meeting.html">會議紀錄</a></li>
+          </ul>
+        </section>
+        <section class="menu-section">
+          <button class="section-button is-open" type="button"><span class="section-title"><span class="icon">🧠</span><span class="label">資料庫</span></span><span class="chevron">›</span></button>
+          <ul class="submenu is-open">
+            <li><a class="" href="../resource/knowledge.html">知識庫</a></li>
+            <li><a class="is-active" href="../resource/ai-database.html">AI 資料庫</a></li>
+          </ul>
+        </section>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>AI 資料庫</h1>
+          <p>AI 相關資料與內容維護。</p>
+        </div>
+        <div class="user-pill">● 已連線 Firebase</div>
+      </header>
+      <section class="placeholder-card" aria-label="AI 資料庫 空白骨架">
+        <div>
+          <h2>AI 資料庫</h2>
+          <p>此頁面已建立多頁架構、共用側邊欄與 Firebase compat CDN 連線。後續可在此加入對應功能模組。</p>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
