@@ -58,15 +58,13 @@
       </header>
       <section class="schedule-panel" aria-label="排程表月曆">
         <div class="panel-heading schedule-heading">
-          <div>
-            <h2>排程月曆</h2>
-            <p>點擊日期可新增排程；點擊排程可編輯，資料自動連動 Firestore schedule collection。</p>
-          </div>
-          <div class="schedule-toolbar" aria-label="排程工具列">
+          <div class="schedule-toolbar schedule-nav" aria-label="月份切換">
             <button class="secondary-button" id="prevSchedulePeriod" type="button">上個月</button>
-            <strong id="schedulePeriodLabel">—</strong>
             <button class="secondary-button" id="nextSchedulePeriod" type="button">下個月</button>
-            <button class="ghost-button" id="todaySchedulePeriod" type="button">今天</button>
+            <button class="ghost-button" id="todaySchedulePeriod" type="button">本月</button>
+          </div>
+          <strong id="schedulePeriodLabel" class="schedule-period-label">—</strong>
+          <div class="schedule-toolbar" aria-label="排程工具列">
             <div class="view-switch" aria-label="檢視切換">
               <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
               <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
@@ -76,8 +74,8 @@
           </div>
         </div>
         <div class="schedule-meta">
-          <p id="scheduleHint">選取日期：<strong id="selectedScheduleDate">—</strong>。週日紅字、週六綠字，今天以綠色圓圈標示。</p>
-          <p class="schedule-status" id="scheduleStatus" data-type="info">載入資料中...</p>
+          <p class="schedule-status" id="scheduleStatus" data-type="info" hidden></p>
+          <strong id="selectedScheduleDate" hidden>—</strong>
         </div>
         <div class="calendar-grid" id="scheduleCalendar" aria-label="排程月曆"></div>
       </section>
@@ -89,12 +87,19 @@
             <button class="icon-button" id="closeScheduleModal" type="button" aria-label="關閉排程表單">✕</button>
           </div>
           <form class="schedule-form" id="scheduleForm">
-            <label><span>標籤顏色</span><select id="scheduleLabelColor" required></select></label>
-            <label><span>標籤名稱</span><input id="scheduleLabelName" type="text" placeholder="例如：例會、活動、維護" /></label>
+            <div class="label-row">
+              <label><span>標籤顏色</span><input id="scheduleLabelColor" type="color" value="#3b82f6" required /></label>
+              <label><span>標籤名稱</span><input id="scheduleLabelName" type="text" placeholder="例如：例會、活動、維護" /></label>
+            </div>
+            <div class="saved-labels" id="scheduleSavedLabels" aria-label="已設置標籤清單"></div>
             <label><span>標題</span><input id="scheduleTitle" type="text" required autocomplete="off" /></label>
             <label><span>內容</span><textarea id="scheduleContent" rows="4" placeholder="輸入排程內容"></textarea></label>
             <label><span>提醒時間</span><input id="scheduleReminderAt" type="datetime-local" required /></label>
             <label><span>設置人員</span><select id="scheduleStaff" multiple size="6"></select><small>按住 Ctrl / Command 可多選人員。</small></label>
+            <section class="schedule-history" aria-label="設置歷程">
+              <h3>設置歷程</h3>
+              <div id="scheduleHistoryList" class="schedule-history-list"></div>
+            </section>
             <p class="form-message" id="scheduleFormMessage" hidden></p>
             <div class="form-actions">
               <button class="danger-button" id="deleteScheduleButton" type="button">刪除</button>
