@@ -27,6 +27,34 @@
       <p class="form-message" id="loginMessage" hidden></p>
       <button class="primary-button" type="submit">登入</button>
     </form>
+    
+    <form class="login-card setup-card is-hidden" id="setupForm" aria-label="建立管理員帳號">
+      <div class="login-brand">
+        <span class="logo-mark">OP</span>
+        <div>
+          <h1>建立管理員帳號</h1>
+          <p>首次設定：staff 尚無資料，請建立第一個管理員帳號。</p>
+        </div>
+      </div>
+      <label>
+        <span>人員編號</span>
+        <input id="setupCode" name="code" type="text" autocomplete="off" required />
+      </label>
+      <label>
+        <span>姓名</span>
+        <input id="setupName" name="name" type="text" autocomplete="name" required />
+      </label>
+      <label>
+        <span>帳號</span>
+        <input id="setupAccount" name="account" type="text" autocomplete="username" required />
+      </label>
+      <label>
+        <span>密碼</span>
+        <input id="setupPassword" name="password" type="password" autocomplete="new-password" required />
+      </label>
+      <p class="form-message" id="setupMessage" hidden></p>
+      <button class="primary-button" type="submit">建立第一個帳號</button>
+    </form>
   </section>
 
   <section class="app-shell is-hidden" aria-label="客服系統主畫面">
