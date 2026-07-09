@@ -56,18 +56,74 @@
         </div>
         <div class="user-pill">● 已連線 Firebase</div>
       </header>
-      <section class="placeholder-card" aria-label="人員管理 空白骨架">
-        <div>
-          <h2>人員管理</h2>
-          <p>此頁面已建立多頁架構、共用側邊欄與 Firebase compat CDN 連線。後續可在此加入對應功能模組。</p>
+      <section class="staff-panel" aria-label="人員管理列表">
+        <div class="panel-heading">
+          <div>
+            <h2>人員列表</h2>
+            <p>管理客服人員的編號、登入帳號與密碼。</p>
+          </div>
+          <button class="primary-button" id="addStaffButton" type="button">＋ 新增人員</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="staff-table">
+            <thead>
+              <tr>
+                <th scope="col">編號</th>
+                <th scope="col">姓名</th>
+                <th scope="col">帳號</th>
+                <th scope="col">密碼</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody id="staffTableBody"></tbody>
+          </table>
+          <p class="empty-state" id="staffEmptyState">目前尚無人員資料，請點選「新增人員」建立第一筆資料。</p>
         </div>
       </section>
+      
+      <div class="modal-backdrop" id="staffModal" aria-hidden="true">
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="staffModalTitle">
+          <div class="modal-heading">
+            <h2 id="staffModalTitle">新增人員</h2>
+            <button class="icon-button" id="closeStaffModal" type="button" aria-label="關閉表單">✕</button>
+          </div>
+          <form class="staff-form" id="staffForm">
+            <label>
+              <span>編號</span>
+              <input id="staffCode" name="code" type="text" autocomplete="off" required />
+            </label>
+            <label>
+              <span>姓名</span>
+              <input id="staffName" name="name" type="text" autocomplete="name" required />
+            </label>
+            <label>
+              <span>帳號</span>
+              <input id="staffAccount" name="account" type="text" autocomplete="username" required />
+            </label>
+            <label>
+              <span>密碼</span>
+              <div class="password-input">
+                <input id="staffPassword" name="password" type="password" autocomplete="new-password" required />
+                <button class="icon-button" id="staffPasswordToggle" type="button" aria-label="切換表單密碼顯示">👁️</button>
+              </div>
+            </label>
+            <p class="form-message" id="staffFormMessage" hidden></p>
+            <div class="form-actions">
+              <button class="ghost-button" id="cancelStaffButton" type="button">取消</button>
+              <button class="primary-button" id="saveStaffButton" type="submit">儲存人員</button>
+            </div>
+          </form>
+        </section>
+      </div>
     </main>
   </section>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js"></script>
+  <script src="../assets/staff.js"></script>
 </body>
 </html>
