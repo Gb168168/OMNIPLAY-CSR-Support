@@ -56,10 +56,24 @@
         </div>
         <div class="user-pill">● 已連線 Firebase</div>
       </header>
-      <section class="placeholder-card" aria-label="對接追蹤 空白骨架">
-        <div>
-          <h2>對接追蹤</h2>
-          <p>此頁面已建立多頁架構、共用側邊欄與 Firebase compat CDN 連線。後續可在此加入對應功能模組。</p>
+      <section class="ragic-card" id="ragicListView" aria-label="列表視圖">
+        <div class="ragic-toolbar">
+          <div><h2 id="ragicTitle"></h2><p id="ragicSubtitle"></p></div>
+          <button class="primary" id="newRecordButton" type="button">+ 新增</button>
+        </div>
+        <div class="ragic-table-wrap">
+          <table class="ragic-table">
+            <thead><tr id="ragicHeaderRow"></tr></thead>
+            <tbody id="ragicTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="ragic-card" id="ragicFormView" aria-label="主表單視圖" hidden>
+        <div class="ragic-form-toolbar"><h2></h2><button class="secondary" id="backToListButton" type="button">返回列表</button></div>
+        <form id="ragicForm"></form>
+        <div class="ragic-actions">
+          <button class="ghost danger" id="deleteButton" type="button">刪除</button>
+          <button class="primary" form="ragicForm" type="submit">儲存</button>
         </div>
       </section>
     </main>
@@ -70,5 +84,21 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js"></script>
+  <script src="../assets/ragic-table.js"></script>
+  <script>
+    initRagicPage({
+      title: '對接追蹤',
+      collection: 'workTracking',
+      fields: [
+        { key: 'date', label: '日期', type: 'date', defaultToday: true },
+        { key: 'target', label: '對接對象', type: 'text' },
+        { key: 'item', label: '事項', type: 'textarea', rows: 5 },
+        { key: 'owner', label: '負責人', type: 'text' },
+        { key: 'status', label: '進度狀態', type: 'select', options: ['未開始', '進行中', '已完成', '卡關'] },
+        { key: 'note', label: '備註', type: 'textarea', rows: 5 }
+      ],
+      listColumns: ['date', 'target', 'owner', 'status']
+    });
+  </script>
 </body>
 </html>
