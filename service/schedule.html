@@ -56,12 +56,56 @@
         </div>
         <div class="user-pill">● 已連線 Firebase</div>
       </header>
-      <section class="placeholder-card" aria-label="排程表 空白骨架">
-        <div>
-          <h2>排程表</h2>
-          <p>此頁面已建立多頁架構、共用側邊欄與 Firebase compat CDN 連線。後續可在此加入對應功能模組。</p>
+      <section class="schedule-panel" aria-label="排程表月曆">
+        <div class="panel-heading schedule-heading">
+          <div>
+            <h2>排程月曆</h2>
+            <p>點擊日期可新增排程；點擊排程可編輯，資料自動連動 Firestore schedule collection。</p>
+          </div>
+          <div class="schedule-toolbar" aria-label="排程工具列">
+            <button class="secondary-button" id="prevSchedulePeriod" type="button">上個月</button>
+            <strong id="schedulePeriodLabel">—</strong>
+            <button class="secondary-button" id="nextSchedulePeriod" type="button">下個月</button>
+            <button class="ghost-button" id="todaySchedulePeriod" type="button">今天</button>
+            <div class="view-switch" aria-label="檢視切換">
+              <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
+              <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
+            </div>
+            <button class="secondary-button schedule-special-trigger" id="phoneDutyButton" type="button" title="顯示所選日期值公務機人員">📱</button>
+            <button class="secondary-button schedule-special-trigger" id="companyEventButton" type="button" title="顯示所選日期公司活動人員">🎰</button>
+          </div>
         </div>
+        <div class="schedule-meta">
+          <p id="scheduleHint">選取日期：<strong id="selectedScheduleDate">—</strong>。週日紅字、週六綠字，今天以綠色圓圈標示。</p>
+          <p class="schedule-status" id="scheduleStatus" data-type="info">載入資料中...</p>
+        </div>
+        <div class="calendar-grid" id="scheduleCalendar" aria-label="排程月曆"></div>
       </section>
+      
+      <div class="modal-backdrop" id="scheduleModal" aria-hidden="true">
+        <section class="modal-card schedule-modal-card" role="dialog" aria-modal="true" aria-labelledby="scheduleModalTitle">
+          <div class="modal-heading">
+            <h2 id="scheduleModalTitle">新增排程</h2>
+            <button class="icon-button" id="closeScheduleModal" type="button" aria-label="關閉排程表單">✕</button>
+          </div>
+          <form class="schedule-form" id="scheduleForm">
+            <label><span>標籤顏色</span><select id="scheduleLabelColor" required></select></label>
+            <label><span>標籤名稱</span><input id="scheduleLabelName" type="text" placeholder="例如：例會、活動、維護" /></label>
+            <label><span>標題</span><input id="scheduleTitle" type="text" required autocomplete="off" /></label>
+            <label><span>內容</span><textarea id="scheduleContent" rows="4" placeholder="輸入排程內容"></textarea></label>
+            <label><span>提醒時間</span><input id="scheduleReminderAt" type="datetime-local" required /></label>
+            <label><span>設置人員</span><select id="scheduleStaff" multiple size="6"></select><small>按住 Ctrl / Command 可多選人員。</small></label>
+            <p class="form-message" id="scheduleFormMessage" hidden></p>
+            <div class="form-actions">
+              <button class="danger-button" id="deleteScheduleButton" type="button">刪除</button>
+              <button class="ghost-button" id="cancelScheduleButton" type="button">取消</button>
+              <button class="primary-button" id="saveScheduleButton" type="submit">儲存</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <div class="schedule-tooltip" id="scheduleSpecialTooltip" hidden></div>
     </main>
   </section>
 
@@ -70,5 +114,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js"></script>
+  <script src="../assets/schedule.js"></script>
 </body>
 </html>
