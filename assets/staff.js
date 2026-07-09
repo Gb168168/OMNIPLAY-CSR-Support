@@ -57,6 +57,7 @@ const renderStaff = (staffList) => {
   staffTableBody.innerHTML = staffList.map((staff) => {
     const passwordVisible = visiblePasswordRows.has(staff.id);
     const passwordText = passwordVisible ? staff.password : maskPassword(staff.password);
+    const protectedOmniplay = isProtectedOmniplay(staff);
 
     return `
       <tr class="${staff.status === '停用' ? 'is-disabled' : ''}">
@@ -73,9 +74,9 @@ const renderStaff = (staffList) => {
         <td><span class="status-badge ${staff.status === '停用' ? 'is-disabled' : 'is-enabled'}">${escapeHtml(staff.status || '啟用')}</span></td>
         <td>
           <div class="table-actions">
-            <button class="secondary-button" type="button" data-action="toggle-status" data-id="${staff.id}">${staff.status === '停用' ? '啟用' : '停用'}</button>
+            ${protectedOmniplay ? '' : `<button class="secondary-button" type="button" data-action="toggle-status" data-id="${staff.id}">${staff.status === '停用' ? '啟用' : '停用'}</button>`}
             <button class="secondary-button" type="button" data-action="edit" data-id="${staff.id}">編輯</button>
-            <button class="danger-button" type="button" data-action="delete" data-id="${staff.id}">刪除</button>
+            ${protectedOmniplay ? '' : `<button class="danger-button" type="button" data-action="delete" data-id="${staff.id}">刪除</button>`}
           </div>
         </td>
       </tr>`;
@@ -150,7 +151,7 @@ staffForm?.addEventListener('submit', async (event) => {
       const currentStaff = staffCache.find((item) => item.id === editingStaffId);
       await staffCollection.doc(editingStaffId).update({
         ...payload,
-        status: currentStaff?.status || '啟用',
+        status: isProtectedOmniplay(currentStaff) ? '啟用' : (currentStaff?.status || '啟用'),
         sortOrder: currentStaff?.sortOrder ?? payload.sortOrder
       });
     } else {
@@ -187,7 +188,7 @@ staffTableBody?.addEventListener('click', async (event) => {
 
   if (action === 'toggle-status' && staffCollection) {
     const staff = staffCache.find((item) => item.id === id);
-    if (!staff) return;
+    if (!staff || isProtectedOmniplay(staff)) return;
 
     try {
       await staffCollection.doc(id).update({
@@ -201,7 +202,7 @@ staffTableBody?.addEventListener('click', async (event) => {
     return;
   }
 
-  if (action === 'delete' && staffCollection && confirm('確定要刪除此人員嗎？')) {
+  if (action === 'delete' && staffCollection && !isProtectedOmniplay(staffCache.find((item) => item.id === id)) && confirm('確定要刪除此人員嗎？')) {
     try {
       await staffCollection.doc(id).delete();
       visiblePasswordRows.delete(id);
@@ -226,3 +227,70 @@ passwordToggle?.addEventListener('click', () => {
 });
 
 loadStaff();
+
+const permissionsCollection = window.omniplayDb?.collection('permissions');
+const permissionButton = document.querySelector('#permissionManageButton');
+const permissionModal = document.querySelector('#permissionModal');
+const permissionManager = document.querySelector('#permissionManager');
+const closePermissionButton = document.querySelector('#closePermissionModal');
+const cancelPermissionButton = document.querySelector('#cancelPermissionButton');
+const savePermissionButton = document.querySelector('#savePermissionButton');
+const pageDefinitions = [
+  ['home', '首頁'], ['staff', '人員管理'], ['leave', '休假表'], ['schedule', '排程表'], ['kpi', 'KPI'],
+  ['log', '日誌'], ['handover', '交接'], ['report', '提報'], ['tracking', '對接追蹤'],
+  ['meeting', '會議紀錄'], ['knowledge', '知識庫'], ['ai_database', 'AI 資料庫']
+];
+let permissionCache = {};
+const isProtectedOmniplay = (staff = {}) => [staff.account, staff.code, staff.name].some((value) => String(value || '').toUpperCase() === 'OMNIPLAY');
+
+const togglePermissionModal = (isOpen) => {
+  permissionModal?.classList.toggle('is-open', isOpen);
+  permissionModal?.setAttribute('aria-hidden', String(!isOpen));
+};
+
+const permissionCheckbox = (staffId, page, action, checked) => `<label class="permission-check"><input type="checkbox" data-staff="${staffId}" data-page="${page}" data-action="${action}" ${checked ? 'checked' : ''}> ${action === 'view' ? '可看' : action === 'edit' ? '可編輯' : action === 'delete' ? '可刪除' : '可設計'}</label>`;
+
+const renderPermissionManager = async () => {
+  if (!permissionManager || !permissionsCollection) return;
+  const snapshot = await permissionsCollection.get();
+  permissionCache = Object.fromEntries(snapshot.docs.map((doc) => [doc.id, doc.data()]));
+  const manageableStaff = staffCache.filter((staff) => !isProtectedOmniplay(staff));
+  permissionManager.innerHTML = manageableStaff.map((staff) => {
+    const pages = permissionCache[staff.id]?.pages || {};
+    const rows = pageDefinitions.map(([key, label]) => {
+      const permission = pages[key] || { view: true, edit: true, delete: true, design: true };
+      return `<tr><td>${escapeHtml(label)}</td><td>${permissionCheckbox(staff.id, key, 'view', permission.view)}</td><td>${permissionCheckbox(staff.id, key, 'edit', permission.edit)}</td><td>${permissionCheckbox(staff.id, key, 'delete', permission.delete)}</td><td>${permissionCheckbox(staff.id, key, 'design', permission.design)}</td></tr>`;
+    }).join('');
+    return `<section class="permission-staff"><h3>${escapeHtml(staff.name)}（${escapeHtml(staff.account)}）</h3><div class="table-wrap"><table class="staff-table"><thead><tr><th>頁面</th><th>瀏覽</th><th>編輯</th><th>刪除</th><th>設計表格</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  }).join('') || '<p class="empty-state">目前沒有可設定權限的人員。</p>';
+};
+
+const savePermissions = async () => {
+  if (!permissionsCollection) return alert('Firebase 尚未完成初始化，無法儲存權限。');
+  savePermissionButton.disabled = true;
+  try {
+    for (const staff of staffCache.filter((item) => !isProtectedOmniplay(item))) {
+      const pages = {};
+      pageDefinitions.forEach(([key]) => {
+        pages[key] = {};
+        ['view', 'edit', 'delete', 'design'].forEach((action) => {
+          pages[key][action] = Boolean(permissionManager.querySelector(`[data-staff="${staff.id}"][data-page="${key}"][data-action="${action}"]`)?.checked);
+        });
+      });
+      await permissionsCollection.doc(staff.id).set({ staffId: staff.id, pages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }
+    togglePermissionModal(false);
+  } catch (error) {
+    console.error('儲存權限失敗：', error);
+    alert('儲存權限失敗，請稍後再試。');
+  } finally {
+    savePermissionButton.disabled = false;
+  }
+};
+
+if (permissionButton) permissionButton.hidden = !window.isOmniplayAdmin?.();
+permissionButton?.addEventListener('click', async () => { await renderPermissionManager(); togglePermissionModal(true); });
+closePermissionButton?.addEventListener('click', () => togglePermissionModal(false));
+cancelPermissionButton?.addEventListener('click', () => togglePermissionModal(false));
+savePermissionButton?.addEventListener('click', savePermissions);
+permissionModal?.addEventListener('click', (event) => { if (event.target === permissionModal) togglePermissionModal(false); });
