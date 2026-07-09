@@ -13,25 +13,45 @@ const leaveTableBody = document.querySelector('#leaveTableBody');
 const leaveStatus = document.querySelector('#leaveStatus');
 const leaveLegend = document.querySelector('#leaveLegend');
 const specialModeButtons = document.querySelectorAll('.special-mode-button');
-const globalQuotaInput = document.querySelector('#globalLeaveQuota');
 
 const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
-const fixedTaiwanHolidays = {
-  '01-01': '元旦',
-  '02-28': '和平紀念日',
-  '04-04': '兒童節',
-  '04-05': '清明節',
-  '05-01': '勞動節',
-  '10-10': '國慶日'
-};
-const taiwanHolidayOverrides = {
+const taiwanHolidays = {
   2026: {
-    '02-16': '農曆除夕',
-    '02-17': '春節',
-    '02-18': '春節',
-    '02-19': '春節',
+    '02-14': '農曆春節',
+    '02-15': '農曆春節',
+    '02-16': '農曆春節',
+    '02-17': '農曆春節',
+    '02-18': '農曆春節',
+    '02-19': '農曆春節',
+    '02-20': '農曆春節',
+    '02-21': '農曆春節',
+    '02-22': '農曆春節',
+    '02-27': '228 和平紀念日',
+    '02-28': '228 和平紀念日',
+    '03-01': '228 和平紀念日',
+    '04-03': '兒童節＋清明節',
+    '04-04': '兒童節＋清明節',
+    '04-05': '兒童節＋清明節',
+    '04-06': '兒童節＋清明節',
+    '05-01': '勞動節',
+    '05-02': '勞動節',
+    '05-03': '勞動節',
     '06-19': '端午節',
-    '09-25': '中秋節'
+    '06-20': '端午節',
+    '06-21': '端午節',
+    '09-25': '中秋＋教師節',
+    '09-26': '中秋＋教師節',
+    '09-27': '中秋＋教師節',
+    '09-28': '中秋＋教師節',
+    '10-09': '國慶日',
+    '10-10': '國慶日',
+    '10-11': '國慶日',
+    '10-24': '光復節',
+    '10-25': '光復節',
+    '10-26': '光復節',
+    '12-25': '行憲紀念日',
+    '12-26': '行憲紀念日',
+    '12-27': '行憲紀念日'
   }
 };
 
@@ -45,6 +65,10 @@ let unsubscribeLeave = null;
 let unsubscribeSchedule = null;
 let activeSpecialMode = null;
 let saveTimer = null;
+const storedLeavePermission = () => {
+  try { return JSON.parse(sessionStorage.getItem('omniplayPermissions') || '{}')?.pages?.leave; } catch { return null; }
+};
+let canEditLeave = Boolean(window.isOmniplayAdmin?.() || storedLeavePermission()?.edit === true);
 
 const pad = (value) => String(value).padStart(2, '0');
 const monthKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
@@ -67,9 +91,10 @@ const fixedStaffOrder = ['中魁', '佳臻', '晴心', '澄希', '茗雅'];
 const fixedStaffOrderMap = fixedStaffOrder.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
 const activeStaff = (staff) => (staff.status || '啟用') === '啟用';
 const getStaffSortOrder = (staff) => Number(staff.sortOrder ?? fixedStaffOrderMap[staff.name] ?? 999);
-const getStaffShift = (staff) => staff.shift || leaveData.shifts?.[staff.id] || '早班';
+const normalizeShift = (value) => value === '晚班' ? '晚' : value === '早班' ? '早' : value;
+const getStaffShift = (staff) => normalizeShift(staff.shift || leaveData.shifts?.[staff.id] || '早');
 const sortStaffForLeave = (items) => [...items].sort((a, b) => {
-  const shiftCompare = (getStaffShift(a) === '晚班' ? 1 : 0) - (getStaffShift(b) === '晚班' ? 1 : 0);
+  const shiftCompare = (getStaffShift(a) === '晚' ? 1 : 0) - (getStaffShift(b) === '晚' ? 1 : 0);
   if (shiftCompare) return shiftCompare;
   const orderCompare = getStaffSortOrder(a) - getStaffSortOrder(b);
   if (orderCompare) return orderCompare;
@@ -78,15 +103,15 @@ const sortStaffForLeave = (items) => [...items].sort((a, b) => {
 
 const getHolidayName = (day) => {
   const key = `${pad(currentMonth.getMonth() + 1)}-${pad(day)}`;
-  return taiwanHolidayOverrides[currentMonth.getFullYear()]?.[key] || fixedTaiwanHolidays[key] || '';
+  return taiwanHolidays[currentMonth.getFullYear()]?.[key] || '';
 };
 
 const getRecord = (staffId, day) => leaveData.records?.[`${staffId}_${dayKey(day)}`] || { type: '', specials: [] };
 const getGlobalQuota = () => Number(leaveData.quota ?? 8);
 const getQuota = () => getGlobalQuota();
+const editableAttribute = () => canEditLeave ? '' : ' disabled';
 const getShift = (staff) => getStaffShift(staff);
 const leaveCount = (staffId) => Object.entries(leaveData.records || {}).filter(([key, record]) => key.startsWith(`${staffId}_`) && ['leave', 'required'].includes(record?.type)).length;
-const isWorking = (staffId, day) => !['leave', 'required'].includes(getRecord(staffId, day).type);
 
 const queueSave = () => {
   clearTimeout(saveTimer);
@@ -118,9 +143,9 @@ const renderHeader = () => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     const weekend = [0, 6].includes(date.getDay());
     const holiday = getHolidayName(day);
-    return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}</small></th>`;
+    return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}</small></th>`;
   }).join('');
-  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col name-col">姓名</th>${dayHeaders}</tr>`;
+  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col quota-col">可休</th><th class="sticky-col name-col">姓名</th>${dayHeaders}</tr>`;
 };
 
 const renderBody = () => {
@@ -132,30 +157,25 @@ const renderBody = () => {
     const cells = Array.from({ length: totalDays }, (_, index) => renderDayCell(staff, index + 1)).join('');
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
       <td class="sticky-col shift-col">
-        <select class="leave-shift-select" data-action="shift" aria-label="${escapeHtml(staff.name)} 班別">
-          <option value="早班" ${getShift(staff) === '早班' ? 'selected' : ''}>早班</option>
-          <option value="晚班" ${getShift(staff) === '晚班' ? 'selected' : ''}>晚班</option>
+        <select class="leave-shift-select" data-action="shift" aria-label="${escapeHtml(staff.name)} 班別"${editableAttribute()}>
+          <option value="早" ${getShift(staff) === '早' ? 'selected' : ''}>早</option>
+          <option value="晚" ${getShift(staff) === '晚' ? 'selected' : ''}>晚</option>
         </select>
       </td>
+      <td class="sticky-col quota-col"><input class="leave-quota-input" data-action="quota" type="number" min="0" max="31" step="1" value="${quota}" aria-label="當月全員可休天數"${editableAttribute()}></td>
       <th class="sticky-col name-col" scope="row">
         <span>${escapeHtml(staff.name || staff.code || '未命名')}</span>
         <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}/${quota}</small>
       </th>${cells}</tr>`;
   }).join('');
 
-  const workforceCells = Array.from({ length: totalDays }, (_, index) => {
-    const day = index + 1;
-    const count = staffList.filter((staff) => isWorking(staff.id, day)).length;
-    return `<td class="summary-cell">${count}</td>`;
-  }).join('');
   const scheduleCells = Array.from({ length: totalDays }, (_, index) => {
     const titles = scheduleByDay[dateKey(currentMonth, index + 1)] || [];
     return `<td class="schedule-cell" title="${escapeHtml(titles.join('、'))}">${titles.map(escapeHtml).join('<br>') || '—'}</td>`;
   }).join('');
 
   leaveTableBody.innerHTML = `${rows}
-    <tr class="summary-row"><td class="sticky-col shift-col">統計</td><th class="sticky-col name-col" scope="row">上班人力</th>${workforceCells}</tr>
-    <tr class="schedule-row"><td class="sticky-col shift-col">排程</td><th class="sticky-col name-col" scope="row">排程</th>${scheduleCells}</tr>`;
+    <tr class="schedule-row"><td class="sticky-col shift-col">排程</td><td class="sticky-col quota-col">—</td><th class="sticky-col name-col" scope="row">排程</th>${scheduleCells}</tr>`;
 };
 
 const renderDayCell = (staff, day) => {
@@ -166,7 +186,7 @@ const renderDayCell = (staff, day) => {
   const marker = record.type === 'required' ? '<span class="leave-marker is-required">▲</span>' : record.type === 'leave' ? '<span class="leave-marker">▲</span>' : '';
   const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : '🎰').join('');
   return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
-    <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(staff.name)} ${day} 號休假狀態">${marker}<span class="special-icons">${specials}</span></button>
+    <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(staff.name)} ${day} 號休假狀態"${editableAttribute()}>${marker}<span class="special-icons">${specials}</span></button>
   </td>`;
 };
 
@@ -183,7 +203,6 @@ const subscribeMonth = () => {
   setStatus('載入休假表資料中...', 'info');
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
     leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, quota: 8, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, quota: 8 };
-    if (globalQuotaInput) globalQuotaInput.value = getGlobalQuota();
     staffList = sortStaffForLeave(staffList);
     render();
     setStatus('', 'success');
@@ -257,6 +276,7 @@ leaveTableBody?.addEventListener('click', (event) => {
   if (!button) return;
   const cell = button.closest('.leave-day');
   if (!cell) return;
+  if (!canEditLeave) return;
   if (activeSpecialMode) {
     toggleSpecial(cell.dataset.staffId, cell.dataset.day, activeSpecialMode);
     return;
@@ -264,10 +284,20 @@ leaveTableBody?.addEventListener('click', (event) => {
   if (button.dataset.action === 'toggle-leave') toggleLeave(cell.dataset.staffId, cell.dataset.day);
 });
 
+const handleQuotaInput = (event) => {
+  const target = event.target;
+  if (!canEditLeave || target.dataset.action !== 'quota') return;
+  updateGlobalQuota(target.value);
+};
+
+leaveTableBody?.addEventListener('input', handleQuotaInput);
+
 leaveTableBody?.addEventListener('change', (event) => {
   const target = event.target;
   const row = target.closest('tr[data-staff-id]');
   if (!row) return;
+  if (!canEditLeave) return;
+  if (target.dataset.action === 'quota') return;
   if (target.dataset.action === 'shift') {
     const staff = staffList.find((item) => item.id === row.dataset.staffId);
     if (staff) staff.shift = target.value;
@@ -287,17 +317,20 @@ leaveTableBody?.addEventListener('change', (event) => {
 prevMonthButton?.addEventListener('click', () => changeMonth(-1));
 nextMonthButton?.addEventListener('click', () => changeMonth(1));
 todayMonthButton?.addEventListener('click', () => { currentMonth = new Date(); currentMonth.setDate(1); setSpecialMode(null); subscribeMonth(); });
-specialModeButtons.forEach((button) => button.addEventListener('click', () => setSpecialMode(button.dataset.special)));
+specialModeButtons.forEach((button) => {
+  button.disabled = !canEditLeave;
+  button.addEventListener('click', () => { if (canEditLeave) setSpecialMode(button.dataset.special); });
+});
 
-const updateGlobalQuota = () => {
-  leaveData.quota = Number(globalQuotaInput.value || 0);
+const updateGlobalQuota = (value) => {
+  if (!canEditLeave) return;
+  leaveData.quota = Number(value || 0);
   const exceededStaff = staffList.find((staff) => leaveCount(staff.id) > getQuota());
   if (exceededStaff) alert('已休天數超過當月全員可休天數！');
   render();
   queueSave();
 };
 
-globalQuotaInput?.addEventListener('input', updateGlobalQuota);
 if (!leaveDb) {
   setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
 } else {
@@ -316,3 +349,25 @@ window.addEventListener('beforeunload', () => {
   unsubscribeLeave?.();
   unsubscribeSchedule?.();
 });
+
+const syncLeavePermission = async () => {
+  if (window.isOmniplayAdmin?.()) {
+    canEditLeave = true;
+  } else {
+    const staffId = sessionStorage.getItem('omniplayStaffId');
+    const permissionsCollection = leaveDb?.collection('permissions');
+    try {
+      if (staffId && permissionsCollection) {
+        const doc = await permissionsCollection.doc(staffId).get();
+        if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
+      }
+    } catch (error) {
+      console.error('讀取休假表權限失敗：', error);
+    }
+    canEditLeave = storedLeavePermission()?.edit === true;
+  }
+  specialModeButtons.forEach((button) => { button.disabled = !canEditLeave; });
+  if (!canEditLeave) setSpecialMode(null);
+  render();
+};
+syncLeavePermission();
