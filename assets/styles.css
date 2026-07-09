@@ -373,7 +373,8 @@ button:hover { transform: translateY(-1px); }
   font-weight: 800;
 }
 
-.staff-form input {
+.staff-form input,
+.staff-form select {
   width: 100%;
   min-height: 46px;
   padding: 11px 13px;
@@ -521,7 +522,7 @@ button:hover { transform: translateY(-1px); }
   overflow: hidden;
   border: 1px solid rgba(203, 213, 225, .24);
   border-radius: 24px;
-  background: linear-gradient(145deg, #020617 0%, var(--sidebar) 58%, #1e293b 100%);
+  background: linear-gradient(145deg, #1e293b 0%, #263449 58%, #334155 100%);
   box-shadow: var(--shadow);
   color: white;
 }
@@ -552,7 +553,7 @@ button:hover { transform: translateY(-1px); }
   gap: 16px;
   padding: 12px 24px;
   border-bottom: 1px solid rgba(255,255,255,.08);
-  color: var(--sidebar-text);
+  color: #e2e8f0;
 }
 
 .leave-meta p { margin: 0; }
@@ -579,7 +580,7 @@ button:hover { transform: translateY(-1px); }
   padding: 6px;
   border-right: 1px solid rgba(255,255,255,.08);
   border-bottom: 1px solid rgba(255,255,255,.08);
-  background: rgba(15, 23, 42, .94);
+  background: rgba(51, 65, 85, .96);
   text-align: center;
   vertical-align: middle;
 }
@@ -588,15 +589,15 @@ button:hover { transform: translateY(-1px); }
   position: sticky;
   top: 0;
   z-index: 5;
-  color: #e2e8f0;
-  background: #1e293b;
+  color: #f8fafc;
+  background: #334155;
   font-size: 13px;
 }
 
 .leave-table thead small,
 .quota-count {
   display: block;
-  color: #94a3b8;
+  color: #cbd5e1;
   font-size: 11px;
   line-height: 1.25;
 }
@@ -608,17 +609,17 @@ button:hover { transform: translateY(-1px); }
 .leave-table .sticky-col {
   position: sticky;
   z-index: 4;
-  background: #111827;
+  background: #293548;
   box-shadow: 1px 0 0 rgba(255,255,255,.08);
 }
 
-.leave-table thead .sticky-col { z-index: 7; background: #0f172a; }
+.leave-table thead .sticky-col { z-index: 7; background: #334155; }
 .leave-table tbody th.name-col { text-align: left; }
 
 .leave-day.is-weekend,
-.day-col.is-weekend { background: rgba(250, 204, 21, .16); }
+.day-col.is-weekend { background: rgba(253, 224, 71, .24); }
 .leave-day.is-holiday,
-.day-col.is-holiday { background: rgba(250, 204, 21, .32); }
+.day-col.is-holiday { background: rgba(253, 224, 71, .42); }
 
 .leave-cell-button {
   width: 100%;
@@ -627,12 +628,13 @@ button:hover { transform: translateY(-1px); }
   place-items: center;
   gap: 1px;
   padding: 2px;
-  color: white;
-  background: transparent;
+  color: #f8fafc;
+  background: rgba(255,255,255,.03);
   border-radius: 10px;
 }
 
-.leave-cell-button:hover { background: rgba(37, 99, 235, .2); }
+.leave-cell-button:hover,
+.leave-table.is-special-mode .leave-cell-button:hover { background: rgba(59, 130, 246, .32); }
 
 .leave-marker {
   color: #020617;
@@ -644,14 +646,10 @@ button:hover { transform: translateY(-1px); }
 .leave-marker.is-required { color: #ef4444; text-shadow: none; }
 .special-icons { min-height: 18px; font-size: 15px; line-height: 1; }
 
-.special-button {
-  width: 24px;
-  height: 20px;
-  padding: 0;
-  border-radius: 999px;
-  color: #bfdbfe;
-  background: rgba(37, 99, 235, .22);
-  font-size: 12px;
+.special-mode-button.is-active {
+  color: #0f172a;
+  background: #facc15;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, .24);
 }
 
 .leave-shift-select,
@@ -661,7 +659,7 @@ button:hover { transform: translateY(-1px); }
   border: 1px solid rgba(203, 213, 225, .2);
   border-radius: 10px;
   color: white;
-  background: rgba(30, 41, 59, .95);
+  background: rgba(71, 85, 105, .98);
   font: inherit;
   font-size: 12px;
   font-weight: 800;
@@ -673,7 +671,7 @@ button:hover { transform: translateY(-1px); }
   align-items: center;
   gap: 4px;
   margin-top: 4px;
-  color: #94a3b8;
+  color: #cbd5e1;
   font-size: 11px;
 }
 
@@ -690,9 +688,9 @@ tr.is-over-quota .name-col { color: #fca5a5; }
 }
 
 .summary-row td,
-.summary-row th { bottom: 52px; background: #172554; }
+.summary-row th { bottom: 52px; background: #1d4ed8; }
 .schedule-row td,
-.schedule-row th { bottom: 0; background: #0f172a; }
+.schedule-row th { bottom: 0; background: #334155; }
 .summary-row .sticky-col,
 .schedule-row .sticky-col { z-index: 6; }
 .summary-cell { color: #bbf7d0; font-size: 18px; }
