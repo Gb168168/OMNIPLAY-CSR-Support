@@ -40,6 +40,7 @@ const PAGE_KEYS = {
   'handover.html': 'handover',
   'report.html': 'report',
   'tracking.html': 'tracking',
+  'alert.html': 'alert',
   'meeting.html': 'meeting',
   'knowledge.html': 'knowledge',
   'ai-database.html': 'ai_database'
