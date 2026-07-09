@@ -21,6 +21,7 @@
             <li><a class="is-active" href="../service/staff.html">人員管理</a></li>
             <li><a class="" href="../service/leave.html">休假表</a></li>
             <li><a class="" href="../service/schedule.html">排程表</a></li>
+            <li><a class="" href="../service/kpi.html">KPI</a></li>
           </ul>
         </section>
         <section class="menu-section">
@@ -62,7 +63,7 @@
             <h2>人員列表</h2>
             <p>管理客服人員的編號、登入帳號與密碼。</p>
           </div>
-          <button class="primary-button" id="addStaffButton" type="button">＋ 新增人員</button>
+          <div class="panel-actions"><button class="secondary-button" id="permissionManageButton" type="button" hidden>⚙️ 權限管理</button><button class="primary-button" id="addStaffButton" type="button">＋ 新增人員</button></div>
         </div>
 
         <div class="table-wrap">
@@ -123,6 +124,19 @@
               <button class="primary-button" id="saveStaffButton" type="submit">儲存人員</button>
             </div>
           </form>
+        </section>
+      </div>
+          <div class="modal-backdrop" id="permissionModal" aria-hidden="true">
+        <section class="modal-card wide-modal" role="dialog" aria-modal="true" aria-labelledby="permissionModalTitle">
+          <div class="modal-heading">
+            <h2 id="permissionModalTitle">權限管理</h2>
+            <button class="icon-button" id="closePermissionModal" type="button" aria-label="關閉權限管理">✕</button>
+          </div>
+          <div class="permission-manager" id="permissionManager"></div>
+          <div class="form-actions">
+            <button class="ghost-button" id="cancelPermissionButton" type="button">取消</button>
+            <button class="primary-button" id="savePermissionButton" type="button">儲存權限</button>
+          </div>
         </section>
       </div>
     </main>
