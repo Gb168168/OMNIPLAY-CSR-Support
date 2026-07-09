@@ -952,3 +952,36 @@ tr.is-over-quota .name-col { color: #fca5a5; }
   .calendar-day { min-width: 96px; }
   .calendar-day { min-height: 118px; }
 }
+
+.ragic-card {
+  border: 1px solid rgba(148, 163, 184, .24);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #101827, #172033);
+  box-shadow: var(--shadow);
+  color: #e2e8f0;
+  overflow: hidden;
+}
+.ragic-toolbar, .ragic-form-toolbar, .ragic-subtable-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px; }
+.ragic-toolbar h2, .ragic-form-toolbar h2, .ragic-subtable h3 { margin: 0; color: #f8fafc; }
+.ragic-toolbar p { margin: 4px 0 0; color: #94a3b8; }
+.ragic-table-wrap { overflow-x: auto; padding: 0 18px 18px; }
+.ragic-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+.ragic-table th { min-width: 150px; padding: 0 8px 8px; text-align: left; vertical-align: bottom; }
+.ragic-table td { padding: 14px 12px; border-top: 1px solid rgba(148,163,184,.18); border-bottom: 1px solid rgba(148,163,184,.18); background: rgba(15,23,42,.72); color: #dbeafe; }
+.ragic-table tr { cursor: pointer; }
+.ragic-table tr:hover td { background: rgba(37, 99, 235, .22); }
+.sort-btn { display: block; margin-bottom: 8px; padding: 0; color: #bfdbfe; background: transparent; }
+.ragic-card input, .ragic-card textarea, .ragic-card select { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid rgba(148,163,184,.28); border-radius: 12px; background: #0f172a; color: #e2e8f0; }
+.ragic-card textarea { resize: vertical; }
+.primary, .secondary, .ghost { padding: 11px 16px; color: white; background: var(--primary); }
+.secondary { background: #334155; }
+.ghost { background: transparent; border: 1px solid rgba(148,163,184,.35); }
+.danger { color: #fecaca; border-color: rgba(248,113,113,.45); }
+.ragic-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; padding: 18px; }
+.ragic-field span { display: block; margin-bottom: 8px; color: #bfdbfe; font-weight: 800; }
+.ragic-field-textarea { grid-column: 1 / -1; }
+.ragic-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 18px; border-top: 1px solid rgba(148,163,184,.18); }
+.ragic-file-preview { display: inline-block; margin-top: 8px; color: #93c5fd; }
+.ragic-subtable { margin: 0 18px 18px; border: 1px solid rgba(148,163,184,.18); border-radius: 18px; }
+.ragic-subtable table { width: 100%; border-collapse: collapse; }
+.ragic-subtable th, .ragic-subtable td { padding: 10px; border-bottom: 1px solid rgba(148,163,184,.14); }
