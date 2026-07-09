@@ -13,6 +13,7 @@ const leaveTableBody = document.querySelector('#leaveTableBody');
 const leaveStatus = document.querySelector('#leaveStatus');
 const leaveLegend = document.querySelector('#leaveLegend');
 const specialModeButtons = document.querySelectorAll('.special-mode-button');
+const globalQuotaInput = document.querySelector('#globalLeaveQuota');
 
 const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
 const fixedTaiwanHolidays = {
@@ -37,12 +38,12 @@ const taiwanHolidayOverrides = {
 let currentMonth = new Date();
 currentMonth.setDate(1);
 let staffList = [];
-let leaveData = { records: {}, quotas: {}, shifts: {} };
+let leaveData = { records: {}, quotas: {}, shifts: {}, quota: 8 };
 let scheduleByDay = {};
 let unsubscribeStaff = null;
 let unsubscribeLeave = null;
 let unsubscribeSchedule = null;
-let activeSpecialMode = null
+let activeSpecialMode = null;
 let saveTimer = null;
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -81,7 +82,8 @@ const getHolidayName = (day) => {
 };
 
 const getRecord = (staffId, day) => leaveData.records?.[`${staffId}_${dayKey(day)}`] || { type: '', specials: [] };
-const getQuota = (staffId) => Number(leaveData.quotas?.[staffId] ?? 8);
+const getGlobalQuota = () => Number(leaveData.quota ?? 8);
+const getQuota = () => getGlobalQuota();
 const getShift = (staff) => getStaffShift(staff);
 const leaveCount = (staffId) => Object.entries(leaveData.records || {}).filter(([key, record]) => key.startsWith(`${staffId}_`) && ['leave', 'required'].includes(record?.type)).length;
 const isWorking = (staffId, day) => !['leave', 'required'].includes(getRecord(staffId, day).type);
@@ -97,6 +99,7 @@ const saveMonthData = async () => {
     await leaveCollection.doc(monthKey(currentMonth)).set({
       month: monthKey(currentMonth),
       records: leaveData.records || {},
+      quota: getGlobalQuota(),
       quotas: leaveData.quotas || {},
       shifts: leaveData.shifts || {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -117,14 +120,14 @@ const renderHeader = () => {
     const holiday = getHolidayName(day);
     return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}</small></th>`;
   }).join('');
-  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col name-col">姓名 / 可休</th>${dayHeaders}</tr>`;
+  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col name-col">姓名</th>${dayHeaders}</tr>`;
 };
 
 const renderBody = () => {
   const totalDays = daysInMonth(currentMonth);
   const rows = staffList.map((staff) => {
     const used = leaveCount(staff.id);
-    const quota = getQuota(staff.id);
+    const quota = getQuota();
     const overQuota = used > quota;
     const cells = Array.from({ length: totalDays }, (_, index) => renderDayCell(staff, index + 1)).join('');
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
@@ -136,8 +139,7 @@ const renderBody = () => {
       </td>
       <th class="sticky-col name-col" scope="row">
         <span>${escapeHtml(staff.name || staff.code || '未命名')}</span>
-        <label class="quota-field"><span>可休</span><input type="number" min="0" max="31" value="${quota}" data-action="quota" aria-label="${escapeHtml(staff.name)} 當月可排休天數" /></label>
-        <small class="quota-count ${overQuota ? 'is-warning' : ''}">已排 ${used}/${quota}</small>
+        <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}/${quota}</small>
       </th>${cells}</tr>`;
   }).join('');
 
@@ -180,7 +182,8 @@ const subscribeMonth = () => {
   if (!leaveCollection) return;
   setStatus('載入休假表資料中...', 'info');
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
-    leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {} };
+    leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, quota: 8, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, quota: 8 };
+    if (globalQuotaInput) globalQuotaInput.value = getGlobalQuota();
     staffList = sortStaffForLeave(staffList);
     render();
     setStatus('', 'success');
@@ -221,7 +224,7 @@ const toggleLeave = (staffId, day) => {
   leaveData.records[key] = { ...record, type: nextType };
   if (!nextType && !(record.specials || []).length) delete leaveData.records[key];
   const staff = staffList.find((item) => item.id === staffId);
-  if (leaveCount(staffId) > getQuota(staffId)) alert(`${staff?.name || '此人員'} 已超過當月可排休天數！`);
+  if (leaveCount(staffId) > getQuota()) alert(`${staff?.name || '此人員'} 已超過當月可休天數！`);
   render();
   queueSave();
 };
@@ -265,10 +268,6 @@ leaveTableBody?.addEventListener('change', (event) => {
   const target = event.target;
   const row = target.closest('tr[data-staff-id]');
   if (!row) return;
-  if (target.dataset.action === 'quota') {
-    leaveData.quotas[row.dataset.staffId] = Number(target.value || 0);
-    if (leaveCount(row.dataset.staffId) > getQuota(row.dataset.staffId)) alert('已排休天數超過此人員當月可排休天數！');
-  }
   if (target.dataset.action === 'shift') {
     const staff = staffList.find((item) => item.id === row.dataset.staffId);
     if (staff) staff.shift = target.value;
@@ -290,6 +289,15 @@ nextMonthButton?.addEventListener('click', () => changeMonth(1));
 todayMonthButton?.addEventListener('click', () => { currentMonth = new Date(); currentMonth.setDate(1); setSpecialMode(null); subscribeMonth(); });
 specialModeButtons.forEach((button) => button.addEventListener('click', () => setSpecialMode(button.dataset.special)));
 
+const updateGlobalQuota = () => {
+  leaveData.quota = Number(globalQuotaInput.value || 0);
+  const exceededStaff = staffList.find((staff) => leaveCount(staff.id) > getQuota());
+  if (exceededStaff) alert('已休天數超過當月全員可休天數！');
+  render();
+  queueSave();
+};
+
+globalQuotaInput?.addEventListener('input', updateGlobalQuota);
 if (!leaveDb) {
   setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
 } else {
