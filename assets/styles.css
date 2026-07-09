@@ -594,16 +594,18 @@ button:hover { transform: translateY(-1px); }
 
 .leave-table {
   width: 100%;
-  min-width: 1180px;
+  min-width: max-content;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .leave-table th,
 .leave-table td {
   height: 52px;
-  padding: 6px;
+  width: auto;
+  padding: 6px 8px;
+  white-space: nowrap;
   border-right: 1px solid rgba(255,255,255,.08);
   border-bottom: 1px solid rgba(255,255,255,.08);
   background: rgba(51, 65, 85, .96);
@@ -628,9 +630,10 @@ button:hover { transform: translateY(-1px); }
   line-height: 1.25;
 }
 
-.day-col { width: calc((100vw - 520px) / 31); min-width: 34px; }
-.shift-col { width: 90px; left: 0; }
-.name-col { width: 148px; left: 90px; }
+.day-col { min-width: max-content; }
+.shift-col,
+.quota-col,
+.name-col { min-width: max-content; }
 
 .leave-table .sticky-col {
   position: sticky;
@@ -645,7 +648,7 @@ button:hover { transform: translateY(-1px); }
 .leave-day.is-weekend,
 .day-col.is-weekend { background: rgba(253, 224, 71, .24); }
 .leave-day.is-holiday,
-.day-col.is-holiday { background: rgba(253, 224, 71, .42); }
+.day-col.is-holiday { background: rgba(251, 146, 60, .38); }
 
 .leave-cell-button {
   position: relative;
@@ -693,8 +696,9 @@ button:hover { transform: translateY(-1px); }
   box-shadow: 0 0 0 3px rgba(250, 204, 21, .24);
 }
 
-.leave-shift-select {
-  width: 100%;
+.leave-shift-select,
+.leave-quota-input {
+  width: auto;
   min-height: 32px;
   border: 1px solid rgba(203, 213, 225, .2);
   border-radius: 10px;
@@ -766,10 +770,11 @@ tr.is-over-quota .name-col { color: #fca5a5; }
   .leave-toolbar .ghost-button,
   .global-quota-field { width: 100%; justify-content: center; }
   .leave-table-wrap { max-height: calc(100vh - 330px); }
-  .day-col { min-width: 58px; }
-  .shift-col { width: 76px; }
-  .name-col { width: 126px; left: 76px; }
-  .leave-table { min-width: 2050px; }
+  .day-col { min-width: max-content; }
+  .shift-col,
+  .quota-col,
+  .name-col { min-width: max-content; }
+  .leave-table { min-width: max-content; }
 }
 
 .leave-special-menu[hidden] { display: none; }
