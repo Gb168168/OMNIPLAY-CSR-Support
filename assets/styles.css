@@ -1174,26 +1174,38 @@ tr.is-over-quota .name-col { color: #fca5a5; }
 }
 
 .wide-modal {
-  max-width: min(1100px, 96vw);
+  width: min(1100px, 100%);
+  max-height: calc(100vh - 44px);
+  overflow: hidden;
 }
 
 .permission-manager {
   display: grid;
-  gap: 1rem;
-  max-height: 70vh;
-  overflow: auto;
-  padding-right: 0.25rem;
+  gap: 0.75rem;
+}
+
+.permission-manager .table-wrap {
+  overflow: visible;
+}
+
+.permission-manager .staff-table {
+  min-width: 0;
+}
+
+.permission-manager .staff-table th,
+.permission-manager .staff-table td {
+  padding: 8px 10px;
 }
 
 .permission-staff {
   border: 1px solid rgba(148, 163, 184, .24);
   border-radius: 16px;
-  padding: 1rem;
+  padding: 0.75rem;
   background: var(--dark-panel-soft);
 }
 
 .permission-staff h3 {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.5rem;
 }
 
 .permission-check {
