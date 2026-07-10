@@ -2,7 +2,7 @@ const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', s
 
 const FIELD_TYPES = [
   { value: 'text', label: '文字' }, { value: 'textarea', label: '多行文字' }, { value: 'number', label: '數字' },
-  { value: 'date', label: '日期' }, { value: 'select', label: '下拉選單' }, { value: 'multiselect', label: '多選' },
+  { value: 'date', label: '日期' }, { value: 'time', label: '時間' }, { value: 'select', label: '下拉選單' }, { value: 'multiselect', label: '多選' },
   { value: 'file', label: '圖片上傳' }, { value: 'person', label: '人員選擇' }, { value: 'subtable', label: '子表格' }
 ];
 
@@ -117,11 +117,22 @@ const initRagicPage = async (config) => {
     button.type = 'button';
     button.textContent = '⚙️ 設計表格';
     if (!button.parentElement) topbarActions.insertBefore(button, userPill || null);
-    } else {
-      designButton?.remove();
+  } else {
+    designButton?.remove();
   }
+  if (!document.querySelector('#ragicDesignerModal')) {
   document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-body"></div><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');
-  document.querySelector('#designTableButton')?.addEventListener('click', openDesigner); document.querySelector('#closeDesignerButton').addEventListener('click', closeDesigner); document.querySelector('#addFieldButton').addEventListener('click', () => document.querySelector('.designer-body').appendChild(fieldDesigner({ label: '新欄位', type: 'text' }))); document.querySelector('#saveSchemaButton').addEventListener('click', async () => { RAGIC_STATE.schema = { fields: readDesigner(document.querySelector('.designer-body')), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; await schemaDoc.set(RAGIC_STATE.schema, { merge: true }); closeDesigner(); renderHeader(); applyFilters(); });
+  }
+  document.querySelector('#designTableButton')?.addEventListener('click', openDesigner);
+  document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);
+  document.querySelector('#addFieldButton')?.addEventListener('click', () => document.querySelector('.designer-body').appendChild(fieldDesigner({ label: '新欄位', type: 'text' })));
+  document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
+    RAGIC_STATE.schema = { fields: readDesigner(document.querySelector('.designer-body')), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (schemaDoc) await schemaDoc.set(RAGIC_STATE.schema, { merge: true });
+    closeDesigner();
+    renderHeader();
+    applyFilters();
+  });
   document.querySelector('#newRecordButton').hidden = !canUse('edit'); document.querySelector('button[form="ragicForm"]').hidden = !canUse('edit'); document.querySelector('#newRecordButton').addEventListener('click', () => renderForm()); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; });
   document.querySelector('#deleteButton').hidden = !canUse('delete'); document.querySelector('#deleteButton').addEventListener('click', async () => { if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
   document.querySelector('#ragicForm').addEventListener('submit', async (event) => { event.preventDefault(); if (!canUse('edit')) return alert('您沒有編輯權限'); const data = await getFormData(); data.updatedAt = firebase.firestore.FieldValue.serverTimestamp(); if (RAGIC_STATE.currentId) await collection.doc(RAGIC_STATE.currentId).set(data, { merge: true }); else await collection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); document.querySelector('#backToListButton').click(); });
