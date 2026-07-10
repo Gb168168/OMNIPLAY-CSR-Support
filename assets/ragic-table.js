@@ -34,7 +34,7 @@ const createControl = (field, value = '', subfield = false) => {
   input.name = subfield ? '' : field.key; input.required = Boolean(field.required); input.placeholder = field.type === 'person' ? '輸入或選擇人員' : (field.placeholder || '');
   if (subfield) input.dataset.subfield = field.key;
   if (field.type === 'multiselect') { const selected = Array.isArray(value) ? value : String(value || '').split(',').map((item) => item.trim()); [...input.options].forEach((option) => { option.selected = selected.includes(option.value); }); }
-  else if (field.type !== 'file') input.value = value || field.defaultValue || (field.type === 'date' && field.defaultToday ? today() : '');
+  else if (field.type !== 'file') input.value = value || field.defaultValue || (field.type === 'date' && !subfield ? today() : '');
   return input;
 };
 
@@ -45,7 +45,15 @@ const createField = (field, value = '') => {
   return wrap;
 };
 
-const fileToDataUrl = (file) => new Promise((resolve, reject) => { if (!file) return resolve(''); const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+const uploadFile = async (file, field) => {
+  if (!file) return '';
+  const storage = window.omniplayStorage;
+  if (!storage) throw new Error('Firebase Storage 尚未完成初始化，請確認已載入 firebase-storage-compat.js。');
+  const safeName = String(file.name || 'image').replace(/[^\w.-]+/g, '_');
+  const path = `ragic/${RAGIC_STATE.config.collection}/${field.key}/${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
+  const snapshot = await storage.ref(path).put(file);
+  return snapshot.ref.getDownloadURL();
+};
 
 const getFormData = async () => {
   const data = {};
@@ -58,7 +66,7 @@ const getFormData = async () => {
     }
     const input = document.querySelector(`[name="${field.key}"]`); if (!input) continue;
     if (field.type === 'multiselect') data[field.key] = [...input.selectedOptions].map((opt) => opt.value);
-    else if (field.type === 'file') data[field.key] = input.files?.[0] ? await fileToDataUrl(input.files[0]) : (RAGIC_STATE.records.find((r) => r.id === RAGIC_STATE.currentId)?.[field.key] || '');
+    else if (field.type === 'file') data[field.key] = input.files?.[0] ? await uploadFile(input.files[0], field) : (RAGIC_STATE.records.find((r) => r.id === RAGIC_STATE.currentId)?.[field.key] || '');
     else data[field.key] = input.value.trim();
   }
   return data;
@@ -135,9 +143,30 @@ const initRagicPage = async (config) => {
   });
   document.querySelector('#newRecordButton').hidden = !canUse('edit'); document.querySelector('button[form="ragicForm"]').hidden = !canUse('edit'); document.querySelector('#newRecordButton').addEventListener('click', () => renderForm()); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; });
   document.querySelector('#deleteButton').hidden = !canUse('delete'); document.querySelector('#deleteButton').addEventListener('click', async () => { if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
-  document.querySelector('#ragicForm').addEventListener('submit', async (event) => { event.preventDefault(); if (!canUse('edit')) return alert('您沒有編輯權限'); const data = await getFormData(); data.updatedAt = firebase.firestore.FieldValue.serverTimestamp(); if (RAGIC_STATE.currentId) await collection.doc(RAGIC_STATE.currentId).set(data, { merge: true }); else await collection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); document.querySelector('#backToListButton').click(); });
+  document.querySelector('#ragicForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+    if (!canUse('edit')) return alert('您沒有編輯權限');
+    const saveButton = document.querySelector('button[form="ragicForm"][type="submit"]');
+    const originalText = saveButton?.textContent || '儲存';
+    if (saveButton) { saveButton.disabled = true; saveButton.textContent = '儲存中...'; }
+    try {
+      const data = await getFormData();
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      if (RAGIC_STATE.currentId) {
+        const existingRecord = RAGIC_STATE.records.find((record) => record.id === RAGIC_STATE.currentId);
+        if (!existingRecord?.createdAt) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        await collection.doc(RAGIC_STATE.currentId).set(data, { merge: true });
+      } else await collection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      document.querySelector('#backToListButton').click();
+    } catch (error) {
+      console.error(error);
+      alert(error.message || '儲存失敗，請稍後再試。');
+    } finally {
+      if (saveButton) { saveButton.disabled = false; saveButton.textContent = originalText; }
+    }
+  });
   document.querySelector('#ragicHeaderRow').addEventListener('input', applyFilters); document.querySelector('#ragicHeaderRow').addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => { if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true }); RAGIC_STATE.schema = doc.exists ? doc.data() : makeDefaultSchema(config); renderHeader(); applyFilters(); });
-  collection.orderBy('updatedAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyFilters(); });
+  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyFilters(); });
 };
