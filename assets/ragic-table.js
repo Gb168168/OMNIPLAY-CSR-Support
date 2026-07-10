@@ -16,8 +16,12 @@ const dataCollectionName = (config) => config.dataCollection || COLLECTION_MAP[c
 const schemaCollectionName = (config) => config.schemaCollection || SCHEMA_MAP[dataCollectionName(config)] || `${dataCollectionName(config)}_schema`;
 const getFields = () => RAGIC_STATE.schema?.fields || [];
 const listColumns = () => getFields().filter((field) => field.type !== 'subtable').map((field) => field.key);
+const fieldByKey = (key) => getFields().find((field) => field.key === key);
 const optionList = (field) => Array.isArray(field.options) ? field.options : String(field.options || '').split('\n').map((item) => item.trim()).filter(Boolean);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+const MAX_IMAGE_WIDTH = 800;
+const JPEG_QUALITY = 0.6;
+const MAX_IMAGE_BYTES = 900 * 1024;
 
 const makeDefaultSchema = (config) => ({
   fields: [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])]
@@ -31,7 +35,7 @@ const createControl = (field, value = '', subfield = false) => {
     input = document.createElement('select'); if (field.type === 'multiselect') input.multiple = true;
     optionList(field).forEach((option) => { const opt = document.createElement('option'); opt.value = option; opt.textContent = option; input.appendChild(opt); });
   } else { input = document.createElement('input'); input.type = field.type === 'person' ? 'text' : (field.type || 'text'); if (field.type === 'file') input.accept = 'image/*'; }
-  input.name = subfield ? '' : field.key; input.required = Boolean(field.required); input.placeholder = field.type === 'person' ? '輸入或選擇人員' : (field.placeholder || '');
+  input.name = subfield ? '' : field.key; input.required = field.type === 'file' ? false : Boolean(field.required); input.placeholder = field.type === 'person' ? '輸入或選擇人員' : (field.placeholder || '');
   if (subfield) input.dataset.subfield = field.key;
   if (field.type === 'multiselect') { const selected = Array.isArray(value) ? value : String(value || '').split(',').map((item) => item.trim()); [...input.options].forEach((option) => { option.selected = selected.includes(option.value); }); }
   else if (field.type !== 'file') input.value = value || field.defaultValue || (field.type === 'date' && !subfield ? today() : '');
@@ -41,18 +45,56 @@ const createControl = (field, value = '', subfield = false) => {
 const createField = (field, value = '') => {
   const wrap = document.createElement('label'); wrap.className = `ragic-field ragic-field-${field.type || 'text'}`; wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   wrap.appendChild(createControl(field, value));
-  if (field.type === 'file' && value) { const preview = document.createElement('a'); preview.href = value; preview.target = '_blank'; preview.textContent = '查看已上傳圖片'; preview.className = 'ragic-file-preview'; wrap.appendChild(preview); }
+  if (field.type === 'file' && value) {
+    const preview = document.createElement('button');
+    preview.type = 'button';
+    preview.className = 'ragic-file-preview';
+    preview.innerHTML = `<img src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}預覽"><span>點擊放大檢視</span>`;
+    preview.addEventListener('click', () => openImagePreview(value, field.label));
+    wrap.appendChild(preview);
+  }
   return wrap;
 };
 
-const uploadFile = async (file, field) => {
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(reader.error || new Error('圖片讀取失敗'));
+  reader.readAsDataURL(file);
+});
+
+const loadImage = (src) => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error('圖片載入失敗，請選擇有效的圖片檔案'));
+  image.src = src;
+});
+
+const canvasToJpegDataUrl = (canvas) => new Promise((resolve, reject) => {
+  canvas.toBlob((blob) => {
+    if (!blob) { reject(new Error('圖片壓縮失敗')); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve({ dataUrl: reader.result, size: new Blob([reader.result]).size });
+    reader.onerror = () => reject(reader.error || new Error('圖片壓縮失敗'));
+    reader.readAsDataURL(blob);
+  }, 'image/jpeg', JPEG_QUALITY);
+});
+
+const compressImageToBase64 = async (file) => {
   if (!file) return '';
-  const storage = window.omniplayStorage;
-  if (!storage) throw new Error('Firebase Storage 尚未完成初始化，請確認已載入 firebase-storage-compat.js。');
-  const safeName = String(file.name || 'image').replace(/[^\w.-]+/g, '_');
-  const path = `ragic/${RAGIC_STATE.config.collection}/${field.key}/${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
-  const snapshot = await storage.ref(path).put(file);
-  return snapshot.ref.getDownloadURL();
+  if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
+  const image = await loadImage(await readFileAsDataUrl(file));
+  const image = await loadImage(await readFileAsDataUrl(file));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(image.width * scale);
+  canvas.height = Math.round(image.height * scale);
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const { dataUrl, size } = await canvasToJpegDataUrl(canvas);
+  if (size > MAX_IMAGE_BYTES) throw new Error('圖片太大，請選擇較小的圖片');
+  return dataUrl;
 };
 
 const getFormData = async () => {
@@ -66,6 +108,7 @@ const getFormData = async () => {
     }
     const input = document.querySelector(`[name="${field.key}"]`); if (!input) continue;
     if (field.type === 'multiselect') data[field.key] = [...input.selectedOptions].map((opt) => opt.value);
+    else if (field.type === 'file') data[field.key] = input.files?.[0] ? await compressImageToBase64(input.files[0]) : (RAGIC_STATE.records.find((r) => r.id === RAGIC_STATE.currentId)?.[field.key] || '');
     else if (field.type === 'file') data[field.key] = input.files?.[0] ? await uploadFile(input.files[0], field) : (RAGIC_STATE.records.find((r) => r.id === RAGIC_STATE.currentId)?.[field.key] || '');
     else data[field.key] = input.value.trim();
   }
@@ -86,8 +129,25 @@ const renderForm = (record = {}) => {
   getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3>${field.label}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><thead><tr>${(field.fields || []).map((f) => `<th>${f.label}</th>`).join('')}<th>操作</th></tr></thead><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => body.appendChild(renderSubtableRow(field))); form.appendChild(section); });
 };
 
-const canUse = (action) => window.getPagePermission ? Boolean(window.getPagePermission()[action]) : true;
-const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = 0; tr.innerHTML = listColumns().map((key) => `<td>${valueToText(record[key])}</td>`).join(''); tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
+const renderCell = (record, key) => {
+  const field = fieldByKey(key);
+  const value = record[key];
+  if (field?.type === 'file') return value ? `<img class="ragic-thumbnail" src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}縮圖">` : '';
+  return escapeHtml(valueToText(value));
+};
+const openImagePreview = (src, label = '圖片') => {
+  const modal = document.querySelector('#ragicImageModal');
+  modal.querySelector('h2').textContent = label;
+  modal.querySelector('img').src = src;
+  modal.hidden = false;
+};
+const closeImagePreview = () => {
+  const modal = document.querySelector('#ragicImageModal');
+  if (!modal) return;
+  modal.hidden = true;
+  modal.querySelector('img').removeAttribute('src');
+};
+const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = 0; tr.innerHTML = listColumns().map((key) => `<td>${renderCell(record, key)}</td>`).join(''); tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
 const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = RAGIC_STATE.records.filter((record) => cols.every((key) => { const filter = document.querySelector(`[data-filter="${key}"]`)?.value.toLowerCase() || ''; return !filter || valueToText(record[key]).toLowerCase().includes(filter); })); if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1)); renderTable(); };
 const renderHeader = () => { document.querySelector('#ragicHeaderRow').innerHTML = listColumns().map((key) => `<th><button class="sort-btn" type="button" data-sort="${key}">${getFields().find((f) => f.key === key)?.label || key} ⇅</button><input data-filter="${key}" placeholder="篩選" /></th>`).join(''); };
 
@@ -131,8 +191,13 @@ const initRagicPage = async (config) => {
   if (!document.querySelector('#ragicDesignerModal')) {
   document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-body"></div><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');
   }
+  if (!document.querySelector('#ragicImageModal')) {
+    document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><img alt="放大圖片預覽"></div></div>');
+  }
   document.querySelector('#designTableButton')?.addEventListener('click', openDesigner);
   document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);
+  document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
+  document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
   document.querySelector('#addFieldButton')?.addEventListener('click', () => document.querySelector('.designer-body').appendChild(fieldDesigner({ label: '新欄位', type: 'text' })));
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
     RAGIC_STATE.schema = { fields: readDesigner(document.querySelector('.designer-body')), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
