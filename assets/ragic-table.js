@@ -106,10 +106,16 @@ const ensureTopbarActions = () => {
 const initRagicPage = async (config) => {
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
-  ensureTopbarActions();
+  const topbarActions = ensureTopbarActions();
   const newRecordButton = document.querySelector('#newRecordButton');
-  if (canUse('design') && newRecordButton && !document.querySelector('#designTableButton')) {
-    newRecordButton.insertAdjacentHTML('beforebegin', '<button class="secondary" id="designTableButton" type="button">⚙️ 設計表格</button>');
+  if (canUse('design') && topbarActions && !document.querySelector('#designTableButton')) {
+    const userPill = topbarActions.querySelector('.user-pill');
+    const designButton = document.createElement('button');
+    designButton.className = 'secondary';
+    designButton.id = 'designTableButton';
+    designButton.type = 'button';
+    designButton.textContent = '⚙️ 設計表格';
+    topbarActions.insertBefore(designButton, userPill || null);
   }
   document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-body"></div><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');
   document.querySelector('#designTableButton')?.addEventListener('click', openDesigner); document.querySelector('#closeDesignerButton').addEventListener('click', closeDesigner); document.querySelector('#addFieldButton').addEventListener('click', () => document.querySelector('.designer-body').appendChild(fieldDesigner({ label: '新欄位', type: 'text' }))); document.querySelector('#saveSchemaButton').addEventListener('click', async () => { RAGIC_STATE.schema = { fields: readDesigner(document.querySelector('.designer-body')), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; await schemaDoc.set(RAGIC_STATE.schema, { merge: true }); closeDesigner(); renderHeader(); applyFilters(); });
