@@ -2,7 +2,6 @@ const firebaseConfig = {
   apiKey: "AIzaSyB5GdlMKz809ITGf7fMpDsYPVFnDAdnh-0",
   authDomain: "omniplay-csr-support.firebaseapp.com",
   projectId: "omniplay-csr-support",
-  storageBucket: "omniplay-csr-support.firebasestorage.app",
   messagingSenderId: "248758412651",
   appId: "1:248758412651:web:d417fb1956442170bc182e",
   measurementId: "G-RSCV4ZGTQH"
@@ -18,7 +17,4 @@ if (window.firebase?.analytics?.isSupported) {
   });
 }
 
-const storage = window.firebase?.storage ? window.firebase.storage() : null;
-
 window.omniplayDb = window.firebase?.firestore ? window.firebase.firestore() : null;
-window.omniplayStorage = storage;
