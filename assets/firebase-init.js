@@ -18,4 +18,7 @@ if (window.firebase?.analytics?.isSupported) {
   });
 }
 
+const storage = window.firebase?.storage ? window.firebase.storage() : null;
+
 window.omniplayDb = window.firebase?.firestore ? window.firebase.firestore() : null;
+window.omniplayStorage = storage;
