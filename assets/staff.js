@@ -267,11 +267,16 @@ const renderPermissionManager = async (staffId = null) => {
   const manageableStaff = staffCache.filter((staff) => !isProtectedOmniplay(staff) && (!staffId || staff.id === staffId));
   permissionManager.innerHTML = manageableStaff.map((staff) => {
     const pages = permissionCache[staff.id]?.pages || {};
-    const rows = pageDefinitions.map(([key, label]) => {
+    const midpoint = Math.ceil(pageDefinitions.length / 2);
+    const pageGroups = [pageDefinitions.slice(0, midpoint), pageDefinitions.slice(midpoint)];
+    const permissionTables = pageGroups.map((group) => {
+    const rows = group.map(([key, label]) => {
       const permission = pages[key] || { view: true, edit: true, delete: true, design: true };
       return `<tr><td>${escapeHtml(label)}</td><td>${permissionCheckbox(staff.id, key, 'view', permission.view)}</td><td>${permissionCheckbox(staff.id, key, 'edit', permission.edit)}</td><td>${permissionCheckbox(staff.id, key, 'delete', permission.delete)}</td><td>${permissionCheckbox(staff.id, key, 'design', permission.design)}</td></tr>`;
     }).join('');
-    return `<section class="permission-staff"><h3>${escapeHtml(staff.name)}（${escapeHtml(staff.account)}）</h3><div class="table-wrap"><table class="staff-table"><thead><tr><th>頁面</th><th>瀏覽</th><th>編輯</th><th>刪除</th><th>設計表格</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+    return `<div class="table-wrap"><table class="staff-table"><thead><tr><th>頁面</th><th>瀏覽</th><th>編輯</th><th>刪除</th><th>設計表格</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+  return `<section class="permission-staff"><h3>${escapeHtml(staff.name)}（${escapeHtml(staff.account)}）</h3><div class="permission-table-grid">${permissionTables}</div></section>`;
   }).join('') || '<p class="empty-state">目前沒有可設定權限的人員。</p>';
 };
 
