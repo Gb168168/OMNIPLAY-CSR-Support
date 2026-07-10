@@ -6,6 +6,7 @@ const loginForm = document.querySelector('#loginForm');
 const loginMessage = document.querySelector('#loginMessage');
 const setupForm = document.querySelector('#setupForm');
 const setupMessage = document.querySelector('#setupMessage');
+const englishAlphanumericInputs = document.querySelectorAll('#loginAccount, #loginPassword, #setupCode, #setupAccount, #setupPassword');
 
 const SESSION_KEYS = {
   id: 'omniplayStaffId',
@@ -96,6 +97,21 @@ const showSetupMessage = (message, type = '') => {
   setupMessage.hidden = !message;
   setupMessage.dataset.type = type;
 };
+
+const sanitizeEnglishAlphanumericInput = (input) => {
+  const sanitizedValue = input.value.replace(/[^A-Za-z0-9]/g, '');
+  if (input.value === sanitizedValue) return;
+
+  const cursorPosition = input.selectionStart || sanitizedValue.length;
+  const removedBeforeCursor = input.value.slice(0, cursorPosition).length - input.value.slice(0, cursorPosition).replace(/[^A-Za-z0-9]/g, '').length;
+  input.value = sanitizedValue;
+  input.setSelectionRange?.(Math.max(cursorPosition - removedBeforeCursor, 0), Math.max(cursorPosition - removedBeforeCursor, 0));
+};
+
+englishAlphanumericInputs.forEach((input) => {
+  input.addEventListener('input', () => sanitizeEnglishAlphanumericInput(input));
+  input.addEventListener('paste', () => requestAnimationFrame(() => sanitizeEnglishAlphanumericInput(input)));
+});
 
 const setInitialSetupVisibility = (showSetup) => {
   if (!isIndexPage || isLoggedIn()) return;
