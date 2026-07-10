@@ -89,10 +89,25 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
 const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; };
 const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
 
+const ensureTopbarActions = () => {
+  const topbar = document.querySelector('.topbar');
+  if (!topbar) return null;
+  let actions = topbar.querySelector('.topbar-actions');
+  if (!actions) {
+    actions = document.createElement('div');
+    actions.className = 'topbar-actions';
+    topbar.appendChild(actions);
+  }
+  const userPill = topbar.querySelector(':scope > .user-pill');
+  if (userPill) actions.appendChild(userPill);
+  return actions;
+};
+
 const initRagicPage = async (config) => {
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
-  if (canUse('design')) document.querySelector('.topbar').insertAdjacentHTML('beforeend', '<button class="secondary" id="designTableButton" type="button">⚙️ 設計表格</button>');
+  const topbarActions = ensureTopbarActions();
+  if (canUse('design')) topbarActions?.insertAdjacentHTML('afterbegin', '<button class="secondary" id="designTableButton" type="button">⚙️ 設計表格</button>');
   document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-body"></div><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');
   document.querySelector('#designTableButton')?.addEventListener('click', openDesigner); document.querySelector('#closeDesignerButton').addEventListener('click', closeDesigner); document.querySelector('#addFieldButton').addEventListener('click', () => document.querySelector('.designer-body').appendChild(fieldDesigner({ label: '新欄位', type: 'text' }))); document.querySelector('#saveSchemaButton').addEventListener('click', async () => { RAGIC_STATE.schema = { fields: readDesigner(document.querySelector('.designer-body')), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; await schemaDoc.set(RAGIC_STATE.schema, { merge: true }); closeDesigner(); renderHeader(); applyFilters(); });
   document.querySelector('#newRecordButton').hidden = !canUse('edit'); document.querySelector('button[form="ragicForm"]').hidden = !canUse('edit'); document.querySelector('#newRecordButton').addEventListener('click', () => renderForm()); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; });
