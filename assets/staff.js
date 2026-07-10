@@ -252,6 +252,10 @@ const isProtectedOmniplay = (staff = {}) => [staff.account, staff.code, staff.na
 const togglePermissionModal = (isOpen) => {
   permissionModal?.classList.toggle('is-open', isOpen);
   permissionModal?.setAttribute('aria-hidden', String(!isOpen));
+  if (isOpen) {
+    permissionModal?.scrollTo({ top: 0, left: 0 });
+    permissionManager?.scrollTo({ top: 0, left: 0 });
+  }
 };
 
 const permissionCheckbox = (staffId, page, action, checked) => `<label class="permission-check"><input type="checkbox" data-staff="${staffId}" data-page="${page}" data-action="${action}" ${checked ? 'checked' : ''}> ${action === 'view' ? '可看' : action === 'edit' ? '可編輯' : action === 'delete' ? '可刪除' : '可設計'}</label>`;
@@ -295,11 +299,12 @@ const savePermissions = async () => {
 };
 
 const openPermissionManager = async (staffId) => {
-if (!window.isOmniplayAdmin?.()) return;
-permissionStaffId = staffId;
+  if (!window.isOmniplayAdmin?.()) return;
+  permissionStaffId = staffId;
   await renderPermissionManager(staffId);
   togglePermissionModal(true);
 };
+closePermissionButton?.addEventListener('click', () => togglePermissionModal(false));
 cancelPermissionButton?.addEventListener('click', () => togglePermissionModal(false));
 savePermissionButton?.addEventListener('click', savePermissions);
 permissionModal?.addEventListener('click', (event) => { if (event.target === permissionModal) togglePermissionModal(false); });
