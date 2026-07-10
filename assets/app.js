@@ -8,6 +8,24 @@ const setupForm = document.querySelector('#setupForm');
 const setupMessage = document.querySelector('#setupMessage');
 const englishAlphanumericInputs = document.querySelectorAll('#loginAccount, #loginPassword, #setupCode, #setupAccount, #setupPassword');
 
+
+const THEME_STORAGE_KEY = 'omniplayTheme';
+const getStoredTheme = () => localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
+const applyTheme = (theme) => {
+  document.documentElement.dataset.theme = theme;
+  document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+    button.textContent = theme === 'light' ? '🌙' : '☀️';
+    button.setAttribute('aria-label', theme === 'light' ? '切換為深色模式' : '切換為淺色模式');
+    button.title = theme === 'light' ? '切換為深色模式' : '切換為淺色模式';
+  });
+};
+const toggleTheme = () => {
+  const nextTheme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  applyTheme(nextTheme);
+};
+applyTheme(getStoredTheme());
+
 const SESSION_KEYS = {
   id: 'omniplayStaffId',
   code: 'omniplayStaffCode',
@@ -150,6 +168,21 @@ const setAppVisibility = () => {
   } else if (!loggedIn) {
     window.location.href = loginPath;
   }
+};
+
+
+const renderThemeToggle = () => {
+  const targets = [sidebar?.querySelector('.sidebar-header'), document.querySelector('.login-card')].filter(Boolean);
+  targets.forEach((target) => {
+    if (target.querySelector('[data-theme-toggle]')) return;
+    const button = document.createElement('button');
+    button.dataset.themeToggle = 'true';
+    button.className = 'theme-toggle';
+    button.type = 'button';
+    button.addEventListener('click', toggleTheme);
+    target.appendChild(button);
+  });
+  applyTheme(getStoredTheme());
 };
 
 const renderSidebarUser = () => {
@@ -297,6 +330,7 @@ document.addEventListener('click', (event) => {
   if (event.target.closest('#logoutButton')) logout();
 });
 
+renderThemeToggle();
 setAppVisibility();
 loadCurrentPermissions();
 renderSidebarUser();
