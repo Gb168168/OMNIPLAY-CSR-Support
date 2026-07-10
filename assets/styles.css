@@ -1046,7 +1046,9 @@ tr.is-over-quota .name-col { color: #fca5a5; }
 .ragic-field span { display: block; margin-bottom: 8px; color: #bfdbfe; font-weight: 800; }
 .ragic-field-textarea { grid-column: 1 / -1; }
 .ragic-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 18px; border-top: 1px solid rgba(148,163,184,.18); }
-.ragic-file-preview { display: inline-block; margin-top: 8px; color: #93c5fd; }
+.ragic-file-preview { display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px 10px; border: 1px solid rgba(147,197,253,.35); border-radius: 12px; color: #93c5fd; background: rgba(15,23,42,.72); cursor: zoom-in; }
+.ragic-file-preview img { width: 96px; height: 72px; object-fit: cover; border-radius: 10px; }
+.ragic-thumbnail { width: 56px; height: 42px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(148,163,184,.28); vertical-align: middle; }
 .ragic-subtable { margin: 0 18px 18px; border: 1px solid rgba(148,163,184,.18); border-radius: 18px; }
 .ragic-subtable table { width: 100%; border-collapse: collapse; }
 .ragic-subtable th, .ragic-subtable td { padding: 10px; border-bottom: 1px solid rgba(148,163,184,.14); }
@@ -1156,6 +1158,8 @@ tr.is-over-quota .name-col { color: #fca5a5; }
 .ragic-modal[hidden] { display: none; }
 .ragic-modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: rgba(2, 6, 23, .72); }
 .ragic-modal-card { width: min(980px, 100%); max-height: 88vh; overflow: auto; border: 1px solid rgba(148,163,184,.28); border-radius: 24px; background: linear-gradient(145deg, var(--dark-panel), var(--dark-panel-soft)); box-shadow: var(--shadow); color: #e2e8f0; }
+.ragic-image-modal-card { width: min(920px, 100%); padding-bottom: 18px; }
+.ragic-image-modal-card img { display: block; max-width: calc(100% - 36px); max-height: 72vh; margin: 0 auto; border-radius: 16px; object-fit: contain; }
 .designer-body { display: grid; gap: 12px; padding: 18px; }
 .designer-field { display: grid; grid-template-columns: minmax(160px, 1fr) 160px minmax(180px, 1fr) auto auto; gap: 10px; align-items: start; padding: 12px; border: 1px solid rgba(148,163,184,.2); border-radius: 16px; background: rgba(15,23,42,.64); }
 .designer-field input, .designer-field textarea, .designer-field select { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid rgba(148,163,184,.28); border-radius: 12px; background: #0f172a; color: #e2e8f0; }
