@@ -76,6 +76,7 @@ const renderStaff = (staffList) => {
           <div class="table-actions">
             ${protectedOmniplay ? '' : `<button class="secondary-button" type="button" data-action="toggle-status" data-id="${staff.id}">${staff.status === '停用' ? '啟用' : '停用'}</button>`}
             <button class="secondary-button" type="button" data-action="edit" data-id="${staff.id}">編輯</button>
+            ${protectedOmniplay || !window.isOmniplayAdmin?.() ? '' : `<button class="secondary-button" type="button" data-action="permissions" data-id="${staff.id}">⚙️ 權限管理</button>`}
             ${protectedOmniplay ? '' : `<button class="danger-button" type="button" data-action="delete" data-id="${staff.id}">刪除</button>`}
           </div>
         </td>
@@ -186,6 +187,11 @@ staffTableBody?.addEventListener('click', async (event) => {
     return;
   }
 
+  if (action === 'permissions') {
+    await openPermissionManager(id);
+    return;
+  }
+
   if (action === 'toggle-status' && staffCollection) {
     const staff = staffCache.find((item) => item.id === id);
     if (!staff || isProtectedOmniplay(staff)) return;
@@ -229,7 +235,6 @@ passwordToggle?.addEventListener('click', () => {
 loadStaff();
 
 const permissionsCollection = window.omniplayDb?.collection('permissions');
-const permissionButton = document.querySelector('#permissionManageButton');
 const permissionModal = document.querySelector('#permissionModal');
 const permissionManager = document.querySelector('#permissionManager');
 const closePermissionButton = document.querySelector('#closePermissionModal');
@@ -241,6 +246,7 @@ const pageDefinitions = [
   ['meeting', '會議紀錄'], ['knowledge', '知識庫'], ['ai_database', 'AI 資料庫']
 ];
 let permissionCache = {};
+let permissionStaffId = null;
 const isProtectedOmniplay = (staff = {}) => [staff.account, staff.code, staff.name].some((value) => String(value || '').toUpperCase() === 'OMNIPLAY');
 
 const togglePermissionModal = (isOpen) => {
@@ -250,11 +256,11 @@ const togglePermissionModal = (isOpen) => {
 
 const permissionCheckbox = (staffId, page, action, checked) => `<label class="permission-check"><input type="checkbox" data-staff="${staffId}" data-page="${page}" data-action="${action}" ${checked ? 'checked' : ''}> ${action === 'view' ? '可看' : action === 'edit' ? '可編輯' : action === 'delete' ? '可刪除' : '可設計'}</label>`;
 
-const renderPermissionManager = async () => {
+const renderPermissionManager = async (staffId = null) => {
   if (!permissionManager || !permissionsCollection) return;
   const snapshot = await permissionsCollection.get();
   permissionCache = Object.fromEntries(snapshot.docs.map((doc) => [doc.id, doc.data()]));
-  const manageableStaff = staffCache.filter((staff) => !isProtectedOmniplay(staff));
+  const manageableStaff = staffCache.filter((staff) => !isProtectedOmniplay(staff) && (!staffId || staff.id === staffId));
   permissionManager.innerHTML = manageableStaff.map((staff) => {
     const pages = permissionCache[staff.id]?.pages || {};
     const rows = pageDefinitions.map(([key, label]) => {
@@ -269,7 +275,7 @@ const savePermissions = async () => {
   if (!permissionsCollection) return alert('Firebase 尚未完成初始化，無法儲存權限。');
   savePermissionButton.disabled = true;
   try {
-    for (const staff of staffCache.filter((item) => !isProtectedOmniplay(item))) {
+    for (const staff of staffCache.filter((item) => !isProtectedOmniplay(item) && (!permissionStaffId || item.id === permissionStaffId))) {
       const pages = {};
       pageDefinitions.forEach(([key]) => {
         pages[key] = {};
@@ -288,9 +294,12 @@ const savePermissions = async () => {
   }
 };
 
-if (permissionButton) permissionButton.hidden = !window.isOmniplayAdmin?.();
-permissionButton?.addEventListener('click', async () => { await renderPermissionManager(); togglePermissionModal(true); });
-closePermissionButton?.addEventListener('click', () => togglePermissionModal(false));
+const openPermissionManager = async (staffId) => {
+if (!window.isOmniplayAdmin?.()) return;
+permissionStaffId = staffId;
+  await renderPermissionManager(staffId);
+  togglePermissionModal(true);
+};
 cancelPermissionButton?.addEventListener('click', () => togglePermissionModal(false));
 savePermissionButton?.addEventListener('click', savePermissions);
 permissionModal?.addEventListener('click', (event) => { if (event.target === permissionModal) togglePermissionModal(false); });
