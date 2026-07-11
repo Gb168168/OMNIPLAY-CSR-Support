@@ -84,9 +84,9 @@
             <div class="meeting-info-cell"><label for="meetingTime">時間</label><input id="meetingTime" type="time" required></div>
             <div class="meeting-info-cell"><label for="meetingRecorder">紀錄</label><select id="meetingRecorder" data-staff-select required></select></div>
             <div class="meeting-info-cell"><label for="meetingLocation">地點</label><input id="meetingLocation" type="text" autocomplete="off"></div>
-            <div class="meeting-info-cell"><label for="meetingMorningAttendees">早 - 出席</label><select id="meetingMorningAttendees" data-staff-select multiple size="5"></select></div>
+            <div class="meeting-info-cell"><label for="meetingMorningAttendeesButton">早 - 出席</label><div class="meeting-attendee-dropdown" data-attendee-dropdown="meetingMorningAttendees"><select id="meetingMorningAttendees" data-staff-select multiple hidden></select><button class="meeting-attendee-toggle" id="meetingMorningAttendeesButton" type="button" aria-haspopup="listbox" aria-expanded="false" data-attendee-toggle>請選擇</button><div class="meeting-attendee-menu" role="listbox" aria-multiselectable="true" data-attendee-menu hidden></div></div></div>
             <div class="meeting-info-cell"><label for="meetingSerial">編號</label><input id="meetingSerial" type="text" readonly></div>
-            <div class="meeting-info-cell"><label for="meetingEveningAttendees">晚 - 出席</label><select id="meetingEveningAttendees" data-staff-select multiple size="5"></select></div>
+            <div class="meeting-info-cell"><label for="meetingEveningAttendeesButton">晚 - 出席</label><div class="meeting-attendee-dropdown" data-attendee-dropdown="meetingEveningAttendees"><select id="meetingEveningAttendees" data-staff-select multiple hidden></select><button class="meeting-attendee-toggle" id="meetingEveningAttendeesButton" type="button" aria-haspopup="listbox" aria-expanded="false" data-attendee-toggle>請選擇</button><div class="meeting-attendee-menu" role="listbox" aria-multiselectable="true" data-attendee-menu hidden></div></div></div>
             <div class="meeting-info-cell meeting-info-note"><label for="meetingNote">備註</label><input id="meetingNote" type="text" autocomplete="off"></div>
           </section>
 
