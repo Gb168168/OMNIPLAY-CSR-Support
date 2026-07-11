@@ -1426,3 +1426,5 @@ body { background: var(--bg-gradient); }
 [data-theme="light"] .status-badge.is-enabled, [data-theme="light"] .user-pill { color: #166534; background: #DCFCE7; }
 [data-theme="light"] .status-badge.is-disabled { color: #991B1B; background: #FEE2E2; }
 [data-theme="light"] .status-badge.is-pending, [data-theme="light"] .status-badge.is-processing, [data-theme="light"] .status-badge[data-status="處理中"] { color: #9A3412; background: #FFEDD5; }
+.ragic-table tr.is-readonly { cursor: default; }
+.ragic-table tr.is-readonly:hover td { background: inherit; }
