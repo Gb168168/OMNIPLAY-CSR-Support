@@ -1,8 +1,9 @@
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', config: null, schema: null, unsubscribeRecords: null };
 
 const canUse = (action) => {
-  if (typeof getPagePermission !== 'function') return true;
-  return getPagePermission()[action] !== false;
+  if (typeof window.canUse === 'function') return window.canUse(action);
+  if (typeof getPagePermission !== 'function') return false;
+  return getPagePermission()[action] === true;
 };
 
 const FIELD_TYPES = [
@@ -185,18 +186,8 @@ const openDesigner = async () => { const modal = document.querySelector('#ragicD
 const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
 
 
-const refreshCurrentPermissions = async () => {
-  if (typeof window.loadCurrentPermissions === 'function') {
-    await window.loadCurrentPermissions();
-    return;
-  }
-  if (window.isOmniplayAdmin?.()) return;
-  const staffId = sessionStorage.getItem('omniplayStaffId');
-  const permissionsCollection = window.omniplayDb?.collection('permissions');
-  if (!staffId || !permissionsCollection) return;
-  const doc = await permissionsCollection.doc(staffId).get();
-  if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
-  else sessionStorage.removeItem('omniplayPermissions');
+const waitForPermissions = async () => {
+  if (window.permissionReady) await window.permissionReady;
 };
 
 const applyRagicPermissionUi = () => {
@@ -237,7 +228,7 @@ const ensureTopbarActions = () => {
 };
 
 const initRagicPage = async (config) => {
-  await refreshCurrentPermissions();
+  await waitForPermissions();
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
