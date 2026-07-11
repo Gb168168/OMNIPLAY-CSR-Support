@@ -18,7 +18,7 @@
       </div>
       <label>
         <span>帳號</span>
-        <input id="loginAccount" name="account" type="text" autocomplete="username" inputmode="latin" pattern="[A-Za-z0-9]*" autocapitalize="none" spellcheck="false" lang="en" required />
+        <input id="account" name="account" type="text" autocomplete="off" inputmode="latin" pattern="[A-Za-z0-9]*" autocapitalize="none" spellcheck="false" lang="en" placeholder="請輸入帳號（僅限英文及數字）" required />
       </label>
       <label>
         <span>密碼</span>
@@ -121,6 +121,23 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="assets/firebase-init.js"></script>
+  <script>
+    const accountInput = document.getElementById('account'); // 帳號欄位的 id
+
+    // 處理中文輸入法的組字過程
+    accountInput.addEventListener('compositionstart', function() {
+      this.composing = true;
+    });
+    accountInput.addEventListener('compositionend', function() {
+      this.composing = false;
+      this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+    });
+    accountInput.addEventListener('input', function() {
+      if (!this.composing) {
+        this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+      }
+    });
+  </script>
   <script src="assets/app.js"></script>
 </body>
 </html>
