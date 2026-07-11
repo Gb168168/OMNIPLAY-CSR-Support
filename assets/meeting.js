@@ -29,8 +29,12 @@ const getNextSerial = () => {
 };
 
 const staffOptions = () => meetingState.staff.map((staff) => `<option value="${escapeHtml(staffName(staff))}">${escapeHtml(staffName(staff))}</option>`).join('');
+const staffDatalistOptions = () => meetingState.staff.map((staff) => `<option value="${escapeHtml(staffName(staff))}"></option>`).join('');
 
 const populateStaffSelects = () => {
+  const list = document.querySelector('#meetingStaffOptions');
+  if (list) list.innerHTML = staffDatalistOptions();
+  
   const options = staffOptions();
   document.querySelectorAll('[data-staff-select]').forEach((select) => {
     const values = [...select.selectedOptions].map((option) => option.value);
@@ -44,36 +48,95 @@ const updateAttendeeSummary = (select) => {
   const dropdown = select.closest('[data-attendee-dropdown]');
   if (!dropdown) return;
   const selectedValues = [...select.selectedOptions].map((option) => option.value);
-  const toggle = dropdown.querySelector('[data-attendee-toggle]');
-  if (toggle) {
-    toggle.textContent = selectedValues.length ? selectedValues.join(', ') : '請選擇';
-    toggle.title = selectedValues.join(', ');
+  const display = dropdown.querySelector('.multi-select-display');
+  if (display) {
+    display.textContent = selectedValues.length ? selectedValues.join('、') : '請選擇';
+    display.title = selectedValues.join('、');
   }
 };
 
-const updateAttendeeDropdown = (select) => {
-  const dropdown = select.closest('[data-attendee-dropdown]');
-  if (!dropdown) return;
-  updateAttendeeSummary(select);
-  const menu = dropdown.querySelector('[data-attendee-menu]');
-  if (menu) {
-    menu.innerHTML = [...select.options].map((option) => `
-      <label class="meeting-attendee-option" role="option" aria-selected="${option.selected}">
-        <input type="checkbox" value="${escapeHtml(option.value)}" ${option.selected ? 'checked' : ''} ${select.disabled ? 'disabled' : ''}>
-        <span>${escapeHtml(option.textContent)}</span>
+// 多選下拉元件
+function createMultiSelect(container, options, fieldName) {
+  const select = container.querySelector(`#${fieldName}`);
+  let display = container.querySelector('.multi-select-display');
+  let dropdown = container.querySelector('.multi-select-dropdown');
+  if (!display || !dropdown || !select) return;
+
+  const selectedValues = [...select.selectedOptions].map((option) => option.value);
+  dropdown.innerHTML = options.map((option) => {
+    const value = typeof option === 'string' ? option : option.value;
+    const label = typeof option === 'string' ? option : option.label;
+    const selected = selectedValues.includes(value);
+    return `
+      <label role="option" aria-selected="${selected}">
+        <input type="checkbox" value="${escapeHtml(value)}" ${selected ? 'checked' : ''} ${select.disabled ? 'disabled' : ''}>
+        <span>${escapeHtml(label)}</span>
       </label>
-    `).join('');
-  }
+    `;
+  }).join('');
+
+  const displayClone = display.cloneNode(true);
+  const dropdownClone = dropdown.cloneNode(true);
+  display.replaceWith(displayClone);
+  dropdown.replaceWith(dropdownClone);
+  display = displayClone;
+  dropdown = dropdownClone;
+  display.textContent = selectedValues.length > 0 ? selectedValues.join('、') : '請選擇';
+
+  // 點擊 display 區域切換下拉
+  display.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (select.disabled) return;
+    // 關閉其他已開啟的下拉
+    document.querySelectorAll('.multi-select-dropdown.show').forEach(d => {
+      if (d !== dropdown) d.classList.remove('show');
+    });
+    dropdown.classList.toggle('show');
+  });
+
+  // 點頁面其他地方關閉
+  document.addEventListener('click', function() {
+    dropdown.classList.remove('show');
+  });
+
+  // dropdown 本身點擊不關閉
+  dropdown.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+
+  // checkbox 變化時更新顯示文字
+  dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', function() {
+      const option = [...select.options].find((item) => item.value === cb.value);
+      if (option) option.selected = cb.checked;
+      cb.closest('[role="option"]')?.setAttribute('aria-selected', String(cb.checked));
+      const selected = [...dropdown.querySelectorAll('input:checked')].map(c => c.value);
+      display.textContent = selected.length > 0 ? selected.join('、') : '請選擇';
+      display.title = selected.join('、');
+    });
+  });
+}
+
+const updateAttendeeDropdown = (select) => {
+  const container = select.closest('[data-attendee-dropdown]');
+  if (!container) return;
+  const options = [...select.options].map((option) => ({ value: option.value, label: option.textContent }));
+  setTimeout(() => createMultiSelect(container, options, select.id), 0);
 };
 
 const updateAttendeeDropdowns = () => {
   document.querySelectorAll('[data-attendee-dropdown] select[multiple]').forEach(updateAttendeeDropdown);
 };
 
-const setSelectValue = (select, value) => {
+const setSelectValue = (control, value) => {
+  if (!control) return;
+  if (control.matches?.('input')) {
+    control.value = Array.isArray(value) ? (value[0] || '') : (value || '');
+    return;
+  }
   const values = Array.isArray(value) ? value : [value].filter(Boolean);
-  [...select.options].forEach((option) => { option.selected = values.includes(option.value); });
-  updateAttendeeDropdown(select);
+  [...control.options].forEach((option) => { option.selected = values.includes(option.value); });
+  updateAttendeeDropdown(control);
 };
 
 const setFormEditable = () => {
@@ -238,28 +301,15 @@ document.querySelector('#meetingTabs')?.addEventListener('click', (event) => {
   const key = event.target.closest('[data-meeting-tab]')?.dataset.meetingTab;
   if (key) switchTab(key);
 });
-document.addEventListener('click', (event) => {
-  const toggle = event.target.closest('[data-attendee-toggle]');
-  document.querySelectorAll('[data-attendee-dropdown]').forEach((dropdown) => {
-    const menu = dropdown.querySelector('[data-attendee-menu]');
-    const button = dropdown.querySelector('[data-attendee-toggle]');
-    if (toggle && dropdown.contains(toggle) && dropdown.querySelector('select')?.disabled !== true) menu.hidden = !menu.hidden;
-    else if (!dropdown.contains(event.target)) menu.hidden = true;
-    button.setAttribute('aria-expanded', String(!menu.hidden));
-  });
+document.querySelector('#meetingForm')?.addEventListener('click', (event) => {
+  const clearId = event.target.closest('[data-clear-combo]')?.dataset.clearCombo;
+  if (!clearId) return;
+  const input = document.querySelector(`#${clearId}`);
+  if (input && !input.disabled) {
+    input.value = '';
+    input.focus();
+  }
 });
-
-document.querySelector('#meetingForm')?.addEventListener('change', (event) => {
-  const checkbox = event.target.closest('[data-attendee-menu] input[type="checkbox"]');
-  if (!checkbox) return;
-  const dropdown = checkbox.closest('[data-attendee-dropdown]');
-  const select = dropdown.querySelector('select');
-  const option = [...select.options].find((item) => item.value === checkbox.value);
-  if (option) option.selected = checkbox.checked;
-  checkbox.closest('[role="option"]')?.setAttribute('aria-selected', String(checkbox.checked));
-  updateAttendeeSummary(select);
-});
-
 document.querySelector('#meetingForm')?.addEventListener('click', (event) => {
   const addKey = event.target.closest('[data-add-row]')?.dataset.addRow;
   if (addKey && canEditMeeting()) {
