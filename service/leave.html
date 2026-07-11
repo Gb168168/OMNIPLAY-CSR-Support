@@ -65,13 +65,12 @@
             <strong id="leaveMonthLabel">—</strong>
             <button class="secondary-button" id="nextLeaveMonth" type="button">下個月 →</button>
             <button class="ghost-button" id="todayLeaveMonth" type="button">本月</button>
-            <button class="secondary-button special-mode-button" id="phoneSpecialMode" type="button" data-special="phone" aria-pressed="false">📱 值公務機</button>
-            <button class="secondary-button special-mode-button" id="eventSpecialMode" type="button" data-special="event" aria-pressed="false">🎰 公司活動</button>
+            <label class="global-quota-field" for="globalLeaveQuota">可休：<input id="globalLeaveQuota" data-action="quota" type="number" min="0" max="31" step="1" value="8" aria-label="當月全員可休天數" /></label>
           </div>
         </div>
 
         <div class="leave-meta">
-          <p id="leaveLegend"><span class="leave-marker">▲</span> 休假　<span class="leave-marker is-required">▲</span> 必休　📱 / 🎰 按上方按鈕後點日期格勾選</p>
+          <p id="leaveLegend" class="leave-legend"><span class="leave-marker">▲</span> 休假　<span class="leave-marker is-required">▲</span> 必休　<button class="leave-legend-button special-mode-button" id="phoneSpecialMode" type="button" data-special="phone" aria-pressed="false">📱 值公務機</button>　<button class="leave-legend-button special-mode-button" id="eventSpecialMode" type="button" data-special="event" aria-pressed="false">🎰 公司活動</button></p>
           <p class="leave-status" id="leaveStatus" data-type="info" hidden></p>
         </div>
 
