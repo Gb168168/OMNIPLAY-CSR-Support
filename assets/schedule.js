@@ -49,6 +49,44 @@ let unsubscribeSchedules = null;
 let unsubscribeLabels = null;
 let unsubscribeLeave = null;
 
+const storedSchedulePermission = () => {
+  try { return JSON.parse(sessionStorage.getItem('omniplayPermissions') || '{}')?.pages?.schedule; } catch { return null; }
+};
+let canEditSchedule = Boolean(window.isOmniplayAdmin?.());
+let canDeleteSchedule = Boolean(window.isOmniplayAdmin?.());
+
+const syncSchedulePermission = async () => {
+  canEditSchedule = false;
+  canDeleteSchedule = false;
+  if (window.isOmniplayAdmin?.()) {
+    canEditSchedule = true;
+    canDeleteSchedule = true;
+  } else {
+    try {
+      if (typeof window.loadCurrentPermissions === 'function') await window.loadCurrentPermissions();
+      else {
+        const staffId = sessionStorage.getItem(SCHEDULE_SESSION_KEYS.id);
+        const permissionsCollection = scheduleDb?.collection('permissions');
+        if (staffId && permissionsCollection) {
+          const doc = await permissionsCollection.doc(staffId).get();
+          if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
+          else sessionStorage.removeItem('omniplayPermissions');
+        }
+      }
+    } catch (error) {
+      console.error('讀取排程表權限失敗：', error);
+    }
+    const permission = storedSchedulePermission();
+    canEditSchedule = permission?.edit === true;
+    canDeleteSchedule = permission?.delete === true;
+  }
+  document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
+  document.querySelector('#saveScheduleButton')?.toggleAttribute('disabled', !canEditSchedule);
+  if (deleteButton) deleteButton.hidden = !canDeleteSchedule || !editingId;
+  formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
+};
+
+
 const setStatus = (message, type = 'info') => {
   if (!statusEl) return;
   statusEl.textContent = message;
@@ -171,7 +209,7 @@ const openModal = (dateKey, scheduleId = null) => {
   formEl.reset();
   setMessage('');
   modalTitleEl.textContent = item ? '編輯排程' : '新增排程';
-  deleteButton.hidden = !item;
+  deleteButton.hidden = !item || !canDeleteSchedule;
   colorInput.value = item?.labelColor || '#3b82f6';
   labelNameInput.value = item?.labelName || '';
   document.querySelector('#scheduleTitle').value = item?.title || '';
@@ -179,6 +217,9 @@ const openModal = (dateKey, scheduleId = null) => {
   document.querySelector('#scheduleReminderAt').value = toDatetimeLocal(item?.reminderAt ? parseDateValue(item.reminderAt) : new Date(`${dateKey}T09:00`));
   selectDefaultStaff(item);
   renderHistory(item?.history || []);
+  formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
+  document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
+  document.querySelector('#saveScheduleButton')?.toggleAttribute('disabled', !canEditSchedule);
   modalEl.classList.add('is-open');
   modalEl.setAttribute('aria-hidden', 'false');
 };
@@ -213,7 +254,7 @@ calendarEl?.addEventListener('click', (event) => {
   currentDate = viewMode === 'week' ? new Date(selectedDate) : currentDate;
   subscribeLeave();
   renderCalendar();
-  openModal(dayEl.dataset.date, eventEl?.dataset.id || null);
+  if (canEditSchedule) openModal(dayEl.dataset.date, eventEl?.dataset.id || null);
 });
 
 savedLabelsEl?.addEventListener('click', (event) => {
@@ -236,6 +277,7 @@ document.addEventListener('click', (event) => { if (!tooltipEl?.contains(event.t
 
 formEl?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!canEditSchedule) return setMessage('您沒有編輯權限。');
   if (!scheduleCollection) return setMessage('Firebase 尚未完成初始化，無法儲存排程。');
   const reminderAt = new Date(document.querySelector('#scheduleReminderAt').value);
   const staffIds = [...staffSelect.selectedOptions].map((option) => option.value);
@@ -262,6 +304,7 @@ formEl?.addEventListener('submit', async (event) => {
 });
 
 deleteButton?.addEventListener('click', async () => {
+  if (!canDeleteSchedule) return setMessage('您沒有刪除權限。');
   if (!editingId || !scheduleCollection || !confirm('確定要刪除此排程嗎？')) return;
   const user = currentUser();
   await scheduleCollection.doc(editingId).update({ deleted: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, history: firebase.firestore.FieldValue.arrayUnion({ action: '刪除', userId: user.id, userName: user.name, at: firebase.firestore.Timestamp.fromDate(new Date()) }) });
@@ -276,5 +319,6 @@ else {
   subscribeLeave();
 }
 
+syncSchedulePermission();
 renderCalendar();
 window.addEventListener('beforeunload', () => { unsubscribeStaff?.(); unsubscribeSchedules?.(); unsubscribeLabels?.(); unsubscribeLeave?.(); });
