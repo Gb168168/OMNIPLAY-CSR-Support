@@ -1,17 +1,31 @@
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', config: null, schema: null, unsubscribeRecords: null };
 
-const FIELD_TYPES = [
-  { value: 'text', label: '文字' }, { value: 'textarea', label: '多行文字' }, { value: 'number', label: '數字' },
-  { value: 'date', label: '日期' }, { value: 'time', label: '時間' }, { value: 'select', label: '下拉選單' }, { value: 'multiselect', label: '多選' },
-  { value: 'file', label: '圖片上傳' }, { value: 'person', label: '人員選擇' }, { value: 'subtable', label: '子表格' }
+const FIELD_TYPE_GROUPS = [
+  { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
+  { label: '🕐 時間', types: [{ value: 'date', label: '日期' }, { value: 'datetime', label: '日期時間' }, { value: 'createdDate', label: '建立日期' }, { value: 'updatedDate', label: '更新時間' }] },
+  { label: '📋 下拉', types: [{ value: 'select', label: '單選' }, { value: 'multiselect', label: '多選' }] },
+  { label: '🖼️ 圖片', types: [{ value: 'image', label: '圖片' }] },
+  { label: '📎 檔案', types: [{ value: 'file', label: '檔案' }] },
+  { label: '🔢 編號', types: [{ value: 'serial', label: '編號' }] },
+  { label: '📊 子表格', types: [{ value: 'subtable', label: '子表格' }] }
+];
+const FIELD_TYPES = FIELD_TYPE_GROUPS.flatMap((group) => group.types);
+const LEGACY_FIELD_TYPES = [
+  { value: 'number', label: '數字（舊）' },
+  { value: 'time', label: '時間（舊）' },
+  { value: 'person', label: '人員選擇（舊）' }
 ];
 
 const COLLECTION_MAP = { workHandover: 'handover', workLogs: 'log', workReports: 'report', workTracking: 'tracking', workAlerts: 'alert', meetingRecords: 'meeting', knowledgeBase: 'knowledge', aiDatabase: 'ai_database' };
 const SCHEMA_MAP = { handover: 'handover_schema', log: 'log_schema', report: 'report_schema', tracking: 'tracking_schema', alert: 'alert_schema', meeting: 'meeting_schema', knowledge: 'knowledge_schema', ai_database: 'ai_database_schema' };
 
 const normalizeKey = (text, fallback = 'field') => String(text || fallback).trim().replace(/[^\w\u4e00-\u9fa5]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase() || `${fallback}_${Date.now()}`;
-const valueToText = (value) => Array.isArray(value) ? value.join('、') : (value?.toDate ? value.toDate().toLocaleString('zh-TW') : (value ?? ''));
+const valueToText = (value) => Array.isArray(value) ? value.join('、') : (value?.toDate ? formatLocalDateTime(value.toDate()) : (value?.name && value?.data ? `${value.name} (${formatFileSize(value.size)})` : (value ?? '')));
+const formatLocalDateTime = (date = new Date()) => date.toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+const formatFileSize = (bytes = 0) => { const size = Number(bytes) || 0; if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / 1024 / 1024).toFixed(1)} MB`; };
 const today = () => new Date().toISOString().slice(0, 10);
+const displayDate = (value) => value ? String(value).replace(/-/g, '/') : '';
+const displayDateTime = (value) => value ? String(value).replace('T', ' ').replace(/-/g, '/') : '';
 const dataCollectionName = (config) => config.dataCollection || COLLECTION_MAP[config.collection] || config.collection;
 const schemaCollectionName = (config) => config.schemaCollection || SCHEMA_MAP[dataCollectionName(config)] || `${dataCollectionName(config)}_schema`;
 const generateFieldKey = () => 'field_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -67,37 +81,106 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => (
 const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
 const MAX_IMAGE_BYTES = 900 * 1024;
+if (!window._multiSelectClickBound) {
+  document.addEventListener('click', () => document.querySelectorAll('.multi-select-dropdown.show').forEach((dropdown) => dropdown.classList.remove('show')));
+  window._multiSelectClickBound = true;
+}
+const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', report: 'RPT-', tracking: 'TRK-', alert: 'ALT-', knowledge: 'KB-', ai_database: 'AI-' };
+const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
 
 const makeDefaultSchema = (config) => normalizeSchema({
   fields: [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])]
 });
 
+const createMultiSelectControl = (field, value = '', subfield = false) => {
+  const selected = Array.isArray(value) ? value : String(value || '').split(/[、,]/).map((item) => item.trim()).filter(Boolean);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'multi-select ragic-multi-select';
+  const select = document.createElement('select');
+  select.multiple = true;
+  select.hidden = true;
+  select.name = subfield ? '' : field.key;
+  if (subfield) select.dataset.subfield = field.key;
+  optionList(field).forEach((option) => {
+    const opt = document.createElement('option');
+    opt.value = option;
+    opt.textContent = option;
+    opt.selected = selected.includes(option);
+    select.appendChild(opt);
+  });
+  const display = document.createElement('div');
+  display.className = 'multi-select-display';
+  display.textContent = selected.length ? selected.join('、') : '請選擇';
+  display.title = selected.join('、');
+  const dropdown = document.createElement('div');
+  dropdown.className = 'multi-select-dropdown';
+  dropdown.setAttribute('role', 'listbox');
+  dropdown.setAttribute('aria-multiselectable', 'true');
+  optionList(field).forEach((option) => {
+    const label = document.createElement('label');
+    label.setAttribute('role', 'option');
+    label.setAttribute('aria-selected', String(selected.includes(option)));
+    label.innerHTML = `<input type="checkbox" value="${escapeHtml(option)}" ${selected.includes(option) ? 'checked' : ''}><span>${escapeHtml(option)}</span>`;
+    dropdown.appendChild(label);
+  });
+  wrapper.append(select, display, dropdown);
+  display.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (select.disabled) return;
+    document.querySelectorAll('.multi-select-dropdown.show').forEach((item) => { if (item !== dropdown) item.classList.remove('show'); });
+    dropdown.classList.toggle('show');
+  });
+  dropdown.addEventListener('click', (event) => event.stopPropagation());
+  dropdown.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+      const option = [...select.options].find((item) => item.value === checkbox.value);
+      if (option) option.selected = checkbox.checked;
+      checkbox.closest('[role="option"]')?.setAttribute('aria-selected', String(checkbox.checked));
+      const values = [...select.selectedOptions].map((option) => option.value);
+      display.textContent = values.length ? values.join('、') : '請選擇';
+      display.title = values.join('、');
+    });
+  });
+  return wrapper;
+};
+
 const createControl = (field, value = '', subfield = false) => {
+  if (field.type === 'multiselect') return createMultiSelectControl(field, value, subfield);
   let input;
   if (field.type === 'textarea') { input = document.createElement('textarea'); input.rows = field.rows || 4; }
-  else if (field.type === 'select' || field.type === 'multiselect') {
-    input = document.createElement('select'); if (field.type === 'multiselect') input.multiple = true;
+  else if (field.type === 'select') {
+    input = document.createElement('select');
     optionList(field).forEach((option) => { const opt = document.createElement('option'); opt.value = option; opt.textContent = option; input.appendChild(opt); });
-  } else { input = document.createElement('input'); input.type = field.type === 'person' ? 'text' : (field.type || 'text'); if (field.type === 'file') input.accept = 'image/*'; }
-  input.name = subfield ? '' : field.key; input.required = field.type === 'file' ? false : Boolean(field.required); input.placeholder = field.type === 'person' ? '輸入或選擇人員' : (field.placeholder || '');
+  } else if (readonlyFieldTypes.has(field.type)) {
+    input = document.createElement('input');
+    input.type = 'text';
+    input.readOnly = true;
+  } else {
+    input = document.createElement('input');
+    input.type = field.type === 'datetime' ? 'datetime-local' : (field.type === 'image' || field.type === 'file' ? 'file' : (field.type || 'text'));
+    if (field.type === 'image') input.accept = 'image/*';
+  }
+  input.name = subfield ? '' : field.key;
+  input.required = field.type === 'image' || field.type === 'file' || readonlyFieldTypes.has(field.type) ? false : Boolean(field.required);
+  input.placeholder = field.placeholder || '';
   if (subfield) input.dataset.subfield = field.key;
-  if (field.type === 'multiselect') { const selected = Array.isArray(value) ? value : String(value || '').split(',').map((item) => item.trim()); [...input.options].forEach((option) => { option.selected = selected.includes(option.value); }); }
-  else if (field.type !== 'file') input.value = value || field.defaultValue || (field.type === 'date' && !subfield ? today() : '');
+  if (field.type !== 'image' && field.type !== 'file') input.value = value || field.defaultValue || (field.type === 'date' && !subfield ? today() : '');
   return input;
 };
 
 const createField = (field, value = '') => {
   const wrap = document.createElement('label'); wrap.className = `ragic-field ragic-field-${field.type || 'text'}`; wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   const control = createControl(field, value);
-  if (field.type === 'file') {
-    const imageArea = document.createElement('div');
-    imageArea.className = 'image-upload-area';
-    imageArea.tabIndex = 0;
-    imageArea.dataset.imageLabel = field.label;
-    imageArea.innerHTML = '<div>選擇檔案 或 Ctrl+V 貼上圖片</div>';
-    imageArea.appendChild(control);
-    wrap.appendChild(imageArea);
-    if (value) showImagePreview(value, imageArea, field.label);
+  if (field.type === 'image' || field.type === 'file') {
+    const fileArea = document.createElement('div');
+    fileArea.className = 'image-upload-area';
+    fileArea.tabIndex = 0;
+    fileArea.dataset.fileLabel = field.label;
+    fileArea.dataset.fileType = field.type;
+    fileArea.innerHTML = `<div>選擇檔案 或 Ctrl+V 貼上${field.type === 'image' ? '圖片' : '檔案'}</div>`;
+    fileArea.appendChild(control);
+    wrap.appendChild(fileArea);
+    if (value) field.type === 'image' ? showImagePreview(value, fileArea, field.label) : showFilePreview(value, fileArea);
   } else {
     wrap.appendChild(control);
   }
@@ -111,6 +194,29 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
+
+const fileToBase64Payload = async (file) => ({ name: file.name, size: file.size, type: file.type || 'application/octet-stream', data: await readFileAsDataUrl(file) });
+
+const showFilePreview = (payload, container) => {
+  if (!container || !payload) return;
+  const file = typeof payload === 'string' ? { name: '檔案', size: 0, data: payload } : payload;
+  const input = container.querySelector('input[type="file"]');
+  if (input) input.dataset.fileValue = JSON.stringify(file);
+  container.querySelector('.ragic-file-preview')?.remove();
+  const preview = document.createElement('a');
+  preview.className = 'ragic-file-preview ragic-download-preview';
+  preview.href = file.data;
+  preview.download = file.name || 'download';
+  preview.innerHTML = `<span>📎 ${escapeHtml(file.name || '檔案')}</span><small>${escapeHtml(formatFileSize(file.size))}</small><button class="image-preview-remove" type="button" aria-label="移除檔案">×</button>`;
+  preview.addEventListener('click', (event) => {
+    if (event.target.closest('.image-preview-remove')) {
+      event.preventDefault();
+      if (input) { input.value = ''; delete input.dataset.fileValue; }
+      preview.remove();
+    }
+  });
+  container.appendChild(preview);
+};
 const loadImage = (src) => new Promise((resolve, reject) => {
   const image = new Image();
   image.onload = () => resolve(image);
@@ -145,7 +251,7 @@ const compressImageToBase64 = async (file) => {
   return dataUrl;
 };
 
-const showImagePreview = (base64, container, label = container?.dataset.imageLabel || '圖片') => {
+const showImagePreview = (base64, container, label = container?.dataset.fileLabel || '圖片') => {
   if (!container || !base64) return;
   const input = container.querySelector('input[type="file"]');
   if (input) input.dataset.imageValue = base64;
@@ -175,16 +281,21 @@ const processImageFile = async (file, container) => {
   showImagePreview(base64, container);
 };
 
+const processGenericFile = async (file, container) => {
+  showFilePreview(await fileToBase64Payload(file), container);
+};
+
 const handleImagePaste = async (event, imageArea) => {
   const items = event.clipboardData?.items;
   if (!items) return;
   for (const item of items) {
-    if (item.type.startsWith('image/')) {
-      event.preventDefault();
-      const file = item.getAsFile();
-      await processImageFile(file, imageArea);
-      break;
-    }
+  if (item.kind !== 'file') continue;
+    if (imageArea.dataset.fileType !== 'file' && !item.type.startsWith('image/')) continue;
+    event.preventDefault();
+    const file = item.getAsFile();
+    if (imageArea.dataset.fileType === 'file') await processGenericFile(file, imageArea);
+    else await processImageFile(file, imageArea);
+    break;
   }
 };
 
@@ -199,7 +310,8 @@ const getFormData = async () => {
     }
     const input = document.querySelector(`[name="${field.key}"]`); if (!input) continue;
     if (field.type === 'multiselect') data[field.key] = [...input.selectedOptions].map((opt) => opt.value);
-    else if (field.type === 'file') data[field.key] = input.files?.[0] ? await compressImageToBase64(input.files[0]) : (input.dataset.imageValue || '');
+    else if (field.type === 'image') data[field.key] = input.files?.[0] ? await compressImageToBase64(input.files[0]) : (input.dataset.imageValue || '');
+    else if (field.type === 'file') data[field.key] = input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (input.dataset.fileValue ? JSON.parse(input.dataset.fileValue) : '');
     else data[field.key] = input.value.trim();
   }
   return data;
@@ -221,7 +333,7 @@ const renderForm = (record = {}) => {
     const input = imageArea.querySelector('input[type="file"]');
     input?.addEventListener('change', async () => {
       if (!input.files?.[0]) return;
-      try { await processImageFile(input.files[0], imageArea); }
+      try { imageArea.dataset.fileType === 'file' ? await processGenericFile(input.files[0], imageArea) : await processImageFile(input.files[0], imageArea); }
       catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
     });
     imageArea.addEventListener('paste', (event) => handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。')));
@@ -233,7 +345,10 @@ const renderForm = (record = {}) => {
 const renderCell = (record, field) => {
   const key = field.key;
   const value = record[key];
-  if (field?.type === 'file') return value ? `<img class="ragic-thumbnail" src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}縮圖">` : '';
+  if (field?.type === 'image') return value ? `<img class="ragic-thumbnail" src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}縮圖">` : '';
+  if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
+  if (field?.type === 'date') return escapeHtml(displayDate(value));
+  if (field?.type === 'datetime') return escapeHtml(displayDateTime(value));
   const text = String(valueToText(value));
   if (field?.type === 'textarea' && text.length > 50) return `${escapeHtml(text.slice(0, 50))}...`;
   return escapeHtml(text);
@@ -275,7 +390,12 @@ const nextDesignerKey = (container, prefix = 'field') => {
 const fieldDesigner = (field = {}, nested = false) => {
   const row = document.createElement('div');
   row.className = 'designer-field';
-  row.innerHTML = `<input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${FIELD_TYPES.filter((type) => !nested || type.value !== 'subtable').map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><div class="designer-actions"><button class="secondary" data-move="up" type="button">↑</button><button class="secondary" data-move="down" type="button">↓</button><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`;
+  const typeOptions = FIELD_TYPE_GROUPS.map((group) => {
+    const options = group.types.filter((type) => !nested || type.value !== 'subtable').map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('');
+    return options ? `<optgroup label="${escapeHtml(group.label)}">${options}</optgroup>` : '';
+  }).join('');
+  const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
+  row.innerHTML = `<input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><div class="designer-actions"><button class="secondary" data-move="up" type="button">↑</button><button class="secondary" data-move="down" type="button">↓</button><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`;
   row.dataset.key = shouldRegenerateFieldKey(field.key) ? generateFieldKey() : field.key;
   const sub = row.querySelector('.designer-subfields');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
@@ -317,7 +437,11 @@ const applyRagicPermissionUi = () => {
 const setFormEditable = (form) => {
   const editable = canUse('edit');
   form.querySelectorAll('input, textarea, select').forEach((control) => {
-    control.disabled = !editable;
+    control.disabled = !editable || control.readOnly;
+  });
+  form.querySelectorAll('.ragic-multi-select').forEach((control) => {
+    control.classList.toggle('is-disabled', !editable);
+    control.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => { checkbox.disabled = !editable; });
   });
   form.querySelectorAll('.ragic-subtable-head button, .subtable-row .danger').forEach((button) => {
     button.hidden = !editable;
@@ -338,6 +462,25 @@ const ensureTopbarActions = () => {
   return actions;
 };
 
+
+const serialPrefix = () => SERIAL_PREFIX_MAP[RAGIC_STATE.config?.collection] || `${String(RAGIC_STATE.config?.collection || 'DOC').toUpperCase().replace(/[^A-Z0-9]/g, '_')}-`;
+const getNextSerial = async (collection, fieldKey) => {
+  const records = RAGIC_STATE.records.length ? RAGIC_STATE.records : (collection ? (await collection.get()).docs.map((doc) => doc.data()) : []);
+  const max = records.reduce((highest, record) => {
+    const match = String(record[fieldKey] || record.serial || '').match(/(\d+)$/);
+    return Math.max(highest, match ? Number(match[1]) : 0);
+  }, 0);
+  return `${serialPrefix()}${String(max + 1).padStart(6, '0')}`;
+};
+
+const applySystemFieldValues = async (data, existingData = {}, collection = null) => {
+  for (const field of getFields()) {
+    if (field.type === 'createdDate') data[field.key] = existingData[field.key] || formatLocalDateTime();
+    if (field.type === 'updatedDate') data[field.key] = formatLocalDateTime();
+    if (field.type === 'serial') data[field.key] = existingData[field.key] || await getNextSerial(collection, field.key);
+  }
+  return data;
+};
 const initRagicPage = async (config) => {
   await waitForPermissions();
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
@@ -389,10 +532,10 @@ const initRagicPage = async (config) => {
     const originalText = saveButton?.textContent || '儲存';
     if (saveButton) { saveButton.disabled = true; saveButton.textContent = '儲存中...'; }
     try {
-      const data = await getFormData();
+      const existingRecord = RAGIC_STATE.currentId ? RAGIC_STATE.records.find((record) => record.id === RAGIC_STATE.currentId) || {} : {};
+      const data = await applySystemFieldValues(await getFormData(), existingRecord, collection);
       data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
       if (RAGIC_STATE.currentId) {
-        const existingRecord = RAGIC_STATE.records.find((record) => record.id === RAGIC_STATE.currentId);
         if (!existingRecord?.createdAt) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         await collection.doc(RAGIC_STATE.currentId).set(data, { merge: true });
       } else await collection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
