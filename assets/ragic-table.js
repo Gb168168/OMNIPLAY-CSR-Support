@@ -32,13 +32,7 @@ const normalizeField = (field = {}, fallback = 'field') => {
 };
 const normalizeSchema = (schema = {}) => ({ fields: (schema.fields || []).map((field, index) => normalizeField(field, `field_${index + 1}`)) });
 const getFields = () => RAGIC_STATE.schema?.fields || [];
-const listFields = () => {
-  const fields = getFields().filter((field) => field.type !== 'subtable');
-  const configuredColumns = RAGIC_STATE.config?.listColumns;
-  if (!Array.isArray(configuredColumns) || !configuredColumns.length) return fields;
-  const byKey = new Map(fields.map((field) => [field.key, field]));
-  return configuredColumns.map((key) => byKey.get(key)).filter(Boolean);
-};
+const listFields = () => getFields().filter((field) => field.type !== 'subtable');
 const listColumns = () => listFields().map((field) => field.key);
 const fieldByKey = (key) => getFields().find((field) => field.key === key);
 const optionList = (field) => Array.isArray(field.options) ? field.options : String(field.options || '').split('\n').map((item) => item.trim()).filter(Boolean);
@@ -157,7 +151,9 @@ const renderCell = (record, key) => {
   const field = fieldByKey(key);
   const value = record[key];
   if (field?.type === 'file') return value ? `<img class="ragic-thumbnail" src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}縮圖">` : '';
-  return escapeHtml(valueToText(value));
+  const text = String(valueToText(value));
+  if (field?.type === 'textarea' && text.length > 50) return `${escapeHtml(text.slice(0, 50))}...`;
+  return escapeHtml(text);
 };
 const openImagePreview = (src, label = '圖片') => {
   const modal = document.querySelector('#ragicImageModal');
