@@ -2102,3 +2102,44 @@ textarea,
   .dashboard-stats { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
   .dashboard-todo-list li a { grid-template-columns: 1fr; }
 }
+.meeting-info-files { grid-column: 1 / -1; border-right: 0; }
+.meeting-file-upload {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  min-height: 86px;
+  padding: 12px;
+  border: 2px dashed var(--border);
+  background: var(--input-bg);
+  color: var(--text-muted);
+}
+.meeting-file-upload:focus,
+.meeting-file-upload:hover { border-color: var(--primary); }
+.meeting-file-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.meeting-file-item,
+.staff-settings-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text);
+}
+.meeting-tab { display: inline-flex; align-items: center; gap: 8px; }
+.meeting-tab-delete {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+.meeting-tab-delete:hover { background: rgba(255,255,255,.18); }
+.meeting-tab-add { font-size: 20px; font-weight: 900; }
+.staff-settings-card { width: min(560px, 100%); }
+.staff-settings-body { display: grid; gap: 16px; padding: 18px; }
+.staff-settings-add { display: flex; gap: 10px; }
+.staff-settings-add input { flex: 1; }
+.staff-settings-list { display: flex; flex-wrap: wrap; gap: 10px; }
