@@ -1041,12 +1041,13 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   z-index: 1;
   padding: 12px;
   color: #e2e8f0;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 600;
   text-align: center;
 }
 
 .calendar-day {
-  min-height: 132px;
+  min-height: 120px;
   display: grid;
   align-content: start;
   gap: 8px;
@@ -1066,13 +1067,15 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .calendar-weekday.weekday-6 { color: #86efac; }
 
 .day-number {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   display: inline-grid;
   place-items: center;
   border-radius: 999px;
   color: #f8fafc;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .calendar-day.is-today .day-number {
@@ -1093,11 +1096,11 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   grid-template-columns: 5px 1fr;
   align-items: center;
   gap: 7px;
-  padding: 6px 8px 6px 0;
-  border-radius: 9px;
+  padding: 6px 10px;
+  border-radius: 6px;
   color: #f8fafc;
   background: rgba(255,255,255,.07);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1192,7 +1195,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   .calendar-grid.is-year-view { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
   .calendar-weekday,
   .calendar-day { min-width: 96px; }
-  .calendar-day { min-height: 118px; }
+  .calendar-day { min-height: 120px; }
 }
 
 .ragic-card {
