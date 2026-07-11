@@ -6,7 +6,8 @@ const meetingState = {
   records: [],
   staff: [],
   currentId: null,
-  activeTab: 'techRows'
+  activeTab: 'techRows',
+  staffLoaded: false
 };
 
 const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
@@ -14,7 +15,8 @@ const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
 const today = () => new Date().toISOString().slice(0, 10);
 const currentTime = () => new Date().toTimeString().slice(0, 5);
-const activeStaff = (staff) => (staff.status || '啟用') === '啟用';
+const activeStaff = (staff) => staff.status === '啟用';
+const visibleMeetingStaff = (staff) => activeStaff(staff) && String(staff.name || '').trim().toUpperCase() !== 'OMNIPLAY';
 const staffName = (staff) => staff.name || staff.code || staff.account || '未命名';
 const canEditMeeting = () => window.canUse?.('edit') !== false;
 const canDeleteMeeting = () => window.canUse?.('delete') === true;
@@ -32,6 +34,7 @@ const staffOptions = () => meetingState.staff.map((staff) => `<option value="${e
 const staffDatalistOptions = () => meetingState.staff.map((staff) => `<option value="${escapeHtml(staffName(staff))}"></option>`).join('');
 
 const populateStaffSelects = () => {
+  if (!meetingState.staffLoaded) return;
   const list = document.querySelector('#meetingStaffOptions');
   if (list) list.innerHTML = staffDatalistOptions();
   
@@ -272,10 +275,17 @@ const closeImagePreview = () => {
 
 const initMeetingPage = async () => {
   if (window.permissionReady) await window.permissionReady;
-  setFormEditable();
   meetingStaffCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-    meetingState.staff = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(activeStaff);
+    meetingState.staff = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(visibleMeetingStaff);
+    meetingState.staffLoaded = true;
     populateStaffSelects();
+    setFormEditable();
+  }, (error) => {
+    console.error('讀取會議人員資料失敗：', error);
+    meetingState.staff = [];
+    meetingState.staffLoaded = true;
+    populateStaffSelects();
+    setFormEditable();
   });
   meetingCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
     meetingState.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
