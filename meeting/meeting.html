@@ -57,30 +57,66 @@
           <p>客服會議歷程與決議。</p>
         </div>
         <div class="topbar-actions">
-          <button class="secondary" id="designTableButton" type="button">⚙️ 設計表格</button>
           <div class="user-pill">● 已連線 Firebase</div>
         </div>
       </header>
-      <section class="ragic-card" id="ragicListView" aria-label="列表視圖">
+      <section class="ragic-card" id="meetingListView" aria-label="會議紀錄列表">
         <div class="ragic-toolbar">
-          <div><h2 id="ragicTitle"></h2><p id="ragicSubtitle"></p></div>
+          <div><h2>會議紀錄列表</h2><p>顯示所有會議紀錄，點選任一列即可編輯。</p></div>
           <button class="primary" id="newRecordButton" type="button">+ 新增</button>
         </div>
         <div class="ragic-table-wrap">
-          <table class="ragic-table">
-            <thead><tr id="ragicHeaderRow"></tr></thead>
-            <tbody id="ragicTableBody"></tbody>
+          <table class="ragic-table meeting-list-table">
+            <thead>
+              <tr><th>日期</th><th>時間</th><th>主持</th><th>紀錄</th><th>編號</th></tr>
+            </thead>
+            <tbody id="meetingTableBody"></tbody>
           </table>
         </div>
       </section>
-      <section class="ragic-card" id="ragicFormView" aria-label="主表單視圖" hidden>
-        <div class="ragic-form-toolbar"><h2></h2><button class="secondary" id="backToListButton" type="button">返回列表</button></div>
-        <form id="ragicForm"></form>
+      
+      <section class="ragic-card" id="meetingFormView" aria-label="會議紀錄編輯" hidden>
+        <div class="ragic-form-toolbar"><h2 id="meetingFormTitle">新增會議紀錄</h2><button class="secondary" id="backToListButton" type="button">返回列表</button></div>
+        <form id="meetingForm" class="meeting-form">
+          <section class="meeting-info-table" aria-label="基本資訊">
+            <div class="meeting-info-cell"><label for="meetingDate">日期</label><input id="meetingDate" type="date" required></div>
+            <div class="meeting-info-cell"><label for="meetingChair">主持</label><select id="meetingChair" data-staff-select required></select></div>
+            <div class="meeting-info-cell"><label for="meetingTime">時間</label><input id="meetingTime" type="time" required></div>
+            <div class="meeting-info-cell"><label for="meetingRecorder">紀錄</label><select id="meetingRecorder" data-staff-select required></select></div>
+            <div class="meeting-info-cell"><label for="meetingLocation">地點</label><input id="meetingLocation" type="text" autocomplete="off"></div>
+            <div class="meeting-info-cell"><label for="meetingMorningAttendees">早 - 出席</label><select id="meetingMorningAttendees" data-staff-select multiple size="5"></select></div>
+            <div class="meeting-info-cell"><label for="meetingSerial">編號</label><input id="meetingSerial" type="text" readonly></div>
+            <div class="meeting-info-cell"><label for="meetingEveningAttendees">晚 - 出席</label><select id="meetingEveningAttendees" data-staff-select multiple size="5"></select></div>
+            <div class="meeting-info-cell meeting-info-note"><label for="meetingNote">備註</label><input id="meetingNote" type="text" autocomplete="off"></div>
+          </section>
+
+          <section class="meeting-tabs-section" aria-label="會議內容分頁">
+            <div class="meeting-tabs" id="meetingTabs" role="tablist">
+              <button class="meeting-tab is-active" type="button" data-meeting-tab="techRows" role="tab">技術會議</button>
+              <button class="meeting-tab" type="button" data-meeting-tab="csRows" role="tab">客服會議</button>
+            </div>
+            <div class="meeting-tab-panel" data-tab-panel="techRows">
+              <div class="ragic-subtable-head"><h3>技術會議</h3><button class="secondary" type="button" data-add-row="techRows">+ 新增一列</button></div>
+              <div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="techRows"></tbody></table></div>
+            </div>
+            <div class="meeting-tab-panel" data-tab-panel="csRows" hidden>
+              <div class="ragic-subtable-head"><h3>客服會議</h3><button class="secondary" type="button" data-add-row="csRows">+ 新增一列</button></div>
+              <div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="csRows"></tbody></table></div>
+            </div>
+          </section>
+        </form>
         <div class="ragic-actions">
-          <button class="ghost danger" id="deleteButton" type="button">刪除</button>
-          <button class="primary" form="ragicForm" type="submit">儲存</button>
+          <button class="ghost danger" id="deleteMeetingButton" type="button">刪除</button>
+          <button class="primary" id="saveMeetingButton" form="meetingForm" type="submit">儲存</button>
         </div>
       </section>
+      
+      <div class="ragic-modal" id="meetingImageModal" hidden>
+        <div class="ragic-modal-card ragic-image-modal-card">
+          <div class="ragic-form-toolbar"><h2>圖片</h2><button class="ghost" id="closeMeetingImageModal" type="button">關閉</button></div>
+          <img id="meetingPreviewImage" alt="放大圖片預覽">
+        </div>
+      </div>
     </main>
   </section>
 
@@ -89,23 +125,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js"></script>
-  <script src="../assets/ragic-table.js"></script>
-  <script>
-    initRagicPage({
-      title: '會議紀錄',
-      collection: 'meeting',
-      fields: [
-        { key: 'date', label: '日期', type: 'date', defaultToday: true },
-        { key: 'meetingType', label: '會議類型', type: 'text' },
-        { key: 'attendees', label: '出席人員', type: 'multiselect', options: ['客服主管', '早班', '中班', '晚班', '支援人員', '其他'] }
-      ],
-      subtable: { key: 'items', label: '會議明細', fields: [
-        { key: 'proposer', label: '提出人', type: 'text' },
-        { key: 'proposal', label: '提出內容', type: 'textarea', rows: 5 },
-        { key: 'handling', label: '處理內容', type: 'textarea', rows: 5 }
-      ] },
-      listColumns: ['date', 'meetingType', 'attendees']
-    });
-  </script>
+  <script src="../assets/meeting.js"></script>
 </body>
 </html>
