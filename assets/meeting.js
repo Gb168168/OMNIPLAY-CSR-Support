@@ -11,6 +11,16 @@ const meetingState = {
 };
 
 const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
+const MAX_IMAGE_WIDTH = 800;
+const JPEG_QUALITY = 0.6;
+const MAX_IMAGE_BYTES = 900 * 1024;
+
+if (!window._multiSelectClickBound) {
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.multi-select-dropdown.show').forEach((dropdown) => dropdown.classList.remove('show'));
+  });
+  window._multiSelectClickBound = true;
+}
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
 const today = () => new Date().toISOString().slice(0, 10);
@@ -95,11 +105,6 @@ function createMultiSelect(container, options, fieldName) {
       if (d !== dropdown) d.classList.remove('show');
     });
     dropdown.classList.toggle('show');
-  });
-
-  // 點頁面其他地方關閉
-  document.addEventListener('click', function() {
-    dropdown.classList.remove('show');
   });
 
   // dropdown 本身點擊不關閉
@@ -233,6 +238,40 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
+const loadImage = (src) => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error('圖片載入失敗，請選擇有效的圖片檔案'));
+  image.src = src;
+});
+
+const canvasToJpegDataUrl = (canvas) => new Promise((resolve, reject) => {
+  canvas.toBlob((blob) => {
+    if (!blob) { reject(new Error('圖片壓縮失敗')); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve({ dataUrl: reader.result, size: blob.size });
+    reader.onerror = () => reject(reader.error || new Error('圖片壓縮失敗'));
+    reader.readAsDataURL(blob);
+  }, 'image/jpeg', JPEG_QUALITY);
+});
+
+const compressImageToBase64 = async (file) => {
+  if (!file) return '';
+  if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
+  const loadedImage = await loadImage(await readFileAsDataUrl(file));
+  const scale = loadedImage.width > MAX_IMAGE_WIDTH ? MAX_IMAGE_WIDTH / loadedImage.width : 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(loadedImage.width * scale);
+  canvas.height = Math.round(loadedImage.height * scale);
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+  const { dataUrl, size } = await canvasToJpegDataUrl(canvas);
+  if (size > MAX_IMAGE_BYTES) throw new Error('圖片壓縮後仍超過 900KB，請選擇較小的圖片');
+  return dataUrl;
+};
+
 const readRows = async (key) => {
   const previousRows = existingRecord()[key] || [];
   const rows = [];
@@ -241,7 +280,7 @@ const readRows = async (key) => {
     const item = {};
     for (const field of detailFields) {
       const control = row.querySelector(`[data-field="${field}"]`);
-      if (field === 'image') item.image = control.files?.[0] ? await readFileAsDataUrl(control.files[0]) : (previousRows[index]?.image || '');
+      if (field === 'image') item.image = control.files?.[0] ? await compressImageToBase64(control.files[0]) : (previousRows[index]?.image || '');
       else item[field] = control?.value?.trim() || '';
     }
     if (Object.values(item).some(Boolean)) rows.push(item);
