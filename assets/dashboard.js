@@ -13,6 +13,7 @@ const setText = (selector, value) => { const el = document.querySelector(selecto
 const pad2 = (value) => String(value).padStart(2, '0');
 const monthKey = (date = new Date()) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
 const dayKey = (date = new Date()) => pad2(date.getDate());
+const displayDate = (date = new Date()) => `${date.getMonth() + 1}/${date.getDate()}`;
 const isActiveStaff = (staff = {}) => !['停用', '離職', 'inactive', 'disabled'].includes(String(staff.status || staff.state || '').trim().toLowerCase());
 const isSystemStaff = (staff = {}) => [staff.account, staff.code, staff.name].some((value) => String(value || '').toUpperCase() === 'OMNIPLAY');
 const valueDate = (value) => {
@@ -59,14 +60,37 @@ const shiftLogs = () => {
   });
 };
 
+const normalizeDashboardShift = (value) => {
+  const text = String(value || '').trim();
+  if (['晚', '晚班', 'night', 'pm'].includes(text.toLowerCase())) return '晚';
+  return '早';
+};
+
 const updateTodayWorking = () => {
-  const todayKey = dayKey();
+  const today = new Date();
+  const todayKey = dayKey(today);
   const records = dashboardState.leave.records || {};
-  const count = dashboardState.staff.filter((staff) => isActiveStaff(staff) && !isSystemStaff(staff)).filter((staff) => {
-    const record = records[`${staff.id}_${todayKey}`] || {};
-    return !['leave', 'required'].includes(record.type) && !(record.specials || []).includes('phone');
-  }).length;
-  setText('#todayWorkingCount', count);
+  const groups = { '早': [], '晚': [] };
+
+  dashboardState.staff
+    .filter((staff) => isActiveStaff(staff) && !isSystemStaff(staff))
+    .forEach((staff) => {
+      const record = records[`${staff.id}_${todayKey}`] || {};
+      if (['leave', 'required'].includes(record.type)) return;
+
+      const specials = Array.isArray(record.specials) ? record.specials : [];
+      const name = `${staff.name || staff.code || staff.account || '未命名'}${specials.includes('phone') ? '📱' : ''}`;
+      groups[normalizeDashboardShift(staff.shift)].push(name);
+    });
+
+  setText('#todayWorkingTitle', `今日上班（${displayDate(today)}）`);
+
+  const list = document.querySelector('#todayWorkingList');
+  if (!list) return;
+  const rows = Object.entries(groups)
+    .filter(([, names]) => names.length > 0)
+    .map(([shift, names]) => `<div class="today-working-row"><span>${shift} - </span>${escapeDashboardHtml(names.join('、'))}</div>`);
+  list.innerHTML = rows.length ? rows.join('') : '<div class="today-working-empty">今日無人上班</div>';
 };
 
 const updateDashboard = () => {
