@@ -104,7 +104,10 @@ const getHolidayName = (day) => {
   return taiwanHolidays[currentMonth.getFullYear()]?.[key] || '';
 };
 
-const getRecord = (staffId, day) => leaveData.records?.[`${staffId}_${dayKey(day)}`] || { type: '', specials: [] };
+const getRecord = (staffId, day) => {
+  const record = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
+  return { ...record, type: record.type || '', specials: record.specials || [] };
+};
 const getGlobalQuota = () => Number(leaveData.quota ?? 8);
 const getQuota = () => getGlobalQuota();
 const editableAttribute = () => canEditLeave ? '' : ' disabled';
@@ -162,7 +165,7 @@ const renderBody = () => {
       </td>
       <th class="sticky-col name-col" scope="row">
         <span>${escapeHtml(staff.name || staff.code || '未命名')}</span>
-        <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}/${quota}</small>
+        <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}</small>
       </th>${cells}</tr>`;
   }).join('');
 
@@ -214,8 +217,10 @@ const changeMonth = (offset) => {
 
 const toggleLeave = (staffId, day) => {
   const key = `${staffId}_${dayKey(day)}`;
+  leaveData.records ||= {};
   const record = getRecord(staffId, day);
-  const nextType = record.type === '' ? 'leave' : record.type === 'leave' ? 'required' : '';
+  const currentType = record.type || '';
+  const nextType = currentType === '' ? 'leave' : currentType === 'leave' ? 'required' : '';
   leaveData.records[key] = { ...record, type: nextType };
   if (!nextType && !(record.specials || []).length) delete leaveData.records[key];
   const staff = staffList.find((item) => item.id === staffId);
@@ -237,6 +242,7 @@ const setSpecialMode = (mode) => {
 
 const toggleSpecial = (staffId, day, specialType) => {
   const key = `${staffId}_${dayKey(day)}`;
+  leaveData.records ||= {};
   const record = getRecord(staffId, day);
   const specials = new Set(record.specials || []);
   specials.has(specialType) ? specials.delete(specialType) : specials.add(specialType);
