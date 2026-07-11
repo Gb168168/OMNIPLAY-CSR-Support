@@ -599,7 +599,7 @@ button:hover { transform: translateY(-1px); }
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
 .leave-toolbar strong {
@@ -898,24 +898,92 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   color: white;
 }
 
-.schedule-heading { align-items: flex-start; }
+.schedule-heading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
 
+.schedule-nav-left,
 .schedule-toolbar,
 .view-switch {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
-.schedule-toolbar strong {
+.schedule-period-picker-wrap { position: relative; }
+
+.schedule-period-label {
   min-width: 154px;
   padding: 10px 12px;
+  border: 0;
   border-radius: 14px;
   color: var(--month-label-text);
   background: var(--month-label-bg);
   text-align: center;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.schedule-period-picker {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 20;
+  width: 280px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, .98);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+}
+
+.schedule-period-picker[hidden] { display: none; }
+
+.period-picker-year {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.period-picker-year select {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid rgba(203, 213, 225, .22);
+  border-radius: 12px;
+  color: white;
+  background: rgba(30, 41, 59, .95);
+  font: inherit;
+}
+
+.period-picker-months {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.month-picker-button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 12px;
+  color: #e2e8f0;
+  background: var(--surface-muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.month-picker-button.is-active {
+  color: var(--primary);
+  background: var(--primary-soft);
 }
 
 .view-switch {
@@ -926,8 +994,8 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   background: rgba(15, 23, 42, .72);
 }
 
-.view-switch .ghost-button { padding: 8px 12px; }
-.view-switch .ghost-button.is-active { color: white; background: var(--primary); }
+.view-switch .ghost-button { padding: 8px 12px; background: var(--surface-muted); }
+.view-switch .ghost-button.is-active { color: #fff; background: var(--primary); }
 
 .schedule-special-trigger {
   width: 44px;
@@ -958,6 +1026,8 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   background: rgba(255,255,255,.08);
   overflow-x: auto;
 }
+
+.calendar-grid.is-year-view { grid-template-columns: repeat(4, minmax(150px, 1fr)); }
 
 .calendar-weekday,
 .calendar-day {
@@ -1034,6 +1104,12 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   white-space: nowrap;
 }
 
+.calendar-event.is-repeat {
+  border: 1px dashed var(--event-color, #3b82f6);
+  opacity: .68;
+  background: rgba(255,255,255,.04);
+}
+
 .calendar-event i {
   width: 5px;
   height: 100%;
@@ -1041,6 +1117,23 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   border-radius: 999px;
   background: var(--event-color, #3b82f6);
 }
+
+.calendar-month-card {
+  min-height: 120px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 0;
+  color: white;
+  background: rgba(15, 23, 42, .96);
+  text-align: left;
+}
+
+.calendar-month-card strong { font-size: 24px; }
+.calendar-month-card span { color: var(--sidebar-text); font-weight: 800; }
+.calendar-month-card.is-current { outline: 2px solid rgba(59, 130, 246, .8); outline-offset: -2px; }
 
 .schedule-modal-card { width: min(620px, 100%); }
 .schedule-form { display: grid; gap: 15px; }
@@ -1089,12 +1182,14 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 @media (max-width: 760px) {
   .schedule-heading,
   .schedule-meta,
+  .schedule-nav-left,
   .schedule-toolbar { align-items: stretch; flex-direction: column; }
   .schedule-toolbar .secondary-button,
   .schedule-toolbar .ghost-button { width: 100%; }
   .view-switch { justify-content: stretch; }
   .view-switch .ghost-button { flex: 1; }
   .calendar-grid { grid-template-columns: repeat(7, minmax(96px, 1fr)); }
+  .calendar-grid.is-year-view { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
   .calendar-weekday,
   .calendar-day { min-width: 96px; }
   .calendar-day { min-height: 118px; }
