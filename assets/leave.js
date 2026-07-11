@@ -64,9 +64,7 @@ let unsubscribeStaff = null;
 let unsubscribeLeave = null;
 let activeSpecialMode = null;
 let saveTimer = null;
-const storedLeavePermission = () => {
-  try { return JSON.parse(sessionStorage.getItem('omniplayPermissions') || '{}')?.pages?.leave; } catch { return null; }
-};
+const storedLeavePermission = () => window.getPagePermission?.('leave') || { view: false, edit: false, delete: false, design: false };
 let canEditLeave = Boolean(window.isOmniplayAdmin?.());
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -374,26 +372,8 @@ window.addEventListener('beforeunload', () => {
 });
 
 const syncLeavePermission = async () => {
-  canEditLeave = false;
-  if (window.isOmniplayAdmin?.()) {
-    canEditLeave = true;
-  } else {
-    try {
-      if (typeof window.loadCurrentPermissions === 'function') await window.loadCurrentPermissions();
-      else {
-        const staffId = sessionStorage.getItem('omniplayStaffId');
-        const permissionsCollection = leaveDb?.collection('permissions');
-        if (staffId && permissionsCollection) {
-          const doc = await permissionsCollection.doc(staffId).get();
-          if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
-          else sessionStorage.removeItem('omniplayPermissions');
-        }
-      }
-    } catch (error) {
-      console.error('讀取休假表權限失敗：', error);
-    }
-    canEditLeave = storedLeavePermission()?.edit === true;
-  }
+  if (window.permissionReady) await window.permissionReady;
+  canEditLeave = Boolean(window.isOmniplayAdmin?.() || storedLeavePermission().edit === true);
   specialModeButtons.forEach((button) => { button.disabled = !canEditLeave; });
   if (!canEditLeave) setSpecialMode(null);
   render();
