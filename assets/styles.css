@@ -1910,7 +1910,7 @@ textarea,
   vertical-align: top;
 }
 .meeting-detail-table th {
-  color: #fff;
+  color: var(--text);
   background: var(--table-head);
   text-align: left;
 }
