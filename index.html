@@ -108,12 +108,41 @@
         </div>
         <div class="user-pill">● 已連線 Firebase</div>
       </header>
-      <section class="placeholder-card" aria-label="首頁 空白骨架">
-        <div>
-          <h2>首頁</h2>
-          <p>此頁面已建立多頁架構、共用側邊欄與 Firebase compat CDN 連線。後續可在此加入對應功能模組。</p>
+      <section class="dashboard" aria-label="首頁 dashboard">
+        <div class="dashboard-stats" id="dashboardStats">
+          <a class="dashboard-card" href="service/leave.html">
+            <span class="dashboard-card-label">今日上班</span>
+            <strong id="todayWorkingCount">—</strong>
+            <small>未請假且未在家值班</small>
+          </a>
+          <a class="dashboard-card" href="work/handover.html">
+            <span class="dashboard-card-label">待交接</span>
+            <strong id="handoverFireCount">—</strong>
+            <small>已標記 🔥 的交接</small>
+          </a>
+          <a class="dashboard-card" href="work/tracking.html">
+            <span class="dashboard-card-label">提報追蹤</span>
+            <strong id="trackingOpenCount">—</strong>
+            <small>待辦中／處理中／觀察中</small>
+          </a>
+          <a class="dashboard-card" href="work/log.html">
+            <span class="dashboard-card-label">日誌</span>
+            <strong id="shiftLogCount">—</strong>
+            <small>交接時段內日誌</small>
+          </a>
         </div>
 
+        <section class="dashboard-todo-card" aria-label="今日待辦列表">
+          <div class="panel-heading">
+            <div>
+              <h2>今日待辦</h2>
+              <p>自動彙整當前班次日誌與 🔥 交接項目。</p>
+            </div>
+          </div>
+          <ul class="dashboard-todo-list" id="dashboardTodoList">
+            <li class="dashboard-empty">載入中...</li>
+          </ul>
+        </section>
       </section>
     </main>
   </section>
@@ -139,5 +168,6 @@
     });
   </script>
   <script src="assets/app.js"></script>
+  <script src="assets/dashboard.js"></script>
 </body>
 </html>
