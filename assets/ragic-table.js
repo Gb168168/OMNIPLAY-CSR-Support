@@ -1,9 +1,8 @@
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', config: null, schema: null, unsubscribeRecords: null };
 
 const canUse = (action) => {
-  if (typeof window.canUse === 'function') return window.canUse(action);
-  if (typeof getPagePermission !== 'function') return false;
-  return getPagePermission()[action] === true;
+  if (typeof getPagePermission !== 'function') return true;
+  return getPagePermission()[action] !== false;
 };
 
 const FIELD_TYPES = [
@@ -101,15 +100,15 @@ const canvasToJpegDataUrl = (canvas) => new Promise((resolve, reject) => {
 const compressImageToBase64 = async (file) => {
   if (!file) return '';
   if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
-  const image = await loadImage(await readFileAsDataUrl(file));
-  const scale = image.width > MAX_IMAGE_WIDTH ? MAX_IMAGE_WIDTH / image.width : 1;
+  const loadedImage = await loadImage(await readFileAsDataUrl(file));
+  const scale = loadedImage.width > MAX_IMAGE_WIDTH ? MAX_IMAGE_WIDTH / loadedImage.width : 1;
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(image.width * scale);
-  canvas.height = Math.round(image.height * scale);
+  canvas.width = Math.round(loadedImage.width * scale);
+  canvas.height = Math.round(loadedImage.height * scale);
   const context = canvas.getContext('2d');
   context.fillStyle = '#fff';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
   const { dataUrl, size } = await canvasToJpegDataUrl(canvas);
   if (size > MAX_IMAGE_BYTES) throw new Error('圖片太大，請選擇較小的圖片');
   return dataUrl;
