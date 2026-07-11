@@ -110,10 +110,9 @@
       </header>
       <section class="dashboard" aria-label="首頁 dashboard">
         <div class="dashboard-stats" id="dashboardStats">
-          <a class="dashboard-card" href="service/leave.html">
-            <span class="dashboard-card-label">今日上班</span>
-            <strong id="todayWorkingCount">—</strong>
-            <small>未請假且未在家值班</small>
+         <a class="dashboard-card today-working-card" href="service/leave.html">
+            <span class="dashboard-card-label" id="todayWorkingTitle">今日上班</span>
+            <div class="today-working-list" id="todayWorkingList">載入中...</div>
           </a>
           <a class="dashboard-card" href="work/handover.html">
             <span class="dashboard-card-label">待交接</span>
