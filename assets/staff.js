@@ -49,11 +49,23 @@ const fixedStaffOrderMap = fixedStaffOrder.reduce((map, name, index) => ({ ...ma
 const getDefaultSortOrder = (name) => fixedStaffOrderMap[name] ?? 999;
 const maskPassword = (password = '') => password ? '**' : '—';
 
+const staffPermission = () => window.getPagePermission?.('staff') || { view: false, edit: false, delete: false, design: false };
+const canEditStaff = () => window.isOmniplayAdmin?.() || staffPermission().edit === true;
+const canDeleteStaff = () => window.isOmniplayAdmin?.() || staffPermission().delete === true;
+const applyStaffPermissionUi = () => {
+  const editable = canEditStaff();
+  if (addButton) addButton.hidden = !editable;
+  if (!editable && staffModal?.classList.contains('is-open')) toggleModal(false);
+};
+
 const renderStaff = (staffList) => {
   staffCache = staffList;
   if (!staffTableBody) return;
 
   emptyState.hidden = staffList.length > 0;
+  applyStaffPermissionUi();
+  const editable = canEditStaff();
+  const deletable = canDeleteStaff();
   staffTableBody.innerHTML = staffList.map((staff) => {
     const passwordVisible = visiblePasswordRows.has(staff.id);
     const passwordText = passwordVisible ? staff.password : maskPassword(staff.password);
@@ -74,10 +86,10 @@ const renderStaff = (staffList) => {
         <td><span class="status-badge ${staff.status === '停用' ? 'is-disabled' : 'is-enabled'}">${escapeHtml(staff.status || '啟用')}</span></td>
         <td>
           <div class="table-actions">
-            ${protectedOmniplay ? '' : `<button class="secondary-button" type="button" data-action="toggle-status" data-id="${staff.id}">${staff.status === '停用' ? '啟用' : '停用'}</button>`}
-            <button class="secondary-button" type="button" data-action="edit" data-id="${staff.id}">編輯</button>
+            ${protectedOmniplay || !editable ? '' : `<button class="secondary-button" type="button" data-action="toggle-status" data-id="${staff.id}">${staff.status === '停用' ? '啟用' : '停用'}</button>`}
+            ${editable ? `<button class="secondary-button" type="button" data-action="edit" data-id="${staff.id}">編輯</button>` : ''}
             ${protectedOmniplay || !window.isOmniplayAdmin?.() ? '' : `<button class="secondary-button" type="button" data-action="permissions" data-id="${staff.id}">⚙️ 權限管理</button>`}
-            ${protectedOmniplay ? '' : `<button class="danger-button" type="button" data-action="delete" data-id="${staff.id}">刪除</button>`}
+            ${protectedOmniplay || !deletable ? '' : `<button class="danger-button" type="button" data-action="delete" data-id="${staff.id}">刪除</button>`}
           </div>
         </td>
       </tr>`;
@@ -85,6 +97,7 @@ const renderStaff = (staffList) => {
 };
 
 const openCreateModal = () => {
+  if (!canEditStaff()) return;
   editingStaffId = null;
   modalTitle.textContent = '新增人員';
   submitButton.textContent = '儲存人員';
@@ -93,6 +106,7 @@ const openCreateModal = () => {
 };
 
 const openEditModal = (staffId) => {
+  if (!canEditStaff()) return;
   const staff = staffCache.find((item) => item.id === staffId);
   if (!staff) return;
 
@@ -126,6 +140,7 @@ const loadStaff = () => {
 
 staffForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!canEditStaff()) return setMessage('您沒有編輯人員管理的權限。');
   if (!staffCollection) return setMessage('Firebase 尚未完成初始化，無法儲存資料。');
 
   const payload = {
@@ -193,6 +208,7 @@ staffTableBody?.addEventListener('click', async (event) => {
   }
 
   if (action === 'toggle-status' && staffCollection) {
+    if (!canEditStaff()) return;
     const staff = staffCache.find((item) => item.id === id);
     if (!staff || isProtectedOmniplay(staff)) return;
 
@@ -208,6 +224,8 @@ staffTableBody?.addEventListener('click', async (event) => {
     return;
   }
 
+  if (action === 'delete' && !canDeleteStaff()) return;
+  
   if (action === 'delete' && staffCollection && !isProtectedOmniplay(staffCache.find((item) => item.id === id)) && confirm('確定要刪除此人員嗎？')) {
     try {
       await staffCollection.doc(id).delete();
@@ -232,6 +250,7 @@ passwordToggle?.addEventListener('click', () => {
   passwordToggle.textContent = isHidden ? '🙈' : '👁️';
 });
 
+window.permissionReady?.then(() => { applyStaffPermissionUi(); renderStaff(staffCache); });
 loadStaff();
 
 const permissionsCollection = window.omniplayDb?.collection('permissions');
