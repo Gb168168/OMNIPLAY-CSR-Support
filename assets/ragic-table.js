@@ -91,7 +91,7 @@ const canvasToJpegDataUrl = (canvas) => new Promise((resolve, reject) => {
   canvas.toBlob((blob) => {
     if (!blob) { reject(new Error('圖片壓縮失敗')); return; }
     const reader = new FileReader();
-    reader.onload = () => resolve({ dataUrl: reader.result, size: new Blob([reader.result]).size });
+    reader.onload = () => resolve({ dataUrl: reader.result, size: blob.size });
     reader.onerror = () => reject(reader.error || new Error('圖片壓縮失敗'));
     reader.readAsDataURL(blob);
   }, 'image/jpeg', JPEG_QUALITY);
@@ -277,6 +277,11 @@ const initRagicPage = async (config) => {
   document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
   document.querySelector('#ragicForm').addEventListener('submit', async (event) => {
   event.preventDefault();
+    const fields = getFields();
+    if (!fields.length) {
+      alert('表格結構尚未載入，請稍後再試');
+      return;
+    }
     if (!canUse('edit')) return alert('您沒有編輯權限');
     const saveButton = document.querySelector('button[form="ragicForm"][type="submit"]');
     const originalText = saveButton?.textContent || '儲存';
