@@ -2084,11 +2084,15 @@ textarea,
 .dashboard { display: grid; gap: 22px; }
 .dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 16px; }
 .dashboard-card, .dashboard-todo-card { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); }
-.dashboard-card { display: grid; gap: 8px; padding: 20px; color: var(--text); text-decoration: none; transition: transform .2s, border-color .2s; }
+.dashboard-card { display: grid; align-content: start; gap: 8px; min-height: 0; padding: 20px; color: var(--text); text-decoration: none; transition: transform .2s, border-color .2s; }
 .dashboard-card:hover { transform: translateY(-2px); border-color: rgba(59,130,246,.55); }
 .dashboard-card-label { color: var(--muted); font-weight: 800; }
 .dashboard-card strong { font-size: 34px; line-height: 1; }
 .dashboard-card small, .dashboard-todo-list small { color: var(--muted); }
+.today-working-card { height: auto; }
+.today-working-list { display: grid; gap: 6px; font-size: 14px; line-height: 1.55; color: var(--text); }
+.today-working-row, .today-working-empty { font-size: 14px; }
+.today-working-row span { color: var(--muted); font-weight: 800; }
 .dashboard-todo-list { list-style: none; margin: 0; padding: 0 18px 18px; display: grid; gap: 10px; }
 .dashboard-todo-list li a, .dashboard-empty { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--table-row); color: var(--text); text-decoration: none; }
 .todo-type { font-weight: 900; color: var(--primary); }
