@@ -1421,7 +1421,15 @@ body { background: var(--bg-gradient); }
 [data-theme="light"] .submenu a:hover,
 [data-theme="light"] .section-button:hover { color: var(--text); }
 .toggle-btn, .theme-toggle { color: var(--text); background: var(--sidebar-soft); border: 1px solid var(--border); }
-.theme-toggle { width: 42px; height: 42px; display: inline-grid; place-items: center; flex: 0 0 auto; font-size: 18px; }
+.theme-toggle {
+  width: 42px;
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 18px;
+  line-height: 1;
+}
 .login-card .theme-toggle { position: absolute; top: 18px; right: 18px; }
 .topbar, .placeholder-card, .staff-panel, .leave-panel, .schedule-panel, .ragic-card {
   border-color: var(--border);
@@ -1885,7 +1893,7 @@ textarea,
 .menu-section {
   margin: 8px 12px 0;
   padding-top: 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
 }
 
 .section-button {
@@ -1923,7 +1931,10 @@ textarea,
 }
 
 .chevron {
-  color: currentColor;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  transform-origin: center;
 }
 
 .submenu {
@@ -1932,7 +1943,7 @@ textarea,
 }
 
 .submenu a {
-  padding: 10px 12px 10px 37px;
+  padding: 10px 12px 10px 45px;
   color: var(--text-secondary);
   font-size: 14px;
   border-left: 3px solid transparent;
