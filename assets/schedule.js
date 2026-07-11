@@ -182,7 +182,13 @@ const renderCalendar = () => {
   const days = [];
   for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) days.push(new Date(cursor));
 
-  eriodLabel.textContent = viewMode === 'week' ? `${toDateKey(start)} ~ ${toDateKey(end)}` : viewMode === 'year' ? `${currentDate.getFullYear()} 年` : `${currentDate.getFullYear()}年${pad(currentDate.getMonth() + 1)}月`;
+  if (periodLabel) {
+    periodLabel.textContent = viewMode === 'week'
+      ? `${toDateKey(start)} ~ ${toDateKey(end)}`
+      : viewMode === 'year'
+        ? `${currentDate.getFullYear()} 年`
+        : `${currentDate.getFullYear()}年${pad(currentDate.getMonth() + 1)}月`;
+  }
   renderPeriodPicker();
   if (selectedDateEl) selectedDateEl.textContent = toDateKey(selectedDate);
 
