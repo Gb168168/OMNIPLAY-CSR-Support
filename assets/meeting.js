@@ -1,15 +1,21 @@
 const meetingDb = window.omniplayDb;
 const meetingCollection = meetingDb?.collection('meeting');
 const meetingStaffCollection = meetingDb?.collection('staff');
+const meetingSettingsDoc = meetingDb?.collection('meetingSettings').doc('staffList');
 
 const meetingState = {
   records: [],
   staff: [],
+  defaultStaff: [],
+  files: [],
+  tabs: [],
   currentId: null,
   activeTab: 'techRows',
   staffLoaded: false
 };
 
+const DEFAULT_MEETING_TABS = ['技術會議', '客服會議'];
+const MEETING_LOCATIONS = ['2F', '3F'];
 const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
 const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
@@ -40,8 +46,21 @@ const getNextSerial = () => {
   return `MTG-${String(max + 1).padStart(6, '0')}`;
 };
 
-const staffOptions = () => meetingState.staff.map((staff) => `<option value="${escapeHtml(staffName(staff))}">${escapeHtml(staffName(staff))}</option>`).join('');
-const staffDatalistOptions = () => meetingState.staff.map((staff) => `<option value="${escapeHtml(staffName(staff))}"></option>`).join('');
+const staffNames = () => meetingState.staff.map((staff) => typeof staff === 'string' ? staff : staffName(staff)).filter(Boolean);
+const staffOptions = () => staffNames().map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+const staffDatalistOptions = () => staffNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join('');
+const makeTabKey = (name, index) => `tab-${index}-${String(name).replace(/[^\w\u4e00-\u9fa5-]/g, '-')}`;
+const normalizeTabs = (record = {}) => {
+  if (Array.isArray(record.tabs) && record.tabs.length) return record.tabs.map((tab) => ({ name: tab.name, rows: tab.rows || [] }));
+  return DEFAULT_MEETING_TABS.map((name, index) => ({ name, rows: index === 0 ? (record.techRows || []) : (record.csRows || []) }));
+};
+const populateLocationSelect = () => {
+  const select = document.querySelector('#meetingLocation');
+  if (!select) return;
+  const value = select.value;
+  select.innerHTML = MEETING_LOCATIONS.map((location) => `<option value="${escapeHtml(location)}">${escapeHtml(location)}</option>`).join('');
+  if (MEETING_LOCATIONS.includes(value)) select.value = value;
+};
 
 const populateStaffSelects = () => {
   if (!meetingState.staffLoaded) return;
@@ -154,7 +173,7 @@ const setFormEditable = () => {
   });
   document.querySelectorAll('[data-attendee-toggle]').forEach((button) => { button.disabled = !editable; });
   updateAttendeeDropdowns();
-  document.querySelectorAll('[data-add-row], [data-delete-row], #saveMeetingButton').forEach((button) => {
+  document.querySelectorAll('[data-add-row], [data-delete-row], #saveMeetingButton, #addMeetingTabButton, [data-delete-tab], #staffSettingsButton').forEach((button) => {
     button.hidden = !editable;
     button.disabled = !editable;
   });
@@ -184,15 +203,57 @@ const showList = () => {
   document.querySelector('#meetingListView').hidden = false;
 };
 
+
+const renderTabs = (tabs = meetingState.tabs) => {
+  meetingState.tabs = tabs.length ? tabs : DEFAULT_MEETING_TABS.map((name) => ({ name, rows: [] }));
+  const tabsEl = document.querySelector('#meetingTabs');
+  const panelsEl = document.querySelector('#meetingTabPanels');
+  if (!tabsEl || !panelsEl) return;
+  tabsEl.innerHTML = meetingState.tabs.map((tab, index) => {
+    const key = makeTabKey(tab.name, index);
+    const removable = !DEFAULT_MEETING_TABS.includes(tab.name);
+    return `<button class="meeting-tab${key === meetingState.activeTab ? ' is-active' : ''}" type="button" data-meeting-tab="${escapeHtml(key)}" role="tab"><span>${escapeHtml(tab.name)}</span>${removable ? `<span class="meeting-tab-delete" data-delete-tab="${escapeHtml(key)}" title="刪除 ${escapeHtml(tab.name)}">×</span>` : ''}</button>`;
+  }).join('') + '<button class="meeting-tab meeting-tab-add" type="button" id="addMeetingTabButton">＋</button>';
+  panelsEl.innerHTML = meetingState.tabs.map((tab, index) => {
+    const key = makeTabKey(tab.name, index);
+    return `<div class="meeting-tab-panel" data-tab-panel="${escapeHtml(key)}" ${key === meetingState.activeTab ? '' : 'hidden'}><div class="ragic-subtable-head"><h3>${escapeHtml(tab.name)}</h3><button class="secondary" type="button" data-add-row="${escapeHtml(key)}">+ 新增一列</button></div><div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="${escapeHtml(key)}"></tbody></table></div></div>`;
+  }).join('');
+  meetingState.tabs.forEach((tab, index) => renderRows(makeTabKey(tab.name, index), tab.rows || []));
+};
+
+const currentRowsByKey = async (key) => readRows(key);
+
+const renderMeetingFiles = () => {
+  const list = document.querySelector('#meetingFileList');
+  if (!list) return;
+  list.innerHTML = meetingState.files.map((file, index) => `<div class="meeting-file-item"><a href="${escapeHtml(file.dataUrl)}" download="${escapeHtml(file.name)}">${escapeHtml(file.name)}</a><button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`).join('');
+};
+
+const addMeetingFiles = async (files) => {
+  for (const file of files) meetingState.files.push({ name: file.name, type: file.type || 'application/octet-stream', dataUrl: await readFileAsDataUrl(file) });
+  renderMeetingFiles();
+};
+
+const renderStaffSettings = () => {
+  const list = document.querySelector('#staffSettingsList');
+  if (!list) return;
+  list.innerHTML = staffNames().map((name) => `<div class="staff-settings-item"><span>${escapeHtml(name)}</span><button class="ghost danger" type="button" data-remove-staff="${escapeHtml(name)}">×</button></div>`).join('');
+};
+
+const saveStaffSettings = async () => {
+  await meetingSettingsDoc?.set({ names: staffNames(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+};
+
 const showForm = (record = {}) => {
   meetingState.currentId = record.id || null;
-  meetingState.activeTab = 'techRows';
+  meetingState.activeTab = makeTabKey(normalizeTabs(record)[0]?.name || DEFAULT_MEETING_TABS[0], 0);
   document.querySelector('#meetingListView').hidden = true;
   document.querySelector('#meetingFormView').hidden = false;
   document.querySelector('#meetingFormTitle').textContent = record.id ? '編輯會議紀錄' : '新增會議紀錄';
   document.querySelector('#meetingDate').value = record.date || today();
   document.querySelector('#meetingTime').value = record.time || currentTime();
-  document.querySelector('#meetingLocation').value = record.location || '';
+  populateLocationSelect();
+  document.querySelector('#meetingLocation').value = MEETING_LOCATIONS.includes(record.location) ? record.location : MEETING_LOCATIONS[0];
   document.querySelector('#meetingSerial').value = record.serial || record.number || getNextSerial();
   document.querySelector('#meetingNote').value = record.note || '';
   populateStaffSelects();
@@ -200,9 +261,10 @@ const showForm = (record = {}) => {
   setSelectValue(document.querySelector('#meetingRecorder'), record.recorder || '');
   setSelectValue(document.querySelector('#meetingMorningAttendees'), record.morningAttendees || []);
   setSelectValue(document.querySelector('#meetingEveningAttendees'), record.eveningAttendees || []);
-  renderRows('techRows', record.techRows || []);
-  renderRows('csRows', record.csRows || []);
-  switchTab('techRows');
+  meetingState.files = Array.isArray(record.files) ? [...record.files] : [];
+  renderMeetingFiles();
+  renderTabs(normalizeTabs(record));
+  switchTab(meetingState.activeTab);
   setFormEditable();
 };
 
@@ -231,6 +293,7 @@ const rowTemplate = (key, index, row = {}) => `
 `;
 
 const switchTab = (key) => {
+  if (!key) return;
   meetingState.activeTab = key;
   document.querySelectorAll('[data-meeting-tab]').forEach((button) => button.classList.toggle('is-active', button.dataset.meetingTab === key));
   document.querySelectorAll('[data-tab-panel]').forEach((panel) => { panel.hidden = panel.dataset.tabPanel !== key; });
@@ -323,7 +386,13 @@ const readRows = async (key) => {
   return rows;
 };
 
-const readForm = async () => ({
+const readForm = async () => {
+  const tabs = [];
+  for (let index = 0; index < meetingState.tabs.length; index += 1) {
+    const tab = meetingState.tabs[index];
+    tabs.push({ name: tab.name, rows: await readRows(makeTabKey(tab.name, index)) });
+  }
+  return ({
   date: document.querySelector('#meetingDate').value,
   time: document.querySelector('#meetingTime').value,
   location: document.querySelector('#meetingLocation').value.trim(),
@@ -333,9 +402,12 @@ const readForm = async () => ({
   morningAttendees: [...document.querySelector('#meetingMorningAttendees').selectedOptions].map((option) => option.value),
   eveningAttendees: [...document.querySelector('#meetingEveningAttendees').selectedOptions].map((option) => option.value),
   note: document.querySelector('#meetingNote').value.trim(),
-  techRows: await readRows('techRows'),
-  csRows: await readRows('csRows')
+  files: meetingState.files,
+  tabs,
+  techRows: tabs[0]?.rows || [],
+  csRows: tabs[1]?.rows || []
 });
+};
 
 const openImagePreview = (src) => {
   document.querySelector('#meetingPreviewImage').src = src;
@@ -350,17 +422,27 @@ const closeImagePreview = () => {
 const initMeetingPage = async () => {
   if (window.permissionReady) await window.permissionReady;
   meetingStaffCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-    meetingState.staff = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(visibleMeetingStaff);
-    meetingState.staffLoaded = true;
+    meetingState.defaultStaff = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(visibleMeetingStaff).map(staffName);
+    if (!meetingState.staffLoaded) meetingState.staff = [...meetingState.defaultStaff];
     populateStaffSelects();
+    renderStaffSettings();
     setFormEditable();
   }, (error) => {
     console.error('讀取會議人員資料失敗：', error);
-    meetingState.staff = [];
+    meetingState.defaultStaff = [];
+    if (!meetingState.staffLoaded) meetingState.staff = [];
     meetingState.staffLoaded = true;
     populateStaffSelects();
     setFormEditable();
   });
+  meetingSettingsDoc?.onSnapshot((doc) => {
+    const names = doc.exists ? (doc.data().names || []) : [];
+    meetingState.staff = names.length ? names : [...meetingState.defaultStaff];
+    meetingState.staffLoaded = true;
+    populateStaffSelects();
+    renderStaffSettings();
+    setFormEditable();
+  }, (error) => console.error('讀取人員設定失敗：', error));
   meetingCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
     meetingState.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     renderList();
@@ -381,7 +463,32 @@ document.querySelector('#meetingTableBody')?.addEventListener('keydown', (event)
   const record = meetingState.records.find((item) => item.id === id);
   if (record) showForm(record);
 });
-document.querySelector('#meetingTabs')?.addEventListener('click', (event) => {
+document.querySelector('#meetingTabs')?.addEventListener('click', async (event) => {
+  const deleteKey = event.target.closest('[data-delete-tab]')?.dataset.deleteTab;
+  if (deleteKey && canEditMeeting()) {
+    event.stopPropagation();
+    const tabIndex = meetingState.tabs.findIndex((tab, index) => makeTabKey(tab.name, index) === deleteKey);
+    if (tabIndex >= 0 && confirm(`確定刪除「${meetingState.tabs[tabIndex].name}」？`)) {
+      meetingState.tabs.splice(tabIndex, 1);
+      meetingState.activeTab = makeTabKey(meetingState.tabs[0].name, 0);
+      renderTabs(meetingState.tabs);
+    }
+    return;
+  }
+  if (event.target.closest('#addMeetingTabButton') && canEditMeeting()) {
+    const name = prompt('請輸入會議名稱');
+    const trimmed = name?.trim();
+    if (trimmed) {
+      const rows = [];
+      for (let index = 0; index < meetingState.tabs.length; index += 1) rows.push(await currentRowsByKey(makeTabKey(meetingState.tabs[index].name, index)));
+      meetingState.tabs = meetingState.tabs.map((tab, index) => ({ ...tab, rows: rows[index] || [] }));
+      meetingState.tabs.push({ name: trimmed, rows: [] });
+      meetingState.activeTab = makeTabKey(trimmed, meetingState.tabs.length - 1);
+      renderTabs(meetingState.tabs);
+      setFormEditable();
+    }
+    return;
+  }
   const key = event.target.closest('[data-meeting-tab]')?.dataset.meetingTab;
   if (key) switchTab(key);
 });
@@ -446,6 +553,46 @@ document.querySelector('#meetingForm')?.addEventListener('click', async (event) 
   const image = event.target.closest('[data-image]')?.dataset.image;
   if (image) openImagePreview(image);
 });
+document.querySelector('#meetingFileInput')?.addEventListener('change', async (event) => {
+  try { await addMeetingFiles(event.target.files || []); event.target.value = ''; }
+  catch (error) { alert(error.message || '檔案讀取失敗，請稍後再試。'); }
+});
+document.querySelector('#meetingFileDropZone')?.addEventListener('paste', (event) => {
+  const files = [...(event.clipboardData?.files || [])];
+  if (!files.length) return;
+  event.preventDefault();
+  addMeetingFiles(files).catch((error) => alert(error.message || '檔案讀取失敗，請稍後再試。'));
+});
+document.querySelector('#meetingFileList')?.addEventListener('click', (event) => {
+  const index = event.target.closest('[data-remove-file]')?.dataset.removeFile;
+  if (index === undefined) return;
+  meetingState.files.splice(Number(index), 1);
+  renderMeetingFiles();
+});
+document.querySelector('#staffSettingsButton')?.addEventListener('click', () => {
+  renderStaffSettings();
+  document.querySelector('#staffSettingsModal').hidden = false;
+});
+document.querySelector('#closeStaffSettingsModal')?.addEventListener('click', () => { document.querySelector('#staffSettingsModal').hidden = true; });
+document.querySelector('#addStaffSettingsName')?.addEventListener('click', async () => {
+  const input = document.querySelector('#staffSettingsName');
+  const name = input.value.trim();
+  if (!name) return;
+  if (!staffNames().includes(name)) meetingState.staff.push(name);
+  input.value = '';
+  populateStaffSelects();
+  renderStaffSettings();
+  await saveStaffSettings();
+});
+document.querySelector('#staffSettingsList')?.addEventListener('click', async (event) => {
+  const name = event.target.closest('[data-remove-staff]')?.dataset.removeStaff;
+  if (!name) return;
+  meetingState.staff = staffNames().filter((item) => item !== name);
+  populateStaffSelects();
+  renderStaffSettings();
+  await saveStaffSettings();
+});
+
 document.querySelector('#meetingForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!canEditMeeting()) return alert('您沒有編輯權限');
