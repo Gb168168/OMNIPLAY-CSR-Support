@@ -148,7 +148,9 @@ const renderForm = (record = {}) => {
   formView.querySelector('h2').textContent = record.id ? `編輯${RAGIC_STATE.config.title}` : `新增${RAGIC_STATE.config.title}`; const form = formView.querySelector('form'); form.innerHTML = '';
   const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
   getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key]))); form.appendChild(grid);
-  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3>${field.label}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><thead><tr>${(field.fields || []).map((f) => `<th>${f.label}</th>`).join('')}<th>操作</th></tr></thead><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => body.appendChild(renderSubtableRow(field))); form.appendChild(section); });
+  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3>${field.label}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><thead><tr>${(field.fields || []).map((f) => `<th>${f.label}</th>`).join('')}<th>操作</th></tr></thead><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) body.appendChild(renderSubtableRow(field)); }); form.appendChild(section); });
+  setFormEditable(form);
+  applyRagicPermissionUi();
 };
 
 const renderCell = (record, key) => {
@@ -169,7 +171,7 @@ const closeImagePreview = () => {
   modal.hidden = true;
   modal.querySelector('img').removeAttribute('src');
 };
-const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = 0; tr.innerHTML = listColumns().map((key) => `<td>${renderCell(record, key)}</td>`).join(''); tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
+const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = canUse('edit') ? 0 : -1; tr.classList.toggle('is-readonly', !canUse('edit')); tr.innerHTML = listColumns().map((key) => `<td>${renderCell(record, key)}</td>`).join(''); if (canUse('edit')) tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
 const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = RAGIC_STATE.records.filter((record) => cols.every((key) => { const filter = document.querySelector(`[data-filter="${key}"]`)?.value.toLowerCase() || ''; return !filter || valueToText(record[key]).toLowerCase().includes(filter); })); if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1)); renderTable(); };
 const renderHeader = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
@@ -186,6 +188,44 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
 const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; };
 const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
 
+
+const refreshCurrentPermissions = async () => {
+  if (typeof window.loadCurrentPermissions === 'function') {
+    await window.loadCurrentPermissions();
+    return;
+  }
+  if (window.isOmniplayAdmin?.()) return;
+  const staffId = sessionStorage.getItem('omniplayStaffId');
+  const permissionsCollection = window.omniplayDb?.collection('permissions');
+  if (!staffId || !permissionsCollection) return;
+  const doc = await permissionsCollection.doc(staffId).get();
+  if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
+  else sessionStorage.removeItem('omniplayPermissions');
+};
+
+const applyRagicPermissionUi = () => {
+  document.querySelector('#newRecordButton')?.toggleAttribute('hidden', !canUse('edit'));
+  const saveButton = document.querySelector('button[form="ragicForm"][type="submit"]');
+  if (saveButton) {
+    saveButton.hidden = !canUse('edit');
+    saveButton.disabled = !canUse('edit');
+  }
+  const deleteButton = document.querySelector('#deleteButton');
+  if (deleteButton) deleteButton.hidden = !canUse('delete') || !RAGIC_STATE.currentId;
+  const designButton = document.querySelector('#designTableButton');
+  if (designButton) designButton.hidden = !canUse('design');
+};
+
+const setFormEditable = (form) => {
+  const editable = canUse('edit');
+  form.querySelectorAll('input, textarea, select').forEach((control) => {
+    control.disabled = !editable;
+  });
+  form.querySelectorAll('.ragic-subtable-head button, .subtable-row .danger').forEach((button) => {
+    button.hidden = !editable;
+    button.disabled = !editable;
+  });
+};
 const ensureTopbarActions = () => {
   const topbar = document.querySelector('.topbar');
   if (!topbar) return null;
@@ -201,6 +241,7 @@ const ensureTopbarActions = () => {
 };
 
 const initRagicPage = async (config) => {
+  await refreshCurrentPermissions();
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
@@ -229,14 +270,15 @@ const initRagicPage = async (config) => {
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
   document.querySelector('#addFieldButton')?.addEventListener('click', () => document.querySelector('.designer-body').appendChild(fieldDesigner({ label: '新欄位', type: 'text' })));
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
+    if (!canUse('design')) return alert('您沒有設計權限');
     RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(document.querySelector('.designer-body')) }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     if (schemaDoc) await schemaDoc.set(RAGIC_STATE.schema, { merge: true });
     closeDesigner();
     renderHeader();
     applyFilters();
   });
-  document.querySelector('#newRecordButton').hidden = !canUse('edit'); document.querySelector('button[form="ragicForm"]').hidden = !canUse('edit'); document.querySelector('#newRecordButton').addEventListener('click', () => renderForm()); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; });
-  document.querySelector('#deleteButton').hidden = !canUse('delete'); document.querySelector('#deleteButton').addEventListener('click', async () => { if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
+  applyRagicPermissionUi(); document.querySelector('#newRecordButton').addEventListener('click', () => { if (canUse('edit')) renderForm(); }); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; });
+  document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
   document.querySelector('#ragicForm').addEventListener('submit', async (event) => {
   event.preventDefault();
     if (!canUse('edit')) return alert('您沒有編輯權限');
@@ -261,6 +303,6 @@ const initRagicPage = async (config) => {
   });
   document.querySelector('#ragicHeaderRow').addEventListener('input', applyFilters); document.querySelector('#ragicHeaderRow').addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
-  schemaDoc.onSnapshot(async (doc) => { if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true }); RAGIC_STATE.schema = doc.exists ? normalizeSchema(doc.data()) : makeDefaultSchema(config); renderHeader(); applyFilters(); });
-  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyFilters(); });
+  schemaDoc.onSnapshot(async (doc) => { if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true }); RAGIC_STATE.schema = doc.exists ? normalizeSchema(doc.data()) : makeDefaultSchema(config); renderHeader(); applyRagicPermissionUi(); applyFilters(); });
+  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyRagicPermissionUi(); applyFilters(); });
 };
