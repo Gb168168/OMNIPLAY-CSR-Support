@@ -88,6 +88,19 @@ if (!window._multiSelectClickBound) {
 const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', report: 'RPT-', tracking: 'TRK-', alert: 'ALT-', knowledge: 'KB-', ai_database: 'AI-' };
 const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
 
+const currentRagicUser = () => sessionStorage.getItem('account') || sessionStorage.getItem('omniplayStaffAccount') || sessionStorage.getItem('omniplayStaffCode') || '';
+const isHandoverPage = () => RAGIC_STATE.config?.collection === 'handover';
+const renderIconActions = (record = {}) => {
+  const currentUser = currentRagicUser();
+  const pinned = Boolean(currentUser && record.pins?.[currentUser]);
+  const starred = Boolean(record.starred);
+  return `<td class="icon-actions">
+    <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="重要/今日交接">🔥</span>
+    <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">📌</span>
+    ${isHandoverPage() ? `<span class="star-btn ${starred ? 'active' : ''}" data-icon-action="star" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="交接星號">★</span>` : ''}
+  </td>`;
+};
+
 const makeDefaultSchema = (config) => normalizeSchema({
   fields: [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])]
 });
@@ -365,11 +378,11 @@ const closeImagePreview = () => {
   modal.hidden = true;
   modal.querySelector('img').removeAttribute('src');
 };
-const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; const fields = listFields(); RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = canUse('edit') ? 0 : -1; tr.classList.toggle('is-readonly', !canUse('edit')); tr.innerHTML = fields.map((field) => `<td>${renderCell(record, field)}</td>`).join(''); if (canUse('edit')) tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
+const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; const fields = listFields(); RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = canUse('edit') ? 0 : -1; tr.classList.toggle('is-readonly', !canUse('edit')); tr.innerHTML = renderIconActions(record) + fields.map((field) => `<td>${renderCell(record, field)}</td>`).join(''); if (canUse('edit')) tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
 const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = RAGIC_STATE.records.filter((record) => cols.every((key) => { const filter = document.querySelector(`[data-filter="${key}"]`)?.value.toLowerCase() || ''; return !filter || valueToText(record[key]).toLowerCase().includes(filter); })); if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1)); renderTable(); };
 const renderHeader = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
-  headerRow.innerHTML = listFields().map((field) => {
+  headerRow.innerHTML = `<th class="icon-actions-head">標記</th>` + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
     return `<th><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
@@ -484,6 +497,9 @@ const applySystemFieldValues = async (data, existingData = {}, collection = null
 const initRagicPage = async (config) => {
   await waitForPermissions();
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
+  window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
+  window.togglePin = async (docId) => { const currentUser = currentRagicUser(); if (!currentUser) return alert('請先登入再使用個人釘選'); const doc = await collection.doc(docId).get(); const pins = doc.data()?.pins || {}; pins[currentUser] = !pins[currentUser]; await collection.doc(docId).update({ pins }); };
+  window.toggleStar = async (docId) => { if (!isHandoverPage()) return; const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ starred: !doc.data()?.starred }); };
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
   const newRecordButton = document.querySelector('#newRecordButton');
@@ -548,6 +564,8 @@ const initRagicPage = async (config) => {
     }
   });
   document.querySelector('#ragicHeaderRow').addEventListener('input', applyFilters); document.querySelector('#ragicHeaderRow').addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
+  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); if (button.dataset.iconAction === 'star') window.toggleStar(id); });
+  document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => {
     if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true });
