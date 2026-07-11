@@ -80,13 +80,13 @@
         <form id="meetingForm" class="meeting-form">
           <section class="meeting-info-table" aria-label="基本資訊">
             <div class="meeting-info-cell"><label for="meetingDate">日期</label><input id="meetingDate" type="date" required></div>
-            <div class="meeting-info-cell"><label for="meetingChair">主持</label><select id="meetingChair" data-staff-select required></select></div>
+            <div class="meeting-info-cell"><label for="meetingChair">主持</label><div class="combo-select"><input id="meetingChair" type="text" list="meetingStaffOptions" data-staff-combo required autocomplete="off"><button class="combo-clear" type="button" data-clear-combo="meetingChair" aria-label="清除主持">×</button></div></div>
             <div class="meeting-info-cell"><label for="meetingTime">時間</label><input id="meetingTime" type="time" required></div>
-            <div class="meeting-info-cell"><label for="meetingRecorder">紀錄</label><select id="meetingRecorder" data-staff-select required></select></div>
+            <div class="meeting-info-cell"><label for="meetingRecorder">紀錄</label><div class="combo-select"><input id="meetingRecorder" type="text" list="meetingStaffOptions" data-staff-combo required autocomplete="off"><button class="combo-clear" type="button" data-clear-combo="meetingRecorder" aria-label="清除紀錄">×</button></div></div>
             <div class="meeting-info-cell"><label for="meetingLocation">地點</label><input id="meetingLocation" type="text" autocomplete="off"></div>
-            <div class="meeting-info-cell"><label for="meetingMorningAttendeesButton">早 - 出席</label><div class="meeting-attendee-dropdown" data-attendee-dropdown="meetingMorningAttendees"><select id="meetingMorningAttendees" data-staff-select multiple hidden></select><button class="meeting-attendee-toggle" id="meetingMorningAttendeesButton" type="button" aria-haspopup="listbox" aria-expanded="false" data-attendee-toggle>請選擇</button><div class="meeting-attendee-menu" role="listbox" aria-multiselectable="true" data-attendee-menu hidden></div></div></div>
+            <div class="meeting-info-cell"><label for="meetingMorningAttendeesDisplay">早 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingMorningAttendees"><select id="meetingMorningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingMorningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
             <div class="meeting-info-cell"><label for="meetingSerial">編號</label><input id="meetingSerial" type="text" readonly></div>
-            <div class="meeting-info-cell"><label for="meetingEveningAttendeesButton">晚 - 出席</label><div class="meeting-attendee-dropdown" data-attendee-dropdown="meetingEveningAttendees"><select id="meetingEveningAttendees" data-staff-select multiple hidden></select><button class="meeting-attendee-toggle" id="meetingEveningAttendeesButton" type="button" aria-haspopup="listbox" aria-expanded="false" data-attendee-toggle>請選擇</button><div class="meeting-attendee-menu" role="listbox" aria-multiselectable="true" data-attendee-menu hidden></div></div></div>
+            <div class="meeting-info-cell"><label for="meetingEveningAttendeesDisplay">晚 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingEveningAttendees"><select id="meetingEveningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingEveningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
             <div class="meeting-info-cell meeting-info-note"><label for="meetingNote">備註</label><input id="meetingNote" type="text" autocomplete="off"></div>
           </section>
 
@@ -104,6 +104,7 @@
               <div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="csRows"></tbody></table></div>
             </div>
           </section>
+        <datalist id="meetingStaffOptions"></datalist>
         </form>
         <div class="ragic-actions">
           <button class="ghost danger" id="deleteMeetingButton" type="button">刪除</button>
