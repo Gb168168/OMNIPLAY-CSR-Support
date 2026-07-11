@@ -60,17 +60,25 @@
       </header>
       <section class="schedule-panel" aria-label="排程表月曆">
         <div class="panel-heading schedule-heading">
-          <div class="schedule-toolbar schedule-nav" aria-label="月份切換">
-            <button class="secondary-button" id="prevSchedulePeriod" type="button">上個月</button>
-            <button class="secondary-button" id="nextSchedulePeriod" type="button">下個月</button>
-            <button class="ghost-button" id="todaySchedulePeriod" type="button">本月</button>
-          </div>
-          <strong id="schedulePeriodLabel" class="schedule-period-label">—</strong>
-          <div class="schedule-toolbar" aria-label="排程工具列">
-            <div class="view-switch" aria-label="檢視切換">
-              <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
-              <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
+          <div class="schedule-nav-left" aria-label="月份切換">
+            <button class="secondary-button" id="prevSchedulePeriod" type="button">&lt; 上個月</button>
+            <div class="schedule-period-picker-wrap">
+              <button class="schedule-period-label" id="schedulePeriodLabel" type="button" aria-haspopup="dialog" aria-expanded="false">—</button>
+              <div class="schedule-period-picker" id="schedulePeriodPicker" hidden>
+                <div class="period-picker-year">
+                  <button class="ghost-button" id="prevPickerYear" type="button" aria-label="上一年">‹</button>
+                  <select id="scheduleYearSelect" aria-label="選擇年份"></select>
+                  <button class="ghost-button" id="nextPickerYear" type="button" aria-label="下一年">›</button>
+                </div>
+                <div class="period-picker-months" id="scheduleMonthPicker" aria-label="選擇月份"></div>
+              </div>
             </div>
+            <button class="secondary-button" id="nextSchedulePeriod" type="button">下個月 &gt;</button>
+          </div>
+          <div class="view-switch" aria-label="檢視切換">
+            <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
+            <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
+            <button class="ghost-button" id="yearViewButton" type="button" data-view="year">年</button>
           </div>
         </div>
         <div class="schedule-meta">
@@ -95,6 +103,16 @@
             <label><span>標題</span><input id="scheduleTitle" type="text" required autocomplete="off" /></label>
             <label><span>內容</span><textarea id="scheduleContent" rows="4" placeholder="輸入排程內容"></textarea></label>
             <label><span>提醒時間</span><input id="scheduleReminderAt" type="datetime-local" required /></label>
+            <div class="label-row repeat-row">
+              <label><span>重複提醒</span><select id="scheduleRepeat">
+                <option value="none">不重複</option>
+                <option value="daily">每天</option>
+                <option value="weekly">每週</option>
+                <option value="monthly">每月</option>
+                <option value="custom">自訂</option>
+              </select></label>
+              <label id="scheduleRepeatIntervalLabel" hidden><span>自訂間隔天數</span><input id="scheduleRepeatInterval" type="number" min="1" step="1" value="1" /></label>
+            </div>
             <label><span>設置人員</span><select id="scheduleStaff" multiple size="6"></select><small>按住 Ctrl / Command 可多選人員。</small></label>
             <section class="schedule-history" aria-label="設置歷程">
               <h3>設置歷程</h3>
