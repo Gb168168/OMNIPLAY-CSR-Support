@@ -19,8 +19,27 @@ const valueToText = (value) => Array.isArray(value) ? value.join('、') : (value
 const today = () => new Date().toISOString().slice(0, 10);
 const dataCollectionName = (config) => config.dataCollection || COLLECTION_MAP[config.collection] || config.collection;
 const schemaCollectionName = (config) => config.schemaCollection || SCHEMA_MAP[dataCollectionName(config)] || `${dataCollectionName(config)}_schema`;
+const normalizeField = (field = {}, fallback = 'field') => {
+  const label = String(field.label || field.key || '未命名欄位');
+  return {
+    ...field,
+    key: field.key || normalizeKey(label, fallback),
+    label,
+    type: field.type || 'text',
+    options: optionList(field),
+    fields: (field.fields || []).map((sub, index) => normalizeField(sub, `subfield_${index + 1}`))
+  };
+};
+const normalizeSchema = (schema = {}) => ({ fields: (schema.fields || []).map((field, index) => normalizeField(field, `field_${index + 1}`)) });
 const getFields = () => RAGIC_STATE.schema?.fields || [];
-const listColumns = () => getFields().filter((field) => field.type !== 'subtable').map((field) => field.key);
+const listFields = () => {
+  const fields = getFields().filter((field) => field.type !== 'subtable');
+  const configuredColumns = RAGIC_STATE.config?.listColumns;
+  if (!Array.isArray(configuredColumns) || !configuredColumns.length) return fields;
+  const byKey = new Map(fields.map((field) => [field.key, field]));
+  return configuredColumns.map((key) => byKey.get(key)).filter(Boolean);
+};
+const listColumns = () => listFields().map((field) => field.key);
 const fieldByKey = (key) => getFields().find((field) => field.key === key);
 const optionList = (field) => Array.isArray(field.options) ? field.options : String(field.options || '').split('\n').map((item) => item.trim()).filter(Boolean);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
@@ -28,9 +47,8 @@ const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
 const MAX_IMAGE_BYTES = 900 * 1024;
 
-const makeDefaultSchema = (config) => ({
+const makeDefaultSchema = (config) => normalizeSchema({
   fields: [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])]
-    .map((field) => ({ ...field, key: field.key || normalizeKey(field.label), options: optionList(field), fields: (field.fields || []).map((sub) => ({ ...sub, key: sub.key || normalizeKey(sub.label), options: optionList(sub) })) }))
 });
 
 const createControl = (field, value = '', subfield = false) => {
@@ -153,7 +171,14 @@ const closeImagePreview = () => {
 };
 const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = 0; tr.innerHTML = listColumns().map((key) => `<td>${renderCell(record, key)}</td>`).join(''); tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
 const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = RAGIC_STATE.records.filter((record) => cols.every((key) => { const filter = document.querySelector(`[data-filter="${key}"]`)?.value.toLowerCase() || ''; return !filter || valueToText(record[key]).toLowerCase().includes(filter); })); if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1)); renderTable(); };
-const renderHeader = () => { document.querySelector('#ragicHeaderRow').innerHTML = listColumns().map((key) => `<th><button class="sort-btn" type="button" data-sort="${key}">${getFields().find((f) => f.key === key)?.label || key} ⇅</button><input data-filter="${key}" placeholder="篩選" /></th>`).join(''); };
+const renderHeader = () => {
+  const headerRow = document.querySelector('#ragicHeaderRow');
+  headerRow.innerHTML = listFields().map((field) => {
+    const key = escapeHtml(field.key);
+    const label = escapeHtml(field.label || field.key);
+    return `<th><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
+  }).join('');
+};
 
 const fieldDesigner = (field = {}, nested = false) => { const row = document.createElement('div'); row.className = 'designer-field'; row.innerHTML = `<input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${FIELD_TYPES.filter((type) => !nested || type.value !== 'subtable').map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><div class="designer-actions"><button class="secondary" data-move="up" type="button">↑</button><button class="secondary" data-move="down" type="button">↓</button><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`; row.dataset.key = field.key || normalizeKey(field.label); const sub = row.querySelector('.designer-subfields'); const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; }; (field.fields || []).forEach((child) => sub.appendChild(fieldDesigner(child, true))); sub.insertAdjacentHTML('afterbegin', '<button class="secondary" data-add-subfield type="button">+ 子欄位</button>'); row.addEventListener('click', (event) => { if (event.target.matches('[data-remove]')) row.remove(); if (event.target.matches('[data-move="up"]') && row.previousElementSibling) row.parentElement.insertBefore(row, row.previousElementSibling); if (event.target.matches('[data-move="down"]') && row.nextElementSibling) row.parentElement.insertBefore(row.nextElementSibling, row); if (event.target.matches('[data-add-subfield]')) sub.appendChild(fieldDesigner({ label: '新子欄位', type: 'text' }, true)); }); row.querySelector('[data-role="type"]').addEventListener('change', sync); sync(); return row; };
 const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => { const label = row.querySelector('[data-role="label"]').value.trim() || '未命名欄位'; const type = row.querySelector('[data-role="type"]').value; const field = { key: row.dataset.key || normalizeKey(label), label, type, required: row.querySelector('[data-role="required"]').checked, options: row.querySelector('[data-role="options"]').value.split('\n').map((v) => v.trim()).filter(Boolean) }; if (type === 'subtable') field.fields = readDesigner(row.querySelector('.designer-subfields')); return field; });
@@ -204,7 +229,7 @@ const initRagicPage = async (config) => {
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
   document.querySelector('#addFieldButton')?.addEventListener('click', () => document.querySelector('.designer-body').appendChild(fieldDesigner({ label: '新欄位', type: 'text' })));
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
-    RAGIC_STATE.schema = { fields: readDesigner(document.querySelector('.designer-body')), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(document.querySelector('.designer-body')) }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     if (schemaDoc) await schemaDoc.set(RAGIC_STATE.schema, { merge: true });
     closeDesigner();
     renderHeader();
@@ -236,6 +261,6 @@ const initRagicPage = async (config) => {
   });
   document.querySelector('#ragicHeaderRow').addEventListener('input', applyFilters); document.querySelector('#ragicHeaderRow').addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
-  schemaDoc.onSnapshot(async (doc) => { if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true }); RAGIC_STATE.schema = doc.exists ? doc.data() : makeDefaultSchema(config); renderHeader(); applyFilters(); });
+  schemaDoc.onSnapshot(async (doc) => { if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true }); RAGIC_STATE.schema = doc.exists ? normalizeSchema(doc.data()) : makeDefaultSchema(config); renderHeader(); applyFilters(); });
   collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyFilters(); });
 };
