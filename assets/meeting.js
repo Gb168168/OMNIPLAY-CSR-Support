@@ -220,8 +220,11 @@ const rowTemplate = (key, index, row = {}) => `
     <td><textarea data-field="solution" rows="3">${escapeHtml(row.solution || '')}</textarea></td>
     <td><textarea data-field="note" rows="2">${escapeHtml(row.note || '')}</textarea></td>
     <td>
-      <input data-field="image" type="file" accept="image/*">
-      ${row.image ? `<button class="ragic-file-preview meeting-image-preview" type="button" data-image="${escapeHtml(row.image)}"><img src="${escapeHtml(row.image)}" alt="圖片預覽"><span>檢視</span></button>` : ''}
+      <div class="image-upload-area" tabindex="0">
+        <div>選擇檔案 或 Ctrl+V 貼上圖片</div>
+        <input data-field="image" type="file" accept="image/*" ${row.image ? `data-image-value="${escapeHtml(row.image)}"` : ''}>
+        ${row.image ? `<span class="ragic-file-preview meeting-image-preview image-upload-preview" data-image="${escapeHtml(row.image)}"><img src="${escapeHtml(row.image)}" alt="圖片預覽"><span>檢視</span><button class="image-preview-remove" type="button" aria-label="移除圖片">×</button></span>` : ''}
+      </div>
     </td>
     <td><button class="ghost danger" data-delete-row="${key}" type="button">刪除</button></td>
   </tr>
@@ -274,6 +277,36 @@ const compressImageToBase64 = async (file) => {
   return dataUrl;
 };
 
+const showImagePreview = (base64, container) => {
+  if (!container || !base64) return;
+  const input = container.querySelector('[data-field="image"]');
+  if (input) input.dataset.imageValue = base64;
+  container.querySelector('.ragic-file-preview')?.remove();
+  const preview = document.createElement('span');
+  preview.className = 'ragic-file-preview meeting-image-preview image-upload-preview';
+  preview.dataset.image = base64;
+  preview.innerHTML = `<img src="${escapeHtml(base64)}" alt="圖片預覽"><span>檢視</span><button class="image-preview-remove" type="button" aria-label="移除圖片">×</button>`;
+  container.appendChild(preview);
+};
+
+const processImageFile = async (file, container) => {
+  const base64 = await compressImageToBase64(file);
+  showImagePreview(base64, container);
+};
+
+const handleImagePaste = async (event, imageArea) => {
+  const items = event.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      event.preventDefault();
+      const file = item.getAsFile();
+      await processImageFile(file, imageArea);
+      break;
+    }
+  }
+};
+
 const readRows = async (key) => {
   const previousRows = existingRecord()[key] || [];
   const rows = [];
@@ -282,7 +315,7 @@ const readRows = async (key) => {
     const item = {};
     for (const field of detailFields) {
       const control = row.querySelector(`[data-field="${field}"]`);
-      if (field === 'image') item.image = control.files?.[0] ? await compressImageToBase64(control.files[0]) : (previousRows[index]?.image || '');
+      if (field === 'image') item.image = control.files?.[0] ? await compressImageToBase64(control.files[0]) : (control?.dataset.imageValue || previousRows[index]?.image || '');
       else item[field] = control?.value?.trim() || '';
     }
     if (Object.values(item).some(Boolean)) rows.push(item);
@@ -361,7 +394,33 @@ document.querySelector('#meetingForm')?.addEventListener('click', (event) => {
     input.focus();
   }
 });
+document.querySelector('#meetingForm')?.addEventListener('change', async (event) => {
+  const input = event.target.closest('[data-field="image"]');
+  if (!input?.files?.[0]) return;
+  try { await processImageFile(input.files[0], input.closest('.image-upload-area')); }
+  catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
+});
+
+document.querySelector('#meetingForm')?.addEventListener('paste', (event) => {
+  const imageArea = event.target.closest('.image-upload-area');
+  if (!imageArea) return;
+  handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。'));
+});
+
 document.querySelector('#meetingForm')?.addEventListener('click', async (event) => {
+  const removeButton = event.target.closest('.image-preview-remove');
+  if (removeButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const imageArea = removeButton.closest('.image-upload-area');
+    const input = imageArea?.querySelector('[data-field="image"]');
+    if (input) {
+      input.value = '';
+      delete input.dataset.imageValue;
+    }
+    removeButton.closest('.ragic-file-preview')?.remove();
+    return;
+  }
   const addKey = event.target.closest('[data-add-row]')?.dataset.addRow;
   if (addKey && canEditMeeting()) {
     try {
@@ -370,7 +429,7 @@ document.querySelector('#meetingForm')?.addEventListener('click', async (event) 
         for (const field of detailFields) {
           if (field === 'image') {
             const control = row.querySelector('[data-field="image"]');
-            item.image = control?.files?.[0] ? await compressImageToBase64(control.files[0]) : (row.querySelector('[data-image] img')?.src || '');
+            item.image = control?.files?.[0] ? await compressImageToBase64(control.files[0]) : (control?.dataset.imageValue || '');
           } else {
             item[field] = row.querySelector(`[data-field="${field}"]`)?.value || '';
           }
