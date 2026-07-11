@@ -66,7 +66,7 @@ let saveTimer = null;
 const storedLeavePermission = () => {
   try { return JSON.parse(sessionStorage.getItem('omniplayPermissions') || '{}')?.pages?.leave; } catch { return null; }
 };
-let canEditLeave = Boolean(window.isOmniplayAdmin?.() || storedLeavePermission()?.edit === true);
+let canEditLeave = Boolean(window.isOmniplayAdmin?.());
 
 const pad = (value) => String(value).padStart(2, '0');
 const monthKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
@@ -333,15 +333,20 @@ window.addEventListener('beforeunload', () => {
 });
 
 const syncLeavePermission = async () => {
+  canEditLeave = false;
   if (window.isOmniplayAdmin?.()) {
     canEditLeave = true;
   } else {
-    const staffId = sessionStorage.getItem('omniplayStaffId');
-    const permissionsCollection = leaveDb?.collection('permissions');
     try {
-      if (staffId && permissionsCollection) {
-        const doc = await permissionsCollection.doc(staffId).get();
-        if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
+      if (typeof window.loadCurrentPermissions === 'function') await window.loadCurrentPermissions();
+      else {
+        const staffId = sessionStorage.getItem('omniplayStaffId');
+        const permissionsCollection = leaveDb?.collection('permissions');
+        if (staffId && permissionsCollection) {
+          const doc = await permissionsCollection.doc(staffId).get();
+          if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
+          else sessionStorage.removeItem('omniplayPermissions');
+        }
       }
     } catch (error) {
       console.error('讀取休假表權限失敗：', error);
