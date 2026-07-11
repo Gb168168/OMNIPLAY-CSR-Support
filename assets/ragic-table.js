@@ -14,6 +14,7 @@ const valueToText = (value) => Array.isArray(value) ? value.join('、') : (value
 const today = () => new Date().toISOString().slice(0, 10);
 const dataCollectionName = (config) => config.dataCollection || COLLECTION_MAP[config.collection] || config.collection;
 const schemaCollectionName = (config) => config.schemaCollection || SCHEMA_MAP[dataCollectionName(config)] || `${dataCollectionName(config)}_schema`;
+const generateFieldKey = () => 'field_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 const uniqueKey = (key, usedKeys = new Set(), fallback = 'field') => {
   const base = normalizeKey(key, fallback);
   let candidate = base;
@@ -41,6 +42,19 @@ const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) =>
   };
 };
 const normalizeSchema = (schema = {}) => ({ fields: normalizeFields(schema.fields || [], 'field') });
+const fixDuplicateKeys = (fields = []) => {
+  const seen = {};
+  let changed = false;
+  fields.forEach((field) => {
+    while (seen[field.key]) {
+      field.key = generateFieldKey();
+      changed = true;
+    }
+    seen[field.key] = true;
+    if (Array.isArray(field.fields) && fixDuplicateKeys(field.fields)) changed = true;
+  });
+  return changed;
+};
 const getFields = () => RAGIC_STATE.schema?.fields || [];
 const listFields = () => getFields().filter((field) => field.type !== 'subtable');
 const listColumns = () => listFields().map((field) => field.key);
@@ -157,8 +171,8 @@ const renderForm = (record = {}) => {
   applyRagicPermissionUi();
 };
 
-const renderCell = (record, key) => {
-  const field = fieldByKey(key);
+const renderCell = (record, field) => {
+  const key = field.key;
   const value = record[key];
   if (field?.type === 'file') return value ? `<img class="ragic-thumbnail" src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}縮圖">` : '';
   const text = String(valueToText(value));
@@ -177,7 +191,7 @@ const closeImagePreview = () => {
   modal.hidden = true;
   modal.querySelector('img').removeAttribute('src');
 };
-const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = canUse('edit') ? 0 : -1; tr.classList.toggle('is-readonly', !canUse('edit')); tr.innerHTML = listColumns().map((key) => `<td>${renderCell(record, key)}</td>`).join(''); if (canUse('edit')) tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
+const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; const fields = listFields(); RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = canUse('edit') ? 0 : -1; tr.classList.toggle('is-readonly', !canUse('edit')); tr.innerHTML = fields.map((field) => `<td>${renderCell(record, field)}</td>`).join(''); if (canUse('edit')) tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
 const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = RAGIC_STATE.records.filter((record) => cols.every((key) => { const filter = document.querySelector(`[data-filter="${key}"]`)?.value.toLowerCase() || ''; return !filter || valueToText(record[key]).toLowerCase().includes(filter); })); if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1)); renderTable(); };
 const renderHeader = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
@@ -293,7 +307,7 @@ const initRagicPage = async (config) => {
   document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);
   document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
-  document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: nextDesignerKey(body), label: '新欄位', type: 'text' })); });
+  document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新欄位', type: 'text' })); });  
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
     if (!canUse('design')) return alert('您沒有設計權限');
     RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(document.querySelector('.designer-body')) }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
@@ -333,6 +347,16 @@ const initRagicPage = async (config) => {
   });
   document.querySelector('#ragicHeaderRow').addEventListener('input', applyFilters); document.querySelector('#ragicHeaderRow').addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
-  schemaDoc.onSnapshot(async (doc) => { if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true }); RAGIC_STATE.schema = doc.exists ? normalizeSchema(doc.data()) : makeDefaultSchema(config); renderHeader(); applyRagicPermissionUi(); applyFilters(); });
+  schemaDoc.onSnapshot(async (doc) => {
+    if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true });
+    const loadedSchema = doc.exists ? doc.data() : makeDefaultSchema(config);
+    if (doc.exists && fixDuplicateKeys(loadedSchema.fields || [])) {
+      await schemaDoc.set({ ...loadedSchema, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }
+    RAGIC_STATE.schema = normalizeSchema(loadedSchema);
+    renderHeader();
+    applyRagicPermissionUi();
+    applyFilters();
+  });
   collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyRagicPermissionUi(); applyFilters(); });
 };
