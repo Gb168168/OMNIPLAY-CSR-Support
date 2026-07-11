@@ -189,6 +189,7 @@ const showSetupMessage = (message, type = '') => {
 };
 
 const sanitizeEnglishAlphanumericInput = (input) => {
+  if (input.dataset.composing === 'true') return;
   const sanitizedValue = input.value.replace(/[^A-Za-z0-9]/g, '');
   if (input.value === sanitizedValue) return;
 
@@ -199,6 +200,8 @@ const sanitizeEnglishAlphanumericInput = (input) => {
 };
 
 englishAlphanumericInputs.forEach((input) => {
+  input.addEventListener('compositionstart', () => { input.dataset.composing = 'true'; });
+  input.addEventListener('compositionend', () => { input.dataset.composing = 'false'; sanitizeEnglishAlphanumericInput(input); });
   input.addEventListener('input', () => sanitizeEnglishAlphanumericInput(input));
   input.addEventListener('paste', () => requestAnimationFrame(() => sanitizeEnglishAlphanumericInput(input)));
 });
