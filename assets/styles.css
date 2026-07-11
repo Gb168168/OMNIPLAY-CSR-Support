@@ -740,9 +740,12 @@ button:hover { transform: translateY(-1px); }
 
 .leave-table th,
 .leave-table td {
-  height: 52px;
+  min-height: 45px;
+  height: 48px;
   width: auto;
-  padding: 6px 8px;
+  padding: 8px 9px;
+  font-size: 14px;
+  line-height: 1.3;
   white-space: nowrap;
   border-right: 1px solid rgba(255,255,255,.08);
   border-bottom: 1px solid rgba(255,255,255,.08);
@@ -757,27 +760,32 @@ button:hover { transform: translateY(-1px); }
   z-index: 5;
   color: #f8fafc;
   background: var(--table-head);
-  font-size: 13px;
+  font-size: 15px;
+  line-height: 1.25;
 }
 
 .leave-table thead small,
 .quota-count {
   display: block;
   color: #cbd5e1;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.25;
 }
 
-.day-col { min-width: max-content; }
+.day-col,
+.leave-day {
+  min-width: 40px;
+  width: 40px;
+}
 .shift-col {
-left: 0;
+  left: 0;
   min-width: 72px;
   width: 72px;
 }
 .name-col {
   left: 72px;
-  min-width: 128px;
-  width: 128px;
+  min-width: 132px;
+  width: 132px;
 }
 
 .leave-table .sticky-col {
@@ -804,12 +812,12 @@ left: 0;
 .leave-cell-button {
   position: relative;
   width: 100%;
-  min-height: 34px;
+  min-height: 45px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 2px;
+  gap: 4px;
+  padding: 4px;
   color: #f8fafc;
   background: rgba(255,255,255,.03);
   border-radius: 10px;
@@ -837,7 +845,7 @@ left: 0;
   align-items: center;
   justify-content: center;
   min-height: 18px;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
 }
 
@@ -849,13 +857,13 @@ left: 0;
 
 .leave-shift-select {
   width: auto;
-  min-height: 32px;
+  min-height: 34px;
   border: 1px solid rgba(203, 213, 225, .2);
   border-radius: 10px;
   color: white;
   background: rgba(71, 85, 105, .98);
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -871,7 +879,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 
 .summary-row td,
-.summary-row th { bottom: 52px; color: var(--summary-text); background: var(--summary-bg); }
+.summary-row th { bottom: 48px; color: var(--summary-text); background: var(--summary-bg); }
 .summary-row .sticky-col { z-index: 6; }
 .summary-cell { color: var(--summary-text); font-size: 18px; }
 
@@ -914,7 +922,11 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   .leave-toolbar .ghost-button,
   .global-quota-field { width: 100%; justify-content: center; }
   .leave-table-wrap { max-height: calc(100vh - 330px); }
-  .day-col { min-width: max-content; }
+  .day-col,
+  .leave-day {
+    min-width: 40px;
+    width: 40px;
+  }
   .shift-col,
   .name-col { min-width: max-content; }
   .leave-table { min-width: max-content; }
