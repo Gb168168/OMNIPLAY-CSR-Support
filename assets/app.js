@@ -10,7 +10,23 @@ const englishAlphanumericInputs = document.querySelectorAll('#loginAccount, #log
 
 
 const THEME_STORAGE_KEY = 'omniplayTheme';
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'omniplaySidebarCollapsed';
 const getStoredTheme = () => localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+const MENU_ICON_MAP = {
+  '人員管理': '👤',
+  '休假表': '🌴',
+  '排程表': '📅',
+  'KPI': '📊',
+  '日誌': '📒',
+  '交接': '🤝',
+  '提報': '📣',
+  '對接追蹤': '🔎',
+  'PROD告警紀錄': '🚨',
+  '會議紀錄': '📝',
+  '知識庫': '📚',
+  'AI 資料庫': '🤖'
+};
+
 const applyTheme = (theme) => {
   document.documentElement.dataset.theme = theme;
   document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
@@ -25,6 +41,46 @@ const toggleTheme = () => {
   applyTheme(nextTheme);
 };
 applyTheme(getStoredTheme());
+
+const getStoredSidebarCollapsed = () => localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
+const applySidebarState = (collapsed) => {
+  if (!sidebar) return;
+  sidebar.classList.toggle('is-collapsed', collapsed);
+  sidebarToggle?.setAttribute('aria-label', collapsed ? '展開左側功能表' : '收合左側功能表');
+  sidebarToggle?.setAttribute('aria-expanded', String(!collapsed));
+};
+const toggleSidebar = () => {
+  const collapsed = !sidebar?.classList.contains('is-collapsed');
+  localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed));
+  applySidebarState(collapsed);
+};
+
+const enhanceSidebarNavigation = () => {
+  if (!sidebar) return;
+  sidebar.querySelectorAll('.home-link, .section-button, .submenu a, .logout-button').forEach((item) => {
+    const label = item.querySelector('.label') || item.querySelector('.sidebar-text');
+    const tooltipText = (label?.textContent || item.textContent || '').trim();
+    if (tooltipText) {
+      item.dataset.tooltip = tooltipText;
+      item.setAttribute('title', tooltipText);
+    }
+  });
+
+  sidebar.querySelectorAll('.submenu a').forEach((link) => {
+    const text = link.textContent.trim();
+    if (!link.querySelector('.icon')) {
+      link.textContent = '';
+      const icon = document.createElement('span');
+      icon.className = 'icon';
+      icon.textContent = MENU_ICON_MAP[text] || '•';
+      const label = document.createElement('span');
+      label.className = 'label sidebar-text';
+      label.textContent = text;
+      link.append(icon, label);
+    }
+  });
+};
+applySidebarState(getStoredSidebarCollapsed());
 
 const SESSION_KEYS = {
   id: 'omniplayStaffId',
@@ -199,6 +255,7 @@ const renderThemeToggle = () => {
     target.appendChild(button);
   });
   applyTheme(getStoredTheme());
+  
 };
 
 const renderSidebarUser = () => {
@@ -220,6 +277,7 @@ const renderSidebarUser = () => {
   }
   const nameElement = footer.querySelector('.sidebar-user-name');
   if (nameElement) nameElement.textContent = currentStaff.name;
+  enhanceSidebarNavigation();
 };
 
 const logout = () => {
@@ -227,9 +285,9 @@ const logout = () => {
   window.location.href = loginPath;
 };
 
-sidebarToggle?.addEventListener('click', () => {
-  sidebar?.classList.toggle('is-collapsed');
-});
+enhanceSidebarNavigation();
+
+sidebarToggle?.addEventListener('click', toggleSidebar);
 
 document.querySelectorAll('.section-button').forEach((button) => {
   const list = button.nextElementSibling;
