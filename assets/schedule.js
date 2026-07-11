@@ -49,37 +49,15 @@ let unsubscribeSchedules = null;
 let unsubscribeLabels = null;
 let unsubscribeLeave = null;
 
-const storedSchedulePermission = () => {
-  try { return JSON.parse(sessionStorage.getItem('omniplayPermissions') || '{}')?.pages?.schedule; } catch { return null; }
-};
+const storedSchedulePermission = () => window.getPagePermission?.('schedule') || { view: false, edit: false, delete: false, design: false };
 let canEditSchedule = Boolean(window.isOmniplayAdmin?.());
 let canDeleteSchedule = Boolean(window.isOmniplayAdmin?.());
 
 const syncSchedulePermission = async () => {
-  canEditSchedule = false;
-  canDeleteSchedule = false;
-  if (window.isOmniplayAdmin?.()) {
-    canEditSchedule = true;
-    canDeleteSchedule = true;
-  } else {
-    try {
-      if (typeof window.loadCurrentPermissions === 'function') await window.loadCurrentPermissions();
-      else {
-        const staffId = sessionStorage.getItem(SCHEDULE_SESSION_KEYS.id);
-        const permissionsCollection = scheduleDb?.collection('permissions');
-        if (staffId && permissionsCollection) {
-          const doc = await permissionsCollection.doc(staffId).get();
-          if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
-          else sessionStorage.removeItem('omniplayPermissions');
-        }
-      }
-    } catch (error) {
-      console.error('讀取排程表權限失敗：', error);
-    }
-    const permission = storedSchedulePermission();
-    canEditSchedule = permission?.edit === true;
-    canDeleteSchedule = permission?.delete === true;
-  }
+  if (window.permissionReady) await window.permissionReady;
+  const permission = storedSchedulePermission();
+  canEditSchedule = Boolean(window.isOmniplayAdmin?.() || permission.edit === true);
+  canDeleteSchedule = Boolean(window.isOmniplayAdmin?.() || permission.delete === true);
   document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
   document.querySelector('#saveScheduleButton')?.toggleAttribute('disabled', !canEditSchedule);
   if (deleteButton) deleteButton.hidden = !canDeleteSchedule || !editingId;
