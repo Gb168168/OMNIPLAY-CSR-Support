@@ -6,7 +6,7 @@ const loginForm = document.querySelector('#loginForm');
 const loginMessage = document.querySelector('#loginMessage');
 const setupForm = document.querySelector('#setupForm');
 const setupMessage = document.querySelector('#setupMessage');
-const englishAlphanumericInputs = document.querySelectorAll('#loginAccount, #loginPassword, #setupCode, #setupAccount, #setupPassword');
+const englishAlphanumericInputs = document.querySelectorAll('#account, #loginPassword, #setupCode, #setupAccount, #setupPassword');
 
 
 const THEME_STORAGE_KEY = 'omniplayTheme';
@@ -355,7 +355,7 @@ loginForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   showLoginMessage('');
 
-  const account = document.querySelector('#loginAccount')?.value.trim();
+  const account = document.querySelector('#account')?.value.trim();
   const password = document.querySelector('#loginPassword')?.value.trim();
   const staffCollection = window.omniplayDb?.collection('staff');
 
