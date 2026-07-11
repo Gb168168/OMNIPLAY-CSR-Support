@@ -2041,3 +2041,38 @@ textarea,
   .meeting-tabs { flex-direction: column; }
   .meeting-tab { border-radius: 14px; border-bottom: 1px solid var(--border); }
 }
+
+.image-upload-area {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+.image-upload-area:hover,
+.image-upload-area:focus {
+  border-color: var(--primary);
+}
+.image-upload-preview {
+  position: relative;
+  max-width: max-content;
+}
+.image-upload-preview img {
+  max-height: 80px;
+}
+.image-preview-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--danger, #dc2626);
+  cursor: pointer;
+  line-height: 1;
+}
