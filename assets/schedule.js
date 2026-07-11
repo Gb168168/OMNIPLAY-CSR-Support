@@ -19,6 +19,12 @@ const savedLabelsEl = document.querySelector('#scheduleSavedLabels');
 const staffSelect = document.querySelector('#scheduleStaff');
 const historyListEl = document.querySelector('#scheduleHistoryList');
 const tooltipEl = document.querySelector('#scheduleSpecialTooltip');
+const repeatSelect = document.querySelector('#scheduleRepeat');
+const repeatIntervalInput = document.querySelector('#scheduleRepeatInterval');
+const repeatIntervalLabel = document.querySelector('#scheduleRepeatIntervalLabel');
+const periodPicker = document.querySelector('#schedulePeriodPicker');
+const yearSelect = document.querySelector('#scheduleYearSelect');
+const monthPicker = document.querySelector('#scheduleMonthPicker');
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 const SCHEDULE_SESSION_KEYS = { id: 'omniplayStaffId', code: 'omniplayStaffCode', name: 'omniplayStaffName' };
@@ -28,6 +34,15 @@ const toMonthKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 const parseDateValue = (value) => value?.toDate?.() || (typeof value === 'string' ? new Date(value) : value instanceof Date ? value : null);
 const toDatetimeLocal = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const daysBetween = (start, end) => Math.floor((new Date(end.getFullYear(), end.getMonth(), end.getDate()) - new Date(start.getFullYear(), start.getMonth(), start.getDate())) / 86400000);
+const addMonthsClamped = (date, count) => {
+  const next = new Date(date);
+  const day = next.getDate();
+  next.setDate(1);
+  next.setMonth(next.getMonth() + count);
+  next.setDate(Math.min(day, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
+  return next;
+};
 const isSameDay = (a, b) => toDateKey(a) === toDateKey(b);
 const activeStaff = (staff) => (staff.status || '啟用') === '啟用';
 const currentUser = () => ({
@@ -80,23 +95,59 @@ const setMessage = (message, type = 'error') => {
 };
 
 const getVisibleRange = () => {
+  if (viewMode === 'year') {
+    const start = new Date(currentDate.getFullYear(), 0, 1);
+    const end = new Date(currentDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { start, end };
+  }
   if (viewMode === 'week') {
     const start = new Date(currentDate);
     start.setDate(currentDate.getDate() - currentDate.getDay());
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
     return { start, end };
   }
   const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   start.setDate(start.getDate() - start.getDay());
   const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
   end.setDate(end.getDate() + (6 - end.getDay()));
+  end.setHours(23, 59, 59, 999);
   return { start, end };
 };
 
-const getSchedulesByDay = () => scheduleList.filter((item) => !item.deleted).reduce((groups, item) => {
-  groups[item.date] ||= [];
-  groups[item.date].push(item);
+const getRepeatStepDays = (item) => {
+  if (item.repeat === 'daily') return 1;
+  if (item.repeat === 'weekly') return 7;
+  if (item.repeat === 'custom') return Math.max(1, Number(item.repeatInterval) || 1);
+  return 0;
+};
+
+const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) => !item.deleted).reduce((groups, item) => {
+  const original = parseDateValue(item.reminderAt) || new Date(`${item.date}T00:00:00`);
+  if (!(original instanceof Date) || Number.isNaN(original.getTime())) return groups;
+  const addOccurrence = (date, isRepeat) => {
+    const key = toDateKey(date);
+    groups[key] ||= [];
+    groups[key].push({ ...item, occurrenceDate: key, isRepeatOccurrence: isRepeat });
+  };
+  if (original >= start && original <= end) addOccurrence(original, false);
+  const repeat = item.repeat || 'none';
+  if (repeat === 'monthly') {
+    for (let i = 1, occurrence = addMonthsClamped(original, i); occurrence <= end; i += 1, occurrence = addMonthsClamped(original, i)) {
+      if (occurrence >= start) addOccurrence(occurrence, true);
+    }
+    return groups;
+  }
+  const step = getRepeatStepDays(item);
+  if (!step) return groups;
+  const firstOffset = Math.max(step, Math.ceil(Math.max(1, daysBetween(original, start)) / step) * step);
+  for (let offset = firstOffset; ; offset += step) {
+    const occurrence = new Date(original);
+    occurrence.setDate(original.getDate() + offset);
+    if (occurrence > end) break;
+    if (occurrence >= start) addOccurrence(occurrence, true);
+  }
   return groups;
 }, {});
 
@@ -125,14 +176,24 @@ const renderHistory = (history = []) => {
 const renderCalendar = () => {
   if (!calendarEl) return;
   const today = new Date();
+  calendarEl.classList.toggle('is-year-view', viewMode === 'year');
   const { start, end } = getVisibleRange();
-  const schedulesByDay = getSchedulesByDay();
+  const schedulesByDay = getScheduleOccurrencesByDay(start, end);
   const days = [];
   for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) days.push(new Date(cursor));
 
-  periodLabel.textContent = viewMode === 'week' ? `${toDateKey(start)} ~ ${toDateKey(end)}` : `${currentDate.getFullYear()} 年 ${currentDate.getMonth() + 1} 月`;
+  eriodLabel.textContent = viewMode === 'week' ? `${toDateKey(start)} ~ ${toDateKey(end)}` : viewMode === 'year' ? `${currentDate.getFullYear()} 年` : `${currentDate.getFullYear()}年${pad(currentDate.getMonth() + 1)}月`;
+  renderPeriodPicker();
   if (selectedDateEl) selectedDateEl.textContent = toDateKey(selectedDate);
 
+  if (viewMode === 'year') {
+    calendarEl.innerHTML = Array.from({ length: 12 }, (_, index) => {
+      const monthItems = days.filter((day) => day.getMonth() === index).flatMap((day) => schedulesByDay[toDateKey(day)] || []);
+      return `<button class="calendar-month-card ${index === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear() ? 'is-current' : ''}" type="button" data-month="${index}"><strong>${index + 1}月</strong><span>${monthItems.length} 筆排程</span></button>`;
+    }).join('');
+    return;
+  }
+  
   const header = weekdays.map((day, index) => `<div class="calendar-weekday weekday-${index}">${day}</div>`).join('');
   const cells = days.map((day) => {
     const key = toDateKey(day);
@@ -140,7 +201,7 @@ const renderCalendar = () => {
     const otherMonth = day.getMonth() !== currentDate.getMonth() && viewMode === 'month';
     return `<button class="calendar-day weekday-${day.getDay()} ${otherMonth ? 'is-muted' : ''} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}">
       <span class="day-number">${day.getDate()}</span>
-      <span class="day-events">${items.map((item) => `<span class="calendar-event" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
+      <span class="day-events">${items.map((item) => `<span class="calendar-event ${item.isRepeatOccurrence ? 'is-repeat' : ''}" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
     </button>`;
   }).join('');
   calendarEl.innerHTML = header + cells;
@@ -193,6 +254,9 @@ const openModal = (dateKey, scheduleId = null) => {
   document.querySelector('#scheduleTitle').value = item?.title || '';
   document.querySelector('#scheduleContent').value = item?.content || '';
   document.querySelector('#scheduleReminderAt').value = toDatetimeLocal(item?.reminderAt ? parseDateValue(item.reminderAt) : new Date(`${dateKey}T09:00`));
+  repeatSelect.value = item?.repeat || 'none';
+  repeatIntervalInput.value = item?.repeatInterval || 1;
+  toggleRepeatInterval();
   selectDefaultStaff(item);
   renderHistory(item?.history || []);
   formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
@@ -205,6 +269,7 @@ const openModal = (dateKey, scheduleId = null) => {
 const closeModal = () => { modalEl.classList.remove('is-open'); modalEl.setAttribute('aria-hidden', 'true'); editingId = null; };
 
 const showSpecials = (type, anchor) => {
+  if (!tooltipEl) return;
   const names = Object.entries(leaveData.records || {}).filter(([, record]) => (record.specials || []).includes(type)).map(([key]) => {
     const [staffId, day] = key.split('_');
     if (Number(day) !== selectedDate.getDate()) return '';
@@ -224,6 +289,60 @@ const saveLabelIfNeeded = async (name, color) => {
   await scheduleLabelCollection.add({ name, color, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
 };
 
+
+const toggleRepeatInterval = () => {
+  if (!repeatIntervalLabel || !repeatSelect) return;
+  repeatIntervalLabel.hidden = repeatSelect.value !== 'custom';
+  repeatIntervalInput.required = repeatSelect.value === 'custom';
+};
+
+const renderPeriodPicker = () => {
+  if (!yearSelect || !monthPicker) return;
+  const year = currentDate.getFullYear();
+  yearSelect.innerHTML = Array.from({ length: 21 }, (_, index) => year - 10 + index)
+    .map((optionYear) => `<option value="${optionYear}" ${optionYear === year ? 'selected' : ''}>${optionYear}年</option>`).join('');
+  monthPicker.innerHTML = Array.from({ length: 12 }, (_, index) => `<button class="month-picker-button ${index === currentDate.getMonth() ? 'is-active' : ''}" type="button" data-month="${index}">${index + 1}月</button>`).join('');
+};
+
+const closePeriodPicker = () => {
+  if (!periodPicker) return;
+  periodPicker.hidden = true;
+  periodLabel?.setAttribute('aria-expanded', 'false');
+};
+
+repeatSelect?.addEventListener('change', toggleRepeatInterval);
+periodLabel?.addEventListener('click', (event) => {
+  event.stopPropagation();
+  renderPeriodPicker();
+  periodPicker.hidden = !periodPicker.hidden;
+  periodLabel.setAttribute('aria-expanded', String(!periodPicker.hidden));
+});
+yearSelect?.addEventListener('change', () => { currentDate.setFullYear(Number(yearSelect.value)); selectedDate = new Date(currentDate); renderCalendar(); });
+document.querySelector('#prevPickerYear')?.addEventListener('click', () => { currentDate.setFullYear(currentDate.getFullYear() - 1); selectedDate = new Date(currentDate); renderCalendar(); });
+document.querySelector('#nextPickerYear')?.addEventListener('click', () => { currentDate.setFullYear(currentDate.getFullYear() + 1); selectedDate = new Date(currentDate); renderCalendar(); });
+monthPicker?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-month]');
+  if (!button) return;
+  currentDate = new Date(currentDate.getFullYear(), Number(button.dataset.month), 1);
+  selectedDate = new Date(currentDate);
+  viewMode = viewMode === 'year' ? 'month' : viewMode;
+  document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('is-active', item.dataset.view === viewMode));
+  subscribeLeave();
+  renderCalendar();
+  closePeriodPicker();
+});
+document.addEventListener('click', (event) => { if (!event.target.closest('.schedule-period-picker-wrap')) closePeriodPicker(); });
+calendarEl?.addEventListener('click', (event) => {
+  const monthCard = event.target.closest('.calendar-month-card');
+  if (!monthCard) return;
+  currentDate = new Date(currentDate.getFullYear(), Number(monthCard.dataset.month), 1);
+  selectedDate = new Date(currentDate);
+  viewMode = 'month';
+  document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('is-active', item.dataset.view === 'month'));
+  subscribeLeave();
+  renderCalendar();
+});
+
 calendarEl?.addEventListener('click', (event) => {
   const eventEl = event.target.closest('.calendar-event');
   const dayEl = event.target.closest('.calendar-day');
@@ -242,8 +361,8 @@ savedLabelsEl?.addEventListener('click', (event) => {
   labelNameInput.value = chip.dataset.name;
 });
 
-document.querySelector('#prevSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() - 1); else currentDate.setDate(currentDate.getDate() - 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
-document.querySelector('#nextSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
+document.querySelector('#prevSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() - 1); else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() - 1); else currentDate.setDate(currentDate.getDate() - 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
+document.querySelector('#nextSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() + 1); else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
 document.querySelector('#todaySchedulePeriod')?.addEventListener('click', () => { currentDate = new Date(); selectedDate = new Date(); subscribeLeave(); renderCalendar(); });
 document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => { viewMode = button.dataset.view; document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('is-active', item === button)); currentDate = new Date(selectedDate); renderCalendar(); }));
 document.querySelector('#phoneDutyButton')?.addEventListener('click', (event) => showSpecials('phone', event.currentTarget));
@@ -251,7 +370,7 @@ document.querySelector('#companyEventButton')?.addEventListener('click', (event)
 document.querySelector('#closeScheduleModal')?.addEventListener('click', closeModal);
 document.querySelector('#cancelScheduleButton')?.addEventListener('click', closeModal);
 modalEl?.addEventListener('click', (event) => { if (event.target === modalEl) closeModal(); });
-document.addEventListener('click', (event) => { if (!tooltipEl?.contains(event.target) && !event.target.closest('.schedule-special-trigger')) tooltipEl.hidden = true; });
+document.addEventListener('click', (event) => { if (tooltipEl && !tooltipEl.contains(event.target) && !event.target.closest('.schedule-special-trigger')) tooltipEl.hidden = true; });
 
 formEl?.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -263,8 +382,10 @@ formEl?.addEventListener('submit', async (event) => {
   const action = editingId ? '編輯' : '新增';
   const labelName = labelNameInput.value.trim();
   const labelColor = colorInput.value;
+  const repeat = repeatSelect?.value || 'none';
+  const repeatInterval = Math.max(1, Number(repeatIntervalInput?.value) || 1);
   const payload = {
-    date: toDateKey(reminderAt), labelColor, labelName,
+    date: toDateKey(reminderAt), labelColor, labelName, repeat,
     title: document.querySelector('#scheduleTitle').value.trim(),
     content: document.querySelector('#scheduleContent').value.trim(),
     reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt), staffIds,
@@ -272,6 +393,8 @@ formEl?.addEventListener('submit', async (event) => {
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, deleted: false,
     history: firebase.firestore.FieldValue.arrayUnion({ action, userId: user.id, userName: user.name, at: firebase.firestore.Timestamp.fromDate(new Date()) })
   };
+  if (repeat === 'custom') payload.repeatInterval = repeatInterval;
+  else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
   if (!payload.title) return setMessage('請輸入標題。');
   try {
     await saveLabelIfNeeded(labelName, labelColor);
