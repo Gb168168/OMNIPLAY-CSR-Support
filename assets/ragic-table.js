@@ -14,18 +14,33 @@ const valueToText = (value) => Array.isArray(value) ? value.join('、') : (value
 const today = () => new Date().toISOString().slice(0, 10);
 const dataCollectionName = (config) => config.dataCollection || COLLECTION_MAP[config.collection] || config.collection;
 const schemaCollectionName = (config) => config.schemaCollection || SCHEMA_MAP[dataCollectionName(config)] || `${dataCollectionName(config)}_schema`;
-const normalizeField = (field = {}, fallback = 'field') => {
+const uniqueKey = (key, usedKeys = new Set(), fallback = 'field') => {
+  const base = normalizeKey(key, fallback);
+  let candidate = base;
+  let index = 1;
+  while (usedKeys.has(candidate)) {
+    candidate = `${base}_${index}`;
+    index += 1;
+  }
+  usedKeys.add(candidate);
+  return candidate;
+};
+const normalizeFields = (fields = [], fallbackPrefix = 'field') => {
+  const usedKeys = new Set();
+  return fields.map((field, index) => normalizeField(field, `${fallbackPrefix}_${index + 1}`, usedKeys));
+};
+const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) => {
   const label = String(field.label || field.key || '未命名欄位');
   return {
     ...field,
-    key: field.key || normalizeKey(label, fallback),
+    key: uniqueKey(field.key || label, usedKeys, fallback),
     label,
     type: field.type || 'text',
     options: optionList(field),
-    fields: (field.fields || []).map((sub, index) => normalizeField(sub, `subfield_${index + 1}`))
+    fields: normalizeFields(field.fields || [], 'subfield')
   };
 };
-const normalizeSchema = (schema = {}) => ({ fields: (schema.fields || []).map((field, index) => normalizeField(field, `field_${index + 1}`)) });
+const normalizeSchema = (schema = {}) => ({ fields: normalizeFields(schema.fields || [], 'field') });
 const getFields = () => RAGIC_STATE.schema?.fields || [];
 const listFields = () => getFields().filter((field) => field.type !== 'subtable');
 const listColumns = () => listFields().map((field) => field.key);
@@ -173,7 +188,36 @@ const renderHeader = () => {
   }).join('');
 };
 
-const fieldDesigner = (field = {}, nested = false) => { const row = document.createElement('div'); row.className = 'designer-field'; row.innerHTML = `<input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${FIELD_TYPES.filter((type) => !nested || type.value !== 'subtable').map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><div class="designer-actions"><button class="secondary" data-move="up" type="button">↑</button><button class="secondary" data-move="down" type="button">↓</button><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`; row.dataset.key = field.key || normalizeKey(field.label); const sub = row.querySelector('.designer-subfields'); const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; }; (field.fields || []).forEach((child) => sub.appendChild(fieldDesigner(child, true))); sub.insertAdjacentHTML('afterbegin', '<button class="secondary" data-add-subfield type="button">+ 子欄位</button>'); row.addEventListener('click', (event) => { if (event.target.matches('[data-remove]')) row.remove(); if (event.target.matches('[data-move="up"]') && row.previousElementSibling) row.parentElement.insertBefore(row, row.previousElementSibling); if (event.target.matches('[data-move="down"]') && row.nextElementSibling) row.parentElement.insertBefore(row.nextElementSibling, row); if (event.target.matches('[data-add-subfield]')) sub.appendChild(fieldDesigner({ label: '新子欄位', type: 'text' }, true)); }); row.querySelector('[data-role="type"]').addEventListener('change', sync); sync(); return row; };
+const designerFieldRows = (container) => [...container.children].filter((el) => el.classList.contains('designer-field'));
+const nextDesignerKey = (container, prefix = 'field') => {
+  const usedKeys = new Set(designerFieldRows(container).map((row) => row.dataset.key).filter(Boolean));
+  let index = usedKeys.size + 1;
+  let key = `${prefix}_${index}`;
+  while (usedKeys.has(key)) {
+    index += 1;
+    key = `${prefix}_${index}`;
+  }
+  return key;
+};
+const fieldDesigner = (field = {}, nested = false) => {
+  const row = document.createElement('div');
+  row.className = 'designer-field';
+  row.innerHTML = `<input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${FIELD_TYPES.filter((type) => !nested || type.value !== 'subtable').map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><div class="designer-actions"><button class="secondary" data-move="up" type="button">↑</button><button class="secondary" data-move="down" type="button">↓</button><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`;
+  row.dataset.key = field.key || normalizeKey(field.label);
+  const sub = row.querySelector('.designer-subfields');
+  const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
+  (field.fields || []).forEach((child) => sub.appendChild(fieldDesigner(child, true)));
+  sub.insertAdjacentHTML('afterbegin', '<button class="secondary" data-add-subfield type="button">+ 子欄位</button>');
+  row.addEventListener('click', (event) => {
+    if (event.target.matches('[data-remove]')) row.remove();
+    if (event.target.matches('[data-move="up"]') && row.previousElementSibling) row.parentElement.insertBefore(row, row.previousElementSibling);
+    if (event.target.matches('[data-move="down"]') && row.nextElementSibling) row.parentElement.insertBefore(row.nextElementSibling, row);
+    if (event.target.matches('[data-add-subfield]')) sub.appendChild(fieldDesigner({ key: nextDesignerKey(sub, 'subfield'), label: '新子欄位', type: 'text' }, true));
+  });
+  row.querySelector('[data-role="type"]').addEventListener('change', sync);
+  sync();
+  return row;
+};
 const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => { const label = row.querySelector('[data-role="label"]').value.trim() || '未命名欄位'; const type = row.querySelector('[data-role="type"]').value; const field = { key: row.dataset.key || normalizeKey(label), label, type, required: row.querySelector('[data-role="required"]').checked, options: row.querySelector('[data-role="options"]').value.split('\n').map((v) => v.trim()).filter(Boolean) }; if (type === 'subtable') field.fields = readDesigner(row.querySelector('.designer-subfields')); return field; });
 
 const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; };
@@ -249,7 +293,7 @@ const initRagicPage = async (config) => {
   document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);
   document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
-  document.querySelector('#addFieldButton')?.addEventListener('click', () => document.querySelector('.designer-body').appendChild(fieldDesigner({ label: '新欄位', type: 'text' })));
+  document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: nextDesignerKey(body), label: '新欄位', type: 'text' })); });
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
     if (!canUse('design')) return alert('您沒有設計權限');
     RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(document.querySelector('.designer-body')) }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
