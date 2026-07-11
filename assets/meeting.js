@@ -36,12 +36,44 @@ const populateStaffSelects = () => {
     const values = [...select.selectedOptions].map((option) => option.value);
     select.innerHTML = select.multiple ? options : `<option value="">請選擇</option>${options}`;
     [...select.options].forEach((option) => { option.selected = values.includes(option.value); });
+    updateAttendeeDropdown(select);
   });
+};
+
+const updateAttendeeSummary = (select) => {
+  const dropdown = select.closest('[data-attendee-dropdown]');
+  if (!dropdown) return;
+  const selectedValues = [...select.selectedOptions].map((option) => option.value);
+  const toggle = dropdown.querySelector('[data-attendee-toggle]');
+  if (toggle) {
+    toggle.textContent = selectedValues.length ? selectedValues.join(', ') : '請選擇';
+    toggle.title = selectedValues.join(', ');
+  }
+};
+
+const updateAttendeeDropdown = (select) => {
+  const dropdown = select.closest('[data-attendee-dropdown]');
+  if (!dropdown) return;
+  updateAttendeeSummary(select);
+  const menu = dropdown.querySelector('[data-attendee-menu]');
+  if (menu) {
+    menu.innerHTML = [...select.options].map((option) => `
+      <label class="meeting-attendee-option" role="option" aria-selected="${option.selected}">
+        <input type="checkbox" value="${escapeHtml(option.value)}" ${option.selected ? 'checked' : ''} ${select.disabled ? 'disabled' : ''}>
+        <span>${escapeHtml(option.textContent)}</span>
+      </label>
+    `).join('');
+  }
+};
+
+const updateAttendeeDropdowns = () => {
+  document.querySelectorAll('[data-attendee-dropdown] select[multiple]').forEach(updateAttendeeDropdown);
 };
 
 const setSelectValue = (select, value) => {
   const values = Array.isArray(value) ? value : [value].filter(Boolean);
   [...select.options].forEach((option) => { option.selected = values.includes(option.value); });
+  updateAttendeeDropdown(select);
 };
 
 const setFormEditable = () => {
@@ -49,6 +81,8 @@ const setFormEditable = () => {
   document.querySelectorAll('#meetingForm input, #meetingForm textarea, #meetingForm select').forEach((control) => {
     if (control.id !== 'meetingSerial') control.disabled = !editable;
   });
+  document.querySelectorAll('[data-attendee-toggle]').forEach((button) => { button.disabled = !editable; });
+  updateAttendeeDropdowns();
   document.querySelectorAll('[data-add-row], [data-delete-row], #saveMeetingButton').forEach((button) => {
     button.hidden = !editable;
     button.disabled = !editable;
@@ -111,7 +145,7 @@ const rowTemplate = (key, index, row = {}) => `
     <td><select data-staff-select data-field="proposer"><option value="">請選擇</option>${staffOptions()}</select></td>
     <td><textarea data-field="content" rows="3">${escapeHtml(row.content || '')}</textarea></td>
     <td><textarea data-field="solution" rows="3">${escapeHtml(row.solution || '')}</textarea></td>
-    <td><input data-field="note" type="text" value="${escapeHtml(row.note || '')}"></td>
+    <td><textarea data-field="note" rows="2">${escapeHtml(row.note || '')}</textarea></td>
     <td>
       <input data-field="image" type="file" accept="image/*">
       ${row.image ? `<button class="ragic-file-preview meeting-image-preview" type="button" data-image="${escapeHtml(row.image)}"><img src="${escapeHtml(row.image)}" alt="圖片預覽"><span>檢視</span></button>` : ''}
@@ -204,6 +238,28 @@ document.querySelector('#meetingTabs')?.addEventListener('click', (event) => {
   const key = event.target.closest('[data-meeting-tab]')?.dataset.meetingTab;
   if (key) switchTab(key);
 });
+document.addEventListener('click', (event) => {
+  const toggle = event.target.closest('[data-attendee-toggle]');
+  document.querySelectorAll('[data-attendee-dropdown]').forEach((dropdown) => {
+    const menu = dropdown.querySelector('[data-attendee-menu]');
+    const button = dropdown.querySelector('[data-attendee-toggle]');
+    if (toggle && dropdown.contains(toggle) && dropdown.querySelector('select')?.disabled !== true) menu.hidden = !menu.hidden;
+    else if (!dropdown.contains(event.target)) menu.hidden = true;
+    button.setAttribute('aria-expanded', String(!menu.hidden));
+  });
+});
+
+document.querySelector('#meetingForm')?.addEventListener('change', (event) => {
+  const checkbox = event.target.closest('[data-attendee-menu] input[type="checkbox"]');
+  if (!checkbox) return;
+  const dropdown = checkbox.closest('[data-attendee-dropdown]');
+  const select = dropdown.querySelector('select');
+  const option = [...select.options].find((item) => item.value === checkbox.value);
+  if (option) option.selected = checkbox.checked;
+  checkbox.closest('[role="option"]')?.setAttribute('aria-selected', String(checkbox.checked));
+  updateAttendeeSummary(select);
+});
+
 document.querySelector('#meetingForm')?.addEventListener('click', (event) => {
   const addKey = event.target.closest('[data-add-row]')?.dataset.addRow;
   if (addKey && canEditMeeting()) {
