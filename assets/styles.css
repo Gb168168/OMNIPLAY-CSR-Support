@@ -683,7 +683,8 @@ button:hover { transform: translateY(-1px); }
 
 .leave-table-wrap {
   max-height: calc(100vh - 260px);
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   scrollbar-color: rgba(148, 163, 184, .7) rgba(15, 23, 42, .72);
 }
 
@@ -726,21 +727,31 @@ button:hover { transform: translateY(-1px); }
 }
 
 .day-col { min-width: max-content; }
-.shift-col,
-.name-col { min-width: max-content; }
+.shift-col {
+left: 0;
+  min-width: 72px;
+  width: 72px;
+}
+.name-col {
+  left: 72px;
+  min-width: 128px;
+  width: 128px;
+}
 
 .leave-table .sticky-col {
   position: sticky;
-  z-index: 4;
-  background: #3a465b;
+  z-index: 10;
+  background: var(--table-row);
   box-shadow: 1px 0 0 rgba(255,255,255,.08);
 }
 
-.leave-table thead .sticky-col { z-index: 7; background: var(--table-head); }
+.leave-table thead .sticky-col { z-index: 20; background: var(--table-head); }
 .leave-table tbody tr:nth-child(odd) th,
 .leave-table tbody tr:nth-child(odd) td { background-color: var(--table-row); }
 .leave-table tbody tr:nth-child(even) th,
 .leave-table tbody tr:nth-child(even) td { background-color: var(--table-row-alt); }
+.leave-table tbody tr:nth-child(odd) .sticky-col { background: var(--table-row); }
+.leave-table tbody tr:nth-child(even) .sticky-col { background: var(--table-row-alt); }
 .leave-table tbody th.name-col { text-align: left; }
 
 .leave-day.is-weekend,
