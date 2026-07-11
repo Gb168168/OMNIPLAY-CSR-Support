@@ -99,9 +99,12 @@ const loadCurrentPermissions = async () => {
   try {
     const doc = await permissionsCollection.doc(staffId).get();
     if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
+    else sessionStorage.removeItem('omniplayPermissions');
   } catch (error) { console.error('讀取權限失敗：', error); }
   applyPermissionUi();
 };
+
+window.loadCurrentPermissions = loadCurrentPermissions;
 
 const showLoginMessage = (message) => {
   if (!loginMessage) return;
