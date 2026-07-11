@@ -400,15 +400,64 @@ const nextDesignerKey = (container, prefix = 'field') => {
   }
   return key;
 };
+let draggedDesignerField = null;
+const moveDesignerField = (fromRow, toRow) => {
+  if (!fromRow || !toRow || fromRow === toRow || fromRow.parentElement !== toRow.parentElement) return;
+  const container = toRow.parentElement;
+  const rows = designerFieldRows(container);
+  const fromIndex = rows.indexOf(fromRow);
+  const toIndex = rows.indexOf(toRow);
+  if (fromIndex < 0 || toIndex < 0) return;
+  if (fromIndex < toIndex) container.insertBefore(fromRow, toRow.nextSibling);
+  else container.insertBefore(fromRow, toRow);
+};
+const enableDesignerDrag = (row) => {
+  const handle = row.querySelector('.drag-handle');
+  let handlePressed = false;
+  row.setAttribute('draggable', 'true');
+  handle.addEventListener('mousedown', () => { handlePressed = true; });
+  handle.addEventListener('touchstart', () => { handlePressed = true; }, { passive: true });
+  row.addEventListener('dragstart', function(e) {
+    if (!handlePressed && !e.target.closest('.drag-handle')) {
+      e.preventDefault();
+      return;
+    }
+    draggedDesignerField = this;
+    const index = designerFieldRows(this.parentElement).indexOf(this);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+    this.classList.add('dragging');
+  });
+  row.addEventListener('dragover', function(e) {
+    if (!draggedDesignerField || draggedDesignerField.parentElement !== this.parentElement) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.classList.add('drag-over');
+  });
+  row.addEventListener('dragleave', function() {
+    this.classList.remove('drag-over');
+  });
+  row.addEventListener('drop', function(e) {
+    e.preventDefault();
+    moveDesignerField(draggedDesignerField, this);
+    this.classList.remove('drag-over');
+  });
+  row.addEventListener('dragend', function() {
+    this.classList.remove('dragging');
+    document.querySelectorAll('.designer-field.drag-over').forEach((item) => item.classList.remove('drag-over'));
+    draggedDesignerField = null;
+    handlePressed = false;
+  });
+};
 const fieldDesigner = (field = {}, nested = false) => {
   const row = document.createElement('div');
-  row.className = 'designer-field';
+  row.className = 'designer-field field-row';
   const typeOptions = FIELD_TYPE_GROUPS.map((group) => {
     const options = group.types.filter((type) => !nested || type.value !== 'subtable').map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('');
     return options ? `<optgroup label="${escapeHtml(group.label)}">${options}</optgroup>` : '';
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
-  row.innerHTML = `<input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><div class="designer-actions"><button class="secondary" data-move="up" type="button">↑</button><button class="secondary" data-move="down" type="button">↓</button><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`;
+  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`;
   row.dataset.key = shouldRegenerateFieldKey(field.key) ? generateFieldKey() : field.key;
   const sub = row.querySelector('.designer-subfields');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
@@ -416,11 +465,10 @@ const fieldDesigner = (field = {}, nested = false) => {
   sub.insertAdjacentHTML('afterbegin', '<button class="secondary" data-add-subfield type="button">+ 子欄位</button>');
   row.addEventListener('click', (event) => {
     if (event.target.matches('[data-remove]')) row.remove();
-    if (event.target.matches('[data-move="up"]') && row.previousElementSibling) row.parentElement.insertBefore(row, row.previousElementSibling);
-    if (event.target.matches('[data-move="down"]') && row.nextElementSibling) row.parentElement.insertBefore(row.nextElementSibling, row);
     if (event.target.matches('[data-add-subfield]')) sub.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true));
   });
   row.querySelector('[data-role="type"]').addEventListener('change', sync);
+  enableDesignerDrag(row);
   sync();
   return row;
 };
