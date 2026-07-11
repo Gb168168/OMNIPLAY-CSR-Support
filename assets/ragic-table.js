@@ -88,14 +88,18 @@ const createControl = (field, value = '', subfield = false) => {
 
 const createField = (field, value = '') => {
   const wrap = document.createElement('label'); wrap.className = `ragic-field ragic-field-${field.type || 'text'}`; wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
-  wrap.appendChild(createControl(field, value));
-  if (field.type === 'file' && value) {
-    const preview = document.createElement('button');
-    preview.type = 'button';
-    preview.className = 'ragic-file-preview';
-    preview.innerHTML = `<img src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}預覽"><span>點擊放大檢視</span>`;
-    preview.addEventListener('click', () => openImagePreview(value, field.label));
-    wrap.appendChild(preview);
+  const control = createControl(field, value);
+  if (field.type === 'file') {
+    const imageArea = document.createElement('div');
+    imageArea.className = 'image-upload-area';
+    imageArea.tabIndex = 0;
+    imageArea.dataset.imageLabel = field.label;
+    imageArea.innerHTML = '<div>選擇檔案 或 Ctrl+V 貼上圖片</div>';
+    imageArea.appendChild(control);
+    wrap.appendChild(imageArea);
+    if (value) showImagePreview(value, imageArea, field.label);
+  } else {
+    wrap.appendChild(control);
   }
   return wrap;
 };
@@ -141,6 +145,49 @@ const compressImageToBase64 = async (file) => {
   return dataUrl;
 };
 
+const showImagePreview = (base64, container, label = container?.dataset.imageLabel || '圖片') => {
+  if (!container || !base64) return;
+  const input = container.querySelector('input[type="file"]');
+  if (input) input.dataset.imageValue = base64;
+  container.querySelector('.ragic-file-preview')?.remove();
+  const preview = document.createElement('span');
+  preview.className = 'ragic-file-preview image-upload-preview';
+  preview.dataset.image = base64;
+  preview.innerHTML = `<img src="${escapeHtml(base64)}" alt="${escapeHtml(label)}預覽"><span>點擊放大檢視</span><button class="image-preview-remove" type="button" aria-label="移除圖片">×</button>`;
+  preview.addEventListener('click', (event) => {
+    if (event.target.closest('.image-preview-remove')) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (input) {
+        input.value = '';
+        delete input.dataset.imageValue;
+      }
+      preview.remove();
+      return;
+    }
+    openImagePreview(base64, label);
+  });
+  container.appendChild(preview);
+};
+
+const processImageFile = async (file, container) => {
+  const base64 = await compressImageToBase64(file);
+  showImagePreview(base64, container);
+};
+
+const handleImagePaste = async (event, imageArea) => {
+  const items = event.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      event.preventDefault();
+      const file = item.getAsFile();
+      await processImageFile(file, imageArea);
+      break;
+    }
+  }
+};
+
 const getFormData = async () => {
   const data = {};
   for (const field of getFields()) {
@@ -152,7 +199,7 @@ const getFormData = async () => {
     }
     const input = document.querySelector(`[name="${field.key}"]`); if (!input) continue;
     if (field.type === 'multiselect') data[field.key] = [...input.selectedOptions].map((opt) => opt.value);
-    else if (field.type === 'file') data[field.key] = input.files?.[0] ? await compressImageToBase64(input.files[0]) : (RAGIC_STATE.records.find((r) => r.id === RAGIC_STATE.currentId)?.[field.key] || '');
+    else if (field.type === 'file') data[field.key] = input.files?.[0] ? await compressImageToBase64(input.files[0]) : (input.dataset.imageValue || '');
     else data[field.key] = input.value.trim();
   }
   return data;
@@ -170,6 +217,15 @@ const renderForm = (record = {}) => {
   const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
   getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key]))); form.appendChild(grid);
   getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3>${field.label}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><thead><tr>${(field.fields || []).map((f) => `<th>${f.label}</th>`).join('')}<th>操作</th></tr></thead><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) body.appendChild(renderSubtableRow(field)); }); form.appendChild(section); });
+  form.querySelectorAll('.image-upload-area').forEach((imageArea) => {
+    const input = imageArea.querySelector('input[type="file"]');
+    input?.addEventListener('change', async () => {
+      if (!input.files?.[0]) return;
+      try { await processImageFile(input.files[0], imageArea); }
+      catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
+    });
+    imageArea.addEventListener('paste', (event) => handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。')));
+  });
   setFormEditable(form);
   applyRagicPermissionUi();
 };
