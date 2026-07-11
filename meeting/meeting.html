@@ -76,33 +76,22 @@
       </section>
       
       <section class="ragic-card" id="meetingFormView" aria-label="會議紀錄編輯" hidden>
-        <div class="ragic-form-toolbar"><h2 id="meetingFormTitle">新增會議紀錄</h2><button class="secondary" id="backToListButton" type="button">返回列表</button></div>
+        <div class="ragic-form-toolbar"><h2 id="meetingFormTitle">新增會議紀錄</h2><div class="topbar-actions"><button class="secondary" id="staffSettingsButton" type="button">⚙️ 人員設定</button><button class="secondary" id="backToListButton" type="button">返回列表</button></div></div>
         <form id="meetingForm" class="meeting-form">
           <section class="meeting-info-table" aria-label="基本資訊">
             <div class="meeting-info-cell"><label for="meetingDate">日期</label><input id="meetingDate" type="date" required></div>
             <div class="meeting-info-cell"><label for="meetingChair">主持</label><div class="combo-select"><input id="meetingChair" type="text" list="meetingStaffOptions" data-staff-combo required autocomplete="off"><button class="combo-clear" type="button" data-clear-combo="meetingChair" aria-label="清除主持">×</button></div></div>
             <div class="meeting-info-cell"><label for="meetingTime">時間</label><input id="meetingTime" type="time" required></div>
             <div class="meeting-info-cell"><label for="meetingRecorder">紀錄</label><div class="combo-select"><input id="meetingRecorder" type="text" list="meetingStaffOptions" data-staff-combo required autocomplete="off"><button class="combo-clear" type="button" data-clear-combo="meetingRecorder" aria-label="清除紀錄">×</button></div></div>
-            <div class="meeting-info-cell"><label for="meetingLocation">地點</label><input id="meetingLocation" type="text" autocomplete="off"></div>
+            <div class="meeting-info-cell"><label for="meetingLocation">地點</label><select id="meetingLocation"></select></div>
             <div class="meeting-info-cell"><label for="meetingMorningAttendeesDisplay">早 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingMorningAttendees"><select id="meetingMorningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingMorningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
             <div class="meeting-info-cell"><label for="meetingSerial">編號</label><input id="meetingSerial" type="text" readonly></div>
             <div class="meeting-info-cell"><label for="meetingEveningAttendeesDisplay">晚 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingEveningAttendees"><select id="meetingEveningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingEveningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
-            <div class="meeting-info-cell meeting-info-note"><label for="meetingNote">備註</label><input id="meetingNote" type="text" autocomplete="off"></div>
+            <div class="meeting-info-cell meeting-info-files"><label for="meetingFileInput">檔案</label><div class="meeting-file-upload" id="meetingFileDropZone" tabindex="0"><div>選擇檔案 或 Ctrl+V 貼上檔案</div><input id="meetingFileInput" type="file" multiple><div class="meeting-file-list" id="meetingFileList"></div></div></div><div class="meeting-info-cell meeting-info-note"><label for="meetingNote">備註</label><input id="meetingNote" type="text" autocomplete="off"></div>
           </section>
 
           <section class="meeting-tabs-section" aria-label="會議內容分頁">
-            <div class="meeting-tabs" id="meetingTabs" role="tablist">
-              <button class="meeting-tab is-active" type="button" data-meeting-tab="techRows" role="tab">技術會議</button>
-              <button class="meeting-tab" type="button" data-meeting-tab="csRows" role="tab">客服會議</button>
-            </div>
-            <div class="meeting-tab-panel" data-tab-panel="techRows">
-              <div class="ragic-subtable-head"><h3>技術會議</h3><button class="secondary" type="button" data-add-row="techRows">+ 新增一列</button></div>
-              <div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="techRows"></tbody></table></div>
-            </div>
-            <div class="meeting-tab-panel" data-tab-panel="csRows" hidden>
-              <div class="ragic-subtable-head"><h3>客服會議</h3><button class="secondary" type="button" data-add-row="csRows">+ 新增一列</button></div>
-              <div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="csRows"></tbody></table></div>
-            </div>
+            <div class="meeting-tabs" id="meetingTabs" role="tablist"></div><div id="meetingTabPanels"></div>
           </section>
         <datalist id="meetingStaffOptions"></datalist>
         </form>
@@ -111,6 +100,16 @@
           <button class="primary" id="saveMeetingButton" form="meetingForm" type="submit">儲存</button>
         </div>
       </section>
+
+      <div class="ragic-modal" id="staffSettingsModal" hidden>
+        <div class="ragic-modal-card staff-settings-card">
+          <div class="ragic-form-toolbar"><h2>人員設定</h2><button class="ghost" id="closeStaffSettingsModal" type="button">關閉</button></div>
+          <div class="staff-settings-body">
+            <div class="staff-settings-add"><input id="staffSettingsName" type="text" placeholder="輸入人員姓名"><button class="primary" id="addStaffSettingsName" type="button">新增</button></div>
+            <div class="staff-settings-list" id="staffSettingsList"></div>
+          </div>
+        </div>
+      </div>
       
       <div class="ragic-modal" id="meetingImageModal" hidden>
         <div class="ragic-modal-card ragic-image-modal-card">
