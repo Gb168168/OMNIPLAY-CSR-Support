@@ -88,6 +88,8 @@ const normalizeStaff = (doc) => ({ id: doc.id, ...doc.data() });
 const fixedStaffOrder = ['中魁', '佳臻', '晴心', '澄希', '茗雅'];
 const fixedStaffOrderMap = fixedStaffOrder.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
 const activeStaff = (staff) => (staff.status || '啟用') === '啟用';
+const isSystemAdminStaff = (staff) => ['id', 'code', 'name'].some((field) => String(staff[field] || '').trim().toUpperCase() === 'OMNIPLAY');
+const visibleLeaveStaff = (staff) => activeStaff(staff) && !isSystemAdminStaff(staff);
 const getStaffSortOrder = (staff) => Number(staff.sortOrder ?? fixedStaffOrderMap[staff.name] ?? 999);
 const normalizeShift = (value) => value === '晚班' ? '晚' : value === '早班' ? '早' : value;
 const getStaffShift = (staff) => normalizeShift(staff.shift || leaveData.shifts?.[staff.id] || '早');
@@ -129,7 +131,7 @@ const saveMonthData = async () => {
       quotas: leaveData.quotas || {},
       shifts: leaveData.shifts || {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    });
     setStatus('已自動儲存休假表。', 'success');
   } catch (error) {
     console.error('儲存休假表失敗：', error);
@@ -316,7 +318,7 @@ if (!leaveDb) {
   setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
 } else {
   unsubscribeStaff = leaveStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-    staffList = sortStaffForLeave(snapshot.docs.map(normalizeStaff).filter(activeStaff));
+    staffList = sortStaffForLeave(snapshot.docs.map(normalizeStaff).filter(visibleLeaveStaff));
     render();
   }, (error) => {
     console.error('讀取人員資料失敗：', error);
