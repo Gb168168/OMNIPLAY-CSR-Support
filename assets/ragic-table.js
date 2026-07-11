@@ -1,10 +1,5 @@
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', config: null, schema: null, unsubscribeRecords: null };
 
-const canUse = (action) => {
-  if (typeof getPagePermission !== 'function') return true;
-  return getPagePermission()[action] !== false;
-};
-
 const FIELD_TYPES = [
   { value: 'text', label: '文字' }, { value: 'textarea', label: '多行文字' }, { value: 'number', label: '數字' },
   { value: 'date', label: '日期' }, { value: 'time', label: '時間' }, { value: 'select', label: '下拉選單' }, { value: 'multiselect', label: '多選' },
