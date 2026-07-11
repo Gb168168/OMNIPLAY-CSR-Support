@@ -1,5 +1,10 @@
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', config: null, schema: null, unsubscribeRecords: null };
 
+const canUse = (action) => {
+  if (typeof getPagePermission !== 'function') return true;
+  return getPagePermission()[action] !== false;
+};
+
 const FIELD_TYPES = [
   { value: 'text', label: '文字' }, { value: 'textarea', label: '多行文字' }, { value: 'number', label: '數字' },
   { value: 'date', label: '日期' }, { value: 'time', label: '時間' }, { value: 'select', label: '下拉選單' }, { value: 'multiselect', label: '多選' },
@@ -84,7 +89,7 @@ const compressImageToBase64 = async (file) => {
   if (!file) return '';
   if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
   const image = await loadImage(await readFileAsDataUrl(file));
-  const image = await loadImage(await readFileAsDataUrl(file));
+  const scale = image.width > MAX_IMAGE_WIDTH ? MAX_IMAGE_WIDTH / image.width : 1;
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(image.width * scale);
   canvas.height = Math.round(image.height * scale);
@@ -109,7 +114,6 @@ const getFormData = async () => {
     const input = document.querySelector(`[name="${field.key}"]`); if (!input) continue;
     if (field.type === 'multiselect') data[field.key] = [...input.selectedOptions].map((opt) => opt.value);
     else if (field.type === 'file') data[field.key] = input.files?.[0] ? await compressImageToBase64(input.files[0]) : (RAGIC_STATE.records.find((r) => r.id === RAGIC_STATE.currentId)?.[field.key] || '');
-    else if (field.type === 'file') data[field.key] = input.files?.[0] ? await uploadFile(input.files[0], field) : (RAGIC_STATE.records.find((r) => r.id === RAGIC_STATE.currentId)?.[field.key] || '');
     else data[field.key] = input.value.trim();
   }
   return data;
