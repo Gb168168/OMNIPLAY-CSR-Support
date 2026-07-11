@@ -159,8 +159,10 @@ const setFormEditable = () => {
     button.disabled = !editable;
   });
   const deleteButton = document.querySelector('#deleteMeetingButton');
-  deleteButton.hidden = !meetingState.currentId || !canDeleteMeeting();
-  deleteButton.disabled = !canDeleteMeeting();
+  if (deleteButton) {
+    deleteButton.hidden = !meetingState.currentId || !canDeleteMeeting();
+    deleteButton.disabled = !canDeleteMeeting();
+  }
   document.querySelector('#newRecordButton').hidden = !editable;
 };
 
@@ -359,15 +361,26 @@ document.querySelector('#meetingForm')?.addEventListener('click', (event) => {
     input.focus();
   }
 });
-document.querySelector('#meetingForm')?.addEventListener('click', (event) => {
+document.querySelector('#meetingForm')?.addEventListener('click', async (event) => {
   const addKey = event.target.closest('[data-add-row]')?.dataset.addRow;
   if (addKey && canEditMeeting()) {
-    const currentRows = [...document.querySelectorAll(`[data-tab-body="${addKey}"] tr`)].map((row) => {
-      const item = {};
-      detailFields.forEach((field) => { if (field !== 'image') item[field] = row.querySelector(`[data-field="${field}"]`)?.value || ''; });
-      return item;
-    });
-    renderRows(addKey, [...currentRows, {}]);
+    try {
+      const currentRows = await Promise.all([...document.querySelectorAll(`[data-tab-body="${addKey}"] tr`)].map(async (row) => {
+        const item = {};
+        for (const field of detailFields) {
+          if (field === 'image') {
+            const control = row.querySelector('[data-field="image"]');
+            item.image = control?.files?.[0] ? await compressImageToBase64(control.files[0]) : (row.querySelector('[data-image] img')?.src || '');
+          } else {
+            item[field] = row.querySelector(`[data-field="${field}"]`)?.value || '';
+          }
+        }
+        return item;
+      }));
+      renderRows(addKey, [...currentRows, {}]);
+    } catch (error) {
+      alert(error.message || '圖片處理失敗，請稍後再試。');
+    }
   }
   const deleteKey = event.target.closest('[data-delete-row]')?.dataset.deleteRow;
   if (deleteKey && canEditMeeting()) event.target.closest('tr')?.remove();
@@ -398,9 +411,14 @@ document.querySelector('#meetingForm')?.addEventListener('submit', async (event)
 });
 document.querySelector('#deleteMeetingButton')?.addEventListener('click', async () => {
   if (!canDeleteMeeting()) return alert('您沒有刪除權限');
+  if (!meetingCollection) return;
   if (!meetingState.currentId || !confirm('確定刪除此筆會議紀錄？')) return;
-  await meetingCollection.doc(meetingState.currentId).delete();
-  showList();
+  try {
+    await meetingCollection.doc(meetingState.currentId).delete();
+    showList();
+  } catch (e) {
+    alert('刪除失敗：' + e.message);
+  }
 });
 document.querySelector('#closeMeetingImageModal')?.addEventListener('click', closeImagePreview);
 document.querySelector('#meetingImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'meetingImageModal') closeImagePreview(); });
