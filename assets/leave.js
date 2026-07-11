@@ -1,7 +1,6 @@
 const leaveDb = window.omniplayDb;
 const leaveStaffCollection = leaveDb?.collection('staff');
 const leaveCollection = leaveDb?.collection('leave');
-const scheduleCollection = leaveDb?.collection('schedule');
 
 const monthLabel = document.querySelector('#leaveMonthLabel');
 const prevMonthButton = document.querySelector('#prevLeaveMonth');
@@ -12,6 +11,7 @@ const leaveTableHead = document.querySelector('#leaveTableHead');
 const leaveTableBody = document.querySelector('#leaveTableBody');
 const leaveStatus = document.querySelector('#leaveStatus');
 const leaveLegend = document.querySelector('#leaveLegend');
+const globalQuotaInput = document.querySelector('#globalLeaveQuota');
 const specialModeButtons = document.querySelectorAll('.special-mode-button');
 
 const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
@@ -59,10 +59,8 @@ let currentMonth = new Date();
 currentMonth.setDate(1);
 let staffList = [];
 let leaveData = { records: {}, quotas: {}, shifts: {}, quota: 8 };
-let scheduleByDay = {};
 let unsubscribeStaff = null;
 let unsubscribeLeave = null;
-let unsubscribeSchedule = null;
 let activeSpecialMode = null;
 let saveTimer = null;
 const storedLeavePermission = () => {
@@ -145,7 +143,7 @@ const renderHeader = () => {
     const holiday = getHolidayName(day);
     return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}</small></th>`;
   }).join('');
-  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col quota-col">可休</th><th class="sticky-col name-col">姓名</th>${dayHeaders}</tr>`;
+  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col name-col">姓名</th>${dayHeaders}</tr>`;
 };
 
 const renderBody = () => {
@@ -162,20 +160,13 @@ const renderBody = () => {
           <option value="晚" ${getShift(staff) === '晚' ? 'selected' : ''}>晚</option>
         </select>
       </td>
-      <td class="sticky-col quota-col"><input class="leave-quota-input" data-action="quota" type="number" min="0" max="31" step="1" value="${quota}" aria-label="當月全員可休天數"${editableAttribute()}></td>
       <th class="sticky-col name-col" scope="row">
         <span>${escapeHtml(staff.name || staff.code || '未命名')}</span>
         <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}/${quota}</small>
       </th>${cells}</tr>`;
   }).join('');
 
-  const scheduleCells = Array.from({ length: totalDays }, (_, index) => {
-    const titles = scheduleByDay[dateKey(currentMonth, index + 1)] || [];
-    return `<td class="schedule-cell" title="${escapeHtml(titles.join('、'))}">${titles.map(escapeHtml).join('<br>') || '—'}</td>`;
-  }).join('');
-
-  leaveTableBody.innerHTML = `${rows}
-    <tr class="schedule-row"><td class="sticky-col shift-col">排程</td><td class="sticky-col quota-col">—</td><th class="sticky-col name-col" scope="row">排程</th>${scheduleCells}</tr>`;
+  leaveTableBody.innerHTML = rows;
 };
 
 const renderDayCell = (staff, day) => {
@@ -192,13 +183,16 @@ const renderDayCell = (staff, day) => {
 
 const render = () => {
   monthLabel.textContent = `${currentMonth.getFullYear()} 年 ${currentMonth.getMonth() + 1} 月`;
+  if (globalQuotaInput) {
+    globalQuotaInput.value = getGlobalQuota();
+    globalQuotaInput.disabled = !canEditLeave;
+  }
   renderHeader();
   renderBody();
 };
 
 const subscribeMonth = () => {
   unsubscribeLeave?.();
-  unsubscribeSchedule?.();
   if (!leaveCollection) return;
   setStatus('載入休假表資料中...', 'info');
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
@@ -210,24 +204,6 @@ const subscribeMonth = () => {
     console.error('讀取休假表失敗：', error);
     setStatus('讀取休假表失敗，請稍後再試。', 'error');
   });
-  subscribeSchedule();
-};
-
-const subscribeSchedule = () => {
-  scheduleByDay = {};
-  if (!scheduleCollection) return render();
-  unsubscribeSchedule = scheduleCollection.onSnapshot((snapshot) => {
-    scheduleByDay = {};
-    snapshot.docs.forEach((doc) => {
-      const data = doc.data();
-      const rawDate = data.date || data.day || data.startDate || data.scheduleDate || doc.id;
-      const key = typeof rawDate === 'string' ? rawDate.slice(0, 10) : rawDate?.toDate?.().toISOString().slice(0, 10);
-      if (!key?.startsWith(monthKey(currentMonth))) return;
-      scheduleByDay[key] ||= [];
-      scheduleByDay[key].push(data.title || data.name || data.subject || '未命名排程');
-    });
-    render();
-  }, (error) => console.error('讀取排程失敗：', error));
 };
 
 const changeMonth = (offset) => {
@@ -290,14 +266,13 @@ const handleQuotaInput = (event) => {
   updateGlobalQuota(target.value);
 };
 
-leaveTableBody?.addEventListener('input', handleQuotaInput);
+globalQuotaInput?.addEventListener('input', handleQuotaInput);
 
 leaveTableBody?.addEventListener('change', (event) => {
   const target = event.target;
   const row = target.closest('tr[data-staff-id]');
   if (!row) return;
   if (!canEditLeave) return;
-  if (target.dataset.action === 'quota') return;
   if (target.dataset.action === 'shift') {
     const staff = staffList.find((item) => item.id === row.dataset.staffId);
     if (staff) staff.shift = target.value;
@@ -347,7 +322,6 @@ if (!leaveDb) {
 window.addEventListener('beforeunload', () => {
   unsubscribeStaff?.();
   unsubscribeLeave?.();
-  unsubscribeSchedule?.();
 });
 
 const syncLeavePermission = async () => {
