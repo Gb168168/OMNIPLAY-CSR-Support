@@ -651,6 +651,33 @@ button:hover { transform: translateY(-1px); }
 }
 
 .leave-meta p { margin: 0; }
+.leave-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.leave-legend-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid rgba(203, 213, 225, .24);
+  border-radius: 999px;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, .22);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.leave-legend-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
 .leave-status[data-type="success"] { color: #bbf7d0; }
 .leave-status[data-type="error"] { color: #fecaca; }
 
@@ -700,7 +727,6 @@ button:hover { transform: translateY(-1px); }
 
 .day-col { min-width: max-content; }
 .shift-col,
-.quota-col,
 .name-col { min-width: max-content; }
 
 .leave-table .sticky-col {
@@ -726,9 +752,10 @@ button:hover { transform: translateY(-1px); }
   position: relative;
   width: 100%;
   min-height: 34px;
-  display: grid;
-  place-items: center;
-  gap: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   padding: 2px;
   color: #f8fafc;
   background: rgba(255,255,255,.03);
@@ -739,10 +766,9 @@ button:hover { transform: translateY(-1px); }
 .leave-table.is-special-mode .leave-cell-button:hover { background: rgba(59, 130, 246, .32); }
 
 .leave-cell-button .leave-marker {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .leave-marker {
@@ -754,9 +780,9 @@ button:hover { transform: translateY(-1px); }
 
 .leave-marker.is-required { color: #ef4444; text-shadow: none; }
 .special-icons {
-  position: absolute;
-  right: 3px;
-  bottom: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 18px;
   font-size: 15px;
   line-height: 1;
@@ -768,8 +794,7 @@ button:hover { transform: translateY(-1px); }
   box-shadow: 0 0 0 3px rgba(250, 204, 21, .24);
 }
 
-.leave-shift-select,
-.leave-quota-input {
+.leave-shift-select {
   width: auto;
   min-height: 32px;
   border: 1px solid rgba(203, 213, 225, .2);
@@ -786,9 +811,7 @@ button:hover { transform: translateY(-1px); }
 tr.is-over-quota .name-col { color: #fca5a5; }
 
 .summary-row td,
-.summary-row th,
-.schedule-row td,
-.schedule-row th {
+.summary-row th {
   position: sticky;
   z-index: 3;
   font-weight: 900;
@@ -796,12 +819,8 @@ tr.is-over-quota .name-col { color: #fca5a5; }
 
 .summary-row td,
 .summary-row th { bottom: 52px; background: #1d4ed8; }
-.schedule-row td,
-.schedule-row th { bottom: 0; background: #334155; }
-.summary-row .sticky-col,
-.schedule-row .sticky-col { z-index: 6; }
+.summary-row .sticky-col { z-index: 6; }
 .summary-cell { color: #bbf7d0; font-size: 18px; }
-.schedule-cell { color: #fde68a; font-size: 12px; line-height: 1.25; }
 
 .leave-special-menu {
   position: fixed;
@@ -844,7 +863,6 @@ tr.is-over-quota .name-col { color: #fca5a5; }
   .leave-table-wrap { max-height: calc(100vh - 330px); }
   .day-col { min-width: max-content; }
   .shift-col,
-  .quota-col,
   .name-col { min-width: max-content; }
   .leave-table { min-width: max-content; }
 }
@@ -1315,8 +1333,7 @@ body { background: var(--bg-gradient); }
 .modal-card, .login-card, .leave-special-menu, .schedule-tooltip { background: var(--panel-solid); border-color: var(--border); color: var(--text); }
 .login-card { position: relative; }
 .login-view { background: var(--bg-gradient); }
-.staff-form input, .staff-form select, .login-card input, .global-quota-field input, .leave-shift-select, .leave-quota-input, .schedule-form input, .schedule-form select, .schedule-form textarea, .ragic-card input, .ragic-card textarea, .ragic-card select {
-  color: var(--input-text);
+.staff-form input, .staff-form select, .login-card input, .global-quota-field input, .leave-shift-select, .schedule-form input, .schedule-form select, .schedule-form textarea, .ragic-card input, .ragic-card textarea, .ragic-card select {  color: var(--input-text);
   background: var(--input-bg);
   border-color: var(--input-border);
 }
@@ -1331,5 +1348,4 @@ body { background: var(--bg-gradient); }
 [data-theme="light"] .status-badge.is-enabled, [data-theme="light"] .user-pill { color: #166534; background: #DCFCE7; }
 [data-theme="light"] .status-badge.is-disabled { color: #991B1B; background: #FEE2E2; }
 [data-theme="light"] .status-badge.is-pending, [data-theme="light"] .status-badge.is-processing, [data-theme="light"] .status-badge[data-status="處理中"] { color: #9A3412; background: #FFEDD5; }
-
 
