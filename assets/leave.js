@@ -59,6 +59,7 @@ let currentMonth = new Date();
 currentMonth.setDate(1);
 let staffList = [];
 let leaveData = { records: {}, quotas: {}, shifts: {}, quota: 8 };
+let shiftLoadToken = 0;
 let unsubscribeStaff = null;
 let unsubscribeLeave = null;
 let activeSpecialMode = null;
@@ -92,7 +93,9 @@ const isSystemAdminStaff = (staff) => ['id', 'code', 'name'].some((field) => Str
 const visibleLeaveStaff = (staff) => activeStaff(staff) && !isSystemAdminStaff(staff);
 const getStaffSortOrder = (staff) => Number(staff.sortOrder ?? fixedStaffOrderMap[staff.name] ?? 999);
 const normalizeShift = (value) => value === '晚班' ? '晚' : value === '早班' ? '早' : value;
-const getStaffShift = (staff) => normalizeShift(staff.shift || leaveData.shifts?.[staff.id] || '早');
+const shiftDocId = (staffId, date = currentMonth) => `${staffId}_${monthKey(date)}`;
+const previousMonthOf = (date) => new Date(date.getFullYear(), date.getMonth() - 1, 1);
+const getStaffShift = (staff) => normalizeShift(leaveData.shifts?.[staff.id] || '早');
 const sortStaffForLeave = (items) => [...items].sort((a, b) => {
   const shiftCompare = (getStaffShift(a) === '晚' ? 1 : 0) - (getStaffShift(b) === '晚' ? 1 : 0);
   if (shiftCompare) return shiftCompare;
@@ -129,7 +132,6 @@ const saveMonthData = async () => {
       records: leaveData.records || {},
       quota: getGlobalQuota(),
       quotas: leaveData.quotas || {},
-      shifts: leaveData.shifts || {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     setStatus('已自動儲存休假表。', 'success');
@@ -196,6 +198,40 @@ const render = () => {
   renderBody();
 };
 
+const loadMonthlyShifts = async () => {
+  if (!leaveCollection) return;
+  const token = ++shiftLoadToken;
+  const targetMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const previousMonth = previousMonthOf(targetMonth);
+
+  try {
+    const previousMonthDoc = await leaveCollection.doc(monthKey(previousMonth)).get();
+    const previousLegacyShifts = previousMonthDoc.exists ? previousMonthDoc.data()?.shifts || {} : {};
+    const shiftEntries = await Promise.all(staffList.map(async (staff) => {
+      const [currentDoc, previousDoc] = await Promise.all([
+        leaveCollection.doc(shiftDocId(staff.id, targetMonth)).get(),
+        leaveCollection.doc(shiftDocId(staff.id, previousMonth)).get()
+      ]);
+      const currentShift = currentDoc.exists ? currentDoc.data()?.shift : undefined;
+      const previousShift = previousDoc.exists ? previousDoc.data()?.shift : undefined;
+      const legacyCurrentShift = leaveData.shifts?.[staff.id];
+      const legacyPreviousShift = previousLegacyShifts?.[staff.id];
+      const fallbackShift = previousShift || legacyPreviousShift || staff.shift || '早';
+      return [staff.id, normalizeShift(currentShift || legacyCurrentShift || fallbackShift) || '早'];
+    }));
+
+    if (token !== shiftLoadToken) return;
+    leaveData.shifts = Object.fromEntries(shiftEntries);
+    staffList = sortStaffForLeave(staffList);
+    render();
+    setStatus('', 'success');
+  } catch (error) {
+    if (token !== shiftLoadToken) return;
+    console.error('讀取班別設定失敗：', error);
+    setStatus('讀取班別設定失敗，請稍後再試。', 'error');
+  }
+};
+
 const subscribeMonth = () => {
   unsubscribeLeave?.();
   if (!leaveCollection) return;
@@ -204,7 +240,7 @@ const subscribeMonth = () => {
     leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, quota: 8, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, quota: 8 };
     staffList = sortStaffForLeave(staffList);
     render();
-    setStatus('', 'success');
+    loadMonthlyShifts();
   }, (error) => {
     console.error('讀取休假表失敗：', error);
     setStatus('讀取休假表失敗，請稍後再試。', 'error');
@@ -282,14 +318,18 @@ leaveTableBody?.addEventListener('change', (event) => {
   if (!row) return;
   if (!canEditLeave) return;
   if (target.dataset.action === 'shift') {
-    const staff = staffList.find((item) => item.id === row.dataset.staffId);
-    if (staff) staff.shift = target.value;
     leaveData.shifts ||= {};
     leaveData.shifts[row.dataset.staffId] = target.value;
-    leaveStaffCollection?.doc(row.dataset.staffId).update({
+    leaveCollection?.doc(shiftDocId(row.dataset.staffId)).set({
+      staffId: row.dataset.staffId,
+      month: monthKey(currentMonth),
       shift: target.value,
+      type: 'staffShift',
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch((error) => console.error('更新班別失敗：', error));
+    }, { merge: true }).catch((error) => {
+      console.error('更新班別失敗：', error);
+      setStatus('更新班別失敗，請稍後再試。', 'error');
+    });
   }
   staffList = sortStaffForLeave(staffList);
   render();
@@ -320,6 +360,7 @@ if (!leaveDb) {
   unsubscribeStaff = leaveStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
     staffList = sortStaffForLeave(snapshot.docs.map(normalizeStaff).filter(visibleLeaveStaff));
     render();
+    loadMonthlyShifts();
   }, (error) => {
     console.error('讀取人員資料失敗：', error);
     setStatus('讀取人員資料失敗，請稍後再試。', 'error');
