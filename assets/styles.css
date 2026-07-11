@@ -1,113 +1,121 @@
-:root {
-  color-scheme: dark;
-  --bg: #1B2A4A;
-  --bg-gradient: radial-gradient(circle at top left, rgba(74, 157, 255, .22) 0, transparent 34%), linear-gradient(135deg, #182642 0%, #1B2A4A 54%, #12203A 100%);
-  --panel: rgba(31, 52, 86, .86);
-  --panel-solid: #1F3456;
-  --panel-soft: rgba(42, 65, 104, .72);
-  --primary: #4A9DFF;
-  --primary-dark: #2F80ED;
-  --accent: #38B2AC;
-  --sidebar: #12203A;
-  --sidebar-soft: #1F3456;
-  --sidebar-text: #A0AEC0;
-  --text: #F8FAFC;
-  --muted: #A0AEC0;
-  --border: rgba(160, 174, 192, .22);
-  --success: #38B2AC;
-  --danger: #F56565;
-  --warning: #ED8936;
-  --shadow: 0 24px 60px rgba(2, 8, 23, 0.34);
-  --dark-panel: rgba(31, 52, 86, .92);
-  --dark-panel-soft: rgba(42, 65, 104, .82);
-  --table-head: #12203A;
-  --table-row: rgba(31, 52, 86, .88);
-  --table-row-alt: rgba(37, 59, 96, .88);
-  --table-row-hover: rgba(74, 157, 255, .18);
-  --table-text: #F8FAFC;
-  --table-muted: #A0AEC0;
-  --input-bg: rgba(18, 32, 58, .86);
-  --input-text: #F8FAFC;
-  --input-border: rgba(160, 174, 192, .26);
-  --overlay: rgba(10, 18, 34, .76);
-  --panel-gradient-end: #334155;
-  --button-secondary-text: #DCEBFF;
-  --button-secondary-bg: rgba(74, 157, 255, .18);
-  --button-ghost-bg: rgba(160, 174, 192, .10);
-  --button-danger-text: #FECACA;
-  --button-danger-bg: rgba(245, 101, 101, .16);
-  --button-danger-border: rgba(245, 101, 101, .35);
-  --month-label-text: #DBEAFE;
-  --month-label-bg: rgba(37, 99, 235, .18);
-  --control-pill-text: #E2E8F0;
-  --control-pill-bg: rgba(15, 23, 42, .22);
-  --weekend-bg: rgba(253, 224, 71, .24);
-  --weekend-text: #FDE68A;
-  --holiday-bg: rgba(251, 146, 60, .38);
-  --holiday-text: #FED7AA;
-  --warning-text: #FCA5A5;
-  --summary-bg: #1D4ED8;
-  --summary-text: #BBF7D0;
-  --calendar-event-bg: rgba(74, 157, 255, .14);
-  --chip-bg: rgba(15, 23, 42, .76);
-  --chip-text: #E2E8F0;
-}
-
+:root,
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #F4F7FB;
-  --bg-gradient: radial-gradient(circle at top left, #DBEAFE 0, transparent 34%), #F4F7FB;
-  --panel: rgba(255, 255, 255, .94);
-  --panel-solid: #FFFFFF;
-  --panel-soft: #EEF4FB;
-  --primary: #2563EB;
-  --primary-dark: #1D4ED8;
-  --accent: #0F766E;
-  --sidebar: #F8FAFC;
-  --sidebar-soft: #E2E8F0;
-  --sidebar-text: #475569;
-  --text: #172033;
-  --muted: #64748B;
-  --border: #DBE4EF;
-  --success: #16A34A;
-  --danger: #DC2626;
-  --warning: #EA580C;
-  --shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-  --dark-panel: rgba(255, 255, 255, .96);
-  --dark-panel-soft: #F8FAFC;
-  --table-head: #E2E8F0;
-  --table-row: #FFFFFF;
-  --table-row-alt: #F1F5F9;
-  --table-row-hover: #E0F2FE;
-  --table-text: #172033;
-  --table-muted: #64748B;
-  --input-bg: #FFFFFF;
-  --input-text: #172033;
-  --input-border: #CBD5E1;
-  --overlay: rgba(15, 23, 42, .45);
-  --panel-gradient-end: #FFFFFF;
-  --button-secondary-text: #1E3A8A;
-  --button-secondary-bg: #DBEAFE;
-  --button-ghost-bg: #FFFFFF;
-  --button-danger-text: #991B1B;
-  --button-danger-bg: #FEE2E2;
-  --button-danger-border: #FCA5A5;
-  --month-label-text: #111827;
-  --month-label-bg: #E5E7EB;
-  --control-pill-text: #111827;
-  --control-pill-bg: #FFFFFF;
-  --weekend-bg: #FEF3C7;
-  --weekend-text: #7C2D12;
-  --holiday-bg: #FFEDD5;
-  --holiday-text: #7C2D12;
-  --warning-text: #DC2626;
-  --summary-bg: #DBEAFE;
-  --summary-text: #111827;
-  --calendar-event-bg: #EFF6FF;
-  --chip-bg: #FFFFFF;
-  --chip-text: #111827;
+  --bg: #F6F0ED;
+  --sidebar: #D6CFCB;
+  --card: #FFFFFF;
+  --surface: #F5F1ED;
+  --text: #554640;
+  --text-secondary: #87919E;
+  --border: #D8D0C1;
+  --primary: #6CBEED;
+  --success: #92B6B1;
+  --warning: #E8DDB5;
+  --danger: #C2948A;
+
+  --bg-gradient: var(--bg);
+  --panel: var(--card);
+  --panel-solid: var(--card);
+  --panel-soft: var(--surface);
+  --primary-dark: #4EA8DE;
+  --accent: var(--success);
+  --sidebar-soft: var(--surface);
+  --sidebar-text: var(--text-secondary);
+  --muted: var(--text-secondary);
+  --shadow: 0 24px 60px rgba(85, 70, 64, 0.12);
+  --dark-panel: var(--card);
+  --dark-panel-soft: var(--surface);
+  --table-head: var(--surface);
+  --table-row: var(--card);
+  --table-row-alt: var(--surface);
+  --table-row-hover: color-mix(in srgb, var(--primary) 24%, var(--card));
+  --table-text: var(--text);
+  --table-muted: var(--text-secondary);
+  --input-bg: var(--card);
+  --input-text: var(--text);
+  --input-border: var(--border);
+  --overlay: rgba(85, 70, 64, .42);
+  --panel-gradient-end: var(--surface);
+  --button-secondary-text: var(--primary);
+  --button-secondary-bg: color-mix(in srgb, var(--primary) 18%, var(--card));
+  --button-ghost-bg: var(--surface);
+  --button-danger-text: var(--danger);
+  --button-danger-bg: color-mix(in srgb, var(--danger) 18%, var(--card));
+  --button-danger-border: var(--danger);
+  --month-label-text: var(--text);
+  --month-label-bg: var(--surface);
+  --control-pill-text: var(--text);
+  --control-pill-bg: var(--surface);
+  --weekend-bg: color-mix(in srgb, var(--warning) 55%, var(--card));
+  --weekend-text: var(--text);
+  --holiday-bg: color-mix(in srgb, var(--danger) 30%, var(--card));
+  --holiday-text: var(--text);
+  --warning-text: var(--danger);
+  --summary-bg: var(--primary);
+  --summary-text: var(--text);
+  --calendar-event-bg: color-mix(in srgb, var(--primary) 18%, var(--card));
+  --chip-bg: var(--surface);
+  --chip-text: var(--text);
 }
 
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #252323;
+  --sidebar: #28536B;
+  --card: #3A405A;
+  --surface: #565264;
+  --text: #F6F0ED;
+  --text-secondary: #ADBABD;
+  --border: #707078;
+  --primary: #6EB4D1;
+  --success: #92B6B1;
+  --warning: #BBB193;
+  --danger: #BD9391;
+
+  --bg-gradient: var(--bg);
+  --panel: var(--card);
+  --panel-solid: var(--card);
+  --panel-soft: var(--surface);
+  --primary-dark: #5AA6C6;
+  --accent: var(--success);
+  --sidebar-soft: color-mix(in srgb, var(--sidebar) 72%, var(--surface));
+  --sidebar-text: var(--text-secondary);
+  --muted: var(--text-secondary);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  --dark-panel: var(--card);
+  --dark-panel-soft: var(--surface);
+  --table-head: var(--surface);
+  --table-row: var(--card);
+  --table-row-alt: var(--surface);
+  --table-row-hover: color-mix(in srgb, var(--primary) 28%, var(--card));
+  --table-text: var(--text);
+  --table-muted: var(--text-secondary);
+  --input-bg: var(--surface);
+  --input-text: var(--text);
+  --input-border: var(--border);
+  --overlay: rgba(37, 35, 35, .76);
+  --panel-gradient-end: var(--surface);
+  --button-secondary-text: var(--text);
+  --button-secondary-bg: color-mix(in srgb, var(--primary) 24%, var(--card));
+  --button-ghost-bg: var(--surface);
+  --button-danger-text: var(--text);
+  --button-danger-bg: color-mix(in srgb, var(--danger) 32%, var(--card));
+  --button-danger-border: var(--danger);
+  --month-label-text: var(--text);
+  --month-label-bg: var(--surface);
+  --control-pill-text: var(--text);
+  --control-pill-bg: var(--surface);
+  --weekend-bg: color-mix(in srgb, var(--warning) 36%, var(--card));
+  --weekend-text: var(--text);
+  --holiday-bg: color-mix(in srgb, var(--danger) 38%, var(--card));
+  --holiday-text: var(--text);
+  --warning-text: var(--warning);
+  --summary-bg: var(--primary);
+  --summary-text: var(--bg);
+  --calendar-event-bg: color-mix(in srgb, var(--primary) 24%, var(--card));
+  --chip-bg: var(--surface);
+  --chip-text: var(--text);
+}
 
 
 * { box-sizing: border-box; }
@@ -1440,3 +1448,160 @@ body { background: var(--bg-gradient); }
 [data-theme="light"] .status-badge.is-pending, [data-theme="light"] .status-badge.is-processing, [data-theme="light"] .status-badge[data-status="處理中"] { color: #9A3412; background: #FFEDD5; }
 .ragic-table tr.is-readonly { cursor: default; }
 .ragic-table tr.is-readonly:hover td { background: inherit; }
+
+
+/* Nordic Mist unified color application */
+html,
+body { background: var(--bg); color: var(--text); }
+body { background-image: none; }
+.app-shell,
+.main,
+.login-view { background: var(--bg); }
+.sidebar { background: var(--sidebar); border-right: 1px solid var(--border); color: var(--text); }
+.sidebar-header,
+.sidebar-user,
+.panel-heading,
+.leave-meta,
+.schedule-meta,
+.ragic-actions,
+.ragic-subtable,
+.ragic-table td,
+.staff-table th,
+.staff-table td,
+.leave-table th,
+.leave-table td { border-color: var(--border); }
+.logo,
+.section-button,
+.sidebar-user-name,
+.sidebar-user-label,
+.home-link,
+.submenu a { color: var(--text); }
+.home-link:hover,
+.home-link.is-active,
+.submenu a:hover,
+.submenu a.is-active,
+.section-button:hover,
+.section-button.is-open,
+.logo-mark { background: var(--primary); color: var(--card); }
+.toggle-btn,
+.theme-toggle,
+.sidebar-user,
+.view-switch,
+.global-quota-field,
+.leave-legend-button,
+.saved-label-chip { background: var(--surface); color: var(--text); border-color: var(--border); }
+.topbar,
+.placeholder-card,
+.staff-panel,
+.leave-panel,
+.schedule-panel,
+.ragic-card,
+.ragic-modal-card,
+.modal-card,
+.login-card,
+.permission-staff,
+.schedule-history,
+.history-item,
+.leave-special-menu,
+.schedule-tooltip { background: var(--card); background-image: none; color: var(--text); border-color: var(--border); }
+.panel-heading p,
+.topbar p,
+.placeholder-card p,
+.login-brand p,
+.empty-state,
+.schedule-meta,
+.leave-meta,
+.saved-label-empty,
+.history-empty,
+.schedule-form small,
+.ragic-toolbar p,
+.schedule-tooltip p,
+.staff-form label span,
+.schedule-form label span,
+.login-card label,
+.ragic-field span,
+.leave-special-menu label { color: var(--text-secondary); }
+.primary-button,
+.primary,
+a { color: var(--card); background-color: var(--primary); }
+a:not(.home-link):not(.submenu a) { color: var(--primary); background: transparent; }
+.primary-button:hover,
+.primary:hover,
+.view-switch .ghost-button.is-active { background: var(--primary); color: var(--card); }
+.secondary-button,
+.secondary { color: var(--primary); background: color-mix(in srgb, var(--primary) 18%, var(--card)); border-color: var(--border); }
+.ghost-button,
+.ghost,
+.icon-button { color: var(--text); background: var(--surface); border-color: var(--border); }
+.danger-button,
+.danger,
+.logout-button { color: var(--text); background: var(--danger); border-color: var(--danger); }
+.status-badge.is-enabled,
+.user-pill,
+.history-item em,
+.leave-status[data-type="success"],
+.schedule-status[data-type="success"] { color: var(--text); background: var(--success); }
+.status-badge.is-disabled,
+.leave-status[data-type="error"],
+.schedule-status[data-type="error"],
+.form-message { color: var(--text); background: var(--danger); }
+.status-badge.is-pending,
+.status-badge.is-processing,
+.status-badge[data-status="處理中"],
+.form-message[data-type="info"],
+.special-mode-button.is-active { color: var(--text); background: var(--warning); }
+.staff-table th,
+.leave-table thead th,
+.ragic-table th,
+.ragic-subtable th,
+.calendar-weekday { color: var(--text); background: var(--surface); }
+.staff-table td,
+.ragic-table td,
+.leave-table td,
+.leave-table th,
+.calendar-day { color: var(--text); }
+.staff-table tbody tr:nth-child(odd),
+.ragic-table tbody tr:nth-child(odd) td,
+.ragic-subtable tbody tr:nth-child(odd) td,
+.leave-table tbody tr:nth-child(odd) th,
+.leave-table tbody tr:nth-child(odd) td,
+.leave-table tbody tr:nth-child(odd) .sticky-col { background: var(--card); }
+.staff-table tbody tr:nth-child(even),
+.ragic-table tbody tr:nth-child(even) td,
+.ragic-subtable tbody tr:nth-child(even) td,
+.leave-table tbody tr:nth-child(even) th,
+.leave-table tbody tr:nth-child(even) td,
+.leave-table tbody tr:nth-child(even) .sticky-col { background: var(--surface); }
+.staff-table tbody tr:hover,
+.ragic-table tr:hover td,
+.calendar-day:hover { background: color-mix(in srgb, var(--primary) 22%, var(--card)); }
+.leave-table thead .sticky-col { background: var(--surface); }
+.staff-form input,
+.staff-form select,
+.login-card input,
+.global-quota-field input,
+.leave-shift-select,
+.schedule-form input,
+.schedule-form select,
+.schedule-form textarea,
+.ragic-card input,
+.ragic-card textarea,
+.ragic-card select,
+.designer-field input,
+.designer-field textarea,
+.designer-field select { color: var(--text); background: var(--surface); border-color: var(--border); }
+.calendar-grid { background: var(--border); }
+.calendar-event { background: color-mix(in srgb, var(--primary) 20%, var(--card)); color: var(--text); }
+.day-number,
+.schedule-history h3,
+.history-item strong,
+.ragic-toolbar h2,
+.ragic-form-toolbar h2,
+.ragic-subtable h3,
+.sort-btn { color: var(--text); }
+.calendar-day.is-today .day-number { background: var(--success); color: var(--text); }
+.quota-count.is-warning,
+tr.is-over-quota .name-col { color: var(--danger); }
+.summary-row td,
+.summary-row th { color: var(--summary-text); background: var(--summary-bg); }
+.ragic-file-preview { color: var(--primary); background: var(--surface); border-color: var(--border); }
