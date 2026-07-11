@@ -10,7 +10,7 @@ const englishAlphanumericInputs = document.querySelectorAll('#loginAccount, #log
 
 
 const THEME_STORAGE_KEY = 'omniplayTheme';
-const getStoredTheme = () => localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
+const getStoredTheme = () => localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
 const applyTheme = (theme) => {
   document.documentElement.dataset.theme = theme;
   document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
