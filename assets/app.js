@@ -30,7 +30,8 @@ const SESSION_KEYS = {
   id: 'omniplayStaffId',
   code: 'omniplayStaffCode',
   name: 'omniplayStaffName',
-  account: 'omniplayStaffAccount'
+  account: 'omniplayStaffAccount',
+  permissions: 'omniplayPermissions'
 };
 
 const isIndexPage = /(^|\/)index\.html$/.test(window.location.pathname) || window.location.pathname.endsWith('/');
@@ -66,12 +67,22 @@ const PAGE_KEYS = {
 };
 
 const currentPageKey = () => PAGE_KEYS[window.location.pathname.split('/').pop() || 'index.html'] || 'home';
+const FULL_PERMISSION = { view: true, edit: true, delete: true, design: true };
+const EMPTY_PERMISSION = { view: false, edit: false, delete: false, design: false };
+const makeDefaultPermissions = () => ({ pages: Object.fromEntries([...new Set(Object.values(PAGE_KEYS))].map((page) => [page, { ...FULL_PERMISSION }])) });
 const getStoredPermissions = () => {
-  try { return JSON.parse(sessionStorage.getItem('omniplayPermissions') || '{}'); } catch { return {}; }
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEYS.permissions) || '{}'); } catch { return {}; }
 };
 const getPagePermission = (page = currentPageKey()) => {
-  if (isOmniplayAdmin()) return { view: true, edit: true, delete: true, design: true };
-  return getStoredPermissions().pages?.[page] || { view: true, edit: true, delete: true, design: true };
+  if (isOmniplayAdmin()) return { ...FULL_PERMISSION };
+  const pages = getStoredPermissions().pages;
+  if (!pages) return { ...EMPTY_PERMISSION };
+  return { ...EMPTY_PERMISSION, ...(pages[page] || {}) };
+};
+const canUse = (pageOrAction, maybeAction) => {
+  const page = maybeAction ? pageOrAction : currentPageKey();
+  const action = maybeAction || pageOrAction;
+  return getPagePermission(page)[action] === true;
 };
 
 const applyPermissionUi = () => {
@@ -89,22 +100,24 @@ const applyPermissionUi = () => {
 };
 
 window.getPagePermission = getPagePermission;
+window.canUse = canUse;
 window.isOmniplayAdmin = isOmniplayAdmin;
 
 const loadCurrentPermissions = async () => {
-  if (!isLoggedIn() || isOmniplayAdmin()) { sessionStorage.removeItem('omniplayPermissions'); applyPermissionUi(); return; }
+  if (!isLoggedIn() || isOmniplayAdmin()) { sessionStorage.removeItem(SESSION_KEYS.permissions); applyPermissionUi(); return; }
   const staffId = getCurrentStaff().id;
   const permissionsCollection = window.omniplayDb?.collection('permissions');
   if (!staffId || !permissionsCollection) { applyPermissionUi(); return; }
   try {
     const doc = await permissionsCollection.doc(staffId).get();
-    if (doc.exists) sessionStorage.setItem('omniplayPermissions', JSON.stringify(doc.data()));
-    else sessionStorage.removeItem('omniplayPermissions');
+    if (doc.exists) sessionStorage.setItem(SESSION_KEYS.permissions, JSON.stringify(doc.data()));
+    else sessionStorage.setItem(SESSION_KEYS.permissions, JSON.stringify(makeDefaultPermissions()));
   } catch (error) { console.error('讀取權限失敗：', error); }
   applyPermissionUi();
 };
 
 window.loadCurrentPermissions = loadCurrentPermissions;
+window.permissionReady = loadCurrentPermissions();
 
 const showLoginMessage = (message) => {
   if (!loginMessage) return;
@@ -335,6 +348,5 @@ document.addEventListener('click', (event) => {
 
 renderThemeToggle();
 setAppVisibility();
-loadCurrentPermissions();
-renderSidebarUser();
+window.permissionReady?.then(() => renderSidebarUser());
 checkInitialSetupRequired();
