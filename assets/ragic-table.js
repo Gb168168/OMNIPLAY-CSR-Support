@@ -58,17 +58,26 @@ const normalizeFields = (fields = [], fallbackPrefix = 'field') => {
   const usedKeys = new Set();
   return fields.map((field, index) => normalizeField(field, `${fallbackPrefix}_${index + 1}`, usedKeys));
 };
+const normalizeSubtableColumnsPerRow = (value) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return 5;
+  return Math.min(10, Math.max(1, parsed));
+};
 const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) => {
   const label = String(field.label || field.key || '未命名欄位');
-  return {
+  const type = field.type || 'text';
+  const normalized = {
     ...field,
     key: uniqueKey(field.key || label, usedKeys, fallback),
     label,
-    type: field.type || 'text',
+    type,
     width: normalizeFieldWidth(field.width),
     options: optionList(field),
     fields: normalizeFields(field.fields || [], 'subfield')
   };
+  if (type === 'subtable') normalized.columnsPerRow = normalizeSubtableColumnsPerRow(field.columnsPerRow);
+  else delete normalized.columnsPerRow;
+  return normalized;
 };
 const normalizeSchema = (schema = {}) => ({ fields: normalizeFields(schema.fields || [], 'field') });
 const fixDuplicateKeys = (fields = []) => {
@@ -592,6 +601,7 @@ const renderSubtableRow = (field, item = {}) => {
 
   const fieldsGrid = document.createElement('div');
   fieldsGrid.className = 'subtable-row-fields';
+  fieldsGrid.style.setProperty('--subtable-cols', normalizeSubtableColumnsPerRow(field.columnsPerRow));
 
   (field.fields || []).forEach((sub) => {
     const fieldWrap = document.createElement('label');
@@ -900,11 +910,13 @@ const moveDesignerField = (fromRow, toRow) => {
 };
 const enableDesignerDrag = (row) => {
   const handle = row.querySelector('.drag-handle');
+  if (!handle) return;
   let handlePressed = false;
   row.setAttribute('draggable', 'true');
   handle.addEventListener('mousedown', () => { handlePressed = true; });
   handle.addEventListener('touchstart', () => { handlePressed = true; }, { passive: true });
   row.addEventListener('dragstart', function(e) {
+    e.stopPropagation();
     if (!handlePressed && !e.target.closest('.drag-handle')) {
       e.preventDefault();
       return;
@@ -916,21 +928,25 @@ const enableDesignerDrag = (row) => {
     this.classList.add('dragging');
   });
   row.addEventListener('dragover', function(e) {
+    e.stopPropagation();
     if (!draggedDesignerField || draggedDesignerField.parentElement !== this.parentElement) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     this.classList.add('drag-over');
   });
-  row.addEventListener('dragleave', function() {
+  row.addEventListener('dragleave', function(e) {
+    e.stopPropagation();
     this.classList.remove('drag-over');
   });
   row.addEventListener('drop', function(e) {
+    e.stopPropagation();
     e.preventDefault();
     moveDesignerField(draggedDesignerField, this);
     this.classList.remove('drag-over');
     updateDesignerPreview();
   });
-  row.addEventListener('dragend', function() {
+  row.addEventListener('dragend', function(e) {
+    e.stopPropagation();
     this.classList.remove('dragging');
     document.querySelectorAll('.designer-field.drag-over').forEach((item) => item.classList.remove('drag-over'));
     draggedDesignerField = null;
@@ -1000,7 +1016,7 @@ const fieldDesigner = (field = {}, nested = false) => {
     return options ? `<optgroup label="${escapeHtml(group.label)}">${options}</optgroup>` : '';
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
-  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><h4>子欄位設定</h4><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
+  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
   const sub = row.querySelector('.designer-subfields');
   const subList = row.querySelector('.designer-subfield-list');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
@@ -1035,7 +1051,10 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
     width: normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value),
     options: (row.querySelector('[data-role="options"]')?.value || '').split('\n').map((v) => v.trim()).filter(Boolean)
   };
-  if (type === 'subtable') field.fields = readDesigner(row.querySelector('.designer-subfield-list'));
+  if (type === 'subtable') {
+    field.columnsPerRow = normalizeSubtableColumnsPerRow(row.querySelector('[data-role="columns-per-row"]')?.value);
+    field.fields = readDesigner(row.querySelector('.designer-subfield-list'));
+  }
   return field;
 });
 
