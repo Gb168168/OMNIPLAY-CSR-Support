@@ -1227,26 +1227,35 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-toolbar > div:first-child { margin-right: auto; }
 .ragic-toolbar h2, .ragic-form-toolbar h2, .ragic-subtable h3 { margin: 0; color: var(--text); }
 .ragic-toolbar p { margin: 4px 0 0; color: var(--text-secondary); }
-.ragic-table-wrap { overflow-x: auto; padding: 0 18px 18px; }
-.ragic-table { table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+.ragic-table-wrap {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 0 18px 18px;
+  position: relative;
+  --ragic-header-row-height: 42px;
+}
+.ragic-table { table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: 0; }
 .ragic-table thead {
   position: sticky;
   top: 0;
   z-index: 10;
   background: var(--surface);
 }
-.ragic-table th { padding: 10px 12px; color: var(--text); background: var(--table-head); text-align: left; vertical-align: bottom; }
+.ragic-table th { padding: 10px 12px; color: var(--text); background: var(--surface); text-align: left; vertical-align: bottom; }
 .ragic-table thead tr:first-child th {
   position: sticky;
   top: 0;
-  z-index: 10;
-  background: var(--table-head);
+  z-index: 11;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 .ragic-table thead tr:nth-child(2) th {
   position: sticky;
-  top: 40px;
-  z-index: 10;
+  top: var(--ragic-header-row-height);
+  z-index: 11;
   background: var(--surface);
+  border-bottom: 2px solid var(--border);
 }
 .ragic-table td { padding: 14px 12px; border-top: 1px solid rgba(226,232,240,.16); border-bottom: 1px solid rgba(226,232,240,.16); color: var(--table-text); }
 .ragic-table tbody tr:nth-child(odd) td { background: var(--table-row); }
