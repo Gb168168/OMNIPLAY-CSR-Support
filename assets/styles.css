@@ -2096,6 +2096,25 @@ textarea,
 .dashboard-todo-list { list-style: none; margin: 0; padding: 0 18px 18px; display: grid; gap: 10px; }
 .dashboard-todo-list li a, .dashboard-empty { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--table-row); color: var(--text); text-decoration: none; }
 .todo-type { font-weight: 900; color: var(--primary); }
+.shift-toggle { display: flex; gap: 4px; flex-wrap: wrap; }
+.shift-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.shift-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.dashboard-schedule-list { list-style: none; margin: 0; padding: 0 18px 18px; display: grid; gap: 10px; }
+.dashboard-schedule-list li a { display: grid; grid-template-columns: 16px 64px 1fr; gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--table-row); color: var(--text); text-decoration: none; }
+.dashboard-schedule-list time { color: var(--muted); font-weight: 900; }
+.schedule-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--event-color, var(--primary)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--event-color, var(--primary)) 18%, transparent); }
+@media (max-width: 980px) {
+  .dashboard-todo-heading { align-items: flex-start; flex-direction: column; }
+  .dashboard-schedule-list li a { grid-template-columns: 1fr; }
+}
 .dashboard-empty { grid-template-columns: 1fr; color: var(--muted); }
 .icon-actions-head, .icon-actions { min-width: 96px !important; text-align: center; white-space: nowrap; }
 .fire-btn, .pin-btn, .star-btn { cursor: pointer; font-size: 16px; opacity: 0.3; transition: opacity 0.2s; display: inline-block; padding: 2px 4px; }
