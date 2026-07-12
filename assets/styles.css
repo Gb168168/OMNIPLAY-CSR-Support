@@ -2165,7 +2165,31 @@ textarea,
   max-width: max-content;
 }
 .image-upload-preview img {
-  max-height: 80px;
+    max-height: 100px;
+}
+.image-preview-item {
+  position: relative;
+  display: inline-block;
+  margin-top: 8px;
+}
+.image-remove-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.image-remove-btn:hover {
+  background: var(--danger-hover, #c0392b);
 }
 .image-preview-remove {
   position: absolute;
