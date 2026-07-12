@@ -1,4 +1,4 @@
-const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null };
+const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null };
 
 const FIELD_TYPE_GROUPS = [
   { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
@@ -711,26 +711,116 @@ const renderTable = () => {
   });
   renderPagination();
 };
+const sortValue = (record, fieldKey) => {
+  const field = getFields().find((item) => item.key === fieldKey);
+  const raw = record[fieldKey];
+  if (['date', 'datetime', 'createdDate', 'updatedDate'].includes(field?.type)) {
+    const text = valueToText(raw).toString().trim();
+    const parsed = raw?.toDate ? raw.toDate().getTime() : Date.parse(text.replace(/\//g, '-'));
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  return valueToText(raw).toString();
+};
+
+const compareRecords = (a, b, fieldKey, direction) => {
+  const first = sortValue(a, fieldKey);
+  const second = sortValue(b, fieldKey);
+  const result = typeof first === 'number' && typeof second === 'number'
+    ? first - second
+    : String(first).localeCompare(String(second), 'zh-Hant', { numeric: true });
+  return result * (direction === 'asc' ? 1 : -1);
+};
+
 const renderFilteredList = (filtered) => {
   RAGIC_STATE.filtered = [...filtered];
-  if (RAGIC_STATE.sortKey) {
-    RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1));
-  }
+  if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => compareRecords(a, b, RAGIC_STATE.sortKey, RAGIC_STATE.sortDir));
   RAGIC_STATE.page = 1;
   renderTable();
 };
 
-const applyFilters = () => {
-  const filters = {};
-  document.querySelectorAll('.filter-input').forEach((input) => {
-    const keyword = input.value.trim().toLowerCase();
-    if (keyword) filters[input.dataset.field] = keyword;
+const updateColumnMenuStates = () => {
+  document.querySelectorAll('.col-menu-trigger').forEach((trigger) => {
+    const key = trigger.dataset.field;
+    const hasFilter = Boolean(RAGIC_STATE.filters[key]);
+    const isSorted = RAGIC_STATE.sortKey === key;
+    trigger.classList.toggle('is-active', hasFilter || isSorted);
+    const indicator = trigger.parentElement?.querySelector('.col-sort-indicator');
+    if (indicator) indicator.textContent = isSorted ? (RAGIC_STATE.sortDir === 'asc' ? '↑' : '↓') : '';
   });
+};
+
+const applyFilters = () => {
+  const filters = Object.fromEntries(Object.entries(RAGIC_STATE.filters).map(([key, value]) => [key, String(value || '').trim().toLowerCase()]).filter(([, value]) => value));
   const filtered = RAGIC_STATE.records.filter((record) => Object.entries(filters).every(([fieldKey, keyword]) => {
     const value = valueToText(record[fieldKey]).toString().toLowerCase();
     return value.includes(keyword);
   }));
   renderFilteredList(filtered);
+  updateColumnMenuStates();
+};
+
+
+const closeColumnMenus = (exceptKey = '') => {
+  document.querySelectorAll('.col-menu-dropdown').forEach((menu) => {
+    if (menu.dataset.menu !== exceptKey) menu.hidden = true;
+  });
+  RAGIC_STATE.openMenuKey = exceptKey;
+};
+
+const toggleColumnMenu = (key) => {
+  const selectorKey = window.CSS?.escape ? CSS.escape(key) : String(key).replace(/"/g, '\\"');
+  const menu = document.querySelector(`.col-menu-dropdown[data-menu="${selectorKey}"]`);
+  if (!menu) return;
+  const willOpen = menu.hidden;
+  closeColumnMenus(willOpen ? key : '');
+  menu.hidden = !willOpen;
+  if (willOpen) menu.querySelector('[data-menu-filter]')?.focus();
+};
+
+const handleColumnMenuClick = (event) => {
+  const trigger = event.target.closest('.col-menu-trigger');
+  if (trigger) {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleColumnMenu(trigger.dataset.field);
+    return;
+  }
+  const item = event.target.closest('[data-menu-action]');
+  if (!item) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const key = item.dataset.field;
+  const action = item.dataset.menuAction;
+  if (action === 'filter') {
+    const box = item.parentElement.querySelector('.col-filter-box');
+    if (box) {
+      box.hidden = false;
+      box.querySelector('input')?.focus();
+    }
+    return;
+  }
+  if (action === 'clear-filter') {
+    delete RAGIC_STATE.filters[key];
+    const input = item.parentElement.querySelector('[data-menu-filter]');
+    if (input) input.value = '';
+  }
+  if (action === 'sort-asc' || action === 'sort-desc') {
+    RAGIC_STATE.sortKey = key;
+    RAGIC_STATE.sortDir = action === 'sort-asc' ? 'asc' : 'desc';
+  }
+  if (action === 'clear-sort') {
+    RAGIC_STATE.sortKey = '';
+    RAGIC_STATE.sortDir = 'asc';
+  }
+  closeColumnMenus();
+  applyFilters();
+};
+
+const handleColumnMenuInput = (event) => {
+  const input = event.target.closest('[data-menu-filter]');
+  if (!input) return;
+  RAGIC_STATE.filters[input.dataset.menuFilter] = input.value;
+  applyFilters();
 };
 
 const updateRagicStickyHeaderOffset = () => {
@@ -746,26 +836,17 @@ const renderHeader = () => {
   const thead = headerRow?.closest('thead');
   const table = headerRow?.closest('table');
   if (table) table.style.tableLayout = 'fixed';
-  let filterRow = document.querySelector('#ragicFilterRow');
-  if (!filterRow && thead) {
-    filterRow = document.createElement('tr');
-    filterRow.id = 'ragicFilterRow';
-    thead.appendChild(filterRow);
-  }
+  document.querySelector('#ragicFilterRow')?.remove();
   headerRow.innerHTML = `<th class="icon-actions-head col-marker">標記</th>` + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
     const style = width ? ` style="width: ${width}px;"` : '';
-    return `<th class="${ragicColumnClass(field)}"${style}><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button></th>`;
+    const filterValue = escapeHtml(RAGIC_STATE.filters[field.key] || '');
+    return `<th class="${ragicColumnClass(field)} col-menu-cell"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="filter" data-field="${key}">🔍 <span>文字篩選</span></div><div class="col-filter-box" ${filterValue ? '' : 'hidden'}><input type="text" data-menu-filter="${key}" placeholder="輸入關鍵字..." value="${filterValue}" /></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div></div></th>`;
   }).join('');
-  if (filterRow) filterRow.innerHTML = '<th class="col-marker"></th>' + listFields().map((field) => {
-    const key = escapeHtml(field.key);
-    const label = escapeHtml(field.label || field.key);
-    const width = fieldColumnWidth(field);
-    const style = width ? ` style="width: ${width}px;"` : '';
-    return `<th class="${ragicColumnClass(field)}"${style}><input class="filter-input" data-field="${key}" data-filter="${key}" placeholder="篩選${label}" /></th>`;
-  }).join('');
+  if (thead) thead.querySelectorAll('tr:not(#ragicHeaderRow)').forEach((row) => row.remove());
+  updateColumnMenuStates();
   updateRagicStickyHeaderOffset();
 };
 
@@ -1064,7 +1145,18 @@ const initRagicPage = async (config) => {
   });
   const ragicTableHead = document.querySelector('#ragicHeaderRow')?.closest('thead');
   window.addEventListener('resize', updateRagicStickyHeaderOffset);
-  ragicTableHead?.addEventListener('input', applyFilters); ragicTableHead?.addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
+  ragicTableHead?.addEventListener('input', handleColumnMenuInput);
+  ragicTableHead?.addEventListener('click', handleColumnMenuClick);
+  ragicTableHead?.addEventListener('keydown', (event) => {
+    if (!['Enter', ' '].includes(event.key)) return;
+    const trigger = event.target.closest('.col-menu-trigger');
+    if (!trigger) return;
+    event.preventDefault();
+    toggleColumnMenu(trigger.dataset.field);
+  });
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.col-menu-cell')) closeColumnMenus();
+  });
   document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (button) { event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); return; } const cell = event.target.closest('td[data-doc-id][data-field-key]'); if (cell) { event.preventDefault(); event.stopPropagation(); startInlineEdit(cell); } });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
