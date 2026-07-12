@@ -2108,7 +2108,7 @@ textarea,
 .today-working-row, .today-working-empty { font-size: 14px; }
 .today-working-row span { color: var(--muted); font-weight: 800; }
 .dashboard-todo-list { list-style: none; margin: 0; padding: 0 18px 18px; display: grid; gap: 10px; }
-.dashboard-todo-list li a, .dashboard-empty { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--table-row); color: var(--text); text-decoration: none; }
+.dashboard-todo-list li a, .dashboard-empty { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--table-row); color: var(--text); text-decoration: none; }
 .todo-type { font-weight: 900; color: var(--primary); }
 .shift-toggle { display: flex; gap: 4px; flex-wrap: wrap; }
 .shift-btn {
