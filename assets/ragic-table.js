@@ -402,9 +402,9 @@ const ragicPageSizeKey = () => `ragicPageSize:${RAGIC_STATE.config?.collection |
 const getTotalPages = () => Math.max(1, Math.ceil(RAGIC_STATE.filtered.length / RAGIC_STATE.pageSize));
 const clampRagicPage = () => { RAGIC_STATE.page = Math.min(Math.max(1, RAGIC_STATE.page), getTotalPages()); };
 const ensurePagination = () => {
-  const tableWrap = document.querySelector('.ragic-table-wrap');
+  const tableWrap = document.querySelector('#ragicListView .ragic-table-wrap');
   if (!tableWrap || document.querySelector('#ragicPagination')) return;
-  tableWrap.insertAdjacentHTML('afterend', `<div class="ragic-pagination" id="ragicPagination"><label class="ragic-page-size">顯示 <select id="ragicPageSizeSelect"><option value="50">50</option><option value="100">100</option><option value="150">150</option><option value="200">200</option></select> 筆</label><div class="ragic-page-nav"><span id="ragicPageStatus">第 1/1 頁</span><button class="secondary" id="ragicPrevPage" type="button">上一頁</button><button class="secondary" id="ragicNextPage" type="button">下一頁</button></div></div>`);
+  tableWrap.insertAdjacentHTML('afterend', `<div class="ragic-pagination" id="ragicPagination"><label class="page-size">顯示 <select id="ragicPageSizeSelect"><option value="50">50</option><option value="100">100</option><option value="150">150</option><option value="200">200</option></select> 筆</label><div class="page-nav"><span id="ragicPageStatus">第 1/1 頁</span><button class="secondary" id="ragicPrevPage" type="button">上一頁</button><button class="secondary" id="ragicNextPage" type="button">下一頁</button></div></div>`);
   const select = document.querySelector('#ragicPageSizeSelect');
   select.value = String(RAGIC_STATE.pageSize);
   select.addEventListener('change', () => {
