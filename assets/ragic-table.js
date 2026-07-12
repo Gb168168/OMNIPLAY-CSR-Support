@@ -94,7 +94,6 @@ const normalizeFieldWidth = (width) => { const value = Number(width); return Num
 const fieldColumnWidth = (field = {}) => normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
 
 const currentRagicUser = () => sessionStorage.getItem('account') || sessionStorage.getItem('omniplayStaffAccount') || sessionStorage.getItem('omniplayStaffCode') || '';
-const isHandoverPage = () => RAGIC_STATE.config?.collection === 'handover';
 
 const normalizeColumnText = (value = '') => String(value || '').replace(/\s+/g, '').toLowerCase();
 const ragicColumnClass = (field = {}) => {
@@ -116,11 +115,9 @@ const cellTooltipText = (record, field) => {
 const renderIconActions = (record = {}) => {
   const currentUser = currentRagicUser();
   const pinned = Boolean(currentUser && record.pins?.[currentUser]);
-  const starred = Boolean(record.starred);
   return `<td class="icon-actions col-marker">
     <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="重要/今日交接">🔥</span>
     <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">📌</span>
-    ${isHandoverPage() ? `<span class="star-btn ${starred ? 'active' : ''}" data-icon-action="star" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="交接星號">★</span>` : ''}
   </td>`;
 };
 
@@ -702,7 +699,6 @@ const initRagicPage = async (config) => {
     const doc = await collection.doc(docId).get();
     await collection.doc(docId).update({ [`pins.${currentUser}`]: !doc.data()?.pins?.[currentUser] });
   };
-  window.toggleStar = async (docId) => { if (!isHandoverPage()) return; const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ starred: !doc.data()?.starred }); };
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
   const newRecordButton = document.querySelector('#newRecordButton');
@@ -769,7 +765,7 @@ const initRagicPage = async (config) => {
   });
   const ragicTableHead = document.querySelector('#ragicHeaderRow')?.closest('thead');
   ragicTableHead?.addEventListener('input', applyFilters); ragicTableHead?.addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
-  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); if (button.dataset.iconAction === 'star') window.toggleStar(id); });
+  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => {
