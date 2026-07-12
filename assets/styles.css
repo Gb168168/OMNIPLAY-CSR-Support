@@ -908,6 +908,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 
 .schedule-nav-left,
 .schedule-toolbar,
+.schedule-heading-actions,
 .view-switch {
   display: flex;
   align-items: center;
@@ -917,6 +918,19 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 
 .schedule-period-picker-wrap { position: relative; }
+.schedule-heading-actions {
+  justify-content: flex-end;
+}
+
+.schedule-filter-select {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
 
 .schedule-period-label {
   min-width: 154px;
@@ -1190,8 +1204,10 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   .schedule-toolbar .secondary-button,
   .schedule-toolbar .ghost-button { width: 100%; }
   .view-switch { justify-content: stretch; }
+  .schedule-heading-actions,
   .view-switch .ghost-button { flex: 1; }
   .calendar-grid { grid-template-columns: repeat(7, minmax(96px, 1fr)); }
+  .schedule-filter-select { width: 100%; }
   .calendar-grid.is-year-view { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
   .calendar-weekday,
   .calendar-day { min-width: 96px; }
@@ -1332,6 +1348,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   .schedule-heading { grid-template-columns: 1fr; }
   .schedule-nav,
   .schedule-heading > .schedule-toolbar:last-child { justify-content: stretch; }
+  .schedule-heading-actions,
   .schedule-period-label { width: 100%; }
   .label-row { grid-template-columns: 1fr; }
   .history-item { grid-template-columns: 1fr; }
