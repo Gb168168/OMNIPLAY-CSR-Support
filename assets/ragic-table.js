@@ -378,10 +378,22 @@ const renderForm = (record = {}) => {
   applyRagicPermissionUi();
 };
 
+const renderFileCell = (value, label = '圖片') => {
+  if (!value) return '';
+  const src = typeof value === 'string' ? value : value.data;
+  const name = typeof value === 'string' ? value : (value.name || '檔案');
+  const size = typeof value === 'string' ? '' : (value.size ? ` (${formatFileSize(value.size)})` : '');
+  if (src && String(src).startsWith('data:image')) {
+    return `<img class="ragic-thumbnail" src="${escapeHtml(src)}" alt="${escapeHtml(label)}" title="點擊放大檢視">`;
+  }
+  if (!src) return '';
+  return `<a class="ragic-file-link" href="${escapeHtml(src)}" target="_blank" rel="noopener" download="${escapeHtml(name || 'download')}">📎 ${escapeHtml(name || src)}${escapeHtml(size)}</a>`;
+};
+
 const renderCell = (record, field) => {
   const key = field.key;
   const value = record[key];
-  if (field?.type === 'image') return value ? `<img class="ragic-thumbnail" src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}縮圖">` : '';
+  if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
@@ -455,7 +467,27 @@ const renderTable = () => {
   });
   renderPagination();
 };
-const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = RAGIC_STATE.records.filter((record) => cols.every((key) => { const filter = document.querySelector(`[data-filter="${key}"]`)?.value.toLowerCase() || ''; return !filter || valueToText(record[key]).toLowerCase().includes(filter); })); if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1)); RAGIC_STATE.page = 1; renderTable(); };
+const renderFilteredList = (filtered) => {
+  RAGIC_STATE.filtered = [...filtered];
+  if (RAGIC_STATE.sortKey) {
+    RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1));
+  }
+  RAGIC_STATE.page = 1;
+  renderTable();
+};
+
+const applyFilters = () => {
+  const filters = {};
+  document.querySelectorAll('.filter-input').forEach((input) => {
+    const keyword = input.value.trim().toLowerCase();
+    if (keyword) filters[input.dataset.field] = keyword;
+  });
+  const filtered = RAGIC_STATE.records.filter((record) => Object.entries(filters).every(([fieldKey, keyword]) => {
+    const value = valueToText(record[fieldKey]).toString().toLowerCase();
+    return value.includes(keyword);
+  }));
+  renderFilteredList(filtered);
+};
 const renderHeader = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
   const thead = headerRow?.closest('thead');
@@ -479,7 +511,7 @@ const renderHeader = () => {
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
     const style = width ? ` style="width: ${width}px;"` : '';
-    return `<th class="${ragicColumnClass(field)}"${style}><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
+    return `<th class="${ragicColumnClass(field)}"${style}><input class="filter-input" data-field="${key}" data-filter="${key}" placeholder="篩選${label}" /></th>`;
   }).join('');
 };
 
@@ -737,7 +769,7 @@ const initRagicPage = async (config) => {
   });
   const ragicTableHead = document.querySelector('#ragicHeaderRow')?.closest('thead');
   ragicTableHead?.addEventListener('input', applyFilters); ragicTableHead?.addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
-  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); if (button.dataset.iconAction === 'star') window.toggleStar(id); });
+  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); if (button.dataset.iconAction === 'star') window.toggleStar(id); });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => {
