@@ -806,13 +806,44 @@ const enableDesignerDrag = (row) => {
     e.preventDefault();
     moveDesignerField(draggedDesignerField, this);
     this.classList.remove('drag-over');
+    updateDesignerPreview();
   });
   row.addEventListener('dragend', function() {
     this.classList.remove('dragging');
     document.querySelectorAll('.designer-field.drag-over').forEach((item) => item.classList.remove('drag-over'));
     draggedDesignerField = null;
     handlePressed = false;
+    updateDesignerPreview();
   });
+};
+const designerPreviewValue = (field = {}, rowIndex = 0) => {
+  const options = optionList(field);
+  const samples = ['範例文字', '第二筆範例', '第三筆範例'];
+  if (field.type === 'date' || field.type === 'datetime' || field.type === 'createdDate' || field.type === 'updatedDate') return '2026/07/13';
+  if (field.type === 'select' || field.type === 'multiselect') return options[0] || '選項一';
+  if (field.type === 'image') return '🖼️';
+  if (field.type === 'link') return 'https://example.com';
+  if (field.type === 'serial') return `#${String(rowIndex + 1).padStart(3, '0')}`;
+  if (field.type === 'file') return '附件.pdf';
+  return samples[rowIndex] || samples[0];
+};
+const updateDesignerPreview = () => {
+  const modal = document.querySelector('#ragicDesignerModal');
+  const body = modal?.querySelector('.designer-body');
+  const preview = modal?.querySelector('#designerPreviewTable');
+  if (!body || !preview) return;
+  const fields = readDesigner(body).filter((field) => field.type !== 'subtable');
+  if (!fields.length) {
+    preview.innerHTML = '<div class="designer-preview-empty">尚未建立欄位，請新增欄位以預覽表格。</div>';
+    return;
+  }
+  const colgroup = fields.map((field) => {
+    const width = fieldColumnWidth(field);
+    return `<col${width ? ` style="width: ${width}px;"` : ''}>`;
+  }).join('');
+  const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}">${escapeHtml(field.label || field.key)}</th>`).join('');
+  const rows = [0, 1, 2].map((rowIndex) => `<tr>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
+  preview.innerHTML = `<table class="ragic-table">${colgroup ? `<colgroup>${colgroup}</colgroup>` : ''}<thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
 };
 const fieldDesigner = (field = {}, nested = false) => {
   const row = document.createElement('div');
@@ -829,17 +860,26 @@ const fieldDesigner = (field = {}, nested = false) => {
   (field.fields || []).forEach((child) => sub.appendChild(fieldDesigner(child, true)));
   sub.insertAdjacentHTML('afterbegin', '<button class="secondary" data-add-subfield type="button">+ 子欄位</button>');
   row.addEventListener('click', (event) => {
-    if (event.target.matches('[data-remove]')) row.remove();
-    if (event.target.matches('[data-add-subfield]')) sub.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true));
+    if (event.target.matches('[data-remove]')) {
+      row.remove();
+      updateDesignerPreview();
+    }
+    if (event.target.matches('[data-add-subfield]')) {
+      sub.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true));
+      updateDesignerPreview();
+    }
   });
-  row.querySelector('[data-role="type"]').addEventListener('change', sync);
+  row.querySelector('[data-role="type"]').addEventListener('change', () => {
+    sync();
+    updateDesignerPreview();
+  });
   enableDesignerDrag(row);
   sync();
   return row;
 };
  const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => { const label = row.querySelector('[data-role="label"]').value.trim() || '未命名欄位'; const type = row.querySelector('[data-role="type"]').value; const field = { key: shouldRegenerateFieldKey(row.dataset.key) ? generateFieldKey() : row.dataset.key, label, type, required: row.querySelector('[data-role="required"]').checked, width: normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value), options: row.querySelector('[data-role="options"]').value.split('\n').map((v) => v.trim()).filter(Boolean) }; if (type === 'subtable') field.fields = readDesigner(row.querySelector('.designer-subfields')); return field; });
 
-const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; };
+const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; updateDesignerPreview(); };
 const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
 
 
@@ -957,7 +997,7 @@ const initRagicPage = async (config) => {
     designButton?.remove();
   }
   if (!document.querySelector('#ragicDesignerModal')) {
-  document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-body"></div><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');
+  document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-body"></div><section class="designer-preview" aria-label="表格預覽"><h3>📋 表格預覽</h3><div class="designer-preview-scroll" id="designerPreviewTable"></div></section><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');
   }
   if (!document.querySelector('#ragicImageModal')) {
     document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><img alt="放大圖片預覽"></div></div>');
@@ -966,7 +1006,9 @@ const initRagicPage = async (config) => {
   document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);
   document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
-  document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新欄位', type: 'text' })); });  
+  document.querySelector('.designer-body')?.addEventListener('input', updateDesignerPreview);
+  document.querySelector('.designer-body')?.addEventListener('change', updateDesignerPreview);
+  document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新欄位', type: 'text' })); updateDesignerPreview(); });  
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
     if (!canUse('design')) return alert('您沒有設計權限');
     RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(document.querySelector('.designer-body')) }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
