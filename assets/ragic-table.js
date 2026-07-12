@@ -85,6 +85,8 @@ const fieldSelector = (fieldKey) => `[data-field="${window.CSS?.escape ? CSS.esc
 const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
 const MAX_IMAGE_BYTES = 900 * 1024;
+const MAX_IMAGE_TOTAL_BYTES = 800 * 1024;
+const IMAGE_TOTAL_LIMIT_MESSAGE = '圖片總大小超過限制，請減少圖片數量或降低解析度';
 if (!window._multiSelectClickBound) {
   document.addEventListener('click', () => document.querySelectorAll('.multi-select-dropdown.show').forEach((dropdown) => dropdown.classList.remove('show')));
   window._multiSelectClickBound = true;
@@ -194,7 +196,7 @@ const createControl = (field, value = '', subfield = false) => {
   } else {
     input = document.createElement('input');
     input.type = field.type === 'datetime' ? 'datetime-local' : (field.type === 'link' ? 'url' : (field.type === 'image' || field.type === 'file' ? 'file' : (field.type || 'text')));
-    if (field.type === 'image') input.accept = 'image/*';
+    if (field.type === 'image') { input.accept = 'image/*'; input.multiple = true; }
   }
   input.name = subfield ? '' : field.key;
   input.required = field.type === 'image' || field.type === 'file' || readonlyFieldTypes.has(field.type) ? false : Boolean(field.required);
@@ -317,7 +319,7 @@ const createField = (field, value = '') => {
     fileArea.innerHTML = `<div>選擇檔案 或 Ctrl+V 貼上${field.type === 'image' ? '圖片' : '檔案'}</div>`;
     fileArea.appendChild(control);
     wrap.appendChild(fileArea);
-    if (value) field.type === 'image' ? showImagePreview(value, fileArea, field.label) : showFilePreview(value, fileArea);
+    if (value) field.type === 'image' ? showImagePreview(normalizeImageArray(value), fileArea, field.label) : showFilePreview(value, fileArea);
   } else {
     wrap.appendChild(control);
   }
@@ -334,10 +336,28 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
 
 const fileToBase64Payload = async (file) => ({ name: file.name, size: file.size, type: file.type || 'application/octet-stream', data: await readFileAsDataUrl(file) });
 
+const normalizeImageArray = (images) => {
+  if (typeof images === 'string') return images ? [images] : [];
+  if (Array.isArray(images)) return images.filter(Boolean);
+  return [];
+};
+
+const estimateBase64Bytes = (value = '') => {
+  const base64 = String(value).split(',').pop() || '';
+  return Math.ceil(base64.length * 3 / 4);
+};
+
+const imageTotalBytes = (images = []) => normalizeImageArray(images).reduce((total, image) => total + estimateBase64Bytes(image), 0);
+
+const assertImageTotalWithinLimit = (images = []) => {
+  if (imageTotalBytes(images) > MAX_IMAGE_TOTAL_BYTES) throw new Error(IMAGE_TOTAL_LIMIT_MESSAGE);
+};
+
 const clearFilePreview = (container) => {
   const input = container?.querySelector('input[type="file"]');
+  container?.querySelector('.image-preview-list')?.remove();
   container?.querySelector('img')?.remove();
-  container?.querySelector('.image-preview-item')?.remove();
+  container?.querySelectorAll('.image-preview-item').forEach((item) => item.remove());
   container?.querySelector('.ragic-file-preview')?.remove();
   if (input) {
     input.value = '';
@@ -356,7 +376,7 @@ const removeImage = (fieldKey) => {
 };
 window.removeImage = removeImage;
 
-const createRemoveButton = (fieldKey, title = '刪除圖片', container = null) => {
+const createRemoveButton = (fieldKey, title = '刪除圖片', container = null, onRemove = null) => {
   const button = document.createElement('button');
   button.className = 'image-remove-btn';
   button.type = 'button';
@@ -366,6 +386,10 @@ const createRemoveButton = (fieldKey, title = '刪除圖片', container = null) 
   button.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (onRemove) {
+      onRemove();
+      return;
+    }
     const targetContainer = container || button.closest('.image-upload-area') || (fieldKey ? document.querySelector(fieldSelector(fieldKey)) : null);
     clearFilePreview(targetContainer);
   });
@@ -439,30 +463,59 @@ const compressImageToBase64 = async (file) => {
   return dataUrl;
 };
 
-const showImagePreview = (base64, container, label = container?.dataset.fileLabel || '圖片') => {
-  if (!container || !base64) return;
+const showImagePreview = (base64List, container, label = container?.dataset.fileLabel || '圖片') => {
+  if (!container) return;
+  const images = normalizeImageArray(base64List);
   const input = container.querySelector('input[type="file"]');
   const fieldKey = container.dataset.field || input?.name || '';
-  if (input) input.dataset.imageValue = base64;
+  if (input) input.dataset.imageValue = JSON.stringify(images);
   delete container.dataset.imageCleared;
   delete container.dataset.fileCleared;
   container.querySelector('.ragic-file-preview')?.remove();
-  container.querySelector('.image-preview-item')?.remove();
-  const preview = document.createElement('div');
-  preview.className = 'image-preview-item ragic-file-preview image-upload-preview';
-  preview.dataset.image = base64;
-  preview.innerHTML = `<img src="${escapeHtml(base64)}" alt="${escapeHtml(label)}預覽" style="max-height:100px; border-radius:6px;"><span>點擊放大檢視</span>`;
-  preview.appendChild(createRemoveButton(fieldKey, '刪除圖片', container));
-  preview.addEventListener('click', (event) => {
-    if (event.target.closest('.image-remove-btn')) return;
-    openImagePreview(base64, label);
+  container.querySelector('.image-preview-list')?.remove();
+  container.querySelectorAll('.image-preview-item').forEach((item) => item.remove());
+  if (!images.length) return;
+  const list = document.createElement('div');
+  list.className = 'image-preview-list';
+  images.forEach((base64, index) => {
+    const preview = document.createElement('div');
+    preview.className = 'image-preview-item image-upload-preview';
+    preview.dataset.image = base64;
+    preview.innerHTML = `<img src="${escapeHtml(base64)}" alt="${escapeHtml(label)}預覽 ${index + 1}" style="max-height:80px; border-radius:6px;"><span>點擊放大檢視</span>`;
+    preview.appendChild(createRemoveButton(fieldKey, '刪除圖片', container, () => {
+      const currentImages = getImageInputValues(input);
+      currentImages.splice(index, 1);
+      showImagePreview(currentImages, container, label);
+      if (!currentImages.length) container.dataset.imageCleared = 'true';
+    }));
+    preview.addEventListener('click', (event) => {
+      if (event.target.closest('.image-remove-btn')) return;
+      openImagePreview(base64, label);
+    });
+    list.appendChild(preview);
   });
-  container.appendChild(preview);
+  container.appendChild(list);
 };
 
-const processImageFile = async (file, container) => {
-  const base64 = await compressImageToBase64(file);
-  showImagePreview(base64, container);
+const getImageInputValues = (input) => {
+  if (!input?.dataset.imageValue) return [];
+  try { return normalizeImageArray(JSON.parse(input.dataset.imageValue)); }
+  catch (_) { return normalizeImageArray(input.dataset.imageValue); }
+};
+
+const getCurrentFormImages = (excludeInput = null) => [...document.querySelectorAll('.image-upload-area[data-file-type="image"] input[type="file"]')]
+  .filter((input) => input !== excludeInput)
+  .flatMap((input) => getImageInputValues(input));
+
+const processImageFiles = async (files, container) => {
+  const input = container?.querySelector('input[type="file"]');
+  const currentImages = getImageInputValues(input);
+  const newImages = [];
+  for (const file of [...(files || [])]) newImages.push(await compressImageToBase64(file));
+  const nextImages = [...currentImages, ...newImages];
+  assertImageTotalWithinLimit([...getCurrentFormImages(input), ...nextImages]);
+  showImagePreview(nextImages, container);
+  if (input) input.value = '';
 };
 
 const processGenericFile = async (file, container) => {
@@ -472,19 +525,24 @@ const processGenericFile = async (file, container) => {
 const handleImagePaste = async (event, imageArea) => {
   const items = event.clipboardData?.items;
   if (!items) return;
+  const files = [];
   for (const item of items) {
-  if (item.kind !== 'file') continue;
+    if (item.kind !== 'file') continue;
     if (imageArea.dataset.fileType !== 'file' && !item.type.startsWith('image/')) continue;
     event.preventDefault();
     const file = item.getAsFile();
-    if (imageArea.dataset.fileType === 'file') await processGenericFile(file, imageArea);
-    else await processImageFile(file, imageArea);
-    break;
+    if (imageArea.dataset.fileType === 'file') {
+      await processGenericFile(file, imageArea);
+      break;
+    }
+    if (file) files.push(file);
   }
+  if (files.length) await processImageFiles(files, imageArea);
 };
 
 const getFormData = async () => {
   const data = {};
+  const allImages = [];
   for (const field of getFields()) {
     if (field.type === 'subtable') {
       data[field.key] = [...document.querySelectorAll(`[data-subtable="${field.key}"] .subtable-row`)].map((row) => {
@@ -496,13 +554,17 @@ const getFormData = async () => {
     if (field.type === 'multiselect') data[field.key] = [...input.selectedOptions].map((opt) => opt.value);
     else if (field.type === 'image') {
       const container = input.closest('.image-upload-area');
-      data[field.key] = container?.dataset.imageCleared === 'true' ? '' : (input.files?.[0] ? await compressImageToBase64(input.files[0]) : (input.dataset.imageValue || ''));
+      const images = container?.dataset.imageCleared === 'true' ? [] : getImageInputValues(input);
+      assertImageTotalWithinLimit(images);
+      data[field.key] = images;
+      allImages.push(...images);
     } else if (field.type === 'file') {
       const container = input.closest('.image-upload-area');
       data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (input.dataset.fileValue ? JSON.parse(input.dataset.fileValue) : ''));
     }
     else data[field.key] = input.value.trim();
   }
+  assertImageTotalWithinLimit(allImages);
   return data;
 };
 
@@ -522,7 +584,7 @@ const renderForm = (record = {}) => {
     const input = imageArea.querySelector('input[type="file"]');
     input?.addEventListener('change', async () => {
       if (!input.files?.[0]) return;
-      try { imageArea.dataset.fileType === 'file' ? await processGenericFile(input.files[0], imageArea) : await processImageFile(input.files[0], imageArea); }
+      try { imageArea.dataset.fileType === 'file' ? await processGenericFile(input.files[0], imageArea) : await processImageFiles(input.files, imageArea); }
       catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
     });
     imageArea.addEventListener('paste', (event) => handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。')));
@@ -533,6 +595,12 @@ const renderForm = (record = {}) => {
 
 const renderFileCell = (value, label = '圖片') => {
   if (!value) return '';
+  const images = normalizeImageArray(value);
+  if (images.length) {
+    const firstImage = images[0];
+    if (images.length === 1) return `<img class="ragic-thumbnail" src="${escapeHtml(firstImage)}" alt="${escapeHtml(label)}" title="點擊放大檢視">`;
+    return `<span class="image-thumb-stack"><img class="ragic-thumbnail" src="${escapeHtml(firstImage)}" alt="${escapeHtml(label)}" title="點擊放大檢視"><span class="image-count-badge">${escapeHtml(images.length)}</span></span>`;
+  }
   const src = typeof value === 'string' ? value : value.data;
   const name = typeof value === 'string' ? value : (value.name || '檔案');
   const size = typeof value === 'string' ? '' : (value.size ? ` (${formatFileSize(value.size)})` : '');
