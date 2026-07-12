@@ -5,12 +5,12 @@ const dashboardCollections = {
   handover: dashboardDb?.collection('handover'),
   tracking: dashboardDb?.collection('tracking'),
   log: dashboardDb?.collection('log'),
-  schedule: dashboardDb?.collection('schedule')
+  schedule: dashboardDb?.collection('schedule'),
+  meeting: dashboardDb?.collection('meeting')
 };
 
-const dashboardState = { staff: [], leave: {}, handovers: [], tracking: [], logs: [], schedules: [], selectedShift: getDefaultShift() };
+const dashboardState = { staff: [], leave: {}, handovers: [], tracking: [], logs: [], schedules: [], meetings: [], selectedShift: getDefaultShift() };
 const todoList = document.querySelector('#dashboardTodoList');
-const todayScheduleList = document.querySelector('#dashboardTodayScheduleList');
 const setText = (selector, value) => { const el = document.querySelector(selector); if (el) el.textContent = String(value); };
 const pad2 = (value) => String(value).padStart(2, '0');
 const monthKey = (date = new Date()) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
@@ -37,7 +37,7 @@ function getShiftRange(shift) {
   }
   
   const nightBase = new Date(today);
-  if (now.getHours() < 20) nightBase.setDate(nightBase.getDate() - 1);
+  if (now.getHours() < 8) nightBase.setDate(nightBase.getDate() - 1);
   return {
     start: new Date(nightBase.getTime() + 20 * 60 * 60 * 1000),
     end: new Date(nightBase.getTime() + 32 * 60 * 60 * 1000)
@@ -46,7 +46,7 @@ function getShiftRange(shift) {
 
 function getDefaultShift() {
   const hour = new Date().getHours();
-  if (hour >= 20 || hour < 8) return 'morning';
+  if (hour >= 8 && hour < 20) return 'morning';
   return 'night';
 }
 
@@ -56,15 +56,6 @@ const isInShiftRange = (record = {}, range) => {
   return [createdAt, updatedAt].some((at) => at && at >= range.start && at <= range.end);
 };
 
-const shiftLogs = () => {
-  const range = getShiftRange(dashboardState.selectedShift);
-  return dashboardState.logs.filter((record) => isInShiftRange(record, range));
-};
-
-const shiftHandovers = () => {
-  const range = getShiftRange(dashboardState.selectedShift);
-  return dashboardState.handovers.filter((record) => record.fire === true || isInShiftRange(record, range));
-};
 
 const getRepeatStepDays = (item) => {
   if (item.repeat === 'daily') return 1;
@@ -165,16 +156,16 @@ const updateTodayWorking = () => {
 };
 
 const updateDashboard = () => {
-  const fireHandovers = shiftHandovers();
   const openStatuses = new Set(['待辦中', '處理中', '觀察中']);
-  const logs = shiftLogs();
+  const fireHandovers = dashboardState.handovers.filter((record) => record.fire === true);
+  const range = getShiftRange(dashboardState.selectedShift);
+  const logs = dashboardState.logs.filter((record) => isInShiftRange(record, range));
   setText('#handoverFireCount', fireHandovers.length);
   setText('#trackingOpenCount', dashboardState.tracking.filter((record) => openStatuses.has(String(record.status || record['進度狀態'] || '').trim())).length);
   setText('#shiftLogCount', logs.length);
   updateTodayWorking();
   updateShiftButtons();
-  renderTodoList(logs, fireHandovers);
-  renderTodaySchedules();
+  renderTodoList();
 };
 
 const updateShiftButtons = () => {
@@ -185,25 +176,57 @@ const updateShiftButtons = () => {
   });
 };
 
-const todoTitle = (record = {}, fallback) => record.subject || record.item || record.category || record.content || record.note || record.serial || fallback;
-const renderTodoList = (logs, handovers) => {
+const todoTitle = (record = {}, fallback) => record.subject || record.title || record.item || record.category || record.content || record.note || record.serial || fallback;
+const recordDateForShift = (record = {}, range) => {
+  const createdAt = valueDate(record.createdAt) || valueDate(record.createdDate);
+  const updatedAt = valueDate(record.updatedAt) || valueDate(record.updatedDate);
+  if (createdAt && createdAt >= range.start && createdAt <= range.end) return createdAt;
+  if (updatedAt && updatedAt >= range.start && updatedAt <= range.end) return updatedAt;
+  return updatedAt || createdAt;
+};
+const formatRecordTime = (at) => at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : '--:--';
+const isFireRecord = (record = {}) => record.fire === true;
+const shiftRecordItems = (records, { type, icon, href, fallback }) => {
+  const range = getShiftRange(dashboardState.selectedShift);
+  return records
+    .filter((record) => isFireRecord(record) || isInShiftRange(record, range))
+    .map((record) => {
+      const at = recordDateForShift(record, range);
+      return {
+        icon: isFireRecord(record) ? '🔥' : icon,
+        time: isFireRecord(record) ? '--:--' : formatRecordTime(at),
+        type,
+        href,
+        title: todoTitle(record, fallback),
+        sortAt: isFireRecord(record) ? 0 : (at || new Date(8640000000000000)).getTime()
+      };
+    });
+};
+const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
+  const allDay = item.allDay || item.isAllDay;
+  return {
+    icon: '📅',
+    time: allDay ? '全天' : `${pad2(item.occurrenceAt.getHours())}:${pad2(item.occurrenceAt.getMinutes())}`,
+    type: '排程',
+    href: 'service/schedule.html',
+    title: item.title || '未命名事項',
+    sortAt: item.occurrenceAt.getTime()
+  };
+});
+const renderTodoList = () => {
   if (!todoList) return;
   const items = [
-    ...logs.map((record) => ({ type: '日誌', href: 'work/log.html', title: todoTitle(record, '日誌'), meta: record.shift || record.staff || record.date || '' })),
-    ...handovers.map((record) => ({ type: '交接', href: 'work/handover.html', title: todoTitle(record, '交接事項'), meta: record.status || record.publisher || record.date || '' }))
-  ];
-  todoList.innerHTML = items.length ? items.map((item) => `<li><a href="${item.href}"><span class="todo-type">${item.type}</span><strong>${escapeDashboardHtml(item.title)}</strong><small>${escapeDashboardHtml(item.meta)}</small></a></li>`).join('') : '<li class="dashboard-empty">目前沒有交接時間日誌或 🔥 交接項目。</li>';
-};
-const renderTodaySchedules = () => {
-  if (!todayScheduleList) return;
-  const items = scheduleOccurrencesForDay();
-  todayScheduleList.innerHTML = items.length ? items.map((item) => {
-    const allDay = item.allDay || item.isAllDay;
-    const time = allDay ? '全天' : `${pad2(item.occurrenceAt.getHours())}:${pad2(item.occurrenceAt.getMinutes())}`;
-    return `<li><a href="service/schedule.html"><span class="schedule-dot" style="--event-color:${escapeDashboardHtml(item.labelColor || '#3b82f6')}"></span><time>${time}</time><strong>${escapeDashboardHtml(item.title || '未命名事項')}</strong></a></li>`;
-  }).join('') : '<li class="dashboard-empty">今日無排定事項</li>';
-};
+    ...shiftRecordItems(dashboardState.handovers, { type: '交接', icon: '📋', href: 'work/handover.html', fallback: '交接事項' }),
+    ...shiftRecordItems(dashboardState.logs, { type: '日誌', icon: '📝', href: 'work/log.html', fallback: '日誌' }),
+    ...shiftRecordItems(dashboardState.tracking, { type: '提報', icon: '📌', href: 'work/tracking.html', fallback: '提報追蹤' }),
+    ...shiftRecordItems(dashboardState.meetings, { type: '會議', icon: '💬', href: 'meeting/meeting.html', fallback: '會議紀錄' }),
+    ...scheduleItems()
+  ].sort((a, b) => a.sortAt - b.sortAt || String(a.type).localeCompare(String(b.type), 'zh-Hant') || String(a.title).localeCompare(String(b.title), 'zh-Hant'));
 
+  todoList.innerHTML = items.length
+    ? items.map((item) => `<li><a href="${item.href}"><span class="todo-type">${item.icon} ${escapeDashboardHtml(item.time)}</span><strong>${escapeDashboardHtml(item.type)} — ${escapeDashboardHtml(item.title)}</strong></a></li>`).join('')
+    : '<li class="dashboard-empty">目前沒有當前班次紀錄或今日排程。</li>';
+};
 const escapeDashboardHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
 
 const subscribeDashboard = () => {
@@ -214,6 +237,7 @@ const subscribeDashboard = () => {
   dashboardCollections.tracking?.onSnapshot((snapshot) => { dashboardState.tracking = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.log?.onSnapshot((snapshot) => { dashboardState.logs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.schedule?.onSnapshot((snapshot) => { dashboardState.schedules = snapshot.docs.map((doc) => ({ id: doc.id, labelColor: '#3b82f6', ...doc.data() })); updateDashboard(); });
+  dashboardCollections.meeting?.onSnapshot((snapshot) => { dashboardState.meetings = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
 };
 
 document.querySelectorAll('.shift-btn').forEach((button) => {
