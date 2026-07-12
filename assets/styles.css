@@ -2558,3 +2558,81 @@ textarea,
   border-radius: 6px;
   font-size: 14px;
 }
+
+/* 表格列表區塊縮小間距（套用所有 ragic-table 列表） */
+.ragic-table-container,
+.ragic-table-wrap {
+  padding: 12px 16px;
+  margin: 8px 0;
+}
+
+/* 頁面標題區縮小 */
+.ragic-page-header,
+.ragic-toolbar,
+.ragic-form-toolbar,
+.ragic-subtable-head {
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+/* 表格行高與表頭縮小 */
+.ragic-table tbody tr {
+  height: auto;
+}
+
+.ragic-table tbody td {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.ragic-table thead th,
+.ragic-table th {
+  padding: 8px 8px;
+  font-size: 13px;
+}
+
+/* 篩選列縮小 */
+.ragic-table .filter-row td {
+  padding: 4px 6px;
+}
+
+.ragic-table .filter-row input,
+.ragic-table th input,
+.ragic-table [data-menu-filter] {
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+/* 設計表格：子表格欄位的子欄位設定區 */
+.designer-subfields {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 0 24px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--primary);
+  border-radius: 0 12px 12px 0;
+  background: var(--surface-muted);
+}
+
+.designer-subfields h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.designer-subfield-list {
+  display: grid;
+  gap: 8px;
+}
+
+.designer-subfield-row {
+  grid-template-columns: auto minmax(160px, 1fr) 150px 140px auto;
+  padding: 8px;
+  background: var(--surface);
+}
+
+.designer-subfield-row .designer-width {
+  grid-template-columns: auto minmax(56px, 1fr) auto;
+}
