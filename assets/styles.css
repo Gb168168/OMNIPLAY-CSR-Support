@@ -1337,6 +1337,20 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-file-preview { display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; color: var(--primary); background: var(--surface); cursor: zoom-in; }
 .ragic-file-preview img { width: 96px; height: 72px; object-fit: cover; border-radius: 10px; }
 .ragic-thumbnail { width: 56px; height: 42px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(148,163,184,.28); vertical-align: middle; }
+.image-thumb-stack { position: relative; display: inline-block; }
+.image-count-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  min-width: 18px;
+  text-align: center;
+}
 .ragic-subtable { margin: 0 18px 18px; border: 1px solid var(--border); border-radius: 18px; }
 .ragic-subtable table { width: 100%; border-collapse: collapse; }
 .ragic-subtable th, .ragic-subtable td { padding: 10px; border-bottom: 1px solid var(--border); }
@@ -2207,6 +2221,12 @@ textarea,
 }
 .image-upload-preview img {
     max-height: 100px;
+}
+.image-preview-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
 }
 .image-preview-item {
   position: relative;
