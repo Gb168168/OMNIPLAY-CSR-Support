@@ -25,6 +25,18 @@ const valueToText = (value) => Array.isArray(value) ? value.join('、') : (value
 const formatLocalDateTime = (date = new Date()) => date.toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
 const formatFileSize = (bytes = 0) => { const size = Number(bytes) || 0; if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / 1024 / 1024).toFixed(1)} MB`; };
 const today = () => new Date().toISOString().slice(0, 10);
+const normalizeDateValue = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const dtMatch = text.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})\s+(\d{1,2}:\d{2})/);
+  if (dtMatch) return `${dtMatch[1]}-${dtMatch[2].padStart(2, '0')}-${dtMatch[3].padStart(2, '0')}T${dtMatch[4]}`;
+  const parts = text.split('/');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  return text;
+};
 const displayDate = (value) => value ? String(value).replace(/-/g, '/') : '';
 const displayDateTime = (value) => value ? String(value).replace('T', ' ').replace(/-/g, '/') : '';
 const dataCollectionName = (config) => config.dataCollection || COLLECTION_MAP[config.collection] || config.collection;
@@ -202,7 +214,10 @@ const createControl = (field, value = '', subfield = false) => {
   input.required = field.type === 'image' || field.type === 'file' || readonlyFieldTypes.has(field.type) ? false : Boolean(field.required);
   input.placeholder = field.placeholder || '';
   if (subfield) input.dataset.subfield = field.key;
-  if (field.type !== 'image' && field.type !== 'file') input.value = value || field.defaultValue || (field.type === 'date' && !subfield ? today() : '');
+  if (field.type !== 'image' && field.type !== 'file') {
+    const controlValue = field.type === 'date' || field.type === 'datetime' ? normalizeDateValue(value) : value;
+    input.value = controlValue || field.defaultValue || (field.type === 'date' && !subfield ? today() : '');
+  }
   return input;
 };
 
