@@ -105,6 +105,24 @@ const getCurrentStaff = () => ({
 });
 
 const isLoggedIn = () => Boolean(getCurrentStaff().code && getCurrentStaff().name);
+
+// 閒置自動登出
+let idleTimer = null;
+const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 分鐘
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  if (!isLoggedIn()) return;
+
+  idleTimer = setTimeout(() => {
+    alert('已閒置超過 30 分鐘，系統將自動登出。');
+    logout();
+  }, IDLE_TIMEOUT);
+}
+
+['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach((event) => {
+  document.addEventListener(event, resetIdleTimer);
+});
 const isOmniplayAdmin = () => {
   const staff = getCurrentStaff();
   return [staff.account, staff.code, staff.name].some((value) => String(value || '').toUpperCase() === 'OMNIPLAY');
@@ -418,6 +436,7 @@ const renderSidebarUser = () => {
 };
 
 const logout = () => {
+  clearTimeout(idleTimer);
   Object.values(SESSION_KEYS).forEach((key) => sessionStorage.removeItem(key));
   window.location.href = loginPath;
 };
@@ -480,6 +499,7 @@ setupForm?.addEventListener('submit', async (event) => {
     loadCurrentPermissions();
     renderSidebarUser();
     requestNotificationPermission();
+    resetIdleTimer();
     startScheduleNotifications();
   } catch (error) {
     console.error('建立管理員帳號失敗：', error);
@@ -531,6 +551,7 @@ loginForm?.addEventListener('submit', async (event) => {
     setAppVisibility();
     renderSidebarUser();
     requestNotificationPermission();
+    resetIdleTimer();
     startScheduleNotifications();
   } catch (error) {
     console.error('登入失敗：', error);
@@ -549,6 +570,9 @@ renderThemeToggle();
 setAppVisibility();
 window.permissionReady?.then(() => {
   renderSidebarUser();
-  if (isLoggedIn()) startScheduleNotifications();
+  if (isLoggedIn()) {
+    resetIdleTimer();
+    startScheduleNotifications();
+  }
 });
 checkInitialSetupRequired();
