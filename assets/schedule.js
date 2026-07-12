@@ -25,6 +25,7 @@ const repeatIntervalLabel = document.querySelector('#scheduleRepeatIntervalLabel
 const periodPicker = document.querySelector('#schedulePeriodPicker');
 const yearSelect = document.querySelector('#scheduleYearSelect');
 const monthPicker = document.querySelector('#scheduleMonthPicker');
+const labelFilterSelect = document.querySelector('#scheduleLabelFilter');
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 const SCHEDULE_SESSION_KEYS = { id: 'omniplayStaffId', code: 'omniplayStaffCode', name: 'omniplayStaffName' };
@@ -63,6 +64,7 @@ let unsubscribeStaff = null;
 let unsubscribeSchedules = null;
 let unsubscribeLabels = null;
 let unsubscribeLeave = null;
+let activeLabelFilter = '';
 
 const storedSchedulePermission = () => window.getPagePermission?.('schedule') || { view: false, edit: false, delete: false, design: false };
 let canEditSchedule = Boolean(window.isOmniplayAdmin?.());
@@ -123,7 +125,7 @@ const getRepeatStepDays = (item) => {
   return 0;
 };
 
-const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) => !item.deleted).reduce((groups, item) => {
+const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) => !item.deleted && scheduleMatchesActiveLabel(item)).reduce((groups, item) => {
   const original = parseDateValue(item.reminderAt) || new Date(`${item.date}T00:00:00`);
   if (!(original instanceof Date) || Number.isNaN(original.getTime())) return groups;
   const addOccurrence = (date, isRepeat) => {
@@ -161,6 +163,31 @@ const renderSavedLabels = () => {
   savedLabelsEl.innerHTML = labelList.length
     ? labelList.map((label) => `<button class="saved-label-chip" type="button" data-color="${escapeHtml(label.color)}" data-name="${escapeHtml(label.name)}"><i style="background:${escapeHtml(label.color)}"></i><span>${escapeHtml(label.name || '未命名')}</span></button>`).join('')
     : '<span class="saved-label-empty">尚無已設置標籤</span>';
+};
+
+const renderLabelFilter = () => {
+  if (!labelFilterSelect) return;
+  const previousValue = activeLabelFilter;
+  const options = labelList
+    .filter((label) => label.name)
+    .map((label) => {
+      const value = label.id || label.name;
+      const selected = value === previousValue ? 'selected' : '';
+      const color = escapeHtml(label.color || '#3b82f6');
+      return `<option value="${escapeHtml(value)}" data-name="${escapeHtml(label.name)}" data-color="${color}" style="color:${color}" ${selected}>● ${escapeHtml(label.name)}</option>`;
+    }).join('');
+  labelFilterSelect.innerHTML = `<option value="">全部標籤</option>${options}`;
+  const stillExists = !previousValue || [...labelFilterSelect.options].some((option) => option.value === previousValue);
+  activeLabelFilter = stillExists ? previousValue : '';
+  labelFilterSelect.value = activeLabelFilter;
+  if (!stillExists) renderCalendar();
+};
+
+const scheduleMatchesActiveLabel = (item) => {
+  if (!activeLabelFilter) return true;
+  const selectedOption = labelFilterSelect?.selectedOptions?.[0];
+  const selectedName = selectedOption?.dataset?.name || '';
+  return item.labelId === activeLabelFilter || item.labelName === selectedName || item.labelName === activeLabelFilter;
 };
 
 const renderHistory = (history = []) => {
@@ -240,6 +267,7 @@ const subscribeLabels = () => {
   unsubscribeLabels = scheduleLabelCollection.orderBy('updatedAt', 'desc').onSnapshot((snapshot) => {
     labelList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     renderSavedLabels();
+    renderLabelFilter();
   }, (error) => console.error('讀取標籤失敗：', error));
 };
 
@@ -366,6 +394,8 @@ savedLabelsEl?.addEventListener('click', (event) => {
   colorInput.value = chip.dataset.color;
   labelNameInput.value = chip.dataset.name;
 });
+
+labelFilterSelect?.addEventListener('change', () => { activeLabelFilter = labelFilterSelect.value; renderCalendar(); });
 
 document.querySelector('#prevSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() - 1); else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() - 1); else currentDate.setDate(currentDate.getDate() - 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
 document.querySelector('#nextSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() + 1); else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
