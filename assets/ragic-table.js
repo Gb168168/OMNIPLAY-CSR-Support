@@ -1,4 +1,4 @@
-const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null };
+const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null };
 
 const FIELD_TYPE_GROUPS = [
   { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
@@ -91,6 +91,7 @@ if (!window._multiSelectClickBound) {
 }
 const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', report: 'RPT-', tracking: 'TRK-', alert: 'ALT-', knowledge: 'KB-', ai_database: 'AI-' };
 const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
+const inlineReadonlyFieldTypes = new Set([...readonlyFieldTypes, 'image', 'file', 'subtable']);
 const DEFAULT_FIELD_WIDTHS = { date: 100, datetime: 150, select: 100, multiselect: 100, image: 80, serial: 90, createdDate: 150, updatedDate: 150, link: 150 };
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
 const fieldColumnWidth = (field = {}) => normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
@@ -201,6 +202,106 @@ const createControl = (field, value = '', subfield = false) => {
   if (subfield) input.dataset.subfield = field.key;
   if (field.type !== 'image' && field.type !== 'file') input.value = value || field.defaultValue || (field.type === 'date' && !subfield ? today() : '');
   return input;
+};
+
+
+const inlineValue = (value, field) => {
+  if (field?.type === 'date' || field?.type === 'datetime' || field?.type === 'link') return String(value || '');
+  if (field?.type === 'multiselect') return Array.isArray(value) ? value : String(value || '').split(/[、,]/).map((item) => item.trim()).filter(Boolean);
+  return String(value ?? '');
+};
+const autoGrowTextarea = (textarea) => {
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+};
+const createInlineEditor = (field, value) => {
+  const currentValue = inlineValue(value, field);
+  if (field.type === 'multiselect') {
+    const control = createMultiSelectControl(field, currentValue);
+    control.querySelector('.multi-select-display')?.setAttribute('tabindex', '0');
+    return control;
+  }
+  const control = createControl(field, currentValue);
+  control.required = false;
+  if (field.type === 'textarea') {
+    control.rows = Math.max(2, field.rows || 2);
+    control.addEventListener('input', () => autoGrowTextarea(control));
+    requestAnimationFrame(() => autoGrowTextarea(control));
+  }
+  return control;
+};
+const getInlineEditorValue = (editor, field) => {
+  if (field.type === 'multiselect') return [...editor.querySelectorAll('select option:checked')].map((option) => option.value);
+  return editor.value;
+};
+const focusInlineEditor = (editor, field) => {
+  const focusTarget = field.type === 'multiselect' ? editor.querySelector('.multi-select-display') : editor;
+  focusTarget?.focus?.();
+  if (editor.select && field.type !== 'date' && field.type !== 'datetime') editor.select();
+};
+const finishInlineEdit = async (td, { cancel = false } = {}) => {
+  if (!td?.classList.contains('editing') || td.dataset.savingInline === 'true') return;
+  const record = RAGIC_STATE.records.find((item) => item.id === td.dataset.docId);
+  const field = fieldByKey(td.dataset.fieldKey);
+  if (!record || !field) return;
+  const editor = td._inlineEditor;
+  const originalValue = td._inlineOriginalValue;
+  td.dataset.savingInline = 'true';
+  try {
+    if (!cancel) {
+      const newValue = getInlineEditorValue(editor, field);
+      const changed = field.type === 'multiselect'
+        ? JSON.stringify(newValue) !== JSON.stringify(originalValue)
+        : String(newValue ?? '') !== String(originalValue ?? '');
+      if (changed) {
+        await RAGIC_STATE.collection.doc(record.id).update({
+          [field.key]: newValue,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    alert(error.message || '自動儲存失敗，請稍後再試。');
+  } finally {
+    td.classList.remove('editing');
+    delete td.dataset.savingInline;
+    delete td._inlineEditor;
+    delete td._inlineOriginalValue;
+    td.innerHTML = renderCell(record, field);
+  }
+};
+const startInlineEdit = (td) => {
+  if (!canUse('edit') || !RAGIC_STATE.collection || td?.classList.contains('editing')) return;
+  const record = RAGIC_STATE.records.find((item) => item.id === td.dataset.docId);
+  const field = fieldByKey(td.dataset.fieldKey);
+  if (!record || !field || inlineReadonlyFieldTypes.has(field.type)) return;
+  document.querySelectorAll('#ragicTableBody td.editing').forEach((cell) => { if (cell !== td) finishInlineEdit(cell); });
+  const originalValue = inlineValue(record[field.key], field);
+  const editor = createInlineEditor(field, originalValue);
+  td._inlineEditor = editor;
+  td._inlineOriginalValue = Array.isArray(originalValue) ? [...originalValue] : originalValue;
+  td.classList.add('editing');
+  td.innerHTML = '';
+  td.appendChild(editor);
+  const finishOnBlur = (event) => {
+    requestAnimationFrame(() => {
+      if (!td.contains(document.activeElement) && !td.contains(event.relatedTarget)) finishInlineEdit(td);
+    });
+  };
+  editor.addEventListener('focusout', finishOnBlur);
+  editor.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      finishInlineEdit(td, { cancel: true });
+    }
+    if (event.key === 'Enter' && field.type !== 'textarea' && field.type !== 'multiselect') {
+      event.preventDefault();
+      finishInlineEdit(td);
+    }
+  });
+  focusInlineEditor(editor, field);
 };
 
 const createField = (field, value = '') => {
@@ -503,9 +604,9 @@ const renderTable = () => {
       const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
       const width = fieldColumnWidth(field);
       const style = width ? ` style="width: ${width}px;"` : '';
-      return `<td class="${columnClass}"${style}${title}>${renderCell(record, field)}</td>`;
+      return `<td class="${columnClass}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${style}${title}>${renderCell(record, field)}</td>`;
     }).join('');
-    if (canUse('edit')) tr.addEventListener('click', () => renderForm(record));
+    if (canUse('edit')) tr.addEventListener('dblclick', () => renderForm(record));
     tbody.appendChild(tr);
   });
   renderPagination();
@@ -737,7 +838,7 @@ const setupRagicFormActions = () => {
 };
 const initRagicPage = async (config) => {
   await waitForPermissions();
-  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
+  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
   window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
   window.togglePin = async (docId) => {
     const currentUser = currentRagicUser();
@@ -811,7 +912,7 @@ const initRagicPage = async (config) => {
   });
   const ragicTableHead = document.querySelector('#ragicHeaderRow')?.closest('thead');
   ragicTableHead?.addEventListener('input', applyFilters); ragicTableHead?.addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
-  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); });
+  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (button) { event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); return; } const cell = event.target.closest('td[data-doc-id][data-field-key]'); if (cell) { event.preventDefault(); event.stopPropagation(); startInlineEdit(cell); } });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => {
