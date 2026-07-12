@@ -1495,6 +1495,51 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .designer-actions { display: flex; gap: 6px; }
 .designer-subfields { grid-column: 1 / -1; display: grid; gap: 10px; margin-left: 24px; padding-left: 14px; border-left: 2px solid rgba(37, 99, 235, .45); }
 .designer-subfields[hidden] { display: none; }
+.designer-preview {
+  margin: 0 18px 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface-muted);
+}
+.designer-preview h3 {
+  margin: 0 0 12px;
+  color: var(--text);
+}
+.designer-preview-scroll {
+  max-height: 240px;
+  min-height: 200px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.designer-preview .ragic-table {
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.designer-preview .ragic-table thead {
+  background: var(--primary);
+}
+.designer-preview .ragic-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: #fff;
+  background: var(--primary);
+  border-bottom: 1px solid var(--primary);
+}
+.designer-preview .ragic-table td {
+  border-color: var(--border);
+}
+.designer-preview-empty {
+  display: grid;
+  place-items: center;
+  min-height: 200px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
 @media (max-width: 900px) { .designer-field { grid-template-columns: 1fr; } .designer-subfields { margin-left: 0; } }
 
 .panel-actions {
