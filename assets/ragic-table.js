@@ -80,6 +80,8 @@ const listColumns = () => listFields().map((field) => field.key);
 const fieldByKey = (key) => getFields().find((field) => field.key === key);
 const optionList = (field) => Array.isArray(field.options) ? field.options : String(field.options || '').split('\n').map((item) => item.trim()).filter(Boolean);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+const fieldSelector = (fieldKey) => `[data-field="${window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\"')}"]`;
+
 const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
 const MAX_IMAGE_BYTES = 900 * 1024;
@@ -208,6 +210,7 @@ const createField = (field, value = '') => {
     const fileArea = document.createElement('div');
     fileArea.className = 'image-upload-area';
     fileArea.tabIndex = 0;
+    fileArea.dataset.field = field.key;
     fileArea.dataset.fileLabel = field.label;
     fileArea.dataset.fileType = field.type;
     fileArea.innerHTML = `<div>選擇檔案 或 Ctrl+V 貼上${field.type === 'image' ? '圖片' : '檔案'}</div>`;
@@ -230,24 +233,65 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
 
 const fileToBase64Payload = async (file) => ({ name: file.name, size: file.size, type: file.type || 'application/octet-stream', data: await readFileAsDataUrl(file) });
 
+const removeImage = (fieldKey) => {
+  if (!fieldKey || !confirm('確定刪除此圖片？')) return;
+  const container = document.querySelector(fieldSelector(fieldKey));
+  const input = container?.querySelector('input[type="file"]');
+  container?.querySelector('img')?.remove();
+  container?.querySelector('.image-preview-item')?.remove();
+  container?.querySelector('.ragic-file-preview')?.remove();
+  if (input) {
+    input.value = '';
+    delete input.dataset.imageValue;
+    delete input.dataset.fileValue;
+  }
+};
+window.removeImage = removeImage;
+
+const createRemoveButton = (fieldKey, title = '刪除圖片') => {
+  const button = document.createElement('button');
+  button.className = 'image-remove-btn';
+  button.type = 'button';
+  button.title = title;
+  button.setAttribute('aria-label', title);
+  button.textContent = '✕';
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    removeImage(fieldKey);
+  });
+  return button;
+};
+
 const showFilePreview = (payload, container) => {
   if (!container || !payload) return;
   const file = typeof payload === 'string' ? { name: '檔案', size: 0, data: payload } : payload;
   const input = container.querySelector('input[type="file"]');
+  const fieldKey = container.dataset.field || input?.name || '';
   if (input) input.dataset.fileValue = JSON.stringify(file);
   container.querySelector('.ragic-file-preview')?.remove();
+  container.querySelector('.image-preview-item')?.remove();
+  const src = file.data || '';
+  const isImage = String(src).startsWith('data:image') || String(file.type || '').startsWith('image/');
+  if (isImage) {
+    const preview = document.createElement('div');
+    preview.className = 'image-preview-item ragic-file-preview image-upload-preview';
+    preview.dataset.image = src;
+    preview.innerHTML = `<img src="${escapeHtml(src)}" alt="${escapeHtml(file.name || container.dataset.fileLabel || '檔案')}預覽" style="max-height:100px; border-radius:6px;"><span>${escapeHtml(file.name || '檔案')}</span>`;
+    preview.appendChild(createRemoveButton(fieldKey, '刪除圖片'));
+    preview.addEventListener('click', (event) => {
+      if (event.target.closest('.image-remove-btn')) return;
+      openImagePreview(src, file.name || container.dataset.fileLabel || '圖片');
+    });
+    container.appendChild(preview);
+    return;
+  }
   const preview = document.createElement('a');
-  preview.className = 'ragic-file-preview ragic-download-preview';
-  preview.href = file.data;
+  preview.className = 'ragic-file-preview ragic-download-preview image-preview-item';
+  preview.href = src;
   preview.download = file.name || 'download';
-  preview.innerHTML = `<span>📎 ${escapeHtml(file.name || '檔案')}</span><small>${escapeHtml(formatFileSize(file.size))}</small><button class="image-preview-remove" type="button" aria-label="移除檔案">×</button>`;
-  preview.addEventListener('click', (event) => {
-    if (event.target.closest('.image-preview-remove')) {
-      event.preventDefault();
-      if (input) { input.value = ''; delete input.dataset.fileValue; }
-      preview.remove();
-    }
-  });
+  preview.innerHTML = `<span>📎 ${escapeHtml(file.name || '檔案')}</span><small>${escapeHtml(formatFileSize(file.size))}</small>`;
+  preview.appendChild(createRemoveButton(fieldKey, '刪除檔案'));
   container.appendChild(preview);
 };
 const loadImage = (src) => new Promise((resolve, reject) => {
@@ -287,23 +331,17 @@ const compressImageToBase64 = async (file) => {
 const showImagePreview = (base64, container, label = container?.dataset.fileLabel || '圖片') => {
   if (!container || !base64) return;
   const input = container.querySelector('input[type="file"]');
+  const fieldKey = container.dataset.field || input?.name || '';
   if (input) input.dataset.imageValue = base64;
   container.querySelector('.ragic-file-preview')?.remove();
-  const preview = document.createElement('span');
-  preview.className = 'ragic-file-preview image-upload-preview';
+  container.querySelector('.image-preview-item')?.remove();
+  const preview = document.createElement('div');
+  preview.className = 'image-preview-item ragic-file-preview image-upload-preview';
   preview.dataset.image = base64;
-  preview.innerHTML = `<img src="${escapeHtml(base64)}" alt="${escapeHtml(label)}預覽"><span>點擊放大檢視</span><button class="image-preview-remove" type="button" aria-label="移除圖片">×</button>`;
+  preview.innerHTML = `<img src="${escapeHtml(base64)}" alt="${escapeHtml(label)}預覽" style="max-height:100px; border-radius:6px;"><span>點擊放大檢視</span>`;
+  preview.appendChild(createRemoveButton(fieldKey, '刪除圖片'));
   preview.addEventListener('click', (event) => {
-    if (event.target.closest('.image-preview-remove')) {
-      event.preventDefault();
-      event.stopPropagation();
-      if (input) {
-        input.value = '';
-        delete input.dataset.imageValue;
-      }
-      preview.remove();
-      return;
-    }
+    if (event.target.closest('.image-remove-btn')) return;
     openImagePreview(base64, label);
   });
   container.appendChild(preview);
