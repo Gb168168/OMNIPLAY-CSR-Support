@@ -785,12 +785,23 @@ const updateColumnMenuStates = () => {
   });
 };
 
+const normalizeFilterValue = (value) => Array.isArray(value) ? value.map((item) => String(item || '').trim()).filter(Boolean) : String(value || '').trim();
+const isSelectFilterField = (field = {}) => ['select', 'multiselect'].includes(field.type);
+
+const filterMatchesRecord = (record, fieldKey, filterValue) => {
+  if (Array.isArray(filterValue)) {
+    if (!filterValue.length) return true;
+    const recordValues = Array.isArray(record[fieldKey]) ? record[fieldKey].map((item) => String(item || '').trim()) : [String(record[fieldKey] || '').trim()];
+    return filterValue.some((option) => recordValues.includes(option));
+  }
+  const keyword = String(filterValue || '').trim().toLowerCase();
+  if (!keyword) return true;
+  return valueToText(record[fieldKey]).toString().toLowerCase().includes(keyword);
+};
+
 const applyFilters = () => {
-  const filters = Object.fromEntries(Object.entries(RAGIC_STATE.filters).map(([key, value]) => [key, String(value || '').trim().toLowerCase()]).filter(([, value]) => value));
-  const filtered = RAGIC_STATE.records.filter((record) => Object.entries(filters).every(([fieldKey, keyword]) => {
-    const value = valueToText(record[fieldKey]).toString().toLowerCase();
-    return value.includes(keyword);
-  }));
+  const filters = Object.fromEntries(Object.entries(RAGIC_STATE.filters).map(([key, value]) => [key, normalizeFilterValue(value)]).filter(([, value]) => Array.isArray(value) ? value.length : value));
+  const filtered = RAGIC_STATE.records.filter((record) => Object.entries(filters).every(([fieldKey, filterValue]) => filterMatchesRecord(record, fieldKey, filterValue)));
   renderFilteredList(filtered);
   updateColumnMenuStates();
 };
@@ -827,16 +838,9 @@ const handleColumnMenuClick = (event) => {
   event.stopPropagation();
   const key = item.dataset.field;
   const action = item.dataset.menuAction;
-  if (action === 'filter') {
-    const box = item.parentElement.querySelector('.col-filter-box');
-    if (box) {
-      box.hidden = false;
-      box.querySelector('input')?.focus();
-    }
-    return;
-  }
   if (action === 'clear-filter') {
     delete RAGIC_STATE.filters[key];
+    item.parentElement.querySelectorAll('[data-menu-option]').forEach((checkbox) => { checkbox.checked = false; });
     const input = item.parentElement.querySelector('[data-menu-filter]');
     if (input) input.value = '';
   }
@@ -859,6 +863,30 @@ const handleColumnMenuInput = (event) => {
   applyFilters();
 };
 
+const handleColumnMenuChange = (event) => {
+  const checkbox = event.target.closest('[data-menu-option]');
+  if (!checkbox) return;
+  const key = checkbox.dataset.menuOption;
+  const selected = [...checkbox.closest('.col-menu-dropdown').querySelectorAll('[data-menu-option]')]
+    .filter((item) => item.dataset.menuOption === key && item.checked)
+    .map((item) => item.value);
+  if (selected.length) RAGIC_STATE.filters[key] = selected;
+  else delete RAGIC_STATE.filters[key];
+  applyFilters();
+};
+
+const renderColumnFilterControls = (field) => {
+  const key = escapeHtml(field.key);
+  const current = normalizeFilterValue(RAGIC_STATE.filters[field.key]);
+  if (isSelectFilterField(field)) {
+    return optionList(field).map((option) => {
+      const checked = Array.isArray(current) && current.includes(option) ? ' checked' : '';
+      return `<label class="menu-item menu-checkbox"><input type="checkbox" data-menu-option="${key}" value="${escapeHtml(option)}"${checked}><span>${escapeHtml(option)}</span></label>`;
+    }).join('');
+  }
+  return `<div class="col-filter-box"><input type="text" data-menu-filter="${key}" placeholder="輸入關鍵字..." value="${escapeHtml(current)}" /></div>`;
+};
+
 const updateRagicStickyHeaderOffset = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
   const wrap = headerRow?.closest('.ragic-table-wrap');
@@ -878,8 +906,7 @@ const renderHeader = () => {
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
     const style = width ? ` style="width: ${width}px;"` : '';
-    const filterValue = escapeHtml(RAGIC_STATE.filters[field.key] || '');
-    return `<th class="${ragicColumnClass(field)} col-menu-cell"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="filter" data-field="${key}">🔍 <span>文字篩選</span></div><div class="col-filter-box" ${filterValue ? '' : 'hidden'}><input type="text" data-menu-filter="${key}" placeholder="輸入關鍵字..." value="${filterValue}" /></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div></div></th>`;
+    return `<th class="${ragicColumnClass(field)} col-menu-cell"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
   if (thead) thead.querySelectorAll('tr:not(#ragicHeaderRow)').forEach((row) => row.remove());
   updateColumnMenuStates();
@@ -1229,6 +1256,7 @@ const initRagicPage = async (config) => {
   const ragicTableHead = document.querySelector('#ragicHeaderRow')?.closest('thead');
   window.addEventListener('resize', updateRagicStickyHeaderOffset);
   ragicTableHead?.addEventListener('input', handleColumnMenuInput);
+  ragicTableHead?.addEventListener('change', handleColumnMenuChange);
   ragicTableHead?.addEventListener('click', handleColumnMenuClick);
   ragicTableHead?.addEventListener('keydown', (event) => {
     if (!['Enter', ' '].includes(event.key)) return;
