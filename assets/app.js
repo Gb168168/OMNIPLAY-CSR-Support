@@ -4,6 +4,7 @@ if ('serviceWorker' in navigator) {
 
 const sidebar = document.querySelector('#sidebar');
 const sidebarToggle = document.querySelector('#sidebarToggle');
+const sidebarOverlay = document.querySelector('#sidebarOverlay');
 const appShell = document.querySelector('.app-shell');
 const loginView = document.querySelector('#loginView');
 const loginForm = document.querySelector('#loginForm');
@@ -47,13 +48,37 @@ const toggleTheme = () => {
 applyTheme(getStoredTheme());
 
 const getStoredSidebarCollapsed = () => localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
+const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
+const closeMobileSidebar = () => {
+  sidebar?.classList.remove('is-open');
+  sidebarOverlay?.classList.remove('is-visible');
+  sidebarToggle?.setAttribute('aria-expanded', 'false');
+};
+const openMobileSidebar = () => {
+  sidebar?.classList.remove('is-collapsed');
+  sidebar?.classList.add('is-open');
+  sidebarOverlay?.classList.add('is-visible');
+  sidebarToggle?.setAttribute('aria-label', '關閉左側功能表');
+  sidebarToggle?.setAttribute('aria-expanded', 'true');
+};
 const applySidebarState = (collapsed) => {
   if (!sidebar) return;
+  if (isMobileViewport()) {
+    sidebar.classList.remove('is-collapsed');
+    closeMobileSidebar();
+    sidebarToggle?.setAttribute('aria-label', '開啟左側功能表');
+    return;
+  }
   sidebar.classList.toggle('is-collapsed', collapsed);
   sidebarToggle?.setAttribute('aria-label', collapsed ? '展開左側功能表' : '收合左側功能表');
   sidebarToggle?.setAttribute('aria-expanded', String(!collapsed));
 };
 const toggleSidebar = () => {
+  if (isMobileViewport()) {
+    if (sidebar?.classList.contains('is-open')) closeMobileSidebar();
+    else openMobileSidebar();
+    return;
+  }
   const collapsed = !sidebar?.classList.contains('is-collapsed');
   localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed));
   applySidebarState(collapsed);
@@ -444,6 +469,13 @@ const logout = () => {
 enhanceSidebarNavigation();
 
 sidebarToggle?.addEventListener('click', toggleSidebar);
+sidebarOverlay?.addEventListener('click', closeMobileSidebar);
+window.addEventListener('resize', () => applySidebarState(getStoredSidebarCollapsed()));
+sidebar?.querySelectorAll('.home-link, .submenu a').forEach((link) => {
+  link.addEventListener('click', () => {
+    if (isMobileViewport()) closeMobileSidebar();
+  });
+});
 
 document.querySelectorAll('.section-button').forEach((button) => {
   const list = button.nextElementSibling;
