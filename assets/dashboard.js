@@ -29,7 +29,6 @@ const valueDate = (value) => {
 function getShiftRange(shift) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
   if (shift === 'morning') {
     return {
       start: new Date(today.getTime() + 8 * 60 * 60 * 1000),
@@ -85,6 +84,18 @@ const addMonthsClamped = (date, count) => {
   return next;
 };
 
+const scheduleDateFromParts = (dateValue, timeValue = '00:00') => {
+  const dateText = String(dateValue || '').trim().replace(/\//g, '-');
+  const match = dateText.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return null;
+  const [, year, month, day] = match.map(Number);
+  const [hour = 0, minute = 0] = String(timeValue || '00:00').split(':').map(Number);
+  const parsed = new Date(year, month - 1, day, hour || 0, minute || 0);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const scheduleOriginalDate = (item = {}) => valueDate(item.reminderAt) || valueDate(item.datetime) || valueDate(item.startAt) || scheduleDateFromParts(item.date, item.time || item.startTime);
+
 const scheduleOccurrencesForDay = (date = new Date()) => {
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const end = new Date(start);
@@ -94,8 +105,8 @@ const scheduleOccurrencesForDay = (date = new Date()) => {
     items.push({ ...item, occurrenceAt, isRepeatOccurrence: isRepeat });
   };
 
-  dashboardState.schedules.filter((item) => !item.deleted).forEach((item) => {
-    const original = valueDate(item.reminderAt) || new Date(`${item.date}T00:00:00`);
+  dashboardState.schedules.filter((item) => item.deleted !== true).forEach((item) => {
+    const original = scheduleOriginalDate(item);
     if (!(original instanceof Date) || Number.isNaN(original.getTime())) return;
     if (original >= start && original <= end) addOccurrence(item, original, false);
 
