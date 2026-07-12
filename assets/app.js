@@ -145,6 +145,136 @@ const canUse = (pageOrAction, maybeAction) => {
   return getPagePermission(page)[action] === true;
 };
 
+
+const notificationState = {
+  allEvents: [],
+  todayEvents: [],
+  unsubscribeSchedule: null,
+  intervalId: null,
+  notifiedKeys: new Set()
+};
+
+const NOTIFICATION_ICON_PATH = isIndexPage ? 'assets/icon-192.png' : '../assets/icon-192.png';
+const padNotificationPart = (value) => String(value).padStart(2, '0');
+const notificationDateKey = (date = new Date()) => `${date.getFullYear()}-${padNotificationPart(date.getMonth() + 1)}-${padNotificationPart(date.getDate())}`;
+const notificationValueDate = (value) => {
+  if (!value) return null;
+  if (value.toDate) return value.toDate();
+  if (value instanceof Date) return value;
+  const parsed = new Date(String(value).replace(/\//g, '-').replace(' ', 'T'));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+const notificationDateFromParts = (dateValue, timeValue = '00:00') => {
+  const match = String(dateValue || '').trim().replace(/\//g, '-').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return null;
+  const [, yearText, monthText, dayText] = match;
+  const [hourText = '0', minuteText = '0'] = String(timeValue || '00:00').split(':');
+  const parsed = new Date(Number(yearText), Number(monthText) - 1, Number(dayText), Number(hourText) || 0, Number(minuteText) || 0);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+const notificationScheduleOriginalDate = (event = {}) => notificationValueDate(event.reminderAt) || notificationValueDate(event.datetime) || notificationValueDate(event.startAt) || notificationDateFromParts(event.date, event.time || event.startTime);
+const notificationRepeatStepDays = (event = {}) => {
+  if (event.repeat === 'daily') return 1;
+  if (event.repeat === 'weekly') return 7;
+  if (event.repeat === 'custom') return Math.max(1, Number(event.repeatInterval) || 1);
+  return 0;
+};
+const notificationDaysBetween = (start, end) => Math.floor((new Date(end.getFullYear(), end.getMonth(), end.getDate()) - new Date(start.getFullYear(), start.getMonth(), start.getDate())) / 86400000);
+const notificationAddMonthsClamped = (date, count) => {
+  const next = new Date(date);
+  const day = next.getDate();
+  next.setDate(1);
+  next.setMonth(next.getMonth() + count);
+  next.setDate(Math.min(day, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
+  return next;
+};
+const notificationOccurrenceForToday = (event = {}, date = new Date()) => {
+  if (event.deleted === true) return null;
+  const original = notificationScheduleOriginalDate(event);
+  if (!(original instanceof Date) || Number.isNaN(original.getTime())) return null;
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const end = new Date(start);
+  end.setHours(23, 59, 59, 999);
+  if (original >= start && original <= end) return original;
+  if (original > end) return null;
+  if ((event.repeat || 'none') === 'monthly') {
+    for (let i = 1, occurrence = notificationAddMonthsClamped(original, i); occurrence <= end; i += 1, occurrence = notificationAddMonthsClamped(original, i)) {
+      if (occurrence >= start) return occurrence;
+    }
+    return null;
+  }
+  const step = notificationRepeatStepDays(event);
+  if (!step) return null;
+  const offset = notificationDaysBetween(original, start);
+  if (offset > 0 && offset % step === 0) {
+    const occurrence = new Date(original);
+    occurrence.setFullYear(start.getFullYear(), start.getMonth(), start.getDate());
+    return occurrence;
+  }
+  return null;
+};
+
+async function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    const permission = await Notification.requestPermission();
+    console.log('通知權限:', permission);
+  }
+}
+
+function sendNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, {
+      body,
+      icon: NOTIFICATION_ICON_PATH,
+      badge: NOTIFICATION_ICON_PATH
+    });
+  }
+}
+
+function refreshTodayNotificationEvents(events = notificationState.allEvents) {
+  notificationState.allEvents = events;
+  notificationState.todayEvents = events.map((event) => {
+    const occurrenceAt = notificationOccurrenceForToday(event);
+    if (!occurrenceAt) return null;
+    return {
+      ...event,
+      occurrenceAt,
+      time: `${padNotificationPart(occurrenceAt.getHours())}:${padNotificationPart(occurrenceAt.getMinutes())}`,
+      notified: notificationState.notifiedKeys.has(`${event.id || event.title}-${notificationDateKey(occurrenceAt)}-${occurrenceAt.getTime()}`)
+    };
+  }).filter(Boolean);
+  window.todayEvents = notificationState.todayEvents;
+}
+
+function startScheduleNotifications() {
+  if (notificationState.intervalId) return;
+  const scheduleCollection = window.omniplayDb?.collection('schedule');
+  if (scheduleCollection && !notificationState.unsubscribeSchedule) {
+    notificationState.unsubscribeSchedule = scheduleCollection.onSnapshot((snapshot) => {
+      refreshTodayNotificationEvents(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    }, (error) => console.error('讀取通知排程失敗：', error));
+  }
+  notificationState.intervalId = setInterval(() => {
+    const now = new Date();
+    if (notificationState.todayEvents.some((event) => notificationDateKey(event.occurrenceAt) !== notificationDateKey(now))) {
+      refreshTodayNotificationEvents(notificationState.allEvents);
+    }
+    const currentTime = `${padNotificationPart(now.getHours())}:${padNotificationPart(now.getMinutes())}`;
+    notificationState.todayEvents.forEach((event) => {
+      const key = `${event.id || event.title}-${notificationDateKey(event.occurrenceAt)}-${event.occurrenceAt.getTime()}`;
+      if (event.time === currentTime && !event.notified && !notificationState.notifiedKeys.has(key)) {
+        sendNotification('📅 排程提醒', event.title || '未命名事項');
+        event.notified = true;
+        notificationState.notifiedKeys.add(key);
+      }
+    });
+  }, 60000);
+}
+
+window.requestNotificationPermission = requestNotificationPermission;
+window.sendNotification = sendNotification;
+window.startScheduleNotifications = startScheduleNotifications;
+
 const applyPermissionUi = () => {
   if (!isLoggedIn()) return;
   const permissions = getStoredPermissions();
@@ -349,6 +479,8 @@ setupForm?.addEventListener('submit', async (event) => {
     setAppVisibility();
     loadCurrentPermissions();
     renderSidebarUser();
+    requestNotificationPermission();
+    startScheduleNotifications();
   } catch (error) {
     console.error('建立管理員帳號失敗：', error);
     showSetupMessage('建立失敗，請稍後再試');
@@ -398,6 +530,8 @@ loginForm?.addEventListener('submit', async (event) => {
     await loadCurrentPermissions();
     setAppVisibility();
     renderSidebarUser();
+    requestNotificationPermission();
+    startScheduleNotifications();
   } catch (error) {
     console.error('登入失敗：', error);
     showLoginMessage('帳號或密碼錯誤');
@@ -413,5 +547,8 @@ document.addEventListener('click', (event) => {
 
 renderThemeToggle();
 setAppVisibility();
-window.permissionReady?.then(() => renderSidebarUser());
+window.permissionReady?.then(() => {
+  renderSidebarUser();
+  if (isLoggedIn()) startScheduleNotifications();
+});
 checkInitialSetupRequired();
