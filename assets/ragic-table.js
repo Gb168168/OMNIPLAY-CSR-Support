@@ -53,6 +53,7 @@ const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) =>
     key: uniqueKey(field.key || label, usedKeys, fallback),
     label,
     type: field.type || 'text',
+    width: normalizeFieldWidth(field.width),
     options: optionList(field),
     fields: normalizeFields(field.fields || [], 'subfield')
   };
@@ -88,6 +89,9 @@ if (!window._multiSelectClickBound) {
 }
 const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', report: 'RPT-', tracking: 'TRK-', alert: 'ALT-', knowledge: 'KB-', ai_database: 'AI-' };
 const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
+const DEFAULT_FIELD_WIDTHS = { date: 100, datetime: 150, select: 100, multiselect: 100, image: 80, serial: 90, createdDate: 150, updatedDate: 150, link: 150 };
+const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
+const fieldColumnWidth = (field = {}) => normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
 
 const currentRagicUser = () => sessionStorage.getItem('account') || sessionStorage.getItem('omniplayStaffAccount') || sessionStorage.getItem('omniplayStaffCode') || '';
 const isHandoverPage = () => RAGIC_STATE.config?.collection === 'handover';
@@ -360,7 +364,7 @@ const renderForm = (record = {}) => {
   formView.querySelector('h2').textContent = record.id ? `編輯${RAGIC_STATE.config.title}` : `新增${RAGIC_STATE.config.title}`; const form = formView.querySelector('form'); form.innerHTML = '';
   const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
   getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key]))); form.appendChild(grid);
-  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3>${field.label}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><thead><tr>${(field.fields || []).map((f) => `<th>${f.label}</th>`).join('')}<th>操作</th></tr></thead><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) body.appendChild(renderSubtableRow(field)); }); form.appendChild(section); });
+  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3>${field.label}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><thead><tr>${(field.fields || []).map((f) => `<th${fieldColumnWidth(f) ? ` style="width: ${fieldColumnWidth(f)}px;"` : ''}>${f.label}</th>`).join('')}<th>操作</th></tr></thead><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) body.appendChild(renderSubtableRow(field)); }); form.appendChild(section); });
   form.querySelectorAll('.image-upload-area').forEach((imageArea) => {
     const input = imageArea.querySelector('input[type="file"]');
     input?.addEventListener('change', async () => {
@@ -442,7 +446,9 @@ const renderTable = () => {
     tr.innerHTML = renderIconActions(record) + fields.map((field) => {
       const columnClass = ragicColumnClass(field);
       const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
-      return `<td class="${columnClass}"${title}>${renderCell(record, field)}</td>`;
+      const width = fieldColumnWidth(field);
+      const style = width ? ` style="width: ${width}px;"` : '';
+      return `<td class="${columnClass}"${style}${title}>${renderCell(record, field)}</td>`;
     }).join('');
     if (canUse('edit')) tr.addEventListener('click', () => renderForm(record));
     tbody.appendChild(tr);
@@ -453,6 +459,8 @@ const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = 
 const renderHeader = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
   const thead = headerRow?.closest('thead');
+  const table = headerRow?.closest('table');
+  if (table) table.style.tableLayout = 'fixed';
   let filterRow = document.querySelector('#ragicFilterRow');
   if (!filterRow && thead) {
     filterRow = document.createElement('tr');
@@ -462,12 +470,16 @@ const renderHeader = () => {
   headerRow.innerHTML = `<th class="icon-actions-head col-marker">標記</th>` + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
-    return `<th class="${ragicColumnClass(field)}"><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button></th>`;
+    const width = fieldColumnWidth(field);
+    const style = width ? ` style="width: ${width}px;"` : '';
+    return `<th class="${ragicColumnClass(field)}"${style}><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button></th>`;
   }).join('');
   if (filterRow) filterRow.innerHTML = '<th class="col-marker"></th>' + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
-    return `<th class="${ragicColumnClass(field)}"><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
+    const width = fieldColumnWidth(field);
+    const style = width ? ` style="width: ${width}px;"` : '';
+    return `<th class="${ragicColumnClass(field)}"${style}><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
   }).join('');
 };
 
@@ -539,7 +551,7 @@ const fieldDesigner = (field = {}, nested = false) => {
     return options ? `<optgroup label="${escapeHtml(group.label)}">${options}</optgroup>` : '';
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
-  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`;
+  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`;
   row.dataset.key = shouldRegenerateFieldKey(field.key) ? generateFieldKey() : field.key;
   const sub = row.querySelector('.designer-subfields');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
@@ -554,7 +566,7 @@ const fieldDesigner = (field = {}, nested = false) => {
   sync();
   return row;
 };
-const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => { const label = row.querySelector('[data-role="label"]').value.trim() || '未命名欄位'; const type = row.querySelector('[data-role="type"]').value; const field = { key: shouldRegenerateFieldKey(row.dataset.key) ? generateFieldKey() : row.dataset.key, label, type, required: row.querySelector('[data-role="required"]').checked, options: row.querySelector('[data-role="options"]').value.split('\n').map((v) => v.trim()).filter(Boolean) }; if (type === 'subtable') field.fields = readDesigner(row.querySelector('.designer-subfields')); return field; });
+ const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => { const label = row.querySelector('[data-role="label"]').value.trim() || '未命名欄位'; const type = row.querySelector('[data-role="type"]').value; const field = { key: shouldRegenerateFieldKey(row.dataset.key) ? generateFieldKey() : row.dataset.key, label, type, required: row.querySelector('[data-role="required"]').checked, width: normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value), options: row.querySelector('[data-role="options"]').value.split('\n').map((v) => v.trim()).filter(Boolean) }; if (type === 'subtable') field.fields = readDesigner(row.querySelector('.designer-subfields')); return field; });
 
 const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; };
 const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
