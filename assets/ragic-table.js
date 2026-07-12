@@ -1,9 +1,10 @@
-const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', config: null, schema: null, unsubscribeRecords: null };
+const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null };
 
 const FIELD_TYPE_GROUPS = [
   { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
   { label: '🕐 時間', types: [{ value: 'date', label: '日期' }, { value: 'datetime', label: '日期時間' }, { value: 'createdDate', label: '建立日期' }, { value: 'updatedDate', label: '更新時間' }] },
   { label: '📋 下拉', types: [{ value: 'select', label: '單選' }, { value: 'multiselect', label: '多選' }] },
+  { label: '🔗 連結', types: [{ value: 'link', label: '連結' }] },
   { label: '🖼️ 圖片', types: [{ value: 'image', label: '圖片' }] },
   { label: '📎 檔案', types: [{ value: 'file', label: '檔案' }] },
   { label: '🔢 編號', types: [{ value: 'serial', label: '編號' }] },
@@ -170,7 +171,7 @@ const createControl = (field, value = '', subfield = false) => {
     input.readOnly = true;
   } else {
     input = document.createElement('input');
-    input.type = field.type === 'datetime' ? 'datetime-local' : (field.type === 'image' || field.type === 'file' ? 'file' : (field.type || 'text'));
+    input.type = field.type === 'datetime' ? 'datetime-local' : (field.type === 'link' ? 'url' : (field.type === 'image' || field.type === 'file' ? 'file' : (field.type || 'text')));
     if (field.type === 'image') input.accept = 'image/*';
   }
   input.name = subfield ? '' : field.key;
@@ -360,6 +361,7 @@ const renderCell = (record, field) => {
   const value = record[key];
   if (field?.type === 'image') return value ? `<img class="ragic-thumbnail" src="${escapeHtml(value)}" alt="${escapeHtml(field.label)}縮圖">` : '';
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
+  if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
   if (field?.type === 'datetime') return escapeHtml(displayDateTime(value));
   const text = String(valueToText(value));
@@ -378,14 +380,72 @@ const closeImagePreview = () => {
   modal.hidden = true;
   modal.querySelector('img').removeAttribute('src');
 };
-const renderTable = () => { const tbody = document.querySelector('#ragicTableBody'); tbody.innerHTML = ''; const fields = listFields(); RAGIC_STATE.filtered.forEach((record) => { const tr = document.createElement('tr'); tr.tabIndex = canUse('edit') ? 0 : -1; tr.classList.toggle('is-readonly', !canUse('edit')); tr.innerHTML = renderIconActions(record) + fields.map((field) => `<td>${renderCell(record, field)}</td>`).join(''); if (canUse('edit')) tr.addEventListener('click', () => renderForm(record)); tbody.appendChild(tr); }); };
-const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = RAGIC_STATE.records.filter((record) => cols.every((key) => { const filter = document.querySelector(`[data-filter="${key}"]`)?.value.toLowerCase() || ''; return !filter || valueToText(record[key]).toLowerCase().includes(filter); })); if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1)); renderTable(); };
+const ragicPageSizeKey = () => `ragicPageSize:${RAGIC_STATE.config?.collection || 'default'}`;
+const getTotalPages = () => Math.max(1, Math.ceil(RAGIC_STATE.filtered.length / RAGIC_STATE.pageSize));
+const clampRagicPage = () => { RAGIC_STATE.page = Math.min(Math.max(1, RAGIC_STATE.page), getTotalPages()); };
+const ensurePagination = () => {
+  const tableWrap = document.querySelector('.ragic-table-wrap');
+  if (!tableWrap || document.querySelector('#ragicPagination')) return;
+  tableWrap.insertAdjacentHTML('afterend', `<div class="ragic-pagination" id="ragicPagination"><label class="ragic-page-size">顯示 <select id="ragicPageSizeSelect"><option value="50">50</option><option value="100">100</option><option value="150">150</option><option value="200">200</option></select> 筆</label><div class="ragic-page-nav"><span id="ragicPageStatus">第 1/1 頁</span><button class="secondary" id="ragicPrevPage" type="button">上一頁</button><button class="secondary" id="ragicNextPage" type="button">下一頁</button></div></div>`);
+  const select = document.querySelector('#ragicPageSizeSelect');
+  select.value = String(RAGIC_STATE.pageSize);
+  select.addEventListener('change', () => {
+    RAGIC_STATE.pageSize = Number(select.value) || 50;
+    RAGIC_STATE.page = 1;
+    localStorage.setItem(ragicPageSizeKey(), String(RAGIC_STATE.pageSize));
+    renderTable();
+  });
+  document.querySelector('#ragicPrevPage')?.addEventListener('click', () => { RAGIC_STATE.page -= 1; renderTable(); });
+  document.querySelector('#ragicNextPage')?.addEventListener('click', () => { RAGIC_STATE.page += 1; renderTable(); });
+};
+const renderPagination = () => {
+  ensurePagination();
+  clampRagicPage();
+  const totalPages = getTotalPages();
+  const pageStatus = document.querySelector('#ragicPageStatus');
+  if (pageStatus) pageStatus.textContent = `第 ${RAGIC_STATE.page}/${totalPages} 頁`;
+  const select = document.querySelector('#ragicPageSizeSelect');
+  if (select) select.value = String(RAGIC_STATE.pageSize);
+  const prev = document.querySelector('#ragicPrevPage');
+  const next = document.querySelector('#ragicNextPage');
+  if (prev) prev.disabled = RAGIC_STATE.page <= 1;
+  if (next) next.disabled = RAGIC_STATE.page >= totalPages;
+};
+const renderTable = () => {
+  const tbody = document.querySelector('#ragicTableBody');
+  tbody.innerHTML = '';
+  const fields = listFields();
+  clampRagicPage();
+  const start = (RAGIC_STATE.page - 1) * RAGIC_STATE.pageSize;
+  RAGIC_STATE.filtered.slice(start, start + RAGIC_STATE.pageSize).forEach((record) => {
+    const tr = document.createElement('tr');
+    tr.tabIndex = canUse('edit') ? 0 : -1;
+    tr.classList.toggle('is-readonly', !canUse('edit'));
+    tr.innerHTML = renderIconActions(record) + fields.map((field) => `<td>${renderCell(record, field)}</td>`).join('');
+    if (canUse('edit')) tr.addEventListener('click', () => renderForm(record));
+    tbody.appendChild(tr);
+  });
+  renderPagination();
+};
+const applyFilters = () => { const cols = listColumns(); RAGIC_STATE.filtered = RAGIC_STATE.records.filter((record) => cols.every((key) => { const filter = document.querySelector(`[data-filter="${key}"]`)?.value.toLowerCase() || ''; return !filter || valueToText(record[key]).toLowerCase().includes(filter); })); if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => valueToText(a[RAGIC_STATE.sortKey]).localeCompare(valueToText(b[RAGIC_STATE.sortKey]), 'zh-Hant') * (RAGIC_STATE.sortDir === 'asc' ? 1 : -1)); RAGIC_STATE.page = 1; renderTable(); };
 const renderHeader = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
+  const thead = headerRow?.closest('thead');
+  let filterRow = document.querySelector('#ragicFilterRow');
+  if (!filterRow && thead) {
+    filterRow = document.createElement('tr');
+    filterRow.id = 'ragicFilterRow';
+    thead.appendChild(filterRow);
+  }
   headerRow.innerHTML = `<th class="icon-actions-head">標記</th>` + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
-    return `<th><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
+    return `<th><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button></th>`;
+  }).join('');
+  if (filterRow) filterRow.innerHTML = '<th></th>' + listFields().map((field) => {
+    const key = escapeHtml(field.key);
+    const label = escapeHtml(field.label || field.key);
+    return `<th><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
   }).join('');
 };
 
@@ -544,7 +604,7 @@ const applySystemFieldValues = async (data, existingData = {}, collection = null
 };
 const initRagicPage = async (config) => {
   await waitForPermissions();
-  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
+  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
   window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
   window.togglePin = async (docId) => { const currentUser = currentRagicUser(); if (!currentUser) return alert('請先登入再使用個人釘選'); const doc = await collection.doc(docId).get(); const pins = doc.data()?.pins || {}; pins[currentUser] = !pins[currentUser]; await collection.doc(docId).update({ pins }); };
   window.toggleStar = async (docId) => { if (!isHandoverPage()) return; const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ starred: !doc.data()?.starred }); };
@@ -611,9 +671,10 @@ const initRagicPage = async (config) => {
       if (saveButton) { saveButton.disabled = false; saveButton.textContent = originalText; }
     }
   });
-  document.querySelector('#ragicHeaderRow').addEventListener('input', applyFilters); document.querySelector('#ragicHeaderRow').addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
-  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); if (button.dataset.iconAction === 'star') window.toggleStar(id); });
-  document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
+  const ragicTableHead = document.querySelector('#ragicHeaderRow')?.closest('thead');
+  ragicTableHead?.addEventListener('input', applyFilters); ragicTableHead?.addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
+  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); if (button.dataset.iconAction === 'star') window.toggleStar(id); });
+  document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => {
     if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true });
