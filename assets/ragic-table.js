@@ -649,6 +649,15 @@ const applyFilters = () => {
   }));
   renderFilteredList(filtered);
 };
+
+const updateRagicStickyHeaderOffset = () => {
+  const headerRow = document.querySelector('#ragicHeaderRow');
+  const wrap = headerRow?.closest('.ragic-table-wrap');
+  if (!headerRow || !wrap) return;
+  requestAnimationFrame(() => {
+    wrap.style.setProperty('--ragic-header-row-height', `${Math.ceil(headerRow.getBoundingClientRect().height || 42)}px`);
+  });
+};
 const renderHeader = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
   const thead = headerRow?.closest('thead');
@@ -674,6 +683,7 @@ const renderHeader = () => {
     const style = width ? ` style="width: ${width}px;"` : '';
     return `<th class="${ragicColumnClass(field)}"${style}><input class="filter-input" data-field="${key}" data-filter="${key}" placeholder="篩選${label}" /></th>`;
   }).join('');
+  updateRagicStickyHeaderOffset();
 };
 
 const designerFieldRows = (container) => [...container.children].filter((el) => el.classList.contains('designer-field'));
@@ -928,6 +938,7 @@ const initRagicPage = async (config) => {
     }
   });
   const ragicTableHead = document.querySelector('#ragicHeaderRow')?.closest('thead');
+  window.addEventListener('resize', updateRagicStickyHeaderOffset);
   ragicTableHead?.addEventListener('input', applyFilters); ragicTableHead?.addEventListener('click', (event) => { const key = event.target.closest('[data-sort]')?.dataset.sort; if (!key) return; RAGIC_STATE.sortDir = RAGIC_STATE.sortKey === key && RAGIC_STATE.sortDir === 'asc' ? 'desc' : 'asc'; RAGIC_STATE.sortKey = key; applyFilters(); });
   document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (button) { event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); return; } const cell = event.target.closest('td[data-doc-id][data-field-key]'); if (cell) { event.preventDefault(); event.stopPropagation(); startInlineEdit(cell); } });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
