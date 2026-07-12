@@ -585,8 +585,22 @@ const getFormData = async () => {
 
 const renderSubtableRow = (field, item = {}) => {
   const row = document.createElement('tr'); row.className = 'subtable-row';
-  (field.fields || []).forEach((sub) => { const td = document.createElement('td'); td.appendChild(createControl(sub, item[sub.key], true)); row.appendChild(td); });
-  const action = document.createElement('td'); action.innerHTML = '<button class="ghost danger" type="button">刪除</button>'; action.querySelector('button').addEventListener('click', () => row.remove()); row.appendChild(action); return row;
+  (field.fields || []).forEach((sub, index) => {
+    const td = document.createElement('td');
+    td.appendChild(createControl(sub, item[sub.key], true));
+    if (index === 0) {
+      const removeButton = document.createElement('button');
+      removeButton.className = 'subtable-row-delete ghost danger';
+      removeButton.type = 'button';
+      removeButton.title = '刪除此列';
+      removeButton.setAttribute('aria-label', '刪除此列');
+      removeButton.textContent = '×';
+      removeButton.addEventListener('click', () => row.remove());
+      td.appendChild(removeButton);
+    }
+    row.appendChild(td);
+  });
+  return row;
 };
 
 const renderForm = (record = {}) => {
@@ -594,7 +608,7 @@ const renderForm = (record = {}) => {
   formView.querySelector('h2').textContent = record.id ? `編輯${RAGIC_STATE.config.title}` : `新增${RAGIC_STATE.config.title}`; const form = formView.querySelector('form'); form.innerHTML = '';
   const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
   getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key]))); form.appendChild(grid);
-  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3>${field.label}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><thead><tr>${(field.fields || []).map((f) => `<th${fieldColumnWidth(f) ? ` style="width: ${fieldColumnWidth(f)}px;"` : ''}>${f.label}</th>`).join('')}<th>操作</th></tr></thead><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) body.appendChild(renderSubtableRow(field)); }); form.appendChild(section); });
+  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3>${field.label}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><thead><tr>${(field.fields || []).map((f) => `<th${fieldColumnWidth(f) ? ` style="width: ${fieldColumnWidth(f)}px;"` : ''}>${f.label}</th>`).join('')}</tr></thead><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) body.appendChild(renderSubtableRow(field)); }); form.appendChild(section); });
   form.querySelectorAll('.image-upload-area').forEach((imageArea) => {
     const input = imageArea.querySelector('input[type="file"]');
     input?.addEventListener('change', async () => {
