@@ -35,7 +35,7 @@
   --dark-panel-soft: var(--surface-muted);
   --table-head: var(--surface-muted);
   --table-row: var(--surface);
-  --table-row-alt: rgba(148, 163, 184, 0.045);
+  --table-row-alt: var(--surface-muted);
   --table-row-hover: var(--surface-muted);
   --table-text: var(--text);
   --table-muted: var(--text-secondary);
@@ -102,7 +102,7 @@
   --dark-panel-soft: var(--surface-muted);
   --table-head: var(--surface-muted);
   --table-row: var(--surface);
-  --table-row-alt: rgba(148, 163, 184, 0.08);
+  --table-row-alt: var(--surface-muted);
   --table-row-hover: var(--surface-muted);
   --table-text: var(--text);
   --table-muted: var(--text-secondary);
@@ -399,7 +399,7 @@ button:hover { transform: translateY(-1px); }
 
 .staff-table td { color: var(--table-text); }
 .staff-table tbody tr:nth-child(odd) { background: var(--table-row); }
-.staff-table tbody tr:nth-child(even) { background: var(--table-row-alt); }
+.staff-table tbody tr:nth-child(even) { background: var(--surface-muted); }
 .staff-table tbody tr:hover { background: var(--table-row-hover); }
 
 .password-cell,
@@ -754,9 +754,9 @@ button:hover { transform: translateY(-1px); }
 .leave-table tbody tr:nth-child(odd) th,
 .leave-table tbody tr:nth-child(odd) td { background-color: var(--table-row); }
 .leave-table tbody tr:nth-child(even) th,
-.leave-table tbody tr:nth-child(even) td { background-color: var(--table-row-alt); }
+.leave-table tbody tr:nth-child(even) td { background-color: var(--surface-muted); }
 .leave-table tbody tr:nth-child(odd) .sticky-col { background: var(--table-row); }
-.leave-table tbody tr:nth-child(even) .sticky-col { background: var(--table-row-alt); }
+.leave-table tbody tr:nth-child(even) .sticky-col { background: var(--surface-muted); }
 .leave-table tbody th.name-col { text-align: left; }
 
 .leave-day.is-weekend,
@@ -1214,7 +1214,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-table th { min-width: 150px; padding: 10px 12px; color: var(--text); background: var(--table-head); text-align: left; vertical-align: bottom; }
 .ragic-table td { padding: 14px 12px; border-top: 1px solid rgba(226,232,240,.16); border-bottom: 1px solid rgba(226,232,240,.16); color: var(--table-text); }
 .ragic-table tbody tr:nth-child(odd) td { background: var(--table-row); }
-.ragic-table tbody tr:nth-child(even) td { background: var(--table-row-alt); }
+.ragic-table tbody tr:nth-child(even) td { background: var(--surface-muted); }
 .ragic-table tr { cursor: pointer; }
 .ragic-table tr:hover td { background: var(--table-row-hover); }
 .sort-btn { display: block; margin-bottom: 8px; padding: 0; color: var(--text); background: transparent; }
@@ -1590,17 +1590,25 @@ a { color: var(--primary); background: transparent; }
 .leave-table th,
 .calendar-day { color: var(--text); }
 .staff-table tbody tr:nth-child(odd),
+.ragic-table tbody tr:nth-child(odd),
 .ragic-table tbody tr:nth-child(odd) td,
 .ragic-subtable tbody tr:nth-child(odd) td,
+.leave-table tbody tr:nth-child(odd),
 .leave-table tbody tr:nth-child(odd) th,
 .leave-table tbody tr:nth-child(odd) td,
-.leave-table tbody tr:nth-child(odd) .sticky-col { background: var(--card); }
+.leave-table tbody tr:nth-child(odd) .sticky-col,
+.meeting-detail-table tbody tr:nth-child(odd),
+.meeting-detail-table tbody tr:nth-child(odd) td { background: var(--surface); }
 .staff-table tbody tr:nth-child(even),
+.ragic-table tbody tr:nth-child(even),
 .ragic-table tbody tr:nth-child(even) td,
 .ragic-subtable tbody tr:nth-child(even) td,
+.leave-table tbody tr:nth-child(even),
 .leave-table tbody tr:nth-child(even) th,
 .leave-table tbody tr:nth-child(even) td,
-.leave-table tbody tr:nth-child(even) .sticky-col { background: var(--surface); }
+.leave-table tbody tr:nth-child(even) .sticky-col,
+.meeting-detail-table tbody tr:nth-child(even),
+.meeting-detail-table tbody tr:nth-child(even) td { background: var(--surface-muted); }
 .staff-table tbody tr:hover,
 .ragic-table tr:hover td,
 .calendar-day:hover { background: color-mix(in srgb, var(--primary) 22%, var(--card)); }
@@ -1688,11 +1696,15 @@ body,
 }
 tbody tr:nth-child(even),
 .staff-table tbody tr:nth-child(even),
+.leave-table tbody tr:nth-child(even),
 .leave-table tbody tr:nth-child(even) th,
 .leave-table tbody tr:nth-child(even) td,
 .leave-table tbody tr:nth-child(even) .sticky-col,
+.ragic-table tbody tr:nth-child(even),
 .ragic-table tbody tr:nth-child(even) td,
-.ragic-subtable tbody tr:nth-child(even) td { background: rgba(148, 163, 184, 0.045); }
+.ragic-subtable tbody tr:nth-child(even) td,
+.meeting-detail-table tbody tr:nth-child(even),
+.meeting-detail-table tbody tr:nth-child(even) td { background: var(--surface-muted); }
 .table-row:hover,
 .staff-table tbody tr:hover,
 .leave-table tbody tr:hover th,
@@ -2025,8 +2037,10 @@ textarea,
 .meeting-detail-table textarea[data-field="content"],
 .meeting-detail-table textarea[data-field="solution"] { min-height: 80px; }
 .meeting-detail-table textarea[data-field="note"] { min-height: 60px; }
-.meeting-detail-table tbody tr:nth-child(odd) td { background: var(--table-row); }
-.meeting-detail-table tbody tr:nth-child(even) td { background: var(--table-row-alt); }
+.meeting-detail-table tbody tr:nth-child(odd),
+.meeting-detail-table tbody tr:nth-child(odd) td { background: var(--surface); }
+.meeting-detail-table tbody tr:nth-child(even),
+.meeting-detail-table tbody tr:nth-child(even) td { background: var(--surface-muted); }
 .meeting-image-preview {
   width: 100%;
   justify-content: flex-start;
