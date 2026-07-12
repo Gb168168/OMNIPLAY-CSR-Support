@@ -1,3 +1,7 @@
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/OMNIPLAY-CSR-Support/sw.js');
+}
+
 const sidebar = document.querySelector('#sidebar');
 const sidebarToggle = document.querySelector('#sidebarToggle');
 const appShell = document.querySelector('.app-shell');
