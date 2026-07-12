@@ -1226,14 +1226,14 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-toolbar h2, .ragic-form-toolbar h2, .ragic-subtable h3 { margin: 0; color: var(--text); }
 .ragic-toolbar p { margin: 4px 0 0; color: var(--text-secondary); }
 .ragic-table-wrap { overflow-x: auto; padding: 0 18px 18px; }
-.ragic-table { width: 100%; min-width: max-content; border-collapse: separate; border-spacing: 0 10px; }
+.ragic-table { table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: 0 10px; }
 .ragic-table thead {
   position: sticky;
   top: 0;
   z-index: 10;
   background: var(--surface);
 }
-.ragic-table th { min-width: 150px; padding: 10px 12px; color: var(--text); background: var(--table-head); text-align: left; vertical-align: bottom; }
+.ragic-table th { padding: 10px 12px; color: var(--text); background: var(--table-head); text-align: left; vertical-align: bottom; }
 .ragic-table thead tr:first-child th {
   position: sticky;
   top: 0;
@@ -1251,6 +1251,39 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-table tbody tr:nth-child(even) td { background: var(--surface-muted); }
 .ragic-table tr { cursor: pointer; }
 .ragic-table tr:hover td { background: var(--table-row-hover); }
+
+/* 交接表格欄寬（套用到所有 ragic-table 列表） */
+.ragic-table .col-marker { width: 70px; }
+.ragic-table .col-date { width: 100px; }
+.ragic-table .col-shift { width: 60px; }
+.ragic-table .col-dept { width: 90px; }
+.ragic-table .col-category { width: 70px; }
+.ragic-table .col-status { width: 80px; }
+.ragic-table .col-content { width: auto; }
+.ragic-table td.col-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ragic-table td.col-content a,
+.ragic-table td.col-content span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ragic-table th input,
+.ragic-table th .sort-btn {
+  max-width: 100%;
+}
+.ragic-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.ragic-form-actions #deleteButton { margin-right: auto; }
+.ragic-form-actions #deleteButton[hidden] { display: none; }
+
 .sort-btn { display: block; margin-bottom: 8px; padding: 0; color: var(--text); background: transparent; }
 .ragic-card input, .ragic-card textarea, .ragic-card select { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid var(--input-border); border-radius: 12px; background: var(--input-bg); color: var(--input-text); }
 .ragic-card textarea { resize: vertical; }
@@ -1981,7 +2014,7 @@ textarea,
 }
 .multi-select-dropdown label:hover { background: var(--surface-muted); }
 .multi-select-dropdown input { width: auto; min-height: auto; }
-.meeting-attendee-dropdown {
+.icon-actions-head, .icon-actions { text-align: center; white-space: nowrap; }
   height: 100%;
   border: 0;
   border-radius: 0;
