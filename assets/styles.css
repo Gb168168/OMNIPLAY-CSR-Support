@@ -1356,7 +1356,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-subtable tbody .subtable-row td:first-child { position: relative; }
 .subtable-row-fields {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--subtable-cols, 5), 1fr);
   gap: 8px;
   align-items: start;
 }
@@ -2642,11 +2642,34 @@ textarea,
   background: var(--surface-muted);
 }
 
+.designer-subfields-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .designer-subfields h4 {
   margin: 0;
   color: var(--text);
   font-size: 14px;
   font-weight: 900;
+}
+
+.designer-columns-per-row {
+  display: grid;
+  grid-template-columns: auto 72px auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.designer-columns-per-row input {
+  min-height: 36px;
+  padding: 8px 10px;
 }
 
 .designer-subfield-list {
