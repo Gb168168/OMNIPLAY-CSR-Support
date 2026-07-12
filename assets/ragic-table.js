@@ -91,11 +91,29 @@ const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
 
 const currentRagicUser = () => sessionStorage.getItem('account') || sessionStorage.getItem('omniplayStaffAccount') || sessionStorage.getItem('omniplayStaffCode') || '';
 const isHandoverPage = () => RAGIC_STATE.config?.collection === 'handover';
+
+const normalizeColumnText = (value = '') => String(value || '').replace(/\s+/g, '').toLowerCase();
+const ragicColumnClass = (field = {}) => {
+  const text = normalizeColumnText(`${field.key || ''}${field.label || ''}`);
+  if (/(date|日期|時間)/.test(text)) return 'col-date';
+  if (/(shift|班別)/.test(text)) return 'col-shift';
+  if (/(dept|department|部門)/.test(text)) return 'col-dept';
+  if (/(category|分類)/.test(text)) return 'col-category';
+  if (/(status|狀態)/.test(text)) return 'col-status';
+  if (/(content|handover|事項|交接事項|內容|description|說明)/.test(text)) return 'col-content';
+  return 'col-content';
+};
+const cellTooltipText = (record, field) => {
+  const value = record?.[field.key];
+  if (field?.type === 'date') return displayDate(value);
+  if (field?.type === 'datetime') return displayDateTime(value);
+  return String(valueToText(value));
+};
 const renderIconActions = (record = {}) => {
   const currentUser = currentRagicUser();
   const pinned = Boolean(currentUser && record.pins?.[currentUser]);
   const starred = Boolean(record.starred);
-  return `<td class="icon-actions">
+  return `<td class="icon-actions col-marker">
     <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="重要/今日交接">🔥</span>
     <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">📌</span>
     ${isHandoverPage() ? `<span class="star-btn ${starred ? 'active' : ''}" data-icon-action="star" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="交接星號">★</span>` : ''}
@@ -421,7 +439,11 @@ const renderTable = () => {
     const tr = document.createElement('tr');
     tr.tabIndex = canUse('edit') ? 0 : -1;
     tr.classList.toggle('is-readonly', !canUse('edit'));
-    tr.innerHTML = renderIconActions(record) + fields.map((field) => `<td>${renderCell(record, field)}</td>`).join('');
+    tr.innerHTML = renderIconActions(record) + fields.map((field) => {
+      const columnClass = ragicColumnClass(field);
+      const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
+      return `<td class="${columnClass}"${title}>${renderCell(record, field)}</td>`;
+    }).join('');
     if (canUse('edit')) tr.addEventListener('click', () => renderForm(record));
     tbody.appendChild(tr);
   });
@@ -437,15 +459,15 @@ const renderHeader = () => {
     filterRow.id = 'ragicFilterRow';
     thead.appendChild(filterRow);
   }
-  headerRow.innerHTML = `<th class="icon-actions-head">標記</th>` + listFields().map((field) => {
+  headerRow.innerHTML = `<th class="icon-actions-head col-marker">標記</th>` + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
-    return `<th><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button></th>`;
+    return `<th class="${ragicColumnClass(field)}"><button class="sort-btn" type="button" data-sort="${key}">${label} ⇅</button></th>`;
   }).join('');
-  if (filterRow) filterRow.innerHTML = '<th></th>' + listFields().map((field) => {
+  if (filterRow) filterRow.innerHTML = '<th class="col-marker"></th>' + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
-    return `<th><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
+    return `<th class="${ragicColumnClass(field)}"><input data-filter="${key}" placeholder="篩選${label}" /></th>`;
   }).join('');
 };
 
@@ -602,11 +624,40 @@ const applySystemFieldValues = async (data, existingData = {}, collection = null
   }
   return data;
 };
+
+const setupRagicFormActions = () => {
+  const deleteButton = document.querySelector('#deleteButton');
+  const cancelButton = document.querySelector('#backToListButton');
+  const saveButton = document.querySelector('button[form="ragicForm"][type="submit"]');
+  const actions = deleteButton?.parentElement || saveButton?.parentElement;
+  if (!actions) return;
+  actions.classList.add('ragic-form-actions');
+  if (deleteButton) {
+    deleteButton.className = 'btn-danger';
+    deleteButton.type = 'button';
+    actions.appendChild(deleteButton);
+  }
+  if (cancelButton) {
+    cancelButton.className = 'btn-secondary';
+    cancelButton.type = 'button';
+    cancelButton.textContent = '取消';
+    actions.appendChild(cancelButton);
+  }
+  if (saveButton) {
+    saveButton.className = 'btn-primary';
+    actions.appendChild(saveButton);
+  }
+};
 const initRagicPage = async (config) => {
   await waitForPermissions();
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
   window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
-  window.togglePin = async (docId) => { const currentUser = currentRagicUser(); if (!currentUser) return alert('請先登入再使用個人釘選'); const doc = await collection.doc(docId).get(); const pins = doc.data()?.pins || {}; pins[currentUser] = !pins[currentUser]; await collection.doc(docId).update({ pins }); };
+  window.togglePin = async (docId) => {
+    const currentUser = currentRagicUser();
+    if (!currentUser) return alert('請先登入再使用個人釘選');
+    const doc = await collection.doc(docId).get();
+    await collection.doc(docId).update({ [`pins.${currentUser}`]: !doc.data()?.pins?.[currentUser] });
+  };
   window.toggleStar = async (docId) => { if (!isHandoverPage()) return; const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ starred: !doc.data()?.starred }); };
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
@@ -642,8 +693,9 @@ const initRagicPage = async (config) => {
     renderHeader();
     applyFilters();
   });
+  setupRagicFormActions();
   applyRagicPermissionUi(); document.querySelector('#newRecordButton').addEventListener('click', () => { if (canUse('edit')) renderForm(); }); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; });
-  document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
+  document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？\n資料將不再存在🚫')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
   document.querySelector('#ragicForm').addEventListener('submit', async (event) => {
   event.preventDefault();
     const fields = getFields();
