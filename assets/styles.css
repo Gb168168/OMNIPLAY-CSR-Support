@@ -1864,10 +1864,11 @@ a { color: var(--primary); background: transparent; }
 .day-number,
 .schedule-history h3,
 .history-item strong,
+.calendar-day.is-today .day-number { background: var(--success); color: var(--text); }
 .ragic-toolbar h2,
 .ragic-form-toolbar h2,
 .ragic-subtable h3,
-.calendar-day.is-today .day-number { background: var(--success); color: var(--text); }
+.ragic-subtable-title { background: none; color: var(--text); }
 .quota-count.is-warning,
 tr.is-over-quota .name-col { color: var(--danger); }
 .summary-row td,
