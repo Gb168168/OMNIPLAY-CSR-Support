@@ -1354,6 +1354,28 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-subtable th, .ragic-subtable td { padding: 10px; border-bottom: 1px solid var(--border); }
 .ragic-subtable th { color: var(--text); background: var(--table-head); }
 .ragic-subtable tbody .subtable-row td:first-child { position: relative; }
+.subtable-row-fields {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.subtable-row-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.subtable-row-field span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.subtable-row-field input,
+.subtable-row-field select,
+.subtable-row-field textarea,
+.subtable-row-field .ragic-multi-select {
+  width: 100%;
+}
 .subtable-row-delete {
   position: absolute;
   left: 6px;
@@ -1559,7 +1581,12 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   color: var(--text-secondary);
   font-weight: 700;
 }
-@media (max-width: 900px) { .designer-field { grid-template-columns: 1fr; } .designer-subfields { margin-left: 0; } }
+@media (max-width: 900px) {
+  .designer-field { grid-template-columns: 1fr; }
+  .designer-subfields { margin-left: 0; }
+  .subtable-row-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) { .subtable-row-fields { grid-template-columns: 1fr; } }
 
 .panel-actions {
   display: flex;
