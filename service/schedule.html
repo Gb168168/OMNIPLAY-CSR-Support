@@ -81,10 +81,15 @@
             </div>
             <button class="secondary-button" id="nextSchedulePeriod" type="button">下個月 &gt;</button>
           </div>
-          <div class="view-switch" aria-label="檢視切換">
-            <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
-            <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
-            <button class="ghost-button" id="yearViewButton" type="button" data-view="year">年</button>
+          <div class="schedule-heading-actions">
+            <div class="view-switch" aria-label="檢視切換">
+              <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
+              <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
+              <button class="ghost-button" id="yearViewButton" type="button" data-view="year">年</button>
+            </div>
+            <select class="schedule-filter-select" id="scheduleLabelFilter" aria-label="依標籤篩選排程">
+              <option value="">全部標籤</option>
+            </select>
           </div>
         </div>
         <div class="schedule-meta">
