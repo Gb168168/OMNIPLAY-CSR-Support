@@ -955,27 +955,52 @@ const updateDesignerPreview = () => {
   const rows = [0, 1, 2].map((rowIndex) => `<tr>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
   preview.innerHTML = `<table class="ragic-table">${colgroup ? `<colgroup>${colgroup}</colgroup>` : ''}<thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
 };
+const SUBFIELD_TYPES = [
+  { value: 'text', label: '文字' },
+  { value: 'textarea', label: '多行文字' },
+  { value: 'date', label: '日期' },
+  { value: 'image', label: '圖片' },
+  { value: 'file', label: '檔案' }
+];
+
 const fieldDesigner = (field = {}, nested = false) => {
   const row = document.createElement('div');
-  row.className = 'designer-field field-row';
+  row.className = `designer-field field-row${nested ? ' designer-subfield-row' : ''}`;
+  row.dataset.key = shouldRegenerateFieldKey(field.key) ? generateFieldKey() : field.key;
+
+  if (nested) {
+    const subfieldType = SUBFIELD_TYPES.some((type) => type.value === field.type) ? field.type : 'text';
+    const typeOptions = SUBFIELD_TYPES.map((type) => `<option value="${type.value}" ${subfieldType === type.value ? 'selected' : ''}>${type.label}</option>`).join('');
+    row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="子欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}</select><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div>`;
+    row.addEventListener('click', (event) => {
+      if (event.target.matches('[data-remove]')) {
+        event.stopPropagation();
+        row.remove();
+        updateDesignerPreview();
+      }
+    });
+    enableDesignerDrag(row);
+    return row;
+  }
+  
   const typeOptions = FIELD_TYPE_GROUPS.map((group) => {
-    const options = group.types.filter((type) => !nested || type.value !== 'subtable').map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('');
+    const options = group.types.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('');
     return options ? `<optgroup label="${escapeHtml(group.label)}">${options}</optgroup>` : '';
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
-  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"></div>`;
-  row.dataset.key = shouldRegenerateFieldKey(field.key) ? generateFieldKey() : field.key;
+  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><h4>子欄位設定</h4><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
   const sub = row.querySelector('.designer-subfields');
+  const subList = row.querySelector('.designer-subfield-list');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
-  (field.fields || []).forEach((child) => sub.appendChild(fieldDesigner(child, true)));
-  sub.insertAdjacentHTML('afterbegin', '<button class="secondary" data-add-subfield type="button">+ 子欄位</button>');
+  (field.fields || []).forEach((child) => subList.appendChild(fieldDesigner(child, true)));
   row.addEventListener('click', (event) => {
-    if (event.target.matches('[data-remove]')) {
+    if (event.target.matches('[data-remove]') && event.target.closest('.designer-field') === row) {
       row.remove();
       updateDesignerPreview();
     }
     if (event.target.matches('[data-add-subfield]')) {
-      sub.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true));
+      event.stopPropagation();
+      subList.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true));
       updateDesignerPreview();
     }
   });
@@ -987,7 +1012,20 @@ const fieldDesigner = (field = {}, nested = false) => {
   sync();
   return row;
 };
- const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => { const label = row.querySelector('[data-role="label"]').value.trim() || '未命名欄位'; const type = row.querySelector('[data-role="type"]').value; const field = { key: shouldRegenerateFieldKey(row.dataset.key) ? generateFieldKey() : row.dataset.key, label, type, required: row.querySelector('[data-role="required"]').checked, width: normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value), options: row.querySelector('[data-role="options"]').value.split('\n').map((v) => v.trim()).filter(Boolean) }; if (type === 'subtable') field.fields = readDesigner(row.querySelector('.designer-subfields')); return field; });
+const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => {
+  const label = row.querySelector('[data-role="label"]').value.trim() || '未命名欄位';
+  const type = row.querySelector('[data-role="type"]').value;
+  const field = {
+    key: shouldRegenerateFieldKey(row.dataset.key) ? generateFieldKey() : row.dataset.key,
+    label,
+    type,
+    required: Boolean(row.querySelector('[data-role="required"]')?.checked),
+    width: normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value),
+    options: (row.querySelector('[data-role="options"]')?.value || '').split('\n').map((v) => v.trim()).filter(Boolean)
+  };
+  if (type === 'subtable') field.fields = readDesigner(row.querySelector('.designer-subfield-list'));
+  return field;
+});
 
 const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; updateDesignerPreview(); };
 const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
