@@ -1253,6 +1253,34 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-table tbody tr:nth-child(even) td { background: var(--surface-muted); }
 .ragic-table tr { cursor: pointer; }
 .ragic-table tr:hover td { background: var(--table-row-hover); }
+.ragic-table td.editing {
+  padding: 0;
+  background: var(--primary-soft);
+}
+.ragic-table td.editing input,
+.ragic-table td.editing textarea,
+.ragic-table td.editing select {
+  width: 100%;
+  padding: 8px;
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: inherit;
+}
+.ragic-table td.editing textarea {
+  min-height: 42px;
+  resize: vertical;
+}
+.ragic-table td.editing .ragic-multi-select {
+  width: 100%;
+}
+.ragic-table td.editing .multi-select-display {
+  width: 100%;
+  padding: 8px;
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  background: var(--surface);
+}
 
 /* 交接表格欄寬（套用到所有 ragic-table 列表） */
 .ragic-table .col-marker { width: 50px; }
