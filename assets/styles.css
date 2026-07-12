@@ -1353,6 +1353,27 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-subtable table { width: 100%; border-collapse: collapse; }
 .ragic-subtable th, .ragic-subtable td { padding: 10px; border-bottom: 1px solid var(--border); }
 .ragic-subtable th { color: var(--text); background: var(--table-head); }
+.ragic-subtable tbody .subtable-row td:first-child { position: relative; }
+.subtable-row-delete {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  padding: 0;
+  border-radius: 999px;
+  line-height: 18px;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.9);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.subtable-row:hover .subtable-row-delete,
+.subtable-row:focus-within .subtable-row-delete {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
 .ragic-subtable tbody tr:nth-child(odd) td { background: var(--table-row); }
 .ragic-subtable tbody tr:nth-child(even) td { background: var(--table-row-alt); }
 .ragic-pagination {
