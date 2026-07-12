@@ -1253,7 +1253,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-table tr:hover td { background: var(--table-row-hover); }
 
 /* 交接表格欄寬（套用到所有 ragic-table 列表） */
-.ragic-table .col-marker { width: 70px; }
+.ragic-table .col-marker { width: 50px; }
 .ragic-table .col-date { width: 100px; }
 .ragic-table .col-shift { width: 60px; }
 .ragic-table .col-dept { width: 90px; }
@@ -2216,10 +2216,10 @@ textarea,
   .dashboard-schedule-list li a { grid-template-columns: 1fr; }
 }
 .dashboard-empty { grid-template-columns: 1fr; color: var(--muted); }
-.icon-actions-head, .icon-actions { min-width: 96px !important; text-align: center; white-space: nowrap; }
-.fire-btn, .pin-btn, .star-btn { cursor: pointer; font-size: 16px; opacity: 0.3; transition: opacity 0.2s; display: inline-block; padding: 2px 4px; }
-.fire-btn.active, .pin-btn.active, .star-btn.active { opacity: 1; }
-.fire-btn:hover, .pin-btn:hover, .star-btn:hover { opacity: 0.7; }
+.icon-actions-head, .icon-actions { min-width: 50px !important; text-align: center; white-space: nowrap; }
+.fire-btn, .pin-btn { cursor: pointer; font-size: 16px; opacity: 0.3; transition: opacity 0.2s; display: inline-block; padding: 2px 4px; }
+.fire-btn.active, .pin-btn.active { opacity: 1; }
+.fire-btn:hover, .pin-btn:hover { opacity: 0.7; }
 
 @media (max-width: 980px) {
   .dashboard-stats { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
