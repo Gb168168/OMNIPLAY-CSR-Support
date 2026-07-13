@@ -1338,6 +1338,12 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   white-space: nowrap;
 }
 .ragic-table td { padding: 14px 12px; border-top: 1px solid rgba(226,232,240,.16); border-bottom: 1px solid rgba(226,232,240,.16); color: var(--table-text); }
+
+/* 確保設計表格儲存的 inline 欄寬不被預設欄寬覆蓋 */
+.ragic-table th[style],
+.ragic-table td[style] {
+  min-width: unset;
+}
 .ragic-table td[data-type="textarea"],
 .ragic-table td.col-textarea {
   white-space: normal;
