@@ -1,4 +1,4 @@
-const RAGIC_STATE = { records: [], filtered: [], currentId: null, sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null };
+const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null };
 
 const FIELD_TYPE_GROUPS = [
   { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
@@ -664,6 +664,72 @@ const attachImageUploadArea = (imageArea) => {
   imageArea.addEventListener('paste', (event) => handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。')));
 };
 
+
+const currentFilteredIndex = () => RAGIC_STATE.filtered.findIndex((item) => item.id === RAGIC_STATE.currentId);
+const currentRecord = () => RAGIC_STATE.records.find((item) => item.id === RAGIC_STATE.currentId) || RAGIC_STATE.filtered.find((item) => item.id === RAGIC_STATE.currentId) || null;
+const renderDisplayValue = (field, value) => {
+  if (field?.type === 'image') {
+    const images = normalizeImageArray(value);
+    if (!images.length) return '<span class="ragic-view-empty">—</span>';
+    return `<div class="ragic-view-images">${images.map((src, index) => `<img class="ragic-view-image" src="${escapeHtml(src)}" alt="${escapeHtml(field.label || '圖片')} ${index + 1}" title="點擊放大檢視">`).join('')}</div>`;
+  }
+  if (field?.type === 'file') return renderFileCell(value, field.label || '檔案') || '<span class="ragic-view-empty">—</span>';
+  if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '<span class="ragic-view-empty">—</span>';
+  if (field?.type === 'date') return escapeHtml(displayDate(value)) || '<span class="ragic-view-empty">—</span>';
+  if (field?.type === 'datetime') return escapeHtml(displayDateTime(value)) || '<span class="ragic-view-empty">—</span>';
+  const text = String(valueToText(value));
+  return text ? escapeHtml(text).replace(/\n/g, '<br>') : '<span class="ragic-view-empty">—</span>';
+};
+const renderSubtableView = (field, rows = []) => {
+  const subfields = field.fields || [];
+  const bodyRows = (Array.isArray(rows) ? rows : []).filter((item) => item && Object.values(item).some((value) => Array.isArray(value) ? value.length : value));
+  if (!subfields.length) return '<div class="ragic-view-empty">尚未設定子欄位</div>';
+  if (!bodyRows.length) return '<div class="ragic-view-empty">無資料</div>';
+  return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable"><thead><tr>${subfields.map((sub) => `<th>${escapeHtml(sub.label || sub.key)}</th>`).join('')}</tr></thead><tbody>${bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td>${renderDisplayValue(sub, item[sub.key])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+};
+const renderViewForm = (form, record = {}) => {
+  const grid = document.createElement('div');
+  grid.className = 'ragic-form-grid ragic-view-grid';
+  getFields().filter((field) => field.type !== 'subtable').forEach((field) => {
+    const item = document.createElement('div');
+    item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}`;
+    item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${renderDisplayValue(field, record[field.key])}</div>`;
+    grid.appendChild(item);
+  });
+  form.appendChild(grid);
+  getFields().filter((field) => field.type === 'subtable').forEach((field) => {
+    const section = document.createElement('section');
+    section.className = 'ragic-subtable ragic-view-subtable-section';
+    section.dataset.subtable = field.key;
+    section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
+    form.appendChild(section);
+  });
+};
+const renderFormToolbar = () => {
+  const formView = document.querySelector('#ragicFormView');
+  const legacyToolbar = formView?.querySelector('.ragic-form-toolbar');
+  if (!legacyToolbar) return;
+  legacyToolbar.classList.add('form-toolbar');
+  const existingTitle = legacyToolbar.querySelector('h2');
+  const titleText = existingTitle?.textContent || '';
+  legacyToolbar.innerHTML = `<div class="form-pager"><button class="pager-btn" id="ragicPrevRecord" type="button">&lt; 上一筆</button><button class="pager-btn" id="ragicNextRecord" type="button">下一筆 &gt;</button></div><h2 class="ragic-form-title">${escapeHtml(titleText)}</h2><div class="form-mode-actions"></div>`;
+  const actions = legacyToolbar.querySelector('.form-mode-actions');
+  if (!RAGIC_STATE.currentId || RAGIC_STATE.formMode === 'edit') {
+    actions.innerHTML = `${RAGIC_STATE.currentId ? '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>' : ''}<button class="edit-btn" form="ragicForm" type="submit">💾儲存</button>`;
+  } else {
+    actions.innerHTML = canUse('edit') ? '<button class="edit-btn" id="ragicEditRecord" type="button">✏️編輯</button>' : '';
+  }
+  const index = currentFilteredIndex();
+  const prev = legacyToolbar.querySelector('#ragicPrevRecord');
+  const next = legacyToolbar.querySelector('#ragicNextRecord');
+  if (prev) prev.disabled = index <= 0 || !RAGIC_STATE.currentId;
+  if (next) next.disabled = index < 0 || index >= RAGIC_STATE.filtered.length - 1 || !RAGIC_STATE.currentId;
+};
+const openRecordAtIndex = (index) => {
+  const record = RAGIC_STATE.filtered[index];
+  if (record) renderForm(record, { mode: 'view' });
+};
+
 const renderSubtableRow = (field, item = {}) => {
   const row = document.createElement('tr');
   row.className = 'subtable-row';
@@ -698,14 +764,28 @@ const renderSubtableRow = (field, item = {}) => {
   return row;
 };
 
-const renderForm = (record = {}) => {
-  RAGIC_STATE.currentId = record.id || null; document.querySelector('#ragicListView').hidden = true; const formView = document.querySelector('#ragicFormView'); formView.hidden = false;
-  const formTitle = formView.querySelector('h2'); formTitle.classList.add('ragic-form-title'); formTitle.textContent = record.id ? `編輯${RAGIC_STATE.config.title}` : `新增${RAGIC_STATE.config.title}`; const form = formView.querySelector('form'); form.innerHTML = '';
-  const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
-  getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key]))); form.appendChild(grid);
-  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) { const row = renderSubtableRow(field); body.appendChild(row); row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea); } }); form.appendChild(section); });
-  form.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
-  setFormEditable(form);
+const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) => {
+  RAGIC_STATE.currentId = record.id || null;
+  RAGIC_STATE.formMode = mode;
+  document.querySelector('#ragicListView').hidden = true;
+  const formView = document.querySelector('#ragicFormView');
+  formView.hidden = false;
+  const legacyTitle = formView.querySelector('h2');
+  if (legacyTitle) legacyTitle.textContent = record.id ? (mode === 'edit' ? `編輯${RAGIC_STATE.config.title}` : `檢視${RAGIC_STATE.config.title}`) : `新增${RAGIC_STATE.config.title}`;
+  renderFormToolbar();
+  const bottomActions = formView.querySelector('.ragic-actions');
+  if (bottomActions) bottomActions.hidden = true;
+  const form = formView.querySelector('form');
+  form.innerHTML = '';
+  if (mode === 'view' && record.id) {
+    renderViewForm(form, record);
+  } else {
+    const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
+    getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key]))); form.appendChild(grid);
+    getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) { const row = renderSubtableRow(field); body.appendChild(row); row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea); } }); form.appendChild(section); });
+    form.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
+    setFormEditable(form);
+  }
   applyRagicPermissionUi();
 };
 
@@ -1342,7 +1422,19 @@ const initRagicPage = async (config) => {
     await saveDesignerSchema({ close: true });
   });
   setupRagicFormActions();
-  applyRagicPermissionUi(); document.querySelector('#newRecordButton').addEventListener('click', () => { if (canUse('edit')) renderForm(); }); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; });
+  applyRagicPermissionUi(); document.querySelector('#newRecordButton').addEventListener('click', () => { if (canUse('edit')) renderForm({}, { mode: 'edit' }); }); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; RAGIC_STATE.formMode = 'view'; });
+  document.querySelector('#ragicFormView')?.addEventListener('click', (event) => {
+    const editButton = event.target.closest('#ragicEditRecord');
+    const cancelEdit = event.target.closest('#ragicCancelEdit');
+    const prevRecord = event.target.closest('#ragicPrevRecord');
+    const nextRecord = event.target.closest('#ragicNextRecord');
+    if (editButton) { event.preventDefault(); const record = currentRecord(); if (record && canUse('edit')) renderForm(record, { mode: 'edit' }); }
+    if (cancelEdit) { event.preventDefault(); const record = currentRecord(); if (record) renderForm(record, { mode: 'view' }); }
+    if (prevRecord) { event.preventDefault(); openRecordAtIndex(currentFilteredIndex() - 1); }
+    if (nextRecord) { event.preventDefault(); openRecordAtIndex(currentFilteredIndex() + 1); }
+    const viewImage = event.target.closest('.ragic-view-image');
+    if (viewImage) { event.preventDefault(); openImagePreview(viewImage.src, viewImage.alt || '圖片'); }
+  });
   document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？\n資料將不再存在🚫')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
   document.querySelector('#ragicForm').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -1362,7 +1454,11 @@ const initRagicPage = async (config) => {
       if (RAGIC_STATE.currentId) {
         if (!existingRecord?.createdAt) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         await collection.doc(RAGIC_STATE.currentId).set(data, { merge: true });
-      } else await collection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      renderForm({ ...existingRecord, ...data, id: RAGIC_STATE.currentId }, { mode: 'view' });
+      } else {
+        await collection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        document.querySelector('#backToListButton').click();
+      }
       document.querySelector('#backToListButton').click();
     } catch (error) {
       console.error(error);
