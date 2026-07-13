@@ -58,6 +58,26 @@ const normalizeFields = (fields = [], fallbackPrefix = 'field') => {
   const usedKeys = new Set();
   return fields.map((field, index) => normalizeField(field, `${fallbackPrefix}_${index + 1}`, usedKeys));
 };
+
+const normalizeFormLayoutNumber = (value, { min = 1, max = Infinity, fallback = null } = {}) => {
+  const text = String(value ?? '').trim();
+  if (!text) return fallback;
+  const parsed = Number.parseInt(text, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+};
+const applyFormLayout = (element, field = {}) => {
+  if (!element) return element;
+  const row = normalizeFormLayoutNumber(field.formRow);
+  const col = normalizeFormLayoutNumber(field.formCol, { max: 4 });
+  const span = normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 });
+  element.classList.add('form-field');
+  if (row || col) element.classList.add('has-form-layout');
+  element.style.setProperty('--form-row', row || 'auto');
+  element.style.setProperty('--form-col', col || 'auto');
+  element.style.setProperty('--form-colspan', span || 1);
+  return element;
+};
 const normalizeSubtableColumnsPerRow = (value) => {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) return 5;
@@ -415,6 +435,7 @@ const startInlineEdit = (td) => {
 
 const createField = (field, value = '') => {
   const wrap = document.createElement('label'); wrap.className = `ragic-field ragic-field-${field.type || 'text'}`; wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
+  applyFormLayout(wrap, field);
   const control = createControl(field, value);
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
   return wrap;
@@ -749,6 +770,7 @@ const renderViewForm = (form, record = {}) => {
   getFields().filter((field) => field.type !== 'subtable').forEach((field) => {
     const item = document.createElement('div');
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}`;
+    applyFormLayout(item, field);
     item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${renderDisplayValue(field, record[field.key])}</div>`;
     grid.appendChild(item);
   });
@@ -1288,7 +1310,7 @@ const fieldDesigner = (field = {}, nested = false) => {
     return options ? `<optgroup label="${escapeHtml(group.label)}">${options}</optgroup>` : '';
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
-  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
+  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-form-layout" aria-label="表單排版"><label><span>列</span><input data-role="form-row" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formRow) ?? '')}"></label><label><span>欄</span><input data-role="form-col" type="number" min="1" max="4" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formCol, { max: 4 }) ?? '')}"></label><label><span>跨欄</span><input data-role="form-colspan" type="number" min="1" max="4" step="1" inputmode="numeric" value="${escapeHtml(normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 }))}"></label></div><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
   const sub = row.querySelector('.designer-subfields');
   const subList = row.querySelector('.designer-subfield-list');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
@@ -1323,6 +1345,12 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
     width: normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value),
     options: (row.querySelector('[data-role="options"]')?.value || '').split('\n').map((v) => v.trim()).filter(Boolean)
   };
+  const formRow = normalizeFormLayoutNumber(row.querySelector('[data-role="form-row"]')?.value);
+  const formCol = normalizeFormLayoutNumber(row.querySelector('[data-role="form-col"]')?.value, { max: 4 });
+  const formColSpan = normalizeFormLayoutNumber(row.querySelector('[data-role="form-colspan"]')?.value, { max: 4, fallback: 1 });
+  if (formRow) field.formRow = formRow;
+  if (formCol) field.formCol = formCol;
+  if (formColSpan !== 1 || formRow || formCol) field.formColSpan = formColSpan;
   if (type === 'subtable') {
     field.columnsPerRow = normalizeSubtableColumnsPerRow(row.querySelector('[data-role="columns-per-row"]')?.value);
     field.fields = readDesigner(row.querySelector('.designer-subfield-list'));
