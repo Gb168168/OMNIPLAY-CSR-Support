@@ -59,18 +59,18 @@
   <script>
     initRagicPage({
       title: '日誌',
-      collection: 'log',
+      collection: 'workLogs',
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true },
         { key: 'shift', label: '班別', type: 'select', options: ['早班', '中班', '晚班', '大夜'] },
         { key: 'staff', label: '人員', type: 'text' },
-        { key: 'category', label: '分類', type: 'text' }
+        { key: 'category', label: '分類', type: 'text' },
+        { key: 'items', label: '日誌明細', type: 'subtable', fields: [
+          { key: 'time', label: '時間', type: 'time' },
+          { key: 'content', label: '事項內容', type: 'textarea' },
+          { key: 'note', label: '備註', type: 'textarea' }
+        ]}
       ],
-      subtable: { key: 'items', label: '日誌明細', fields: [
-        { key: 'time', label: '時間', type: 'time' },
-        { key: 'content', label: '事項內容', type: 'textarea', rows: 5 },
-        { key: 'note', label: '備註', type: 'textarea', rows: 5 }
-      ] },
       listColumns: ['date', 'shift', 'staff', 'category']
     });
   </script>
