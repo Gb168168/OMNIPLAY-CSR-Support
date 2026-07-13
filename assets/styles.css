@@ -1427,10 +1427,17 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ghost { background: transparent; border: 1px solid rgba(148,163,184,.35); }
 .danger { color: #fecaca; border-color: rgba(248,113,113,.45); }
 .ragic-form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 16px; padding: 18px; }
-.ragic-form-grid .form-field { grid-row: var(--form-row, auto); grid-column: var(--form-col, auto) / span var(--form-colspan, 1); }
+.ragic-form-grid .form-field { grid-row: var(--form-row, auto) / span var(--form-rowspan, 1); grid-column: var(--form-col, auto) / span var(--form-colspan, 1); }
+.ragic-form-grid .form-field[style*="--form-rowspan"] { height: 100%; }
 .ragic-field span { display: block; margin-bottom: 8px; color: var(--text-secondary); font-weight: 800; }
 .ragic-field-textarea:not(.has-form-layout) { grid-column: 1 / -1; }
 .ragic-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 18px; border-top: 1px solid var(--border); }
+.has-form-layout.ragic-field-image .image-upload-area,
+.has-form-layout.ragic-field-file .image-upload-area,
+.ragic-view-field-image.has-form-layout,
+.ragic-view-field-file.has-form-layout { height: 100%; }
+.has-form-layout.ragic-field-image .image-upload-area,
+.has-form-layout.ragic-field-file .image-upload-area { display: flex; flex-direction: column; justify-content: center; }
 .ragic-file-preview { display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; color: var(--primary); background: var(--surface); cursor: zoom-in; }
 .ragic-file-preview img { width: 96px; height: 72px; object-fit: cover; border-radius: 10px; }
 .ragic-thumbnail { width: 56px; height: 42px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(148,163,184,.28); vertical-align: middle; }
@@ -2928,9 +2935,9 @@ textarea,
   background: var(--surface-muted);
   min-width: 0;
 }
-.ragic-view-field-textarea,
-.ragic-view-field-image,
-.ragic-view-field-file { grid-column: 1 / -1; }
+.ragic-view-field-textarea:not(.has-form-layout),
+.ragic-view-field-image:not(.has-form-layout),
+.ragic-view-field-file:not(.has-form-layout) { grid-column: 1 / -1; }
 .ragic-view-label { margin-bottom: 8px; color: var(--text-secondary); font-weight: 800; }
 .ragic-view-value { color: var(--text); line-height: 1.7; word-break: break-word; white-space: normal; }
 .ragic-view-empty { color: var(--text-secondary); opacity: .75; }
