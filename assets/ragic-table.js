@@ -124,6 +124,11 @@ const applyFormLayout = (element, field = {}) => {
   element.style.setProperty('--form-col', col || 'auto');
   element.style.setProperty('--form-colspan', colSpan || 1);
   element.style.setProperty('--form-rowspan', rowSpan || 1);
+  if (field.formWidth) element.style.width = `${normalizeFormFieldSize(field.formWidth, MIN_FORM_FIELD_WIDTH)}px`;
+  if (field.formHeight) {
+    element.style.height = `${normalizeFormFieldSize(field.formHeight, MIN_FORM_FIELD_HEIGHT)}px`;
+    element.style.minHeight = `${normalizeFormFieldSize(field.formHeight, MIN_FORM_FIELD_HEIGHT)}px`;
+  }
   return element;
 };
 const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
@@ -178,6 +183,8 @@ const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) =>
     label,
     type,
     width: normalizeFieldWidth(field.width),
+    formWidth: normalizeFormFieldSize(field.formWidth, MIN_FORM_FIELD_WIDTH),
+    formHeight: normalizeFormFieldSize(field.formHeight, MIN_FORM_FIELD_HEIGHT),
     options: optionList(field),
     fields: normalizeFields(field.fields || [], 'subfield')
   };
@@ -222,6 +229,9 @@ const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', repor
 const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
 const inlineReadonlyFieldTypes = new Set([...readonlyFieldTypes, 'image', 'file', 'subtable']);
 const DEFAULT_FIELD_WIDTHS = { text: 180, textarea: 300, date: 100, datetime: 150, select: 100, multiselect: 120, image: 80, file: 160, serial: 90, createdDate: 150, updatedDate: 150, link: 180 };
+const MIN_FORM_FIELD_WIDTH = 56;
+const MIN_FORM_FIELD_HEIGHT = 38;
+const normalizeFormFieldSize = (value, min = 1) => { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? Math.max(min, Math.round(parsed)) : null; };
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
 const fieldColumnWidth = (field = {}) => normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
 const columnWidthStyle = (width) => width ? ` style="--col-width: ${width}px; min-width: ${width}px !important; width: ${width}px;"` : '';
@@ -250,6 +260,63 @@ const saveSchema = async () => {
   await RAGIC_STATE.schemaDoc.set(RAGIC_STATE.schema, { merge: true });
   return true;
 };
+
+const adjustFontSize = (fieldEl) => {
+  if (!fieldEl) return;
+  const width = fieldEl.offsetWidth;
+  let size = '14px';
+  if (width < 80) size = '11px';
+  else if (width < 120) size = '12px';
+  else if (width < 180) size = '13px';
+  fieldEl.style.fontSize = size;
+  fieldEl.querySelectorAll('.ragic-view-label, .ragic-view-value, .field-value, span, td, th').forEach((item) => { item.style.fontSize = size; });
+};
+const appendFormResizeHandles = (element, field, { target = field } = {}) => {
+  if (!element || !target || element.dataset.formResizeBound === 'true') return element;
+  element.dataset.formResizeBound = 'true';
+  element.classList.add('form-field-resizable');
+  const right = document.createElement('span');
+  right.className = 'resize-handle-right';
+  const bottom = document.createElement('span');
+  bottom.className = 'resize-handle-bottom';
+  element.append(right, bottom);
+  const startResize = (event, type) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.pageX;
+    const startY = event.pageY;
+    const startWidth = element.offsetWidth;
+    const startHeight = element.offsetHeight;
+    const handle = type === 'width' ? right : bottom;
+    handle.classList.add('resizing');
+    const move = (moveEvent) => {
+      if (type === 'width') {
+        const width = Math.max(MIN_FORM_FIELD_WIDTH, Math.round(startWidth + moveEvent.pageX - startX));
+        element.style.width = `${width}px`;
+      } else {
+        const height = Math.max(MIN_FORM_FIELD_HEIGHT, Math.round(startHeight + moveEvent.pageY - startY));
+        element.style.height = `${height}px`;
+        element.style.minHeight = `${height}px`;
+      }
+      adjustFontSize(element);
+    };
+    const up = async () => {
+      handle.classList.remove('resizing');
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      if (type === 'width') target.formWidth = Math.max(MIN_FORM_FIELD_WIDTH, Math.round(element.offsetWidth));
+      else target.formHeight = Math.max(MIN_FORM_FIELD_HEIGHT, Math.round(element.offsetHeight));
+      await saveSchema();
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  };
+  right.addEventListener('mousedown', (event) => startResize(event, 'width'));
+  bottom.addEventListener('mousedown', (event) => startResize(event, 'height'));
+  adjustFontSize(element);
+  return element;
+};
+
 const attachColumnResizers = (headerRow) => {
   const table = headerRow?.closest('table');
   if (!table) return;
@@ -850,6 +917,7 @@ const createTitleOnlyField = (field = {}, record = {}) => {
   item.className = 'ragic-view-field ragic-view-field-title-only';
   applyFormLayout(item, field);
   item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${titleOnlyDisplayValue(field, record)}</div>`;
+  appendFormResizeHandles(item, field);
   return item;
 };
 
@@ -873,7 +941,7 @@ const renderSubtableView = (field, rows = []) => {
   const bodyRows = (Array.isArray(rows) ? rows : []).filter((item) => item && Object.values(item).some((value) => Array.isArray(value) ? value.length : value));
   if (!subfields.length) return '<div class="ragic-view-empty">尚未設定子欄位</div>';
   if (!bodyRows.length) return '<div class="ragic-view-empty">無資料</div>';
-  return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable"><thead><tr>${subfields.map((sub) => `<th>${escapeHtml(sub.label || sub.key)}</th>`).join('')}</tr></thead><tbody>${bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td>${renderDisplayValue(sub, item[sub.key])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable"><thead><tr>${subfields.map((sub) => `<th class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${sub.formWidth ? `width:${normalizeFormFieldSize(sub.formWidth, MIN_FORM_FIELD_WIDTH)}px;min-width:${normalizeFormFieldSize(sub.formWidth, MIN_FORM_FIELD_WIDTH)}px;` : ''}${sub.formHeight ? `height:${normalizeFormFieldSize(sub.formHeight, MIN_FORM_FIELD_HEIGHT)}px;` : ''}">${escapeHtml(sub.label || sub.key)}</th>`).join('')}</tr></thead><tbody>${bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${sub.formWidth ? `width:${normalizeFormFieldSize(sub.formWidth, MIN_FORM_FIELD_WIDTH)}px;min-width:${normalizeFormFieldSize(sub.formWidth, MIN_FORM_FIELD_WIDTH)}px;` : ''}${sub.formHeight ? `height:${normalizeFormFieldSize(sub.formHeight, MIN_FORM_FIELD_HEIGHT)}px;` : ''}">${renderDisplayValue(sub, item[sub.key])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 };
 const renderViewForm = (form, record = {}) => {
   const grid = document.createElement('div');
@@ -884,6 +952,7 @@ const renderViewForm = (form, record = {}) => {
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}`;
     applyFormLayout(item, field);
     item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${renderDisplayValue(field, record[field.key])}</div>`;
+    appendFormResizeHandles(item, field);
     grid.appendChild(item);
   });
   titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
@@ -893,9 +962,17 @@ const renderViewForm = (form, record = {}) => {
     applyFormLayout(section, field);
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
+    appendFormResizeHandles(section, field);
     grid.appendChild(section);
   });
   form.appendChild(grid);
+  form.querySelectorAll('.ragic-view-subtable-section').forEach((section) => {
+    const parentField = getFields().find((field) => field.key === section.dataset.subtable);
+    section.querySelectorAll('.ragic-view-subfield[data-subfield-key]').forEach((cell) => {
+      const subfield = (parentField?.fields || []).find((sub) => sub.key === cell.dataset.subfieldKey);
+      if (subfield) appendFormResizeHandles(cell, subfield, { target: subfield });
+    });
+  });
 };
 const formDisplayName = () => {
   const configuredName = RAGIC_STATE.config?.tableName || RAGIC_STATE.config?.title || '';
@@ -917,6 +994,8 @@ const renderFormToolbar = () => {
   if (!RAGIC_STATE.currentId || RAGIC_STATE.formMode === 'edit') {
     actions.insertAdjacentHTML('beforeend', '<button class="save-btn" form="ragicForm" type="submit">儲存</button>');
     if (RAGIC_STATE.currentId) actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>');
+    } else if (RAGIC_STATE.currentId) {
+    actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCloseForm" type="button">取消</button>');
   }
   const deleteButton = document.querySelector('#deleteButton');
   if (deleteButton) {
@@ -1756,10 +1835,12 @@ const initRagicPage = async (config) => {
   document.querySelector('#ragicFormView')?.addEventListener('click', (event) => {
     const editButton = event.target.closest('#ragicEditRecord');
     const cancelEdit = event.target.closest('#ragicCancelEdit');
+    const closeForm = event.target.closest('#ragicCloseForm');
     const prevRecord = event.target.closest('#ragicPrevRecord');
     const nextRecord = event.target.closest('#ragicNextRecord');
     if (editButton) { event.preventDefault(); const record = currentRecord(); if (record && canUse('edit')) renderForm(record, { mode: 'edit' }); }
     if (cancelEdit) { event.preventDefault(); const record = currentRecord(); if (record) renderForm(record, { mode: 'view' }); }
+    if (closeForm) { event.preventDefault(); document.querySelector('#backToListButton')?.click(); }
     if (prevRecord) { event.preventDefault(); openRecordAtIndex(currentFilteredIndex() - 1); }
     if (nextRecord) { event.preventDefault(); openRecordAtIndex(currentFilteredIndex() + 1); }
     const viewImage = event.target.closest('.ragic-view-image, .ragic-view-field .field-value img, .form-view-mode .field-value img');
