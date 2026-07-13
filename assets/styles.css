@@ -3018,7 +3018,7 @@ body.is-col-resizing * {
   box-shadow: 0 1px 0 var(--border);
 }
 
-/* Fixed viewport layout: keep page chrome static and scroll only inside tables. */
+/* Fixed viewport layout: keep page chrome static and let each view own scrolling. */
 html,
 body {
   height: 100vh !important;
@@ -3045,7 +3045,34 @@ body {
   max-height: 100vh !important;
   min-width: 0;
   min-height: 0;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.main::-webkit-scrollbar,
+.main-content::-webkit-scrollbar {
+  display: none;
+}
+
+.main:has(#ragicListView:not([hidden]) .ragic-table-wrapper),
+.main:has(#ragicListView:not([hidden]) .ragic-table-wrap),
+.main-content:has(#ragicListView:not([hidden]) .ragic-table-wrapper),
+.main-content:has(#ragicListView:not([hidden]) .ragic-table-wrap) {
   overflow: hidden !important;
+}
+
+.main:has(#ragicFormView:not([hidden]) .ragic-form-grid),
+.main:has(#ragicFormView:not([hidden]) .ragic-view-grid),
+.main:has(#ragicFormView:not([hidden]) form),
+.main-content:has(#ragicFormView:not([hidden]) .ragic-form-grid),
+.main-content:has(#ragicFormView:not([hidden]) .ragic-view-grid),
+.main-content:has(#ragicFormView:not([hidden]) form),
+.main.is-form-view,
+.main-content.is-form-view {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
 }
 
 .ragic-page-header,
