@@ -58,15 +58,58 @@
       title: '提報',
       collection: 'report',
       fields: [
-        { key: 'date', label: '日期', type: 'date', defaultToday: true },
-        { key: 'reporter', label: '提報人', type: 'text' },
-        { key: 'category', label: '類別', type: 'text' },
-        { key: 'subject', label: '主旨', type: 'text' },
-        { key: 'content', label: '內容', type: 'textarea', rows: 5 },
-        { key: 'status', label: '處理狀態', type: 'select', options: ['待處理', '處理中', '已完成', '暫緩'] },
-        { key: 'note', label: '備註', type: 'textarea', rows: 5 }
+        { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
+        { key: 'reporter', label: '班別', type: 'text', formRow: 1, formCol: 2 },
+        { key: 'category', label: '部門', type: 'text', formRow: 1, formCol: 3 },
+        { key: 'subject', label: '分類', type: 'text', formRow: 1, formCol: 4 },
+        { key: 'content', label: '級數', type: 'text', formRow: 1, formCol: 5 },
+        { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', formRow: 2, formCol: 1 },
+        { key: 'status', label: '狀態', type: 'select', options: ['待處理', '處理中', '已完成', '暫緩'], formRow: 2, formCol: 2 },
+        { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', formRow: 2, formCol: 3 },
+        { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'link', formRow: 2, formCol: 4 },
+        { key: 'serial', label: '編號', type: 'serial', formRow: 2, formCol: 5 },
+        { key: 'field_1783793518050_ijdc6', label: '完成者', type: 'text', formRow: 3, formCol: 1 },
+        { key: 'field_1783793539632_yakx0', label: '完成時間', type: 'datetime', formRow: 3, formCol: 2 },
+        { key: 'field_1783889793781_euuc0', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 3 },
+        { key: 'field_1783889767182_tuy8x', label: '檔案', type: 'file', formRow: 3, formCol: 4 },
+        { key: 'field_1783793551894_qk3ol', label: '圖片', type: 'image', formRow: 3, formCol: 5, formRowSpan: 2 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 3, formColSpan: 2 }
       ],
-      listColumns: ['date', 'reporter', 'category', 'subject', 'status']
+      subtable: {
+        key: 'field_1783793415787_ht9q7',
+        label: '子表格',
+        formRow: 5,
+        formCol: 1,
+        formColSpan: 5,
+        columnsPerRow: 4,
+        fields: [
+          { key: 'content', label: '內容', type: 'textarea', rows: 4 },
+          { key: 'service_reply', label: '客服處理', type: 'textarea', rows: 4 },
+          { key: 'it_reply', label: '技術/IT 回覆', type: 'textarea', rows: 4 },
+          { key: 'am_reply', label: '商務/AM 回覆', type: 'textarea', rows: 4 }
+        ]
+      },
+      formLayout: [
+        { key: 'date', formRow: 1, formCol: 1 },
+        { key: 'reporter', formRow: 1, formCol: 2 },
+        { key: 'category', formRow: 1, formCol: 3 },
+        { key: 'subject', formRow: 1, formCol: 4 },
+        { key: 'content', formRow: 1, formCol: 5 },
+        { key: 'field_1783792645702_pi66u', formRow: 2, formCol: 1 },
+        { key: 'status', formRow: 2, formCol: 2 },
+        { key: 'field_1783793487601_dbb5n', formRow: 2, formCol: 3 },
+        { key: 'field_1783793471256_rn925', formRow: 2, formCol: 4 },
+        { key: 'serial', formRow: 2, formCol: 5 },
+        { key: 'field_1783793518050_ijdc6', formRow: 3, formCol: 1 },
+        { key: 'field_1783793539632_yakx0', formRow: 3, formCol: 2 },
+        { key: 'field_1783889793781_euuc0', formRow: 3, formCol: 3 },
+        { key: 'field_1783889767182_tuy8x', formRow: 3, formCol: 4 },
+        { key: 'field_1783793551894_qk3ol', formRow: 3, formCol: 5, formRowSpan: 2 },
+        { key: 'field_1783793415787_ht9q7', label: '標題', formRow: 4, formCol: 1, formColSpan: 2, _titleOnly: true },
+        { key: 'note', formRow: 4, formCol: 3, formColSpan: 2 },
+        { key: 'field_1783793415787_ht9q7', formRow: 5, formCol: 1, formColSpan: 5 }
+      ],
+      listColumns: ['date', 'reporter', 'category', 'subject', 'content', 'status']
     });
   </script>
 </body>
