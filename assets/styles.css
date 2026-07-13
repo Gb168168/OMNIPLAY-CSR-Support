@@ -1293,14 +1293,15 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   overflow-y: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  width: 100%;
   padding: 0 18px 18px;
   position: relative;
   --ragic-header-row-height: 42px;
 }
 .ragic-table {
-  table-layout: fixed;
+  width: 100%;
   min-width: max-content;
-  width: max-content;
+  table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -1327,7 +1328,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 .ragic-table th,
 .ragic-table td {
-  min-width: 60px;
+  min-width: var(--col-width, 80px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1372,14 +1373,14 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 
 /* 交接表格欄寬（套用到所有 ragic-table 列表） */
-.ragic-table .col-marker { width: 50px; }
-.ragic-table .col-date { width: 100px; }
-.ragic-table .col-shift { width: 60px; }
-.ragic-table .col-dept { width: 90px; }
-.ragic-table .col-category { width: 70px; }
-.ragic-table .col-status { width: 80px; }
-.ragic-table .col-content { width: 180px; }
-.ragic-table .col-textarea { width: 300px; }
+.ragic-table .col-marker { min-width: 50px; }
+.ragic-table .col-date { min-width: 100px; }
+.ragic-table .col-shift { min-width: 60px; }
+.ragic-table .col-dept { min-width: 90px; }
+.ragic-table .col-category { min-width: 70px; }
+.ragic-table .col-status { min-width: 80px; }
+.ragic-table .col-content { min-width: 180px; }
+.ragic-table .col-textarea { min-width: 300px; }
 .ragic-table td.col-content {
   overflow: hidden;
   text-overflow: ellipsis;
