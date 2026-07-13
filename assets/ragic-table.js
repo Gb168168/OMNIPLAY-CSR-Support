@@ -70,13 +70,39 @@ const applyFormLayout = (element, field = {}) => {
   if (!element) return element;
   const row = normalizeFormLayoutNumber(field.formRow);
   const col = normalizeFormLayoutNumber(field.formCol, { max: 4 });
-  const span = normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 });
+  const colSpan = normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 });
+  const rowSpan = normalizeFormLayoutNumber(field.formRowSpan, { max: 4, fallback: 1 });
   element.classList.add('form-field');
   if (row || col) element.classList.add('has-form-layout');
   element.style.setProperty('--form-row', row || 'auto');
   element.style.setProperty('--form-col', col || 'auto');
-  element.style.setProperty('--form-colspan', span || 1);
+  element.style.setProperty('--form-colspan', colSpan || 1);
+  element.style.setProperty('--form-rowspan', rowSpan || 1);
   return element;
+};
+const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
+  const key = String(field.key || '');
+  const label = String(field.label || '');
+  if (override.key && key === override.key) return true;
+  if (override.keyIncludes && key.includes(override.keyIncludes)) return true;
+  if (override.label && label === override.label) return true;
+  return false;
+};
+const applyFormLayoutOverrides = (schema = {}, config = {}) => {
+  const overrides = Array.isArray(config.formLayout) ? config.formLayout : [];
+  if (!overrides.length || !Array.isArray(schema.fields)) return schema;
+  return {
+    ...schema,
+    fields: schema.fields.map((field) => {
+      const override = overrides.find((item) => fieldLayoutOverrideMatches(field, item));
+      if (!override) return field;
+      const next = { ...field };
+      ['formRow', 'formCol', 'formColSpan', 'formRowSpan'].forEach((prop) => {
+        if (override[prop] !== undefined) next[prop] = override[prop];
+      });
+      return next;
+    })
+  };
 };
 const normalizeSubtableColumnsPerRow = (value) => {
   const parsed = Number.parseInt(value, 10);
@@ -250,9 +276,9 @@ const renderIconActions = (record = {}) => {
   </td>`;
 };
 
-const makeDefaultSchema = (config) => normalizeSchema({
+const makeDefaultSchema = (config) => applyFormLayoutOverrides(normalizeSchema({
   fields: [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])]
-});
+}), config);
 
 const createMultiSelectControl = (field, value = '', subfield = false) => {
   const selected = Array.isArray(value) ? value : String(value || '').split(/[、,]/).map((item) => item.trim()).filter(Boolean);
@@ -1572,11 +1598,11 @@ const initRagicPage = async (config) => {
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => {
     if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true });
-    const loadedSchema = doc.exists ? doc.data() : makeDefaultSchema(config);
+    const loadedSchema = doc.exists ? applyFormLayoutOverrides(doc.data(), config) : makeDefaultSchema(config);
     if (doc.exists && fixDuplicateKeys(loadedSchema.fields || [])) {
       await schemaDoc.set({ ...loadedSchema, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
-    RAGIC_STATE.schema = normalizeSchema(loadedSchema);
+    RAGIC_STATE.schema = applyFormLayoutOverrides(normalizeSchema(loadedSchema), config);
     renderHeader();
     applyRagicPermissionUi();
     applyFilters();
