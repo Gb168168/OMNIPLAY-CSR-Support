@@ -360,20 +360,7 @@ const startInlineEdit = (td) => {
 const createField = (field, value = '') => {
   const wrap = document.createElement('label'); wrap.className = `ragic-field ragic-field-${field.type || 'text'}`; wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   const control = createControl(field, value);
-  if (field.type === 'image' || field.type === 'file') {
-    const fileArea = document.createElement('div');
-    fileArea.className = 'image-upload-area';
-    fileArea.tabIndex = 0;
-    fileArea.dataset.field = field.key;
-    fileArea.dataset.fileLabel = field.label;
-    fileArea.dataset.fileType = field.type;
-    fileArea.innerHTML = `<div>選擇檔案 或 Ctrl+V 貼上${field.type === 'image' ? '圖片' : '檔案'}</div>`;
-    fileArea.appendChild(control);
-    wrap.appendChild(fileArea);
-    if (value) field.type === 'image' ? showImagePreview(normalizeImageArray(value), fileArea, field.label) : showFilePreview(value, fileArea);
-  } else {
-    wrap.appendChild(control);
-  }
+  wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
   return wrap;
 };
 
@@ -591,13 +578,45 @@ const handleImagePaste = async (event, imageArea) => {
   if (files.length) await processImageFiles(files, imageArea);
 };
 
+const getFileInputValue = (input) => {
+  if (!input?.dataset.fileValue) return '';
+  try { return JSON.parse(input.dataset.fileValue); }
+  catch (_) { return input.dataset.fileValue; }
+};
+
+const getSubtableAttachmentValue = (row, sub) => {
+  const container = row.querySelector(`[data-subfield-container="${sub.key}"]`);
+  const input = row.querySelector(`[data-subfield="${sub.key}"]`);
+  if (sub.type === 'image') {
+    if (container?.dataset.imageCleared === 'true') return [];
+    const images = container ? [...container.querySelectorAll('img')].map((img) => img.src).filter(Boolean) : [];
+    const value = images.length ? images : getImageInputValues(input);
+    return value.length === 1 ? value[0] : value;
+  }
+  if (container?.dataset.fileCleared === 'true') return '';
+  const hiddenInput = row.querySelector(`input[data-subfield="${sub.key}"][type="hidden"]`);
+  return hiddenInput?.value || getFileInputValue(input) || input?.dataset?.imageValue || '';
+};
+
 const getFormData = async () => {
   const data = {};
   const allImages = [];
   for (const field of getFields()) {
     if (field.type === 'subtable') {
       data[field.key] = [...document.querySelectorAll(`[data-subtable="${field.key}"] .subtable-row`)].map((row) => {
-        const item = {}; (field.fields || []).forEach((sub) => { const control = row.querySelector(`[data-subfield="${sub.key}"]`); item[sub.key] = sub.type === 'multiselect' ? [...control.selectedOptions].map((opt) => opt.value) : (control?.value?.trim() || ''); }); return item;
+         const item = {};
+        (field.fields || []).forEach((sub) => {
+          const control = row.querySelector(`[data-subfield="${sub.key}"]`);
+          if (sub.type === 'image' || sub.type === 'file') {
+            item[sub.key] = getSubtableAttachmentValue(row, sub);
+            if (sub.type === 'image') allImages.push(...normalizeImageArray(item[sub.key]));
+          } else if (sub.type === 'multiselect') {
+            item[sub.key] = control ? [...control.selectedOptions].map((opt) => opt.value) : [];
+          } else {
+            item[sub.key] = control?.value?.trim() || '';
+          }
+        });
+        return item;    
       }).filter((item) => Object.values(item).some((value) => Array.isArray(value) ? value.length : value));
       continue;
     }
@@ -611,12 +630,38 @@ const getFormData = async () => {
       allImages.push(...images);
     } else if (field.type === 'file') {
       const container = input.closest('.image-upload-area');
-      data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (input.dataset.fileValue ? JSON.parse(input.dataset.fileValue) : ''));
+      data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (getFileInputValue(input)));
     }
     else data[field.key] = input.value.trim();
   }
   assertImageTotalWithinLimit(allImages);
   return data;
+};
+
+const createFileUploadArea = (field, control, value = '', { subfield = false } = {}) => {
+  const fileArea = document.createElement('div');
+  fileArea.className = 'image-upload-area';
+  fileArea.tabIndex = 0;
+  if (subfield) fileArea.dataset.subfieldContainer = field.key;
+  else fileArea.dataset.field = field.key;
+  fileArea.dataset.fileLabel = field.label || field.key;
+  fileArea.dataset.fileType = field.type;
+  fileArea.innerHTML = `<div>選擇檔案 或 Ctrl+V 貼上${field.type === 'image' ? '圖片' : '檔案'}</div>`;
+  fileArea.appendChild(control);
+  if (value) field.type === 'image' ? showImagePreview(normalizeImageArray(value), fileArea, field.label) : showFilePreview(value, fileArea);
+  return fileArea;
+};
+
+const attachImageUploadArea = (imageArea) => {
+  if (!imageArea || imageArea.dataset.uploadBound === 'true') return;
+  imageArea.dataset.uploadBound = 'true';
+  const input = imageArea.querySelector('input[type="file"]');
+  input?.addEventListener('change', async () => {
+    if (!input.files?.[0]) return;
+    try { imageArea.dataset.fileType === 'file' ? await processGenericFile(input.files[0], imageArea) : await processImageFiles(input.files, imageArea); }
+    catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
+  });
+  imageArea.addEventListener('paste', (event) => handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。')));
 };
 
 const renderSubtableRow = (field, item = {}) => {
@@ -634,7 +679,8 @@ const renderSubtableRow = (field, item = {}) => {
     const fieldWrap = document.createElement('label');
     fieldWrap.className = `subtable-row-field subtable-row-field-${sub.type || 'text'}`;
     fieldWrap.innerHTML = `<span>${escapeHtml(sub.label || sub.key)}${sub.required ? ' *' : ''}</span>`;
-    fieldWrap.appendChild(createControl(sub, item[sub.key], true));
+    const control = createControl(sub, item[sub.key], true);
+    fieldWrap.appendChild(sub.type === 'image' || sub.type === 'file' ? createFileUploadArea(sub, control, item[sub.key], { subfield: true }) : control);
     fieldsGrid.appendChild(fieldWrap);
   });
   
@@ -657,16 +703,8 @@ const renderForm = (record = {}) => {
   const formTitle = formView.querySelector('h2'); formTitle.classList.add('ragic-form-title'); formTitle.textContent = record.id ? `編輯${RAGIC_STATE.config.title}` : `新增${RAGIC_STATE.config.title}`; const form = formView.querySelector('form'); form.innerHTML = '';
   const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
   getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key]))); form.appendChild(grid);
-  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) body.appendChild(renderSubtableRow(field)); }); form.appendChild(section); });
-  form.querySelectorAll('.image-upload-area').forEach((imageArea) => {
-    const input = imageArea.querySelector('input[type="file"]');
-    input?.addEventListener('change', async () => {
-      if (!input.files?.[0]) return;
-      try { imageArea.dataset.fileType === 'file' ? await processGenericFile(input.files[0], imageArea) : await processImageFiles(input.files, imageArea); }
-      catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
-    });
-    imageArea.addEventListener('paste', (event) => handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。')));
-  });
+  getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) { const row = renderSubtableRow(field); body.appendChild(row); row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea); } }); form.appendChild(section); });
+  form.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
   setFormEditable(form);
   applyRagicPermissionUi();
 };
