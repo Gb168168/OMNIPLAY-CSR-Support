@@ -113,17 +113,30 @@ const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
   return false;
 };
 const applyFormLayoutOverrides = (schema = {}, config = {}) => {
-  const overrides = normalizeFormLayoutConfig(config.formLayout).overrides.map(normalizeFormLayoutOverride);
-  if (!overrides.length || !Array.isArray(schema.fields)) return schema;
+  const { columns, overrides: rawOverrides } = normalizeFormLayoutConfig(config.formLayout);
+  const overrides = rawOverrides.map(normalizeFormLayoutOverride);
+  if (!Array.isArray(schema.fields)) return schema;
+  const layoutRows = overrides
+    .filter((item) => !item._titleOnly)
+    .map((item) => normalizeFormLayoutNumber(item.formRow, { fallback: 0 }))
+    .filter(Boolean);
+  const subtableRow = (layoutRows.length ? Math.max(...layoutRows) : 0) + 1;
   return {
     ...schema,
     fields: schema.fields.map((field) => {
       const override = overrides.find((item) => !item._titleOnly && fieldLayoutOverrideMatches(field, item));
-      if (!override) return field;
-      const next = { ...field };
-      ['formRow', 'formCol', 'formColSpan', 'formRowSpan', '_titleOnly'].forEach((prop) => {
-        if (override[prop] !== undefined) next[prop] = override[prop];
-      });
+      const next = override ? { ...field } : (field.type === 'subtable' ? { ...field } : field);
+      if (override) {
+        ['formRow', 'formCol', 'formColSpan', 'formRowSpan', '_titleOnly'].forEach((prop) => {
+          if (override[prop] !== undefined) next[prop] = override[prop];
+        });
+      }
+      if (next.type === 'subtable' && !next.formRow && !next.formCol) {
+        next.formRow = subtableRow;
+        next.formCol = 1;
+        next.formColSpan = columns || 5;
+        next.formRowSpan = 1;
+      }
       return next;
     })
   };
@@ -978,7 +991,6 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     renderViewForm(form, record);
   } else {
     const grid = document.createElement('div'); grid.className = 'ragic-form-grid'; applyFormGridLayout(grid);
-    const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
     getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key])));
     titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
     form.appendChild(grid);
