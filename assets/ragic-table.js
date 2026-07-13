@@ -1653,10 +1653,10 @@ const renderLayoutDesigner = () => {
     return `<div class="ragic-view-field" style="--form-row:${item.row};--form-col:${item.col};--form-colspan:${item.colSpan};--form-rowspan:${item.rowSpan};"><div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${escapeHtml(designerPreviewValue(field))}</div></div>`;
   }).join('') || '<div class="designer-preview-empty">拖入欄位後顯示預覽</div>';
   panel.innerHTML = `<div class="layout-designer">
-    <div class="layout-unplaced"><span>未放置的欄位：</span>${unplaced}<button class="secondary btn-add-layout-field" type="button">+新增</button></div>
-    <div class="layout-toolbar"><label>欄數: <select id="gridCols">${colsSelect}</select></label><label>列數: <select id="gridRows">${rowsSelect}</select></label><button class="btn-auto-layout secondary" type="button">自動排版</button><button class="btn-save-layout primary" type="button">儲存排版</button></div>
-    <div class="layout-grid" style="grid-template-columns: repeat(${layout.columns}, minmax(92px, 1fr));">${cells.join('')}</div>
-    <div class="layout-preview" style="max-height: 200px; overflow: auto;"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${previewFields}</div></div>
+    <div class="layout-unplaced"><div class="layout-unplaced-fields"><span class="layout-section-label">未放置的欄位：</span>${unplaced}</div><button class="secondary btn-add-layout-field" type="button">+新增</button></div>
+    <div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數: <select id="gridCols">${colsSelect}</select></label><label>列數: <select id="gridRows">${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="btn-auto-layout secondary" type="button">自動排版</button><button class="btn-save-layout primary" type="button">儲存排版</button></div></div>
+    <div class="layout-grid-section"><div class="layout-grid" aria-label="排版表格拖曳區" style="grid-template-columns: repeat(${layout.columns}, minmax(92px, 1fr));">${cells.join('')}</div></div>
+    <div class="layout-preview"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${previewFields}</div></div>
   </div>`;
 };
 const updateDesignerFieldByKey = (fieldKey, patcher) => {
