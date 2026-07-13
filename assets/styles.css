@@ -2941,3 +2941,26 @@ textarea,
 .ragic-view-subtable { width: 100%; border-collapse: collapse; }
 .ragic-view-subtable th,
 .ragic-view-subtable td { text-align: left; vertical-align: top; }
+
+.col-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 5;
+}
+
+.col-resizer:hover,
+.col-resizer.is-dragging {
+  background: var(--primary);
+  opacity: 0.5;
+}
+
+body.is-col-resizing,
+body.is-col-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
