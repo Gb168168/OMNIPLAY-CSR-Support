@@ -115,9 +115,25 @@ if (!window._multiSelectClickBound) {
 const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', report: 'RPT-', tracking: 'TRK-', alert: 'ALT-', knowledge: 'KB-', ai_database: 'AI-' };
 const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
 const inlineReadonlyFieldTypes = new Set([...readonlyFieldTypes, 'image', 'file', 'subtable']);
-const DEFAULT_FIELD_WIDTHS = { date: 100, datetime: 150, select: 100, multiselect: 100, image: 80, serial: 90, createdDate: 150, updatedDate: 150, link: 150 };
+const DEFAULT_FIELD_WIDTHS = { text: 180, textarea: 300, date: 100, datetime: 150, select: 100, multiselect: 120, image: 80, file: 160, serial: 90, createdDate: 150, updatedDate: 150, link: 180 };
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
 const fieldColumnWidth = (field = {}) => normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
+
+const applyRagicColumnGroup = (table, fields = listFields()) => {
+  if (!table) return;
+  table.querySelector('colgroup')?.remove();
+  const colgroup = document.createElement('colgroup');
+  const markerCol = document.createElement('col');
+  markerCol.style.width = '50px';
+  colgroup.appendChild(markerCol);
+  fields.forEach((field) => {
+    const col = document.createElement('col');
+    const width = fieldColumnWidth(field);
+    if (width) col.style.width = `${width}px`;
+    colgroup.appendChild(col);
+  });
+  table.insertBefore(colgroup, table.firstChild);
+};
 
 const currentRagicUser = () => sessionStorage.getItem('account') || sessionStorage.getItem('omniplayStaffAccount') || sessionStorage.getItem('omniplayStaffCode') || '';
 
@@ -736,11 +752,12 @@ const renderTable = () => {
     tr.tabIndex = canUse('edit') ? 0 : -1;
     tr.classList.toggle('is-readonly', !canUse('edit'));
     tr.innerHTML = renderIconActions(record) + fields.map((field) => {
-      const columnClass = ragicColumnClass(field);
+      const columnClass = `${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''}`;
+      const typeAttr = field.type ? ` data-type="${escapeHtml(field.type)}"` : '';
       const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
       const width = fieldColumnWidth(field);
       const style = width ? ` style="width: ${width}px;"` : '';
-      return `<td class="${columnClass}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${style}${title}>${renderCell(record, field)}</td>`;
+      return `<td class="${columnClass}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${typeAttr}${style}${title}>${renderCell(record, field)}</td>`;
     }).join('');
     if (canUse('edit')) tr.addEventListener('dblclick', () => renderForm(record));
     tbody.appendChild(tr);
@@ -908,14 +925,17 @@ const renderHeader = () => {
   const headerRow = document.querySelector('#ragicHeaderRow');
   const thead = headerRow?.closest('thead');
   const table = headerRow?.closest('table');
-  if (table) table.style.tableLayout = 'fixed';
+  if (table) {
+    table.style.tableLayout = 'fixed';
+    applyRagicColumnGroup(table);
+  }
   document.querySelector('#ragicFilterRow')?.remove();
   headerRow.innerHTML = `<th class="icon-actions-head col-marker">標記</th>` + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
     const style = width ? ` style="width: ${width}px;"` : '';
-    return `<th class="${ragicColumnClass(field)} col-menu-cell"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div>${renderColumnFilterControls(field)}</div></th>`;
+    return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
   if (thead) thead.querySelectorAll('tr:not(#ragicHeaderRow)').forEach((row) => row.remove());
   updateColumnMenuStates();
