@@ -3,6 +3,67 @@ if ('serviceWorker' in navigator) {
 }
 
 const sidebar = document.querySelector('#sidebar');
+
+const isIndexPage = /(^|\/)index\.html$/.test(window.location.pathname) || window.location.pathname.endsWith('/');
+const sidebarPath = (path) => isIndexPage ? path : `../${path}`;
+const sidebarItems = [
+  { label: '首頁', icon: '🏠', href: 'index.html', className: 'home-link' },
+  { title: '客服內部', icon: '👥', id: 'serviceGroupTitle', items: [
+    { label: '人員管理', icon: '👤', href: 'service/staff.html' },
+    { label: '休假表', icon: '🌴', href: 'service/leave.html' },
+    { label: '排程表', icon: '📅', href: 'service/schedule.html' },
+    { label: 'KPI', icon: '📊', href: 'service/kpi.html' }
+  ] },
+  { title: '作業管理', icon: '🗂️', id: 'workGroupTitle', items: [
+    { label: '日誌', icon: '📒', href: 'work/log.html' },
+    { label: '交接', icon: '🤝', href: 'work/handover.html' },
+    { label: '提報', icon: '📣', href: 'work/report.html' },
+    { label: '對接追蹤', icon: '🔎', href: 'work/tracking.html' },
+    { label: 'PROD告警紀錄', icon: '🚨', href: 'work/alert.html' }
+  ] },
+  { title: '會議歷程', icon: '📁', id: 'meetingGroupTitle', items: [
+    { label: '會議紀錄', icon: '📝', href: 'meeting/meeting.html' }
+  ] },
+  { title: '資料庫', icon: '🧠', id: 'resourceGroupTitle', items: [
+    { label: '知識庫', icon: '📚', href: 'resource/knowledge.html' },
+    { label: 'AI 資料庫', icon: '🤖', href: 'resource/ai-database.html' }
+  ] }
+  ];
+const isActiveSidebarHref = (href) => (href === 'index.html' && isIndexPage) || window.location.pathname.split('/').pop() === href.split('/').pop();
+const renderSidebarLink = (item) => {
+  const classes = [item.className || 'sidebar-sub-item'];
+  if (isActiveSidebarHref(item.href)) classes.push('is-active');
+  const bullet = item.className === 'home-link' ? '' : '<span class="bullet">•</span>';
+  return `<a class="${classes.join(' ')}" href="${sidebarPath(item.href)}">${bullet}<span class="icon">${item.icon}</span><span class="label">${item.label}</span></a>`;
+};
+const renderSidebar = () => {
+  if (!sidebar) return;
+  sidebar.className = 'sidebar';
+  sidebar.innerHTML = `
+    <div class="sidebar-header">
+      <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR<br />Support</span></div>
+      <button class="toggle-btn mobile-menu-btn" id="sidebarToggle" type="button" aria-label="收合左側功能表">☰</button>
+    </div>
+    <nav class="menu" aria-label="主功能表">
+      ${renderSidebarLink(sidebarItems[0])}
+      ${sidebarItems.slice(1).map((group) => `
+        <section class="sidebar-group" aria-labelledby="${group.id}">
+          <h2 class="sidebar-group-title" id="${group.id}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span></h2>
+          ${group.items.map(renderSidebarLink).join('')}
+        </section>
+      `).join('')}
+    </nav>
+    <div class="sidebar-footer" id="sidebarUserFooter">
+      <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
+      <div class="sidebar-user-row">
+        <div class="sidebar-user-info"><span class="sidebar-user-label label">登入者</span><strong class="sidebar-user-name label"></strong></div>
+        <button class="logout-button" id="logoutButton" type="button"><span class="icon">⎋</span><span class="label">登出</span></button>
+      </div>
+    </div>
+  `;
+};
+window.renderSidebar = renderSidebar;
+renderSidebar();
 const sidebarToggle = document.querySelector('#sidebarToggle');
 const sidebarOverlay = document.querySelector('#sidebarOverlay');
 const sidebarCollapsedToggle = document.createElement('button');
@@ -115,7 +176,6 @@ const SESSION_KEYS = {
   permissions: 'omniplayPermissions'
 };
 
-const isIndexPage = /(^|\/)index\.html$/.test(window.location.pathname) || window.location.pathname.endsWith('/');
 const loginPath = isIndexPage ? 'index.html' : '../index.html';
 
 const getCurrentStaff = () => ({
@@ -449,9 +509,10 @@ const renderSidebarUser = () => {
         <button class="logout-button" id="logoutButton" type="button"><span class="icon">⎋</span><span class="label">登出</span></button>
       </div>
     `;
-    footer.querySelector('[data-theme-toggle]')?.addEventListener('click', toggleTheme);
     sidebar.appendChild(footer);
   }
+  const sidebarThemeToggle = footer.querySelector('[data-theme-toggle]');
+  if (sidebarThemeToggle) sidebarThemeToggle.onclick = toggleTheme;
   const nameElement = footer.querySelector('.sidebar-user-name');
   if (nameElement) nameElement.textContent = currentStaff.name;
   enhanceSidebarNavigation();
