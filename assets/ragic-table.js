@@ -112,14 +112,17 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
 };
 const applyFormLayout = (element, field = {}) => {
   if (!element) return element;
-  const row = normalizeFormLayoutNumber(field.formRow);
-  const columns = normalizeFormLayoutConfig(RAGIC_STATE.schema?.formLayout || RAGIC_STATE.config?.formLayout).columns || 5;
-  const col = normalizeFormLayoutNumber(field.formCol, { max: columns });
-  const colSpan = normalizeFormLayoutNumber(field.formColSpan, { max: columns, fallback: 1 });
-  const rowSpan = normalizeFormLayoutNumber(field.formRowSpan, { max: normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout || RAGIC_STATE.config?.formLayout).rows || 10, fallback: 1 });
+  const activeLayout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout || RAGIC_STATE.config?.formLayout, getFields());
+  const layoutItem = activeLayout.fields?.[field.key] || {};
+  const row = normalizeFormLayoutNumber(layoutItem.row ?? field.formRow);
+  const columns = activeLayout.columns || 5;
+  const col = normalizeFormLayoutNumber(layoutItem.col ?? field.formCol, { max: columns });
+  const colSpan = normalizeFormLayoutNumber(layoutItem.colSpan ?? field.formColSpan, { max: columns, fallback: 1 });
+  const rowSpan = normalizeFormLayoutNumber(layoutItem.rowSpan ?? field.formRowSpan, { max: activeLayout.rows || 10, fallback: 1 });
   element.classList.add('form-field');
   element.dataset.type = field.type || 'text';
   if (row || col) element.classList.add('has-form-layout');
+  element.classList.toggle('field-value-multiline', field.type === 'textarea');
   element.style.setProperty('--form-row', row || 'auto');
   element.style.setProperty('--form-col', col || 'auto');
   element.style.setProperty('--form-colspan', colSpan || 1);
@@ -1641,12 +1644,47 @@ const renderLayoutDesigner = () => {
       }
       const field = owner ? fields.find((item) => item.key === owner[0]) : null;
       const item = owner?.[1];
-      cells.push(`<div class="layout-cell" data-row="${row}" data-col="${col}" style="grid-column: ${col} / span ${item ? item.colSpan : 1}; grid-row: ${row} / span ${item ? item.rowSpan : 1};">${field ? `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}"><span>${escapeHtml(field.label || field.key)}${field.type === 'subtable' ? ' <small>子表單</small>' : ''}</span><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span></div>` : ''}</div>`);
+      cells.push(`<div class="layout-cell" data-row="${row}" data-col="${col}" style="grid-column: ${col} / span ${item ? item.colSpan : 1}; grid-row: ${row} / span ${item ? item.rowSpan : 1};">${field ? `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}"><span>${escapeHtml(field.label || field.key)}${field.type === 'subtable' ? ' <small>子表單</small>' : ''}</span><button class="settings-btn" type="button" title="設定">⚙️</button><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span></div>` : ''}</div>`);
     }
   }
   const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}">${escapeHtml(field.label || field.key)}${field.type === 'subtable' ? ' <small>子表單</small>' : ''}</div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
-  panel.innerHTML = `<div class="layout-designer"><div class="layout-unplaced"><span>未放置的欄位：</span>${unplaced}</div><div class="layout-toolbar"><label>欄數: <select id="gridCols">${colsSelect}</select></label><label>列數: <select id="gridRows">${rowsSelect}</select></label><button class="btn-save-layout primary" type="button">儲存排版</button></div><div class="layout-grid" style="grid-template-columns: repeat(${layout.columns}, minmax(92px, 1fr));">${cells.join('')}</div><div class="layout-preview" style="max-height: 200px; overflow: auto;"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${fields.filter((field) => placed.has(field.key)).map((field) => { const item = layout.fields[field.key]; return `<div class="ragic-view-field" style="--form-row:${item.row};--form-col:${item.col};--form-colspan:${item.colSpan};--form-rowspan:${item.rowSpan};"><div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${escapeHtml(designerPreviewValue(field))}</div></div>`; }).join('') || '<div class="designer-preview-empty">拖入欄位後顯示預覽</div>'}</div></div></div>`;};
-  const updateLayoutDesignerState = (patcher) => {
+  panel.innerHTML = `<div class="layout-designer"><div class="layout-unplaced"><span>未放置的欄位：</span>${unplaced}<button class="secondary btn-add-layout-field" type="button">+新增</button></div><div class="layout-toolbar"><label>欄數: <select id="gridCols">${colsSelect}</select></label><label>列數: <select id="gridRows">${rowsSelect}</select></label><button class="btn-auto-layout secondary" type="button">自動排版</button><button class="btn-save-layout primary" type="button">儲存排版</button></div><div class="layout-grid" style="grid-template-columns: repeat(${layout.columns}, minmax(92px, 1fr));">${cells.join('')}</div><div class="layout-preview" style="max-height: 200px; overflow: auto;"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${fields.filter((field) => placed.has(field.key)).map((field) => { const item = layout.fields[field.key]; return `<div class="ragic-view-field" style="--form-row:${item.row};--form-col:${item.col};--form-colspan:${item.colSpan};--form-rowspan:${item.rowSpan};"><div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${escapeHtml(designerPreviewValue(field))}</div></div>`; }).join('') || '<div class="designer-preview-empty">拖入欄位後顯示預覽</div>'}</div></div></div>`;};
+  const updateDesignerFieldByKey = (fieldKey, patcher) => {
+  const row = document.querySelector(`#ragicDesignerModal .designer-field[data-field-key="${window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\\"')}"]`);
+  if (!row) return;
+  patcher(row);
+  updateDesignerPreview();
+  renderLayoutDesigner();
+};
+
+const typeSelectOptions = (selected = 'text') => FIELD_TYPE_GROUPS.map((group) => `<optgroup label="${escapeHtml(group.label)}">${group.types.map((type) => `<option value="${escapeHtml(type.value)}" ${selected === type.value ? 'selected' : ''}>${escapeHtml(type.label)}</option>`).join('')}</optgroup>`).join('');
+
+const openLayoutFieldSettings = (fieldKey) => {
+  const field = readDesigner(document.querySelector('#ragicDesignerModal .designer-body') || document.createElement('div')).find((item) => item.key === fieldKey);
+  if (!field) return;
+  let panel = document.querySelector('#layoutFieldSettingsPanel');
+  if (!panel) { panel = document.createElement('div'); panel.id = 'layoutFieldSettingsPanel'; panel.className = 'layout-field-settings'; document.querySelector('#ragicDesignerModal .ragic-modal-card')?.appendChild(panel); }
+  const options = optionList(field).map((option) => `<input data-option value="${escapeHtml(option)}" placeholder="選項">`).join('');
+  panel.innerHTML = `<label>欄位名稱:<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>類型:<select data-setting-type>${typeSelectOptions(field.type)}</select></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><div data-option-list>${options || '<input data-option placeholder="選項">'}</div><button class="secondary" data-add-option type="button">+新增選項</button></div><div class="layout-settings-actions"><button class="primary" data-confirm-settings type="button">確認</button><button class="danger" data-remove-settings-field type="button">移除欄位</button></div>`;
+  panel.hidden = false;
+  panel.dataset.fieldKey = fieldKey;
+};
+
+const autoLayoutFields = (layout, fields) => {
+  layout.fields = {};
+  let row = 1;
+  let col = 1;
+  const normal = fields.filter((field) => field.type !== 'subtable');
+  normal.forEach((field) => {
+    layout.fields[field.key] = { row, col, colSpan: 1, rowSpan: 1 };
+    col += 1;
+    if (col > layout.columns) { col = 1; row += 1; }
+  });
+  if (fields.some((field) => field.type === 'subtable')) { if (col !== 1) row += 1; fields.filter((field) => field.type === 'subtable').forEach((field) => { layout.fields[field.key] = { row, col: 1, colSpan: layout.columns, rowSpan: 1 }; row += 1; }); }
+  layout.rows = Math.min(10, Math.max(layout.rows, row));
+};
+
+const updateLayoutDesignerState = (patcher) => {
   const body = document.querySelector('#ragicDesignerModal .designer-body');
   const fields = readDesigner(body || document.createElement('div'));
   const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
@@ -1795,7 +1833,7 @@ const initRagicPage = async (config) => {
     designButton?.remove();
   }
   if (!document.querySelector('#ragicDesignerModal')) {
-  document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-tabs"><button class="designer-tab active" data-designer-tab="fields" type="button">欄位設定</button><button class="designer-tab" data-designer-tab="layout" type="button">表單排版</button></div><section class="designer-tab-panel" data-designer-panel="fields"><div class="designer-body"></div><section class="designer-preview" aria-label="表格預覽"><h3>📋 表格預覽</h3><div class="designer-preview-scroll" id="designerPreviewTable"></div></section></section><section class="designer-tab-panel" data-designer-panel="layout" hidden><div id="layoutDesignerPanel"></div></section><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');  
+  document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-body" hidden></div><div id="layoutDesignerPanel"></div></div></div>');
   }
   if (!document.querySelector('#ragicImageModal')) {
     document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><img alt="放大圖片預覽"></div></div>');
@@ -1820,6 +1858,21 @@ const initRagicPage = async (config) => {
     if (mode === 'layout') renderLayoutDesigner();
   });
   attachLayoutDesignerEvents(document.querySelector('#layoutDesignerPanel'));
+  
+  document.querySelector('#layoutDesignerPanel')?.addEventListener('click', (event) => {
+    if (event.target.closest('.btn-add-layout-field')) { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新欄位', type: 'text' })); updateDesignerPreview(); renderLayoutDesigner(); return; }
+    if (event.target.closest('.btn-auto-layout')) { if (!confirm('這會清除目前的排版，確定嗎？')) return; updateLayoutDesignerState(autoLayoutFields); return; }
+    const settings = event.target.closest('.settings-btn, .layout-field');
+    if (settings && !event.target.closest('.remove-btn, [data-resize]')) openLayoutFieldSettings(settings.closest('[data-field-key]')?.dataset.fieldKey);
+  });
+  document.querySelector('#ragicDesignerModal')?.addEventListener('click', (event) => {
+    const panel = event.target.closest('#layoutFieldSettingsPanel');
+    if (!panel) return;
+    if (event.target.closest('[data-add-option]')) panel.querySelector('[data-option-list]').insertAdjacentHTML('beforeend', '<input data-option placeholder="選項">');
+    if (event.target.matches('[data-setting-type]')) panel.querySelector('.setting-options').hidden = !['select','multiselect'].includes(event.target.value);
+    if (event.target.closest('[data-remove-settings-field]')) { updateLayoutDesignerState((layout) => { delete layout.fields[panel.dataset.fieldKey]; }); panel.hidden = true; }
+    if (event.target.closest('[data-confirm-settings]')) { const key = panel.dataset.fieldKey; updateDesignerFieldByKey(key, (row) => { row.querySelector('[data-role="label"]').value = panel.querySelector('[data-setting-label]').value; row.querySelector('[data-role="type"]').value = panel.querySelector('[data-setting-type]').value; row.querySelector('[data-role="options"]').value = [...panel.querySelectorAll('[data-option]')].map((input) => input.value.trim()).filter(Boolean).join('\n'); }); panel.hidden = true; }
+  });
   document.querySelector('#layoutDesignerPanel')?.addEventListener('click', async (event) => {
     if (!event.target.closest('.btn-save-layout')) return;
     if (!canUse('design')) return alert('您沒有設計權限');
