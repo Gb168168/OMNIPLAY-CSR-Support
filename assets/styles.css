@@ -2976,6 +2976,8 @@ body.is-col-resizing * {
 /* Ragic tables: keep sticky headers opaque and above table rows. */
 .ragic-table-wrapper,
 .ragic-table-wrap {
+  padding-top: 0;
+  margin-top: 0;
   overflow-x: auto;
   overflow-y: auto;
 }
