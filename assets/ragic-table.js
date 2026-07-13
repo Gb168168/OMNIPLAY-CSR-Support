@@ -767,11 +767,20 @@ const compareRecords = (a, b, fieldKey, direction) => {
   return result * (direction === 'asc' ? 1 : -1);
 };
 
+
+const openRecordFromQuery = () => {
+  const id = new URLSearchParams(window.location.search).get('id');
+  if (!id || RAGIC_STATE.currentId === id) return;
+  const record = RAGIC_STATE.records.find((item) => item.id === id);
+  if (record) renderForm(record);
+};
+
 const renderFilteredList = (filtered) => {
   RAGIC_STATE.filtered = [...filtered];
   if (RAGIC_STATE.sortKey) RAGIC_STATE.filtered.sort((a, b) => compareRecords(a, b, RAGIC_STATE.sortKey, RAGIC_STATE.sortDir));
   RAGIC_STATE.page = 1;
   renderTable();
+  openRecordFromQuery();
 };
 
 const updateColumnMenuStates = () => {
