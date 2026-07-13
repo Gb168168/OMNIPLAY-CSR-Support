@@ -71,6 +71,24 @@
           { key: 'note', label: '備註', type: 'textarea' }
         ]}
       ],
+      formLayout: {
+        columns: 5,
+        fields: {
+          '發生時間': { row: 1, col: 1 },
+          '接洽人員': { row: 1, col: 2 },
+          '狀態': { row: 1, col: 3 },
+          '分類': { row: 1, col: 4 },
+          '客戶': { row: 1, col: 5 },
+          '完成時間': { row: 2, col: 1 },
+          '完成人員': { row: 2, col: 2 },
+          '提報連結': { row: 2, col: 3 },
+          '編號': { row: 2, col: 4 },
+          '檔案': { row: 2, col: 5 },
+          '問題描述': { row: 3, col: 1, colSpan: 2 },
+          '備註': { row: 3, col: 3, colSpan: 2 },
+          '圖片': { row: 3, col: 5 }
+        }
+      },
       listColumns: ['date', 'shift', 'staff', 'category']
     });
   </script>
