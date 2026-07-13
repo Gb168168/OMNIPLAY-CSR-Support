@@ -51,9 +51,8 @@ function getDefaultShift() {
 }
 
 const isInShiftRange = (record = {}, range) => {
-  const createdAt = valueDate(record.createdAt) || valueDate(record.createdDate);
   const updatedAt = valueDate(record.updatedAt) || valueDate(record.updatedDate);
-  return [createdAt, updatedAt].some((at) => at && at >= range.start && at <= range.end);
+  return Boolean(updatedAt && updatedAt >= range.start && updatedAt <= range.end);
 };
 
 
@@ -178,14 +177,13 @@ const updateShiftButtons = () => {
 
 const todoTitle = (record = {}, fallback) => record.subject || record.title || record.item || record.category || record.content || record.note || record.serial || fallback;
 const recordDateForShift = (record = {}, range) => {
-  const createdAt = valueDate(record.createdAt) || valueDate(record.createdDate);
   const updatedAt = valueDate(record.updatedAt) || valueDate(record.updatedDate);
-  if (createdAt && createdAt >= range.start && createdAt <= range.end) return createdAt;
   if (updatedAt && updatedAt >= range.start && updatedAt <= range.end) return updatedAt;
-  return updatedAt || createdAt;
+  return updatedAt;
 };
 const formatRecordTime = (at) => at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : '--:--';
 const isFireRecord = (record = {}) => record.fire === true;
+const withRecordLink = (href, id) => id ? `${href}?id=${encodeURIComponent(id)}` : href;
 const shiftRecordItems = (records, { type, icon, href, fallback }) => {
   const range = getShiftRange(dashboardState.selectedShift);
   return records
@@ -196,7 +194,7 @@ const shiftRecordItems = (records, { type, icon, href, fallback }) => {
         icon: isFireRecord(record) ? '🔥' : icon,
         time: isFireRecord(record) ? '--:--' : formatRecordTime(at),
         type,
-        href,
+        href: withRecordLink(href, record.id),
         title: todoTitle(record, fallback),
         sortAt: isFireRecord(record) ? 0 : (at || new Date(8640000000000000)).getTime()
       };
@@ -208,7 +206,7 @@ const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
     icon: '📅',
     time: allDay ? '全天' : `${pad2(item.occurrenceAt.getHours())}:${pad2(item.occurrenceAt.getMinutes())}`,
     type: '排程',
-    href: 'service/schedule.html',
+    href: withRecordLink('service/schedule.html', item.id),
     title: item.title || '未命名事項',
     sortAt: item.occurrenceAt.getTime()
   };
