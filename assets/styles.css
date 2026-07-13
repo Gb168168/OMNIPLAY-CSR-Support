@@ -1300,7 +1300,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   width: 100%;
   padding: 0 18px 18px;
   position: relative;
-  --ragic-header-row-height: 42px;
+  --ragic-header-row-height: 36px;
 }
 .ragic-table {
   width: 100%;
@@ -1323,10 +1323,11 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.ragic-table thead tr:nth-child(2) th {
+.ragic-table thead tr:nth-child(2) th,
+.ragic-table thead .filter-row td {
   position: sticky;
-  top: var(--ragic-header-row-height);
-  z-index: 11;
+  top: var(--ragic-header-row-height, 36px);
+  z-index: 10;
   background: var(--surface);
   border-bottom: 2px solid var(--border);
 }
@@ -2963,4 +2964,39 @@ body.is-col-resizing,
 body.is-col-resizing * {
   cursor: col-resize !important;
   user-select: none;
+}
+
+
+/* Ragic tables: keep sticky headers opaque and above table rows. */
+.ragic-table-wrapper,
+.ragic-table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.ragic-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.ragic-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+}
+
+.ragic-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+}
+
+.ragic-table thead tr:nth-child(2) th,
+.ragic-table thead .filter-row td {
+  position: sticky;
+  top: var(--ragic-header-row-height, 36px);
+  z-index: 10;
+  background: var(--surface);
 }
