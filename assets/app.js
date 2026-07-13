@@ -5,6 +5,12 @@ if ('serviceWorker' in navigator) {
 const sidebar = document.querySelector('#sidebar');
 const sidebarToggle = document.querySelector('#sidebarToggle');
 const sidebarOverlay = document.querySelector('#sidebarOverlay');
+const sidebarCollapsedToggle = document.createElement('button');
+sidebarCollapsedToggle.className = 'sidebar-toggle-btn';
+sidebarCollapsedToggle.type = 'button';
+sidebarCollapsedToggle.textContent = '☰';
+sidebarCollapsedToggle.setAttribute('aria-label', '展開左側功能表');
+if (sidebar) document.body.appendChild(sidebarCollapsedToggle);
 const appShell = document.querySelector('.app-shell');
 const loginView = document.querySelector('#loginView');
 const loginForm = document.querySelector('#loginForm');
@@ -35,9 +41,9 @@ const MENU_ICON_MAP = {
 const applyTheme = (theme) => {
   document.documentElement.dataset.theme = theme;
   document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
-    button.textContent = theme === 'light' ? '🌙' : '☀️';
     button.setAttribute('aria-label', theme === 'light' ? '切換為深色模式' : '切換為淺色模式');
     button.title = theme === 'light' ? '切換為深色模式' : '切換為淺色模式';
+    button.setAttribute('aria-pressed', String(theme === 'dark'));
   });
 };
 const toggleTheme = () => {
@@ -53,6 +59,7 @@ const closeMobileSidebar = () => {
   sidebar?.classList.remove('is-open');
   sidebarOverlay?.classList.remove('is-visible');
   sidebarToggle?.setAttribute('aria-expanded', 'false');
+  sidebarCollapsedToggle.classList.add('is-visible');
 };
 const openMobileSidebar = () => {
   sidebar?.classList.remove('is-collapsed');
@@ -60,6 +67,7 @@ const openMobileSidebar = () => {
   sidebarOverlay?.classList.add('is-visible');
   sidebarToggle?.setAttribute('aria-label', '關閉左側功能表');
   sidebarToggle?.setAttribute('aria-expanded', 'true');
+  sidebarCollapsedToggle.classList.remove('is-visible');
 };
 const applySidebarState = (collapsed) => {
   if (!sidebar) return;
@@ -72,6 +80,7 @@ const applySidebarState = (collapsed) => {
   sidebar.classList.toggle('is-collapsed', collapsed);
   sidebarToggle?.setAttribute('aria-label', collapsed ? '展開左側功能表' : '收合左側功能表');
   sidebarToggle?.setAttribute('aria-expanded', String(!collapsed));
+  sidebarCollapsedToggle.classList.toggle('is-visible', collapsed);
 };
 const toggleSidebar = () => {
   if (isMobileViewport()) {
@@ -86,7 +95,7 @@ const toggleSidebar = () => {
 
 const enhanceSidebarNavigation = () => {
   if (!sidebar) return;
-  sidebar.querySelectorAll('.home-link, .section-button, .submenu a, .logout-button').forEach((item) => {
+  sidebar.querySelectorAll('.home-link, .sidebar-sub-item, .logout-button').forEach((item) => {
     const label = item.querySelector('.label') || item.querySelector('.sidebar-text');
     const tooltipText = (label?.textContent || item.textContent || '').trim();
     if (tooltipText) {
@@ -95,19 +104,6 @@ const enhanceSidebarNavigation = () => {
     }
   });
 
-  sidebar.querySelectorAll('.submenu a').forEach((link) => {
-    const text = link.textContent.trim();
-    if (!link.querySelector('.icon')) {
-      link.textContent = '';
-      const icon = document.createElement('span');
-      icon.className = 'icon';
-      icon.textContent = MENU_ICON_MAP[text] || '•';
-      const label = document.createElement('span');
-      label.className = 'label sidebar-text';
-      label.textContent = text;
-      link.append(icon, label);
-    }
-  });
 };
 applySidebarState(getStoredSidebarCollapsed());
 
@@ -324,10 +320,10 @@ const applyPermissionUi = () => {
   const restrict = !isOmniplayAdmin() && permissions.pages;
   document.querySelectorAll('.menu a[href]').forEach((link) => {
     const page = PAGE_KEYS[link.getAttribute('href').split('/').pop()];
-    if (page && restrict && !permissions.pages?.[page]?.view) link.closest('li')?.remove();
+    if (page && restrict && !permissions.pages?.[page]?.view) link.remove();
   });
-  document.querySelectorAll('.submenu').forEach((list) => {
-    if (!list.querySelector('li')) list.closest('.menu-section')?.remove();
+  document.querySelectorAll('.sidebar-group').forEach((group) => {
+    if (!group.querySelector('.sidebar-sub-item')) group.remove();
   });
   if (restrict && !getPagePermission().view && !isIndexPage) window.location.href = loginPath;
 };
@@ -423,19 +419,19 @@ const setAppVisibility = () => {
 };
 
 
+const makeThemeToggleButton = () => {
+  const button = document.createElement('button');
+  button.dataset.themeToggle = 'true';
+  button.className = 'theme-toggle';
+  button.type = 'button';
+  button.addEventListener('click', toggleTheme);
+  return button;
+};
+
 const renderThemeToggle = () => {
-  const targets = [sidebar?.querySelector('.sidebar-header'), document.querySelector('.login-card')].filter(Boolean);
-  targets.forEach((target) => {
-    if (target.querySelector('[data-theme-toggle]')) return;
-    const button = document.createElement('button');
-    button.dataset.themeToggle = 'true';
-    button.className = 'theme-toggle';
-    button.type = 'button';
-    button.addEventListener('click', toggleTheme);
-    target.appendChild(button);
-  });
+  const loginCard = document.querySelector('.login-card');
+  if (loginCard && !loginCard.querySelector('[data-theme-toggle]')) loginCard.appendChild(makeThemeToggleButton());
   applyTheme(getStoredTheme());
-  
 };
 
 const renderSidebarUser = () => {
@@ -445,14 +441,15 @@ const renderSidebarUser = () => {
   if (!footer) {
     footer = document.createElement('div');
     footer.id = 'sidebarUserFooter';
-    footer.className = 'sidebar-user';
+    footer.className = 'sidebar-footer';
     footer.innerHTML = `
-      <div class="sidebar-user-info">
-        <span class="sidebar-user-label label">登入者</span>
-        <strong class="sidebar-user-name label"></strong>
+      <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
+        <div class="sidebar-user-row">
+        <div class="sidebar-user-info"><span class="sidebar-user-label label">登入者</span><strong class="sidebar-user-name label"></strong></div>
+        <button class="logout-button" id="logoutButton" type="button"><span class="icon">⎋</span><span class="label">登出</span></button>
       </div>
-      <button class="logout-button" id="logoutButton" type="button"><span class="icon">⎋</span><span class="label">登出</span></button>
     `;
+    footer.querySelector('[data-theme-toggle]')?.addEventListener('click', toggleTheme);
     sidebar.appendChild(footer);
   }
   const nameElement = footer.querySelector('.sidebar-user-name');
@@ -471,21 +468,14 @@ enhanceSidebarNavigation();
 sidebarToggle?.addEventListener('click', toggleSidebar);
 sidebarOverlay?.addEventListener('click', closeMobileSidebar);
 window.addEventListener('resize', () => applySidebarState(getStoredSidebarCollapsed()));
-sidebar?.querySelectorAll('.home-link, .submenu a').forEach((link) => {
+sidebar?.querySelectorAll('.home-link, .sidebar-sub-item').forEach((link) => {
   link.addEventListener('click', () => {
     if (isMobileViewport()) closeMobileSidebar();
   });
 });
 
-document.querySelectorAll('.section-button').forEach((button) => {
-  const list = button.nextElementSibling;
-  button.addEventListener('click', () => {
-    button.classList.toggle('is-open');
-    list?.classList.toggle('is-open');
-  });
-});
-
-
+sidebarCollapsedToggle.addEventListener('click', toggleSidebar);
+  
 setupForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   showSetupMessage('');
