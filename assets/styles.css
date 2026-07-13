@@ -253,7 +253,7 @@ button:hover { transform: translateY(-1px); }
 .icon { width: 18px; min-width: 18px; height: 18px; display: inline-grid; place-items: center; font-size: 16px; }
 .bullet { color: var(--text-muted); line-height: 1; }
 .sidebar-sub-item {
-  padding: 6px 16px 6px 32px;
+  padding: 6px 16px 6px 36px;
   font-size: 13px;
   color: var(--text);
   cursor: pointer;
@@ -263,6 +263,8 @@ button:hover { transform: translateY(-1px); }
   border-radius: 6px;
   margin: 1px 8px;
 }
+.sidebar-sub-item .bullet,
+.sidebar-sub-item::before { margin-left: 0; }
 .sidebar-sub-item:hover { background: var(--surface-muted); }
 .sidebar-sub-item.is-active,
 .sidebar-sub-item.active { background: var(--primary); color: #fff; }
