@@ -69,9 +69,9 @@ const normalizeFormLayoutNumber = (value, { min = 1, max = Infinity, fallback = 
 const applyFormLayout = (element, field = {}) => {
   if (!element) return element;
   const row = normalizeFormLayoutNumber(field.formRow);
-  const col = normalizeFormLayoutNumber(field.formCol, { max: 4 });
-  const colSpan = normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 });
-  const rowSpan = normalizeFormLayoutNumber(field.formRowSpan, { max: 4, fallback: 1 });
+  const col = normalizeFormLayoutNumber(field.formCol, { max: 5 });
+  const colSpan = normalizeFormLayoutNumber(field.formColSpan, { max: 5, fallback: 1 });
+  const rowSpan = normalizeFormLayoutNumber(field.formRowSpan, { max: 5, fallback: 1 });
   element.classList.add('form-field');
   if (row || col) element.classList.add('has-form-layout');
   element.style.setProperty('--form-row', row || 'auto');
@@ -94,10 +94,10 @@ const applyFormLayoutOverrides = (schema = {}, config = {}) => {
   return {
     ...schema,
     fields: schema.fields.map((field) => {
-      const override = overrides.find((item) => fieldLayoutOverrideMatches(field, item));
+      const override = overrides.find((item) => !item._titleOnly && fieldLayoutOverrideMatches(field, item));
       if (!override) return field;
       const next = { ...field };
-      ['formRow', 'formCol', 'formColSpan', 'formRowSpan'].forEach((prop) => {
+      ['formRow', 'formCol', 'formColSpan', 'formRowSpan', '_titleOnly'].forEach((prop) => {
         if (override[prop] !== undefined) next[prop] = override[prop];
       });
       return next;
@@ -768,6 +768,33 @@ const attachImageUploadArea = (imageArea) => {
 };
 
 
+
+const titleOnlyLayoutFields = () => {
+  const fields = getFields();
+  const overrides = Array.isArray(RAGIC_STATE.config?.formLayout) ? RAGIC_STATE.config.formLayout : [];
+  return overrides.filter((override) => override._titleOnly).map((override) => {
+    const source = fields.find((field) => fieldLayoutOverrideMatches(field, override));
+    return source ? { ...source, ...override, type: 'titleOnly', sourceType: source.type } : null;
+  }).filter(Boolean);
+};
+const titleOnlyDisplayValue = (field = {}, record = {}) => {
+  const value = record[field.key];
+  if (Array.isArray(value)) {
+    const source = getFields().find((item) => item.key === field.key);
+    const firstRow = value.find((row) => row && Object.values(row).some(Boolean)) || {};
+    const firstSubfield = (source?.fields || []).find((sub) => firstRow[sub.key] !== undefined && firstRow[sub.key] !== '');
+    return firstSubfield ? renderDisplayValue(firstSubfield, firstRow[firstSubfield.key]) : '<span class="ragic-view-empty">—</span>';
+  }
+  return renderDisplayValue(field, value);
+};
+const createTitleOnlyField = (field = {}, record = {}) => {
+  const item = document.createElement('div');
+  item.className = 'ragic-view-field ragic-view-field-title-only';
+  applyFormLayout(item, field);
+  item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${titleOnlyDisplayValue(field, record)}</div>`;
+  return item;
+};
+
 const currentFilteredIndex = () => RAGIC_STATE.filtered.findIndex((item) => item.id === RAGIC_STATE.currentId);
 const currentRecord = () => RAGIC_STATE.records.find((item) => item.id === RAGIC_STATE.currentId) || RAGIC_STATE.filtered.find((item) => item.id === RAGIC_STATE.currentId) || null;
 const renderDisplayValue = (field, value) => {
@@ -800,14 +827,16 @@ const renderViewForm = (form, record = {}) => {
     item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${renderDisplayValue(field, record[field.key])}</div>`;
     grid.appendChild(item);
   });
-  form.appendChild(grid);
+  titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
   getFields().filter((field) => field.type === 'subtable').forEach((field) => {
     const section = document.createElement('section');
     section.className = 'ragic-subtable ragic-view-subtable-section';
+    applyFormLayout(section, field);
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
-    form.appendChild(section);
+    grid.appendChild(section);
   });
+  form.appendChild(grid);
 };
 const renderFormToolbar = () => {
   const formView = document.querySelector('#ragicFormView');
@@ -910,8 +939,10 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     renderViewForm(form, record);
   } else {
     const grid = document.createElement('div'); grid.className = 'ragic-form-grid';
-    getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key]))); form.appendChild(grid);
-    getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) { const row = renderSubtableRow(field); body.appendChild(row); row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea); } }); form.appendChild(section); });
+    getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key])));
+    titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
+    form.appendChild(grid);
+    getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; applyFormLayout(section, field); section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) { const row = renderSubtableRow(field); body.appendChild(row); row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea); } }); grid.appendChild(section); });
     form.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
     setFormEditable(form);
   }
