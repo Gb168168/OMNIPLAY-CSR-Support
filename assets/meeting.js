@@ -419,6 +419,14 @@ const closeImagePreview = () => {
   document.querySelector('#meetingPreviewImage').removeAttribute('src');
 };
 
+
+const openMeetingFromQuery = () => {
+  const id = new URLSearchParams(window.location.search).get('id');
+  if (!id || meetingState.currentId === id) return;
+  const record = meetingState.records.find((item) => item.id === id);
+  if (record) showForm(record);
+};
+
 const initMeetingPage = async () => {
   if (window.permissionReady) await window.permissionReady;
   meetingStaffCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
@@ -446,6 +454,7 @@ const initMeetingPage = async () => {
   meetingCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
     meetingState.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     renderList();
+    openMeetingFromQuery();
     setFormEditable();
   });
 };
