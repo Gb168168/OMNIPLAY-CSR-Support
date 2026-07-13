@@ -1084,7 +1084,8 @@ const SUBFIELD_TYPES = [
   { value: 'textarea', label: '多行文字' },
   { value: 'date', label: '日期' },
   { value: 'image', label: '圖片' },
-  { value: 'file', label: '檔案' }
+  { value: 'file', label: '檔案' },
+  { value: 'link', label: '連結' }
 ];
 
 const fieldDesigner = (field = {}, nested = false) => {
