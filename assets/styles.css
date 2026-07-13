@@ -2833,3 +2833,48 @@ textarea,
   .sidebar-toggle-btn { display: inline-flex; }
   .sidebar-toggle-btn:not(.is-visible) { display: none; }
 }
+
+/* 排程表單欄位標籤 — 移除所有底色 */
+.schedule-form label,
+.schedule-form label span,
+.schedule-form .field-label,
+.schedule-form h3,
+.schedule-form h4,
+.schedule-form .history-title,
+.schedule-form .creator-label {
+  background: none !important;
+  background-color: transparent !important;
+  color: var(--text);
+}
+
+/* 歷程區塊標題 */
+.history-item strong,
+.schedule-form .section-title {
+  background: none !important;
+  background-color: transparent !important;
+  color: var(--text);
+}
+
+/* 全站文字標籤：統一移除綠色、藍色等文字底色 */
+.status-badge,
+.status-success,
+.user-pill,
+.leave-status,
+.schedule-status,
+.saved-label-chip,
+.saved-label-empty,
+.history-empty,
+.history-item em,
+.ragic-subtable-title,
+.image-count-badge,
+.staff-form label,
+.staff-form label span,
+.login-card label,
+.ragic-field span,
+.leave-special-menu label,
+.designer-required,
+.designer-width {
+  background: none !important;
+  background-color: transparent !important;
+  color: var(--text);
+}
