@@ -1151,7 +1151,8 @@ const closeColumnMenus = (exceptKey = '') => {
 
 const toggleColumnMenu = (key) => {
   const selectorKey = window.CSS?.escape ? CSS.escape(key) : String(key).replace(/"/g, '\\"');
-  const menu = document.querySelector(`.col-menu-dropdown[data-menu="${selectorKey}"]`);
+  const tableWrap = document.querySelector('#ragicHeaderRow')?.closest('.ragic-table-wrap, .ragic-table-wrapper');
+  const menu = (tableWrap || document).querySelector(`.col-menu-dropdown[data-menu="${selectorKey}"]`);
   if (!menu) return;
   const willOpen = menu.hidden;
   closeColumnMenus(willOpen ? key : '');
@@ -1634,16 +1635,17 @@ const initRagicPage = async (config) => {
       if (saveButton) { saveButton.disabled = false; saveButton.textContent = originalText; }
     }
   });
-  const ragicTableHead = document.querySelector('#ragicHeaderRow')?.closest('thead');
+  const ragicTableWrap = document.querySelector('#ragicHeaderRow')?.closest('.ragic-table-wrap, .ragic-table-wrapper');
   window.addEventListener('resize', updateRagicStickyHeaderOffset);
-  ragicTableHead?.addEventListener('input', handleColumnMenuInput);
-  ragicTableHead?.addEventListener('change', handleColumnMenuChange);
-  ragicTableHead?.addEventListener('click', handleColumnMenuClick);
-  ragicTableHead?.addEventListener('keydown', (event) => {
+  ragicTableWrap?.addEventListener('input', handleColumnMenuInput);
+  ragicTableWrap?.addEventListener('change', handleColumnMenuChange);
+  ragicTableWrap?.addEventListener('click', handleColumnMenuClick);
+  ragicTableWrap?.addEventListener('keydown', (event) => {
     if (!['Enter', ' '].includes(event.key)) return;
     const trigger = event.target.closest('.col-menu-trigger');
-    if (!trigger) return;
+    if (!trigger || !ragicTableWrap.contains(trigger)) return;
     event.preventDefault();
+    event.stopPropagation();
     toggleColumnMenu(trigger.dataset.field);
   });
   document.addEventListener('click', (event) => {
