@@ -157,7 +157,7 @@ const cellTooltipText = (record, field) => {
 const renderIconActions = (record = {}) => {
   const currentUser = currentRagicUser();
   const pinned = Boolean(currentUser && record.pins?.[currentUser]);
-  return `<td class="icon-actions col-marker">
+  return `<td class="icon-actions col-marker marker-cell">
     <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="重要/今日交接">🔥</span>
     <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">📌</span>
   </td>`;
@@ -753,13 +753,30 @@ const renderTable = () => {
     tr.classList.toggle('is-readonly', !canUse('edit'));
     tr.innerHTML = renderIconActions(record) + fields.map((field) => {
       const columnClass = `${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''}`;
-      const typeAttr = field.type ? ` data-type="${escapeHtml(field.type)}"` : '';
+      const typeAttr = field.type ? ` data-type="${escapeHtml(field.type)}" data-field-type="${escapeHtml(field.type)}"` : '';
       const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
       const width = fieldColumnWidth(field);
       const style = width ? ` style="--col-width: ${width}px; min-width: ${width}px;"` : '';
       return `<td class="${columnClass}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${typeAttr}${style}${title}>${renderCell(record, field)}</td>`;
     }).join('');
-    if (canUse('edit')) tr.addEventListener('dblclick', () => renderForm(record));
+    let rowClickTimer = null;
+    tr.addEventListener('click', (event) => {
+      if (event.target.closest('.marker-cell, a, button, .ragic-thumbnail, .editing')) return;
+      if (rowClickTimer) window.clearTimeout(rowClickTimer);
+      rowClickTimer = window.setTimeout(() => renderForm(record), 180);
+    });
+    if (canUse('edit')) {
+      tr.addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (rowClickTimer) {
+          window.clearTimeout(rowClickTimer);
+          rowClickTimer = null;
+        }
+        const cell = event.target.closest('td[data-field-key]');
+        if (cell) startInlineEdit(cell);
+      });
+    }
     tbody.appendChild(tr);
   });
   renderPagination();
@@ -1297,7 +1314,7 @@ const initRagicPage = async (config) => {
   document.addEventListener('click', (event) => {
     if (!event.target.closest('.col-menu-cell')) closeColumnMenus();
   });
-  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (button) { event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); return; } const cell = event.target.closest('td[data-doc-id][data-field-key]'); if (cell) { event.preventDefault(); event.stopPropagation(); startInlineEdit(cell); } });
+  document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (button) { event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); return; } });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => {
