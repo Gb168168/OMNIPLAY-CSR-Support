@@ -1635,8 +1635,11 @@ const initRagicPage = async (config) => {
     if (cancelEdit) { event.preventDefault(); const record = currentRecord(); if (record) renderForm(record, { mode: 'view' }); }
     if (prevRecord) { event.preventDefault(); openRecordAtIndex(currentFilteredIndex() - 1); }
     if (nextRecord) { event.preventDefault(); openRecordAtIndex(currentFilteredIndex() + 1); }
-    const viewImage = event.target.closest('.ragic-view-image');
-    if (viewImage) { event.preventDefault(); openImagePreview(viewImage.src, viewImage.alt || '圖片'); }
+    const viewImage = event.target.closest('.ragic-view-image, .ragic-view-field .field-value img, .form-view-mode .field-value img');
+    if (viewImage && event.currentTarget.contains(viewImage)) {
+      event.preventDefault();
+      openImagePreview(viewImage.currentSrc || viewImage.src, viewImage.alt || '圖片');
+    }
   });
   document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？\n資料將不再存在🚫')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
   document.querySelector('#ragicForm').addEventListener('submit', async (event) => {
