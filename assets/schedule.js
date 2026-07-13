@@ -246,6 +246,18 @@ const subscribeLeave = () => {
   unsubscribeLeave = scheduleLeaveCollection.doc(toMonthKey(selectedDate)).onSnapshot((doc) => { leaveData = doc.exists ? { records: {}, ...doc.data() } : { records: {} }; });
 };
 
+
+const openScheduleFromQuery = () => {
+  const id = new URLSearchParams(window.location.search).get('id');
+  if (!id || editingId === id || modalEl?.classList.contains('is-open')) return;
+  const item = scheduleList.find((entry) => entry.id === id && !entry.deleted);
+  if (!item) return;
+  const at = parseDateValue(item.reminderAt) || new Date(`${item.date}T09:00`);
+  currentDate = new Date(at);
+  selectedDate = new Date(at);
+  openModal(toDateKey(at), id);
+};
+
 const subscribeSchedules = () => {
   unsubscribeSchedules?.();
   if (!scheduleCollection) return;
@@ -257,6 +269,7 @@ const subscribeSchedules = () => {
       return { id: doc.id, ...data, date: data.date || (reminder ? toDateKey(reminder) : doc.id.slice(0, 10)), labelColor: data.labelColor || '#3b82f6', history: data.history || [] };
     });
     renderCalendar();
+    openScheduleFromQuery();
     setStatus('資料已載入。', 'success');
   }, (error) => { console.error('讀取排程失敗：', error); setStatus('讀取資料失敗。', 'error'); });
 };
