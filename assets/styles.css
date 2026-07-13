@@ -2995,18 +2995,90 @@ textarea,
   color: #d32f2f;
   border-color: #d32f2f;
 }
+
+.form-field-resizable {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.form-field-resizable .resize-handle-right {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 5;
+}
+
+.form-field-resizable .resize-handle-right:hover,
+.form-field-resizable .resize-handle-right.resizing {
+  background: #1976d2;
+}
+
+.form-field-resizable .resize-handle-bottom {
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+  background: transparent;
+  z-index: 5;
+}
+
+.form-field-resizable .resize-handle-bottom:hover,
+.form-field-resizable .resize-handle-bottom.resizing {
+  background: #1976d2;
+}
+
+.form-field-resizable .ragic-view-label,
+.form-field-resizable .ragic-view-value,
+.form-field-resizable .field-value,
+.form-field-resizable span,
+.form-field-resizable td,
+.form-field-resizable th {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.form-field-resizable .ragic-view-label,
+.form-field-resizable .ragic-view-value,
+.form-field-resizable .field-value {
+  display: block;
+}
+
+.form-field-resizable .ragic-view-value,
+.form-field-resizable .field-value {
+  height: calc(100% - 24px);
+}
+
+.ragic-view-subtable th.form-field-resizable,
+.ragic-view-subtable td.form-field-resizable {
+  position: relative;
+  min-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+
 .ragic-view-field {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
   background: var(--surface-muted);
   min-width: 0;
+  overflow: hidden;
 }
 .ragic-view-field-textarea:not(.has-form-layout),
 .ragic-view-field-image:not(.has-form-layout),
 .ragic-view-field-file:not(.has-form-layout) { grid-column: 1 / -1; }
 .ragic-view-label { margin-bottom: 8px; color: var(--text-secondary); font-weight: 800; }
-.ragic-view-value { color: var(--text); line-height: 1.7; word-break: break-word; white-space: normal; }
+.ragic-view-value { color: var(--text); line-height: 1.7; word-break: break-word; white-space: normal; overflow: hidden; text-overflow: ellipsis; }
 .ragic-view-field-textarea .ragic-view-value,
 .ragic-view-field-textarea .field-value {
   max-height: 150px;
@@ -3179,20 +3251,22 @@ body {
 }
 
 
-/* 表單容器 — 全屏覆蓋列表（保留頁面標題區） */
+/* 表單容器 — 取代列表並佔滿主要內容區 */
+.form-container,
+.ragic-form-wrapper,
 .ragic-form-container {
   position: absolute;
-  top: var(--ragic-form-overlay-top, 0);
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 20;
+  background: #fff;
+  z-index: 15;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--surface);
-  overflow-y: auto;
-  max-height: calc(100vh - var(--ragic-form-overlay-top, 0px));
+  max-height: none;
   max-width: none;
   width: 100%;
   margin: 0;
