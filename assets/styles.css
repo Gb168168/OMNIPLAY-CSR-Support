@@ -1426,9 +1426,10 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .secondary { background: #334155; }
 .ghost { background: transparent; border: 1px solid rgba(148,163,184,.35); }
 .danger { color: #fecaca; border-color: rgba(248,113,113,.45); }
-.ragic-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; padding: 18px; }
+.ragic-form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 16px; padding: 18px; }
+.ragic-form-grid .form-field { grid-row: var(--form-row, auto); grid-column: var(--form-col, auto) / span var(--form-colspan, 1); }
 .ragic-field span { display: block; margin-bottom: 8px; color: var(--text-secondary); font-weight: 800; }
-.ragic-field-textarea { grid-column: 1 / -1; }
+.ragic-field-textarea:not(.has-form-layout) { grid-column: 1 / -1; }
 .ragic-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 18px; border-top: 1px solid var(--border); }
 .ragic-file-preview { display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; color: var(--primary); background: var(--surface); cursor: zoom-in; }
 .ragic-file-preview img { width: 96px; height: 72px; object-fit: cover; border-radius: 10px; }
@@ -1621,12 +1622,15 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-image-modal-card { width: min(920px, 100%); padding-bottom: 18px; }
 .ragic-image-modal-card img { display: block; max-width: calc(100% - 36px); max-height: 72vh; margin: 0 auto; border-radius: 16px; object-fit: contain; }
 .designer-body { display: grid; gap: 12px; padding: 18px; }
-.designer-field { display: grid; grid-template-columns: auto minmax(160px, 1fr) 160px minmax(180px, 1fr) auto 120px auto; gap: 10px; align-items: start; padding: 12px; border: 1px solid rgba(148,163,184,.2); border-radius: 16px; background: rgba(15,23,42,.64); }
+.designer-field { display: grid; grid-template-columns: auto minmax(160px, 1fr) 160px minmax(180px, 1fr) auto 120px minmax(220px, auto) auto; gap: 10px; align-items: start; padding: 12px; border: 1px solid rgba(148,163,184,.2); border-radius: 16px; background: rgba(15,23,42,.64); }
 .designer-field input, .designer-field textarea, .designer-field select { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid rgba(148,163,184,.28); border-radius: 12px; background: #0f172a; color: #e2e8f0; }
 .designer-required { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; color: #bfdbfe; font-weight: 800; white-space: nowrap; }
 .designer-required input { width: auto; min-height: auto; }
 .designer-width { display: grid; grid-template-columns: auto minmax(64px, 1fr) auto; gap: 6px; align-items: center; min-height: 42px; color: #bfdbfe; font-weight: 800; white-space: nowrap; }
 .designer-width input { min-width: 0; }
+.designer-form-layout { display: grid; grid-template-columns: repeat(3, minmax(58px, 1fr)); gap: 6px; align-items: start; color: #bfdbfe; font-weight: 800; }
+.designer-form-layout label { display: grid; grid-template-columns: auto minmax(42px, 1fr); gap: 4px; align-items: center; white-space: nowrap; }
+.designer-form-layout input { min-width: 0; padding-inline: 8px; }
 .drag-handle { cursor: grab; color: var(--text-muted); font-size: 18px; padding: 4px 8px; user-select: none; line-height: 1; }
 .drag-handle:active { cursor: grabbing; }
 .field-row.dragging { opacity: 0.4; }
@@ -1681,6 +1685,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 @media (max-width: 900px) {
   .designer-field { grid-template-columns: 1fr; }
+  .ragic-form-grid { grid-template-columns: 1fr; }
   .designer-subfields { margin-left: 0; }
   .subtable-row-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -2874,7 +2879,8 @@ textarea,
 .ragic-field span,
 .leave-special-menu label,
 .designer-required,
-.designer-width {
+.designer-width,
+.designer-form-layout {
   background: none !important;
   background-color: transparent !important;
   color: var(--text);
