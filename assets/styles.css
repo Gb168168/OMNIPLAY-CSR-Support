@@ -1439,11 +1439,33 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .form-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  max-width: 1000px;
+  max-width: none;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
   gap: 8px 12px;
   padding: 16px;
+}
+
+.form-field[data-type="text"] input,
+.form-field[data-type="date"] input,
+.form-field[data-type="datetime"] input,
+.form-field[data-type="select"] select,
+.form-field[data-type="number"] input,
+.form-field[data-type="link"] input,
+.form-field[data-type="serial"] input,
+.form-field[data-type="createdDate"] input,
+.form-field[data-type="updatedDate"] input {
+  max-width: 200px;
+}
+
+.form-field[data-type="textarea"] textarea {
+  width: 100%;
+  min-height: 150px;
+}
+
+.form-field[data-type="image"],
+.form-field[data-type="file"] {
+  width: 100%;
 }
 .ragic-form-grid .form-field { grid-row: var(--form-row, auto) / span var(--form-rowspan, 1); grid-column: var(--form-col, auto) / span var(--form-colspan, 1); }
 .ragic-form-grid .form-field[style*="--form-rowspan"] { height: 100%; }
@@ -3134,9 +3156,9 @@ body {
   min-height: 0;
   background: var(--surface);
   overflow-y: auto;
-  max-width: 1000px;
+  max-width: none;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
   padding: 16px;
   scrollbar-width: none;
   -ms-overflow-style: none;
