@@ -73,6 +73,7 @@ const applyFormLayout = (element, field = {}) => {
   const colSpan = normalizeFormLayoutNumber(field.formColSpan, { max: 5, fallback: 1 });
   const rowSpan = normalizeFormLayoutNumber(field.formRowSpan, { max: 5, fallback: 1 });
   element.classList.add('form-field');
+  element.dataset.type = field.type || 'text';
   if (row || col) element.classList.add('has-form-layout');
   element.style.setProperty('--form-row', row || 'auto');
   element.style.setProperty('--form-col', col || 'auto');
