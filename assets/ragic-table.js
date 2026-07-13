@@ -868,13 +868,37 @@ const renderSubtableRow = (field, item = {}) => {
   return row;
 };
 
+
+const setRagicFormOverlayOffset = () => {
+  const main = document.querySelector('.main, .main-content');
+  const topbar = main?.querySelector(':scope > .topbar');
+  if (!main || !topbar) return;
+  main.style.setProperty('--ragic-form-overlay-top', `${topbar.offsetHeight}px`);
+};
+
+const setRagicViewMode = (mode) => {
+  const listView = document.querySelector('#ragicListView');
+  const formView = document.querySelector('#ragicFormView');
+  const main = document.querySelector('.main, .main-content');
+  listView?.classList.add('ragic-list-section');
+  formView?.classList.add('ragic-form-container');
+  if (mode === 'form') {
+    setRagicFormOverlayOffset();
+    if (listView) listView.hidden = true;
+    if (formView) formView.hidden = false;
+    main?.classList.add('is-form-view');
+    return;
+  }
+  if (formView) formView.hidden = true;
+  if (listView) listView.hidden = false;
+  main?.classList.remove('is-form-view');
+};
+
 const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) => {
   RAGIC_STATE.currentId = record.id || null;
   RAGIC_STATE.formMode = mode;
-  document.querySelector('#ragicListView').hidden = true;
-  document.querySelector('.main, .main-content')?.classList.add('is-form-view');
+  setRagicViewMode('form');
   const formView = document.querySelector('#ragicFormView');
-  formView.hidden = false;
   const legacyTitle = formView.querySelector('h2');
   if (legacyTitle) legacyTitle.textContent = record.id ? (mode === 'edit' ? `編輯${RAGIC_STATE.config.title}` : `檢視${RAGIC_STATE.config.title}`) : `新增${RAGIC_STATE.config.title}`;
   renderFormToolbar();
@@ -1534,7 +1558,7 @@ const initRagicPage = async (config) => {
     await saveDesignerSchema({ close: true });
   });
   setupRagicFormActions();
-  applyRagicPermissionUi(); document.querySelector('#newRecordButton').addEventListener('click', () => { if (canUse('edit')) renderForm({}, { mode: 'edit' }); }); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; document.querySelector('.main, .main-content')?.classList.remove('is-form-view'); RAGIC_STATE.formMode = 'view'; });
+  applyRagicPermissionUi(); setRagicViewMode('list'); window.addEventListener('resize', setRagicFormOverlayOffset); document.querySelector('#newRecordButton').addEventListener('click', () => { if (canUse('edit')) renderForm({}, { mode: 'edit' }); }); document.querySelector('#backToListButton').addEventListener('click', () => { setRagicViewMode('list'); RAGIC_STATE.formMode = 'view'; });
   document.querySelector('#ragicFormView')?.addEventListener('click', (event) => {
     const editButton = event.target.closest('#ragicEditRecord');
     const cancelEdit = event.target.closest('#ragicCancelEdit');
