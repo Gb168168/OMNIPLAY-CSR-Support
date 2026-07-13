@@ -89,26 +89,29 @@
           { key: 'am_reply', label: '商務/AM 回覆', type: 'textarea', rows: 4 }
         ]
       },
-      formLayout: [
-        { key: 'date', formRow: 1, formCol: 1 },
-        { key: 'reporter', formRow: 1, formCol: 2 },
-        { key: 'category', formRow: 1, formCol: 3 },
-        { key: 'subject', formRow: 1, formCol: 4 },
-        { key: 'content', formRow: 1, formCol: 5 },
-        { key: 'field_1783792645702_pi66u', formRow: 2, formCol: 1 },
-        { key: 'status', formRow: 2, formCol: 2 },
-        { key: 'field_1783793487601_dbb5n', formRow: 2, formCol: 3 },
-        { key: 'field_1783793471256_rn925', formRow: 2, formCol: 4 },
-        { key: 'serial', formRow: 2, formCol: 5 },
-        { key: 'field_1783793518050_ijdc6', formRow: 3, formCol: 1 },
-        { key: 'field_1783793539632_yakx0', formRow: 3, formCol: 2 },
-        { key: 'field_1783889793781_euuc0', formRow: 3, formCol: 3 },
-        { key: 'field_1783889767182_tuy8x', formRow: 3, formCol: 4 },
-        { key: 'field_1783793551894_qk3ol', formRow: 3, formCol: 5, formRowSpan: 2 },
-        { key: 'field_1783793415787_ht9q7', label: '標題', formRow: 4, formCol: 1, formColSpan: 2, _titleOnly: true },
-        { key: 'note', formRow: 4, formCol: 3, formColSpan: 2 },
-        { key: 'field_1783793415787_ht9q7', formRow: 5, formCol: 1, formColSpan: 5 }
-      ],
+      formLayout: {
+        columns: 5,
+        fields: {
+          '日期': { row: 1, col: 1 },
+          '班別': { row: 1, col: 2 },
+          '部門': { row: 1, col: 3 },
+          '分類': { row: 1, col: 4 },
+          '級數': { row: 1, col: 5 },
+          '客戶': { row: 2, col: 1 },
+          '狀態': { row: 2, col: 2 },
+          '提報者': { row: 2, col: 3 },
+          '日誌連結': { row: 2, col: 4 },
+          '編號': { row: 2, col: 5 },
+          '完成者': { row: 3, col: 1 },
+          '完成時間': { row: 3, col: 2 },
+          '更新時間': { row: 3, col: 3 },
+          '檔案': { row: 3, col: 4 },
+          '圖片': { row: 3, col: 5, rowSpan: 2 },
+          '標題': { key: 'field_1783793415787_ht9q7', row: 4, col: 1, colSpan: 2, _titleOnly: true },
+          '備註': { row: 4, col: 3, colSpan: 2 },
+          '子表單': { row: 5, col: 1, colSpan: 5 }
+        }
+      },
       listColumns: ['date', 'reporter', 'category', 'subject', 'content', 'status']
     });
   </script>
