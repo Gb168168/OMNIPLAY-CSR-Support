@@ -1648,8 +1648,18 @@ const renderLayoutDesigner = () => {
     }
   }
   const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}">${escapeHtml(field.label || field.key)}${field.type === 'subtable' ? ' <small>子表單</small>' : ''}</div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
-  panel.innerHTML = `<div class="layout-designer"><div class="layout-unplaced"><span>未放置的欄位：</span>${unplaced}<button class="secondary btn-add-layout-field" type="button">+新增</button></div><div class="layout-toolbar"><label>欄數: <select id="gridCols">${colsSelect}</select></label><label>列數: <select id="gridRows">${rowsSelect}</select></label><button class="btn-auto-layout secondary" type="button">自動排版</button><button class="btn-save-layout primary" type="button">儲存排版</button></div><div class="layout-grid" style="grid-template-columns: repeat(${layout.columns}, minmax(92px, 1fr));">${cells.join('')}</div><div class="layout-preview" style="max-height: 200px; overflow: auto;"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${fields.filter((field) => placed.has(field.key)).map((field) => { const item = layout.fields[field.key]; return `<div class="ragic-view-field" style="--form-row:${item.row};--form-col:${item.col};--form-colspan:${item.colSpan};--form-rowspan:${item.rowSpan};"><div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${escapeHtml(designerPreviewValue(field))}</div></div>`; }).join('') || '<div class="designer-preview-empty">拖入欄位後顯示預覽</div>'}</div></div></div>`;};
-  const updateDesignerFieldByKey = (fieldKey, patcher) => {
+  const previewFields = fields.filter((field) => placed.has(field.key)).map((field) => {
+    const item = layout.fields[field.key];
+    return `<div class="ragic-view-field" style="--form-row:${item.row};--form-col:${item.col};--form-colspan:${item.colSpan};--form-rowspan:${item.rowSpan};"><div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${escapeHtml(designerPreviewValue(field))}</div></div>`;
+  }).join('') || '<div class="designer-preview-empty">拖入欄位後顯示預覽</div>';
+  panel.innerHTML = `<div class="layout-designer">
+    <div class="layout-unplaced"><span>未放置的欄位：</span>${unplaced}<button class="secondary btn-add-layout-field" type="button">+新增</button></div>
+    <div class="layout-toolbar"><label>欄數: <select id="gridCols">${colsSelect}</select></label><label>列數: <select id="gridRows">${rowsSelect}</select></label><button class="btn-auto-layout secondary" type="button">自動排版</button><button class="btn-save-layout primary" type="button">儲存排版</button></div>
+    <div class="layout-grid" style="grid-template-columns: repeat(${layout.columns}, minmax(92px, 1fr));">${cells.join('')}</div>
+    <div class="layout-preview" style="max-height: 200px; overflow: auto;"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${previewFields}</div></div>
+  </div>`;
+};
+const updateDesignerFieldByKey = (fieldKey, patcher) => {
   const row = document.querySelector(`#ragicDesignerModal .designer-field[data-field-key="${window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\\"')}"]`);
   if (!row) return;
   patcher(row);
