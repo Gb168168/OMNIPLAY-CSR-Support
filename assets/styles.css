@@ -3014,9 +3014,11 @@ body.is-col-resizing * {
 /* Fixed viewport layout: keep page chrome static and scroll only inside tables. */
 html,
 body {
-  height: 100vh;
-  overflow: hidden;
-  margin: 0;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .app-layout,
@@ -3032,10 +3034,11 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100vh !important;
+  max-height: 100vh !important;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: hidden !important;
 }
 
 .ragic-page-header,
@@ -3051,11 +3054,12 @@ body {
   min-height: 0;
 }
 
+/* Table wrappers fill remaining space and scroll internally. */
 .ragic-table-wrapper,
 .ragic-table-wrap {
   flex: 1;
   min-height: 0;
-  max-height: none;
+  max-height: none !important;
   overflow-x: auto;
   overflow-y: auto;
 }
