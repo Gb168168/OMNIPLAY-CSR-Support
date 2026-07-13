@@ -1089,7 +1089,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 
 .schedule-meta p { margin: 0; }
-.schedule-status[data-type="success"] { color: #bbf7d0; }
+.schedule-status[data-type="success"] { color: var(--primary); }
 .schedule-status[data-type="error"] { color: #fecaca; }
 
 .calendar-grid {
@@ -1138,7 +1138,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .weekday-0 .day-number,
 .calendar-weekday.weekday-0 { color: #f87171; }
 .weekday-6 .day-number,
-.calendar-weekday.weekday-6 { color: #86efac; }
+.calendar-weekday.weekday-6 { color: var(--primary); }
 
 .day-number {
   width: 30px;
@@ -1153,9 +1153,9 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 
 .calendar-day.is-today .day-number {
-  color: white;
-  background: #16a34a;
-  box-shadow: 0 0 0 4px rgba(22, 163, 74, .22);
+  color: var(--primary);
+  background: var(--primary-light, #e3f2fd);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .day-events {
@@ -1583,8 +1583,8 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   justify-self: end;
   padding: 3px 8px;
   border-radius: 999px;
-  color: #bbf7d0;
-  background: rgba(22, 163, 74, .16);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
   font-style: normal;
   font-weight: 800;
 }
@@ -1789,7 +1789,7 @@ body { background: var(--bg-gradient); }
 [data-theme="light"] .weekday-0 .day-number,
 [data-theme="light"] .calendar-weekday.weekday-0 { color: #B91C1C; }
 [data-theme="light"] .weekday-6 .day-number,
-[data-theme="light"] .calendar-weekday.weekday-6 { color: #166534; }
+[data-theme="light"] .calendar-weekday.weekday-6 { color: var(--primary); }
 [data-theme="light"] .day-number { color: var(--text); }
 [data-theme="light"] .schedule-history { background: #F8FAFC; }
 [data-theme="light"] .schedule-history h3,
@@ -1883,6 +1883,11 @@ a { color: var(--primary); background: transparent; }
 .history-item em,
 .leave-status[data-type="success"],
 .schedule-status[data-type="success"] { color: var(--text); background: var(--success); }
+.schedule-status[data-type="success"],
+.history-item em {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
 .status-badge.is-disabled,
 .leave-status[data-type="error"],
 .schedule-status[data-type="error"],
@@ -1942,10 +1947,10 @@ a { color: var(--primary); background: transparent; }
 .designer-field select { color: var(--text); background: var(--surface); border-color: var(--border); }
 .calendar-grid { background: var(--border); }
 .calendar-event { background: color-mix(in srgb, var(--primary) 20%, var(--card)); color: var(--text); }
-.day-number,
+.day-number { background: var(--primary); color: #fff; }
+.calendar-day.is-today .day-number { background: var(--primary-light, #e3f2fd); color: var(--primary); }
 .schedule-history h3,
-.history-item strong,
-.calendar-day.is-today .day-number { background: var(--success); color: var(--text); }
+.history-item strong { background: var(--primary); color: #fff; }
 .ragic-toolbar h2,
 .ragic-form-toolbar h2,
 .ragic-subtable h3,
@@ -2091,6 +2096,11 @@ tbody tr:nth-child(even),
   background: var(--success-soft);
   border-radius: 999px;
   padding: 4px 10px;
+}
+.schedule-status[data-type="success"],
+.history-item em {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
 }
 .status-badge.is-disabled,
 .leave-status[data-type="error"],
