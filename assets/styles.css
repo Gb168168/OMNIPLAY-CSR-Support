@@ -3026,8 +3026,19 @@ textarea,
   object-fit: contain;
   border: 1px solid var(--border);
   border-radius: 12px;
-  cursor: zoom-in;
+  cursor: pointer;
+  transition: opacity 0.2s;
   background: var(--surface);
+}
+.ragic-view-field .field-value img,
+.form-view-mode .field-value img {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.ragic-view-image:hover,
+.ragic-view-field .field-value img:hover,
+.form-view-mode .field-value img:hover {
+  opacity: 0.85;
 }
 .ragic-view-subtable-wrap { max-height: none; margin: 0; padding: 0; }
 .ragic-view-subtable { width: 100%; border-collapse: collapse; }
