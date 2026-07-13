@@ -2683,8 +2683,11 @@ textarea,
   cursor: pointer;
   font-size: 12px;
   line-height: 1;
+  pointer-events: auto;
+  position: relative;
   user-select: none;
   vertical-align: middle;
+  z-index: 5;
 }
 .col-menu-trigger:hover,
 .col-menu-trigger.is-active {
