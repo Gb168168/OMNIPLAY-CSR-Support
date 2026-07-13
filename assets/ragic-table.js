@@ -1726,8 +1726,7 @@ const initRagicPage = async (config) => {
   document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);
   document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
-  document.querySelector('.designer-body')?.addEventListener('input', updateDesignerPreview);
-  document.querySelector('.designer-body')?.addEventListener('input', () => { updateDesignerPreview(); renderLayoutDesigner(); });
+  document.querySelector('.designer-body')?.addEventListener('input', (event) => {
     updateDesignerPreview();
     renderLayoutDesigner();
     if (event.target?.matches('[data-role="width"]')) saveDesignerSchema();
