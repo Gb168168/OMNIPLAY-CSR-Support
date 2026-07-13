@@ -1227,15 +1227,23 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-toolbar > div:first-child { margin-right: auto; }
 .ragic-toolbar h2, .ragic-form-toolbar h2, .ragic-subtable h3 { margin: 0; color: var(--text); }
 .ragic-toolbar p { margin: 4px 0 0; color: var(--text-secondary); }
+.ragic-table-wrapper,
 .ragic-table-wrap {
   max-height: calc(100vh - 220px);
   overflow-y: auto;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0 18px 18px;
   position: relative;
   --ragic-header-row-height: 42px;
 }
-.ragic-table { table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: 0; }
+.ragic-table {
+  table-layout: fixed;
+  min-width: max-content;
+  width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+}
 .ragic-table thead {
   position: sticky;
   top: 0;
@@ -1257,7 +1265,19 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   background: var(--surface);
   border-bottom: 2px solid var(--border);
 }
+.ragic-table th,
+.ragic-table td {
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .ragic-table td { padding: 14px 12px; border-top: 1px solid rgba(226,232,240,.16); border-bottom: 1px solid rgba(226,232,240,.16); color: var(--table-text); }
+.ragic-table td[data-type="textarea"],
+.ragic-table td.col-textarea {
+  white-space: normal;
+  word-break: break-word;
+}
 .ragic-table tbody tr:nth-child(odd) td { background: var(--table-row); }
 .ragic-table tbody tr:nth-child(even) td { background: var(--surface-muted); }
 .ragic-table tr { cursor: pointer; }
@@ -1298,11 +1318,11 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-table .col-dept { width: 90px; }
 .ragic-table .col-category { width: 70px; }
 .ragic-table .col-status { width: 80px; }
-.ragic-table .col-content { width: auto; }
+.ragic-table .col-content { width: 180px; }
+.ragic-table .col-textarea { width: 300px; }
 .ragic-table td.col-content {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .ragic-table td.col-content a,
 .ragic-table td.col-content span {
