@@ -837,27 +837,43 @@ const renderViewForm = (form, record = {}) => {
   });
   form.appendChild(grid);
 };
+const formDisplayName = () => {
+  const configuredName = RAGIC_STATE.config?.tableName || RAGIC_STATE.config?.title || '';
+  const pageTitle = document.title ? document.title.split(/[｜|-]/)[0].trim() : '';
+  const baseName = String(configuredName || pageTitle || '表單').trim();
+  return baseName.includes('表單') ? baseName : `${baseName}表單`;
+};
 const renderFormToolbar = () => {
   const formView = document.querySelector('#ragicFormView');
   const legacyToolbar = formView?.querySelector('.ragic-form-toolbar');
   if (!legacyToolbar) return;
   legacyToolbar.classList.add('form-toolbar');
-  const existingTitle = legacyToolbar.querySelector('h2');
-  const titleText = existingTitle?.textContent || '';
-  legacyToolbar.innerHTML = `<div class="form-pager"><button class="pager-btn" id="ragicPrevRecord" type="button">&lt; 上一筆</button><button class="pager-btn" id="ragicNextRecord" type="button">下一筆 &gt;</button></div><h2 class="ragic-form-title">${escapeHtml(titleText)}</h2><div class="form-mode-actions"></div>`;
-  const actions = legacyToolbar.querySelector('.form-mode-actions');
+  const modeLabel = RAGIC_STATE.formMode === 'edit' ? '編輯' : '檢視';
+  legacyToolbar.innerHTML = `<div class="form-toolbar-left"><button class="pager-btn" id="ragicPrevRecord" type="button">&lt; 上一筆</button><button class="pager-btn" id="ragicNextRecord" type="button">下一筆 &gt;</button></div><div class="form-toolbar-center ragic-form-title">${escapeHtml(modeLabel)}：${escapeHtml(formDisplayName())}</div><div class="form-toolbar-right"></div>`;
+  const actions = legacyToolbar.querySelector('.form-toolbar-right');
+  if (RAGIC_STATE.currentId && RAGIC_STATE.formMode !== 'edit' && canUse('edit')) {
+    actions.insertAdjacentHTML('beforeend', '<button class="edit-btn" id="ragicEditRecord" type="button">✏️編輯</button>');
+  }
   if (!RAGIC_STATE.currentId || RAGIC_STATE.formMode === 'edit') {
-    actions.innerHTML = `${RAGIC_STATE.currentId ? '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>' : ''}<button class="edit-btn" form="ragicForm" type="submit">💾儲存</button>`;
-  } else {
-    actions.innerHTML = canUse('edit') ? '<button class="edit-btn" id="ragicEditRecord" type="button">✏️編輯</button>' : '';
+    actions.insertAdjacentHTML('beforeend', '<button class="save-btn" form="ragicForm" type="submit">儲存</button>');
+    if (RAGIC_STATE.currentId) actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>');
+  }
+  const deleteButton = document.querySelector('#deleteButton');
+  if (deleteButton) {
+    deleteButton.className = 'btn-delete';
+    deleteButton.type = 'button';
+    deleteButton.textContent = '刪除';
+    actions.appendChild(deleteButton);
   }
   const index = currentFilteredIndex();
   const prev = legacyToolbar.querySelector('#ragicPrevRecord');
   const next = legacyToolbar.querySelector('#ragicNextRecord');
-  if (prev) prev.disabled = index <= 0 || !RAGIC_STATE.currentId;
-  if (next) next.disabled = index < 0 || index >= RAGIC_STATE.filtered.length - 1 || !RAGIC_STATE.currentId;
+  const disablePaging = RAGIC_STATE.formMode === 'edit' || !RAGIC_STATE.currentId;
+  if (prev) prev.disabled = disablePaging || index <= 0;
+  if (next) next.disabled = disablePaging || index < 0 || index >= RAGIC_STATE.filtered.length - 1;
 };
 const openRecordAtIndex = (index) => {
+  if (RAGIC_STATE.formMode === 'edit') return;
   const record = RAGIC_STATE.filtered[index];
   if (record) renderForm(record, { mode: 'view' });
 };
