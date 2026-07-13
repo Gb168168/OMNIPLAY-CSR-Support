@@ -2701,10 +2701,11 @@ textarea,
 .col-menu-trigger {
   display: inline-block;
   margin-left: 6px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 10px;
   line-height: 1;
+  padding: 2px 4px;
   pointer-events: auto;
   position: relative;
   user-select: none;
