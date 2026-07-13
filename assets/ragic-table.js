@@ -71,7 +71,7 @@ const normalizeFormLayoutConfig = (formLayout) => {
   if (!formLayout || typeof formLayout !== 'object') return { columns: 5, overrides: [] };
   const columns = normalizeFormLayoutNumber(formLayout.columns, { min: 1, max: 10, fallback: 5 });
   const fields = formLayout.fields && typeof formLayout.fields === 'object' ? formLayout.fields : {};
-  const overrides = Object.entries(fields).map(([label, layout]) => ({ label, ...(layout || {}) }));
+  const overrides = Object.entries(fields).map(([key, layout]) => ({ key, ...(layout || {}) }));
   return { columns, overrides };
 };
 const normalizeFormLayoutOverride = (override = {}) => {
@@ -82,19 +82,41 @@ const normalizeFormLayoutOverride = (override = {}) => {
   if (next.rowSpan !== undefined && next.formRowSpan === undefined) next.formRowSpan = next.rowSpan;
   return next;
 };
+
+const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
+  const source = formLayout && typeof formLayout === 'object' ? formLayout : {};
+  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
+  const rows = normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
+  const sourceFields = source.fields && typeof source.fields === 'object' ? source.fields : {};
+  const fieldKeys = new Set((fields || []).map((field) => field.key).filter(Boolean));
+  const nextFields = {};
+  Object.entries(sourceFields).forEach(([key, layout]) => {
+    if (fieldKeys.size && !fieldKeys.has(key)) return;
+    const row = normalizeFormLayoutNumber(layout?.row, { min: 1, max: rows });
+    const col = normalizeFormLayoutNumber(layout?.col, { min: 1, max: columns });
+    if (!row || !col) return;
+    nextFields[key] = {
+      row,
+      col,
+      colSpan: normalizeFormLayoutNumber(layout?.colSpan, { min: 1, max: columns - col + 1, fallback: 1 }),
+      rowSpan: normalizeFormLayoutNumber(layout?.rowSpan, { min: 1, max: rows - row + 1, fallback: 1 })
+    };
+  });
+  return { columns, rows, fields: nextFields };
+};
 const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   if (!grid) return grid;
-  const { columns } = normalizeFormLayoutConfig(config?.formLayout);
+  const { columns } = normalizeFormLayoutConfig(RAGIC_STATE.schema?.formLayout || config?.formLayout);
   grid.style.setProperty('--form-columns', columns || 5);
   return grid;
 };
 const applyFormLayout = (element, field = {}) => {
   if (!element) return element;
   const row = normalizeFormLayoutNumber(field.formRow);
-  const columns = normalizeFormLayoutConfig(RAGIC_STATE.config?.formLayout).columns || 5;
+  const columns = normalizeFormLayoutConfig(RAGIC_STATE.schema?.formLayout || RAGIC_STATE.config?.formLayout).columns || 5;
   const col = normalizeFormLayoutNumber(field.formCol, { max: columns });
   const colSpan = normalizeFormLayoutNumber(field.formColSpan, { max: columns, fallback: 1 });
-  const rowSpan = normalizeFormLayoutNumber(field.formRowSpan, { max: 5, fallback: 1 });
+  const rowSpan = normalizeFormLayoutNumber(field.formRowSpan, { max: normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout || RAGIC_STATE.config?.formLayout).rows || 10, fallback: 1 });
   element.classList.add('form-field');
   element.dataset.type = field.type || 'text';
   if (row || col) element.classList.add('has-form-layout');
@@ -113,7 +135,8 @@ const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
   return false;
 };
 const applyFormLayoutOverrides = (schema = {}, config = {}) => {
-  const { columns, overrides: rawOverrides } = normalizeFormLayoutConfig(config.formLayout);
+  const activeLayout = schema.formLayout || config.formLayout;
+  const { columns, overrides: rawOverrides } = normalizeFormLayoutConfig(activeLayout);
   const overrides = rawOverrides.map(normalizeFormLayoutOverride);
   if (!Array.isArray(schema.fields)) return schema;
   const layoutRows = overrides
@@ -162,7 +185,7 @@ const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) =>
   else delete normalized.columnsPerRow;
   return normalized;
 };
-const normalizeSchema = (schema = {}) => ({ fields: normalizeFields(schema.fields || [], 'field') });
+const normalizeSchema = (schema = {}) => ({ fields: normalizeFields(schema.fields || [], 'field'), formLayout: normalizeDesignerFormLayout(schema.formLayout, schema.fields || []) });
 const fixDuplicateKeys = (fields = []) => {
   const seen = new Set();
   let changed = false;
@@ -806,7 +829,7 @@ const attachImageUploadArea = (imageArea) => {
 
 const titleOnlyLayoutFields = () => {
   const fields = getFields();
-  const overrides = normalizeFormLayoutConfig(RAGIC_STATE.config?.formLayout).overrides.map(normalizeFormLayoutOverride);
+  const overrides = normalizeFormLayoutConfig(RAGIC_STATE.schema?.formLayout || RAGIC_STATE.config?.formLayout).overrides.map(normalizeFormLayoutOverride);
   return overrides.filter((override) => override._titleOnly).map((override) => {
     const source = fields.find((field) => fieldLayoutOverrideMatches(field, override));
     return source ? { ...source, ...override, type: 'titleOnly', sourceType: source.type } : null;
@@ -1513,7 +1536,59 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
   return field;
 });
 
-const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; updateDesignerPreview(); };
+
+const designerFieldRowsFromModal = () => [...document.querySelectorAll('#ragicDesignerModal .designer-body > .designer-field')];
+const currentDesignerLayout = () => normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, readDesigner(document.querySelector('#ragicDesignerModal .designer-body') || document.createElement('div')));
+const placedLayoutKeys = (layout) => new Set(Object.keys(layout.fields || {}));
+const layoutCellsOverlap = (a, b) => a.row < b.row + b.rowSpan && a.row + a.rowSpan > b.row && a.col < b.col + b.colSpan && a.col + a.colSpan > b.col;
+const isLayoutAreaFree = (layout, fieldKey, candidate) => !Object.entries(layout.fields || {}).some(([key, item]) => key !== fieldKey && layoutCellsOverlap(candidate, item));
+const renderLayoutDesigner = () => {
+  const modal = document.querySelector('#ragicDesignerModal');
+  const panel = modal?.querySelector('#layoutDesignerPanel');
+  const body = modal?.querySelector('.designer-body');
+  if (!panel || !body) return;
+  const fields = readDesigner(body);
+  const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
+  const rowsSelect = [...Array(9)].map((_, i) => i + 2).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
+  const colsSelect = [3, 4, 5, 6].map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
+  const placed = placedLayoutKeys(layout);
+  const cells = [];
+  for (let row = 1; row <= layout.rows; row += 1) {
+    for (let col = 1; col <= layout.columns; col += 1) {
+      const owner = Object.entries(layout.fields).find(([, item]) => row >= item.row && row < item.row + item.rowSpan && col >= item.col && col < item.col + item.colSpan);
+      if (owner && (owner[1].row !== row || owner[1].col !== col)) {
+        cells.push(`<div class="layout-cell layout-cell-occupied" data-row="${row}" data-col="${col}" style="grid-column:${col};grid-row:${row};"></div>`);
+        continue;
+      }
+      const field = owner ? fields.find((item) => item.key === owner[0]) : null;
+      const item = owner?.[1];
+      cells.push(`<div class="layout-cell" data-row="${row}" data-col="${col}" style="grid-column: ${col} / span ${item ? item.colSpan : 1}; grid-row: ${row} / span ${item ? item.rowSpan : 1};">${field ? `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}"><span>${escapeHtml(field.label || field.key)}${field.type === 'subtable' ? ' <small>子表單</small>' : ''}</span><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span></div>` : ''}</div>`);
+    }
+  }
+  const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}">${escapeHtml(field.label || field.key)}${field.type === 'subtable' ? ' <small>子表單</small>' : ''}</div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
+  panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><label>欄數: <select id="gridCols">${colsSelect}</select></label><label>列數: <select id="gridRows">${rowsSelect}</select></label><button class="btn-save-layout primary" type="button">儲存排版</button></div><div class="layout-designer-main"><div class="layout-grid" style="grid-template-columns: repeat(${layout.columns}, minmax(92px, 1fr));">${cells.join('')}</div><aside class="layout-preview"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${fields.filter((field) => placed.has(field.key)).map((field) => { const item = layout.fields[field.key]; return `<div class="ragic-view-field" style="--form-row:${item.row};--form-col:${item.col};--form-colspan:${item.colSpan};--form-rowspan:${item.rowSpan};"><div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${escapeHtml(designerPreviewValue(field))}</div></div>`; }).join('') || '<div class="designer-preview-empty">拖入欄位後顯示預覽</div>'}</div></aside></div><div class="layout-unplaced"><span>未放置的欄位：</span>${unplaced}</div></div>`;
+};
+const updateLayoutDesignerState = (patcher) => {
+  const body = document.querySelector('#ragicDesignerModal .designer-body');
+  const fields = readDesigner(body || document.createElement('div'));
+  const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
+  patcher(layout, fields);
+  RAGIC_STATE.schema = { ...(RAGIC_STATE.schema || {}), fields: normalizeFields(fields), formLayout: normalizeDesignerFormLayout(layout, fields) };
+  renderLayoutDesigner();
+};
+const attachLayoutDesignerEvents = (panel) => {
+  if (!panel || panel.dataset.layoutEventsBound === 'true') return;
+  panel.dataset.layoutEventsBound = 'true';
+  panel.addEventListener('dragstart', (event) => { const item = event.target.closest('[data-field-key]'); if (!item || event.target.closest('[data-resize], .remove-btn')) return; event.dataTransfer.setData('text/plain', item.dataset.fieldKey); });
+  panel.addEventListener('dragover', (event) => { const cell = event.target.closest('.layout-cell:not(.layout-cell-occupied)'); if (!cell) return; event.preventDefault(); cell.classList.add('drag-over'); });
+  panel.addEventListener('dragleave', (event) => event.target.closest('.layout-cell')?.classList.remove('drag-over'));
+  panel.addEventListener('drop', (event) => { const cell = event.target.closest('.layout-cell:not(.layout-cell-occupied)'); const key = event.dataTransfer.getData('text/plain'); if (!cell || !key) return; event.preventDefault(); updateLayoutDesignerState((layout, fields) => { const field = fields.find((item) => item.key === key); const candidate = { row: Number(cell.dataset.row), col: Number(cell.dataset.col), colSpan: field?.type === 'subtable' ? layout.columns : 1, rowSpan: 1 }; if (candidate.col + candidate.colSpan - 1 > layout.columns) candidate.col = 1; if (field?.type === 'subtable' && candidate.row < layout.rows - 1) candidate.row = layout.rows; if (isLayoutAreaFree(layout, key, candidate)) layout.fields[key] = candidate; }); });
+  panel.addEventListener('click', (event) => { const remove = event.target.closest('.remove-btn'); if (remove) updateLayoutDesignerState((layout) => { delete layout.fields[remove.closest('[data-field-key]').dataset.fieldKey]; }); });
+  panel.addEventListener('change', (event) => { if (!event.target.matches('#gridCols, #gridRows')) return; updateLayoutDesignerState((layout) => { layout.columns = Number(panel.querySelector('#gridCols').value); layout.rows = Number(panel.querySelector('#gridRows').value); }); });
+  panel.addEventListener('mousedown', (event) => { const handle = event.target.closest('[data-resize]'); if (!handle) return; event.preventDefault(); const fieldKey = handle.closest('[data-field-key]').dataset.fieldKey; const startX = event.pageX; const startY = event.pageY; const type = handle.dataset.resize; const start = { ...currentDesignerLayout().fields[fieldKey] }; const move = (moveEvent) => updateLayoutDesignerState((layout) => { const next = { ...start }; if (type === 'col') next.colSpan = Math.min(layout.columns - next.col + 1, Math.max(1, start.colSpan + Math.round((moveEvent.pageX - startX) / 90))); else next.rowSpan = Math.min(layout.rows - next.row + 1, Math.max(1, start.rowSpan + Math.round((moveEvent.pageY - startY) / 60))); if (isLayoutAreaFree(layout, fieldKey, next)) layout.fields[fieldKey] = next; }); const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); }; document.addEventListener('mousemove', move); document.addEventListener('mouseup', up); });
+};
+
+const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; renderLayoutDesigner(); updateDesignerPreview(); };
 const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
 
 
@@ -1619,7 +1694,7 @@ const initRagicPage = async (config) => {
     if (!canUse('design')) return false;
     const designerBody = document.querySelector('.designer-body');
     if (!designerBody) return false;
-    RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(designerBody) }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(designerBody), formLayout: RAGIC_STATE.schema?.formLayout }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     if (schemaDoc) await schemaDoc.set(RAGIC_STATE.schema, { merge: true });
     renderHeader();
     applyFilters();
@@ -1642,7 +1717,7 @@ const initRagicPage = async (config) => {
     designButton?.remove();
   }
   if (!document.querySelector('#ragicDesignerModal')) {
-  document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-body"></div><section class="designer-preview" aria-label="表格預覽"><h3>📋 表格預覽</h3><div class="designer-preview-scroll" id="designerPreviewTable"></div></section><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');
+  document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div><div class="designer-tabs"><button class="designer-tab active" data-designer-tab="fields" type="button">欄位設定</button><button class="designer-tab" data-designer-tab="layout" type="button">表單排版</button></div><section class="designer-tab-panel" data-designer-panel="fields"><div class="designer-body"></div><section class="designer-preview" aria-label="表格預覽"><h3>📋 表格預覽</h3><div class="designer-preview-scroll" id="designerPreviewTable"></div></section></section><section class="designer-tab-panel" data-designer-panel="layout" hidden><div id="layoutDesignerPanel"></div></section><div class="ragic-actions"><button class="secondary" id="addFieldButton" type="button">+ 新增欄位</button><button class="primary" id="saveSchemaButton" type="button">儲存設計</button></div></div></div>');  
   }
   if (!document.querySelector('#ragicImageModal')) {
     document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><img alt="放大圖片預覽"></div></div>');
@@ -1652,11 +1727,28 @@ const initRagicPage = async (config) => {
   document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
   document.querySelector('.designer-body')?.addEventListener('input', updateDesignerPreview);
-  document.querySelector('.designer-body')?.addEventListener('change', (event) => {
+  document.querySelector('.designer-body')?.addEventListener('input', () => { updateDesignerPreview(); renderLayoutDesigner(); });
     updateDesignerPreview();
+    renderLayoutDesigner();
     if (event.target?.matches('[data-role="width"]')) saveDesignerSchema();
   });
-  document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新欄位', type: 'text' })); updateDesignerPreview(); });  
+  document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新欄位', type: 'text' })); updateDesignerPreview(); renderLayoutDesigner(); });
+  document.querySelector('#ragicDesignerModal')?.addEventListener('click', (event) => {
+    const tab = event.target.closest('[data-designer-tab]');
+    if (!tab) return;
+    const mode = tab.dataset.designerTab;
+    document.querySelectorAll('#ragicDesignerModal [data-designer-tab]').forEach((item) => item.classList.toggle('active', item === tab));
+    document.querySelectorAll('#ragicDesignerModal [data-designer-panel]').forEach((panel) => { panel.hidden = panel.dataset.designerPanel !== mode; });
+    document.querySelector('#addFieldButton')?.toggleAttribute('hidden', mode !== 'fields');
+    if (mode === 'layout') renderLayoutDesigner();
+  });
+  attachLayoutDesignerEvents(document.querySelector('#layoutDesignerPanel'));
+  document.querySelector('#layoutDesignerPanel')?.addEventListener('click', async (event) => {
+    if (!event.target.closest('.btn-save-layout')) return;
+    if (!canUse('design')) return alert('您沒有設計權限');
+    await saveDesignerSchema();
+    alert('表單排版已儲存');
+  });  
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
     if (!canUse('design')) return alert('您沒有設計權限');
     await saveDesignerSchema({ close: true });
