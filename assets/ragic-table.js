@@ -118,18 +118,29 @@ const inlineReadonlyFieldTypes = new Set([...readonlyFieldTypes, 'image', 'file'
 const DEFAULT_FIELD_WIDTHS = { text: 180, textarea: 300, date: 100, datetime: 150, select: 100, multiselect: 120, image: 80, file: 160, serial: 90, createdDate: 150, updatedDate: 150, link: 180 };
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
 const fieldColumnWidth = (field = {}) => normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
+const columnWidthStyle = (width) => width ? ` style="--col-width: ${width}px; min-width: ${width}px !important; width: ${width}px;"` : '';
+const applyColumnWidth = (element, width) => {
+  if (!element || !width) return;
+  element.style.setProperty('--col-width', `${width}px`);
+  element.style.setProperty('min-width', `${width}px`, 'important');
+  element.style.setProperty('width', `${width}px`);
+};
 
 const applyRagicColumnGroup = (table, fields = listFields()) => {
   if (!table) return;
   table.querySelector('colgroup')?.remove();
   const colgroup = document.createElement('colgroup');
   const markerCol = document.createElement('col');
-  markerCol.style.minWidth = '50px';
+  markerCol.style.setProperty('min-width', '50px', 'important');
+  markerCol.style.setProperty('width', '50px');
   colgroup.appendChild(markerCol);
   fields.forEach((field) => {
     const col = document.createElement('col');
     const width = fieldColumnWidth(field);
-    if (width) col.style.minWidth = `${width}px`;
+    if (width) {
+      col.style.setProperty('min-width', `${width}px`, 'important');
+      col.style.setProperty('width', `${width}px`);
+    }
     colgroup.appendChild(col);
   });
   table.insertBefore(colgroup, table.firstChild);
@@ -756,9 +767,12 @@ const renderTable = () => {
       const typeAttr = field.type ? ` data-type="${escapeHtml(field.type)}" data-field-type="${escapeHtml(field.type)}"` : '';
       const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
       const width = fieldColumnWidth(field);
-      const style = width ? ` style="--col-width: ${width}px; min-width: ${width}px;"` : '';
+      const style = columnWidthStyle(width);
       return `<td class="${columnClass}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${typeAttr}${style}${title}>${renderCell(record, field)}</td>`;
     }).join('');
+    fields.forEach((field) => {
+      applyColumnWidth(tr.querySelector(`td[data-field-key="${CSS.escape(field.key)}"]`), fieldColumnWidth(field));
+    });
     let rowClickTimer = null;
     tr.addEventListener('click', (event) => {
       if (event.target.closest('.marker-cell, a, button, .ragic-thumbnail, .editing')) return;
@@ -951,9 +965,12 @@ const renderHeader = () => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
-    const style = width ? ` style="--col-width: ${width}px; min-width: ${width}px;"` : '';
+    const style = columnWidthStyle(width);
     return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
+  listFields().forEach((field) => {
+    applyColumnWidth(headerRow.querySelector(`[data-menu="${CSS.escape(field.key)}"]`)?.closest('th'), fieldColumnWidth(field));
+  });
   if (thead) thead.querySelectorAll('tr:not(#ragicHeaderRow)').forEach((row) => row.remove());
   updateColumnMenuStates();
   updateRagicStickyHeaderOffset();
@@ -1050,11 +1067,17 @@ const updateDesignerPreview = () => {
   }
   const colgroup = fields.map((field) => {
     const width = fieldColumnWidth(field);
-    return `<col${width ? ` style="min-width: ${width}px;"` : ''}>`;
+    return `<col${width ? ` style="min-width: ${width}px !important; width: ${width}px;"` : ''}>`;
   }).join('');
   const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}">${escapeHtml(field.label || field.key)}</th>`).join('');
   const rows = [0, 1, 2].map((rowIndex) => `<tr>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
   preview.innerHTML = `<table class="ragic-table">${colgroup ? `<colgroup>${colgroup}</colgroup>` : ''}<thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+  const previewTable = preview.querySelector('.ragic-table');
+  fields.forEach((field, index) => {
+    const width = fieldColumnWidth(field);
+    applyColumnWidth(previewTable?.querySelector(`thead th:nth-child(${index + 1})`), width);
+    previewTable?.querySelectorAll(`tbody td:nth-child(${index + 1})`).forEach((cell) => applyColumnWidth(cell, width));
+  });
 };
 const SUBFIELD_TYPES = [
   { value: 'text', label: '文字' },
@@ -1233,6 +1256,17 @@ const initRagicPage = async (config) => {
     const doc = await collection.doc(docId).get();
     await collection.doc(docId).update({ [`pins.${currentUser}`]: !doc.data()?.pins?.[currentUser] });
   };
+  const saveDesignerSchema = async ({ close = false } = {}) => {
+    if (!canUse('design')) return false;
+    const designerBody = document.querySelector('.designer-body');
+    if (!designerBody) return false;
+    RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(designerBody) }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (schemaDoc) await schemaDoc.set(RAGIC_STATE.schema, { merge: true });
+    renderHeader();
+    applyFilters();
+    if (close) closeDesigner();
+    return true;
+  };
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
   const newRecordButton = document.querySelector('#newRecordButton');
@@ -1259,15 +1293,14 @@ const initRagicPage = async (config) => {
   document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
   document.querySelector('.designer-body')?.addEventListener('input', updateDesignerPreview);
-  document.querySelector('.designer-body')?.addEventListener('change', updateDesignerPreview);
+  document.querySelector('.designer-body')?.addEventListener('change', (event) => {
+    updateDesignerPreview();
+    if (event.target?.matches('[data-role="width"]')) saveDesignerSchema();
+  });
   document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新欄位', type: 'text' })); updateDesignerPreview(); });  
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
     if (!canUse('design')) return alert('您沒有設計權限');
-    RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(document.querySelector('.designer-body')) }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    if (schemaDoc) await schemaDoc.set(RAGIC_STATE.schema, { merge: true });
-    closeDesigner();
-    renderHeader();
-    applyFilters();
+    await saveDesignerSchema({ close: true });
   });
   setupRagicFormActions();
   applyRagicPermissionUi(); document.querySelector('#newRecordButton').addEventListener('click', () => { if (canUse('edit')) renderForm(); }); document.querySelector('#backToListButton').addEventListener('click', () => { document.querySelector('#ragicFormView').hidden = true; document.querySelector('#ragicListView').hidden = false; });
