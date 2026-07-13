@@ -1,4 +1,4 @@
-const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null };
+const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
 
 const FIELD_TYPE_GROUPS = [
   { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
@@ -124,6 +124,62 @@ const applyColumnWidth = (element, width) => {
   element.style.setProperty('--col-width', `${width}px`);
   element.style.setProperty('min-width', `${width}px`, 'important');
   element.style.setProperty('width', `${width}px`);
+};
+
+
+const MIN_COLUMN_WIDTH = 40;
+const setColumnWidth = (table, th, width) => {
+  const newWidth = Math.max(MIN_COLUMN_WIDTH, Math.round(Number(width) || MIN_COLUMN_WIDTH));
+  applyColumnWidth(th, newWidth);
+  const colIndex = th?.cellIndex ?? -1;
+  if (!table || colIndex < 0) return newWidth;
+  const col = table.querySelector(`colgroup col:nth-child(${colIndex + 1})`);
+  if (col) applyColumnWidth(col, newWidth);
+  table.querySelectorAll(`tbody td:nth-child(${colIndex + 1})`).forEach((td) => applyColumnWidth(td, newWidth));
+  return newWidth;
+};
+const saveSchema = async () => {
+  if (!RAGIC_STATE.schemaDoc || !RAGIC_STATE.schema) return false;
+  RAGIC_STATE.schema = { ...RAGIC_STATE.schema, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  await RAGIC_STATE.schemaDoc.set(RAGIC_STATE.schema, { merge: true });
+  return true;
+};
+const attachColumnResizers = (headerRow) => {
+  const table = headerRow?.closest('table');
+  if (!table) return;
+  headerRow.querySelectorAll('th[data-field-key]').forEach((th) => {
+    th.style.position = 'relative';
+    th.querySelector('.col-resizer')?.remove();
+    const resizer = document.createElement('div');
+    resizer.className = 'col-resizer';
+    th.appendChild(resizer);
+    let startX = 0;
+    let startWidth = 0;
+    resizer.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      startX = event.pageX;
+      startWidth = th.offsetWidth;
+      resizer.classList.add('is-dragging');
+      document.body.classList.add('is-col-resizing');
+      const onMouseMove = (moveEvent) => {
+        setColumnWidth(table, th, startWidth + (moveEvent.pageX - startX));
+      };
+      const onMouseUp = async () => {
+        resizer.classList.remove('is-dragging');
+        document.body.classList.remove('is-col-resizing');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        const field = getFields().find((item) => item.key === th.dataset.fieldKey);
+        if (field) {
+          field.width = Math.max(MIN_COLUMN_WIDTH, Math.round(th.offsetWidth));
+          await saveSchema();
+        }
+      };
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  });
 };
 
 const applyRagicColumnGroup = (table, fields = listFields()) => {
@@ -1084,11 +1140,12 @@ const renderHeader = () => {
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
     const style = columnWidthStyle(width);
-    return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div>${renderColumnFilterControls(field)}</div></th>`;
+    return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
   listFields().forEach((field) => {
     applyColumnWidth(headerRow.querySelector(`[data-menu="${CSS.escape(field.key)}"]`)?.closest('th'), fieldColumnWidth(field));
   });
+  attachColumnResizers(headerRow);
   if (thead) thead.querySelectorAll('tr:not(#ragicHeaderRow)').forEach((row) => row.remove());
   updateColumnMenuStates();
   updateRagicStickyHeaderOffset();
@@ -1367,7 +1424,7 @@ const setupRagicFormActions = () => {
 };
 const initRagicPage = async (config) => {
   await waitForPermissions();
-  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active');
+  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
   window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
   window.togglePin = async (docId) => {
     const currentUser = currentRagicUser();
