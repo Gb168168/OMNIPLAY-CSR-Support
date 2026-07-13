@@ -1443,7 +1443,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-form-grid,
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--form-columns, 5), minmax(0, 1fr));
   max-width: none;
   width: 100%;
   margin: 0;
