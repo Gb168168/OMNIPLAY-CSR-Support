@@ -137,6 +137,11 @@
 
 * { box-sizing: border-box; }
 
+html,
+body {
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -1461,6 +1466,8 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .form-field[data-type="textarea"] textarea {
   width: 100%;
   min-height: 150px;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .form-field[data-type="image"],
@@ -2994,6 +3001,17 @@ textarea,
 .ragic-view-field-file:not(.has-form-layout) { grid-column: 1 / -1; }
 .ragic-view-label { margin-bottom: 8px; color: var(--text-secondary); font-weight: 800; }
 .ragic-view-value { color: var(--text); line-height: 1.7; word-break: break-word; white-space: normal; }
+.ragic-view-field-textarea .ragic-view-value,
+.ragic-view-field-textarea .field-value {
+  max-height: 150px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fafafa;
+}
 .ragic-view-empty { color: var(--text-secondary); opacity: .75; }
 .ragic-view-images { display: flex; flex-wrap: wrap; gap: 12px; }
 .ragic-view-image {
@@ -3127,7 +3145,7 @@ body {
 .main.is-form-view,
 .main-content.is-form-view {
   overflow-x: hidden !important;
-  overflow-y: auto !important;
+  overflow-y: hidden !important;
 }
 
 .ragic-page-header,
@@ -3157,6 +3175,7 @@ body {
   min-height: 0;
   background: var(--surface);
   overflow-y: auto;
+  max-height: calc(100vh - var(--ragic-form-overlay-top, 0px));
   max-width: none;
   width: 100%;
   margin: 0;
@@ -3175,6 +3194,7 @@ body {
 
 .ragic-form-container > form {
   min-height: 0;
+  overflow-y: visible;
 }
 
 /* Table wrappers fill remaining space and scroll internally. */
