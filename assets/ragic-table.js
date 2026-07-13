@@ -1143,7 +1143,7 @@ const applyFilters = () => {
 };
 
 
-const closeColumnMenus = (exceptKey = '') => {
+const closeAllMenus = (exceptKey = '') => {
   document.querySelectorAll('.col-menu-dropdown').forEach((menu) => {
     if (menu.dataset.menu !== exceptKey) menu.hidden = true;
   });
@@ -1156,10 +1156,41 @@ const toggleColumnMenu = (key) => {
   const menu = (tableWrap || document).querySelector(`.col-menu-dropdown[data-menu="${selectorKey}"]`);
   if (!menu) return;
   const willOpen = menu.hidden;
-  closeColumnMenus(willOpen ? key : '');
+  closeAllMenus(willOpen ? key : '');
   menu.hidden = !willOpen;
   if (willOpen) menu.querySelector('[data-menu-filter]')?.focus();
 };
+
+const sortByField = (fieldKey, direction) => {
+  RAGIC_STATE.sortKey = fieldKey;
+  RAGIC_STATE.sortDir = direction;
+  RAGIC_STATE.filtered.sort((a, b) => {
+    const va = valueToText(a[fieldKey]).toString();
+    const vb = valueToText(b[fieldKey]).toString();
+    return direction === 'asc' ? va.localeCompare(vb, 'zh-Hant', { numeric: true }) : vb.localeCompare(va, 'zh-Hant', { numeric: true });
+  });
+  RAGIC_STATE.page = 1;
+  renderTable();
+  updateColumnMenuStates();
+};
+
+const handleMenuAction = (item) => {
+  const key = item.dataset.field;
+  const action = item.dataset.menuAction;
+  if (action === 'clear-filter') {
+    delete RAGIC_STATE.filters[key];
+    item.parentElement.querySelectorAll('[data-menu-option]').forEach((checkbox) => { checkbox.checked = false; });
+    const input = item.parentElement.querySelector('[data-menu-filter]');
+    if (input) input.value = '';
+    closeAllMenus();
+    applyFilters();
+    return;
+  }
+  if (action === 'sort-asc' || action === 'sort-desc') {
+    closeAllMenus();
+    sortByField(key, action === 'sort-asc' ? 'asc' : 'desc');
+  }
+  };
 
 const handleColumnMenuClick = (event) => {
   const trigger = event.target.closest('.col-menu-trigger');
@@ -1169,28 +1200,17 @@ const handleColumnMenuClick = (event) => {
     toggleColumnMenu(trigger.dataset.field);
     return;
   }
-  const item = event.target.closest('[data-menu-action]');
-  if (!item) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const key = item.dataset.field;
-  const action = item.dataset.menuAction;
-  if (action === 'clear-filter') {
-    delete RAGIC_STATE.filters[key];
-    item.parentElement.querySelectorAll('[data-menu-option]').forEach((checkbox) => { checkbox.checked = false; });
-    const input = item.parentElement.querySelector('[data-menu-filter]');
-    if (input) input.value = '';
+  
+  const action = event.target.closest('[data-menu-action]');
+  if (action) {
+    event.preventDefault();
+    event.stopPropagation();
+    handleMenuAction(action);
+    return;
   }
-  if (action === 'sort-asc' || action === 'sort-desc') {
-    RAGIC_STATE.sortKey = key;
-    RAGIC_STATE.sortDir = action === 'sort-asc' ? 'asc' : 'desc';
-  }
-  if (action === 'clear-sort') {
-    RAGIC_STATE.sortKey = '';
-    RAGIC_STATE.sortDir = 'asc';
-  }
-  closeColumnMenus();
-  applyFilters();
+
+  if (event.target.closest('.col-menu-dropdown')) return;
+  closeAllMenus();
 };
 
 const handleColumnMenuInput = (event) => {
@@ -1246,7 +1266,7 @@ const renderHeader = () => {
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
     const style = columnWidthStyle(width);
-    return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div>${renderColumnFilterControls(field)}</div></th>`;
+    return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
   listFields().forEach((field) => {
     applyColumnWidth(headerRow.querySelector(`[data-menu="${CSS.escape(field.key)}"]`)?.closest('th'), fieldColumnWidth(field));
@@ -1636,7 +1656,9 @@ const initRagicPage = async (config) => {
       if (saveButton) { saveButton.disabled = false; saveButton.textContent = originalText; }
     }
   });
-  const ragicTableWrap = document.querySelector('#ragicHeaderRow')?.closest('.ragic-table-wrap, .ragic-table-wrapper');
+  const legacyTableWrap = document.querySelector('#ragicHeaderRow')?.closest('.ragic-table-wrap');
+  legacyTableWrap?.classList.add('ragic-table-wrapper');
+  const ragicTableWrap = document.querySelector('.ragic-table-wrapper');
   window.addEventListener('resize', updateRagicStickyHeaderOffset);
   ragicTableWrap?.addEventListener('input', handleColumnMenuInput);
   ragicTableWrap?.addEventListener('change', handleColumnMenuChange);
@@ -1650,7 +1672,7 @@ const initRagicPage = async (config) => {
     toggleColumnMenu(trigger.dataset.field);
   });
   document.addEventListener('click', (event) => {
-    if (!event.target.closest('.col-menu-cell')) closeColumnMenus();
+    if (!event.target.closest('.ragic-table-wrapper')) closeAllMenus();
   });
   document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (button) { event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); return; } });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
