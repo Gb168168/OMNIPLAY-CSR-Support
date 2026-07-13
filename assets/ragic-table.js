@@ -367,8 +367,7 @@ const inlineValue = (value, field) => {
   return String(value ?? '');
 };
 const autoGrowTextarea = (textarea) => {
-  textarea.style.height = 'auto';
-  textarea.style.height = `${textarea.scrollHeight}px`;
+  textarea.style.height = '';
 };
 const createInlineEditor = (field, value) => {
   const currentValue = inlineValue(value, field);
@@ -381,8 +380,7 @@ const createInlineEditor = (field, value) => {
   control.required = false;
   if (field.type === 'textarea') {
     control.rows = Math.max(2, field.rows || 2);
-    control.addEventListener('input', () => autoGrowTextarea(control));
-    requestAnimationFrame(() => autoGrowTextarea(control));
+    autoGrowTextarea(control);
   }
   return control;
 };
@@ -792,7 +790,7 @@ const createTitleOnlyField = (field = {}, record = {}) => {
   const item = document.createElement('div');
   item.className = 'ragic-view-field ragic-view-field-title-only';
   applyFormLayout(item, field);
-  item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${titleOnlyDisplayValue(field, record)}</div>`;
+  item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${titleOnlyDisplayValue(field, record)}</div>`;
   return item;
 };
 
@@ -825,7 +823,7 @@ const renderViewForm = (form, record = {}) => {
     const item = document.createElement('div');
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}`;
     applyFormLayout(item, field);
-    item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${renderDisplayValue(field, record[field.key])}</div>`;
+    item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${renderDisplayValue(field, record[field.key])}</div>`;
     grid.appendChild(item);
   });
   titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
