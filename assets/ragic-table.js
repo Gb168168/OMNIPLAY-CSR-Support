@@ -124,12 +124,12 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   table.querySelector('colgroup')?.remove();
   const colgroup = document.createElement('colgroup');
   const markerCol = document.createElement('col');
-  markerCol.style.width = '50px';
+  markerCol.style.minWidth = '50px';
   colgroup.appendChild(markerCol);
   fields.forEach((field) => {
     const col = document.createElement('col');
     const width = fieldColumnWidth(field);
-    if (width) col.style.width = `${width}px`;
+    if (width) col.style.minWidth = `${width}px`;
     colgroup.appendChild(col);
   });
   table.insertBefore(colgroup, table.firstChild);
@@ -756,7 +756,7 @@ const renderTable = () => {
       const typeAttr = field.type ? ` data-type="${escapeHtml(field.type)}"` : '';
       const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
       const width = fieldColumnWidth(field);
-      const style = width ? ` style="width: ${width}px;"` : '';
+      const style = width ? ` style="--col-width: ${width}px; min-width: ${width}px;"` : '';
       return `<td class="${columnClass}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${typeAttr}${style}${title}>${renderCell(record, field)}</td>`;
     }).join('');
     if (canUse('edit')) tr.addEventListener('dblclick', () => renderForm(record));
@@ -926,7 +926,7 @@ const renderHeader = () => {
   const thead = headerRow?.closest('thead');
   const table = headerRow?.closest('table');
   if (table) {
-    table.style.tableLayout = 'fixed';
+    table.style.tableLayout = 'auto';
     applyRagicColumnGroup(table);
   }
   document.querySelector('#ragicFilterRow')?.remove();
@@ -934,7 +934,7 @@ const renderHeader = () => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
-    const style = width ? ` style="width: ${width}px;"` : '';
+    const style = width ? ` style="--col-width: ${width}px; min-width: ${width}px;"` : '';
     return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-sort" data-field="${key}">✕ <span>清除排序</span></div><div class="menu-divider"></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
   if (thead) thead.querySelectorAll('tr:not(#ragicHeaderRow)').forEach((row) => row.remove());
@@ -1033,7 +1033,7 @@ const updateDesignerPreview = () => {
   }
   const colgroup = fields.map((field) => {
     const width = fieldColumnWidth(field);
-    return `<col${width ? ` style="width: ${width}px;"` : ''}>`;
+    return `<col${width ? ` style="min-width: ${width}px;"` : ''}>`;
   }).join('');
   const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}">${escapeHtml(field.label || field.key)}</th>`).join('');
   const rows = [0, 1, 2].map((rowIndex) => `<tr>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
