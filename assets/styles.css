@@ -1146,7 +1146,8 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   display: inline-grid;
   place-items: center;
   border-radius: 999px;
-  color: #f8fafc;
+  background: none;
+  color: var(--text);
   font-size: 16px;
   font-weight: 600;
   line-height: 1;
@@ -1154,8 +1155,9 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 
 .calendar-day.is-today .day-number {
   color: var(--primary);
-  background: var(--primary-light, #e3f2fd);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
+  background: none;
+  box-shadow: none;
+  font-weight: 700;
 }
 
 .day-events {
@@ -1338,6 +1340,12 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-table td.col-textarea {
   white-space: normal;
   word-break: break-word;
+}
+.ragic-table td[data-field-type="link"] {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ragic-table tbody tr:nth-child(odd) td { background: var(--table-row); }
 .ragic-table tbody tr:nth-child(even) td { background: var(--surface-muted); }
@@ -1947,8 +1955,8 @@ a { color: var(--primary); background: transparent; }
 .designer-field select { color: var(--text); background: var(--surface); border-color: var(--border); }
 .calendar-grid { background: var(--border); }
 .calendar-event { background: color-mix(in srgb, var(--primary) 20%, var(--card)); color: var(--text); }
-.day-number { background: var(--primary); color: #fff; }
-.calendar-day.is-today .day-number { background: var(--primary-light, #e3f2fd); color: var(--primary); }
+.day-number { background: none; color: var(--text); }
+.calendar-day.is-today .day-number { background: none; color: var(--primary); box-shadow: none; font-weight: 700; }
 .schedule-history h3,
 .history-item strong { background: var(--primary); color: #fff; }
 .ragic-toolbar h2,
