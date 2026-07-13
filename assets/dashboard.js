@@ -4,12 +4,13 @@ const dashboardCollections = {
   leave: dashboardDb?.collection('leave'),
   handover: dashboardDb?.collection('handover'),
   tracking: dashboardDb?.collection('tracking'),
+  report: dashboardDb?.collection('report'),
   log: dashboardDb?.collection('log'),
   schedule: dashboardDb?.collection('schedule'),
   meeting: dashboardDb?.collection('meeting')
 };
 
-const dashboardState = { staff: [], leave: {}, handovers: [], tracking: [], logs: [], schedules: [], meetings: [], selectedShift: getDefaultShift() };
+const dashboardState = { staff: [], leave: {}, handovers: [], tracking: [], reports: [], logs: [], schedules: [], meetings: [], selectedShift: getDefaultShift() };
 const todoList = document.querySelector('#dashboardTodoList');
 const setText = (selector, value) => { const el = document.querySelector(selector); if (el) el.textContent = String(value); };
 const pad2 = (value) => String(value).padStart(2, '0');
@@ -155,12 +156,12 @@ const updateTodayWorking = () => {
 };
 
 const updateDashboard = () => {
-  const openStatuses = new Set(['待辦中', '處理中', '觀察中']);
+  const reportTrackStatuses = new Set(['待辦中', '處理中', '觀察中', '追客']);
   const fireHandovers = dashboardState.handovers.filter((record) => record.fire === true);
   const range = getShiftRange(dashboardState.selectedShift);
   const logs = dashboardState.logs.filter((record) => isInShiftRange(record, range));
   setText('#handoverFireCount', fireHandovers.length);
-  setText('#trackingOpenCount', dashboardState.tracking.filter((record) => openStatuses.has(String(record.status || record['進度狀態'] || '').trim())).length);
+  setText('#trackingOpenCount', dashboardState.reports.filter((record) => reportTrackStatuses.has(String(record.status || '').trim())).length);
   setText('#shiftLogCount', logs.length);
   updateTodayWorking();
   updateShiftButtons();
@@ -233,6 +234,7 @@ const subscribeDashboard = () => {
   dashboardCollections.leave?.doc(monthKey()).onSnapshot((doc) => { dashboardState.leave = doc.exists ? { records: {}, ...doc.data() } : { records: {} }; updateDashboard(); });
   dashboardCollections.handover?.onSnapshot((snapshot) => { dashboardState.handovers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.tracking?.onSnapshot((snapshot) => { dashboardState.tracking = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
+  dashboardCollections.report?.onSnapshot((snapshot) => { dashboardState.reports = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.log?.onSnapshot((snapshot) => { dashboardState.logs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.schedule?.onSnapshot((snapshot) => { dashboardState.schedules = snapshot.docs.map((doc) => ({ id: doc.id, labelColor: '#3b82f6', ...doc.data() })); updateDashboard(); });
   dashboardCollections.meeting?.onSnapshot((snapshot) => { dashboardState.meetings = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
