@@ -99,7 +99,9 @@ const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
       row,
       col,
       colSpan: normalizeFormLayoutNumber(layout?.colSpan, { min: 1, max: columns - col + 1, fallback: 1 }),
-      rowSpan: normalizeFormLayoutNumber(layout?.rowSpan, { min: 1, max: rows - row + 1, fallback: 1 })
+      rowSpan: normalizeFormLayoutNumber(layout?.rowSpan, { min: 1, max: rows - row + 1, fallback: 1 }),
+      width: normalizeFormLayoutNumber(layout?.width ?? layout?.formWidth, { min: 40, max: 2000, fallback: null }),
+      height: normalizeFormLayoutNumber(layout?.height ?? layout?.formHeight, { min: 32, max: 2000, fallback: null })
     };
   });
   return { columns, rows, fields: nextFields };
@@ -127,10 +129,12 @@ const applyFormLayout = (element, field = {}) => {
   element.style.setProperty('--form-col', col || 'auto');
   element.style.setProperty('--form-colspan', colSpan || 1);
   element.style.setProperty('--form-rowspan', rowSpan || 1);
-  if (field.formWidth) element.style.width = `${normalizeFormFieldSize(field.formWidth, MIN_FORM_FIELD_WIDTH)}px`;
-  if (field.formHeight) {
-    element.style.height = `${normalizeFormFieldSize(field.formHeight, MIN_FORM_FIELD_HEIGHT)}px`;
-    element.style.minHeight = `${normalizeFormFieldSize(field.formHeight, MIN_FORM_FIELD_HEIGHT)}px`;
+  const layoutWidth = normalizeFormFieldSize(layoutItem.width ?? field.formWidth, MIN_FORM_FIELD_WIDTH);
+  const layoutHeight = normalizeFormFieldSize(layoutItem.height ?? field.formHeight, MIN_FORM_FIELD_HEIGHT);
+  if (layoutItem.width || field.formWidth) element.style.width = `${layoutWidth}px`;
+  if (layoutItem.height || field.formHeight) {
+    element.style.height = `${layoutHeight}px`;
+    element.style.minHeight = `${layoutHeight}px`;
   }
   return element;
 };
@@ -1570,7 +1574,7 @@ const fieldDesigner = (field = {}, nested = false) => {
     return options ? `<optgroup label="${escapeHtml(group.label)}">${options}</optgroup>` : '';
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
-  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-form-layout" aria-label="表單排版"><label><span>列</span><input data-role="form-row" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formRow) ?? '')}"></label><label><span>欄</span><input data-role="form-col" type="number" min="1" max="4" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formCol, { max: 4 }) ?? '')}"></label><label><span>跨欄</span><input data-role="form-colspan" type="number" min="1" max="4" step="1" inputmode="numeric" value="${escapeHtml(normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 }))}"></label></div><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
+  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-form-layout" aria-label="表單排版"><label><span>列</span><input data-role="form-row" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formRow) ?? '')}"></label><label><span>欄</span><input data-role="form-col" type="number" min="1" max="4" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formCol, { max: 4 }) ?? '')}"></label><label><span>跨欄</span><input data-role="form-colspan" type="number" min="1" max="4" step="1" inputmode="numeric" value="${escapeHtml(normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 }))}"></label></div><input data-role="default" type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-role="help" type="hidden" value="${escapeHtml(field.help || '')}"><input data-role="readonly" type="hidden" value="${field.readonly ? '1' : ''}"><input data-role="hidden" type="hidden" value="${field.hidden ? '1' : ''}"><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
   const sub = row.querySelector('.designer-subfields');
   const subList = row.querySelector('.designer-subfield-list');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
@@ -1603,7 +1607,11 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
     type,
     required: Boolean(row.querySelector('[data-role="required"]')?.checked),
     width: normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value),
-    options: (row.querySelector('[data-role="options"]')?.value || '').split('\n').map((v) => v.trim()).filter(Boolean)
+    options: (row.querySelector('[data-role="options"]')?.value || '').split('\n').map((v) => v.trim()).filter(Boolean),
+    defaultValue: row.querySelector('[data-role="default"]')?.value || '',
+    help: row.querySelector('[data-role="help"]')?.value || '',
+    readonly: row.querySelector('[data-role="readonly"]')?.value === '1',
+    hidden: row.querySelector('[data-role="hidden"]')?.value === '1'
   };
   const formRow = normalizeFormLayoutNumber(row.querySelector('[data-role="form-row"]')?.value);
   const formCol = normalizeFormLayoutNumber(row.querySelector('[data-role="form-col"]')?.value, { max: 4 });
@@ -1624,6 +1632,28 @@ const currentDesignerLayout = () => normalizeDesignerFormLayout(RAGIC_STATE.sche
 const placedLayoutKeys = (layout) => new Set(Object.keys(layout.fields || {}));
 const layoutCellsOverlap = (a, b) => a.row < b.row + b.rowSpan && a.row + a.rowSpan > b.row && a.col < b.col + b.colSpan && a.col + a.colSpan > b.col;
 const isLayoutAreaFree = (layout, fieldKey, candidate) => !Object.entries(layout.fields || {}).some(([key, item]) => key !== fieldKey && layoutCellsOverlap(candidate, item));
+const layoutFieldTypeLabel = (type = 'text') => FIELD_TYPES.find((item) => item.value === type)?.label || LEGACY_FIELD_TYPES.find((item) => item.value === type)?.label || type;
+const clampLayoutItem = (item = {}, layout = {}) => {
+  const columns = layout.columns || 5;
+  const rows = layout.rows || 4;
+  const row = normalizeFormLayoutNumber(item.row, { min: 1, max: rows, fallback: 1 });
+  const col = normalizeFormLayoutNumber(item.col ?? item.column, { min: 1, max: columns, fallback: 1 });
+  return {
+    row,
+    col,
+    colSpan: normalizeFormLayoutNumber(item.colSpan ?? item.columnSpan, { min: 1, max: columns - col + 1, fallback: 1 }),
+    rowSpan: normalizeFormLayoutNumber(item.rowSpan, { min: 1, max: rows - row + 1, fallback: 1 }),
+    width: normalizeFormLayoutNumber(item.width, { min: 40, max: 2000, fallback: null }),
+    height: normalizeFormLayoutNumber(item.height, { min: 32, max: 2000, fallback: null })
+  };
+};
+const getLayoutCellMetrics = (grid) => {
+  const rect = grid.getBoundingClientRect();
+  const styles = getComputedStyle(grid);
+  const gapX = Number.parseFloat(styles.columnGap) || 0;
+  const gapY = Number.parseFloat(styles.rowGap) || 0;
+  return { rect, gapX, gapY, cellW: (rect.width - gapX * ((Number(grid.dataset.columns) || 1) - 1)) / (Number(grid.dataset.columns) || 1), cellH: (rect.height - gapY * ((Number(grid.dataset.rows) || 1) - 1)) / (Number(grid.dataset.rows) || 1) };
+};
 const renderLayoutDesigner = () => {
   const modal = document.querySelector('#ragicDesignerModal');
   const panel = modal?.querySelector('#layoutDesignerPanel');
@@ -1631,33 +1661,23 @@ const renderLayoutDesigner = () => {
   if (!panel || !body) return;
   const fields = readDesigner(body);
   const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
-  const rowsSelect = [...Array(9)].map((_, i) => i + 2).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
-  const colsSelect = [3, 4, 5, 6].map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
+  const rowsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
+  const colsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
   const placed = placedLayoutKeys(layout);
-  const cells = [];
-  for (let row = 1; row <= layout.rows; row += 1) {
-    for (let col = 1; col <= layout.columns; col += 1) {
-      const owner = Object.entries(layout.fields).find(([, item]) => row >= item.row && row < item.row + item.rowSpan && col >= item.col && col < item.col + item.colSpan);
-      if (owner && (owner[1].row !== row || owner[1].col !== col)) {
-        cells.push(`<div class="layout-cell layout-cell-occupied" data-row="${row}" data-col="${col}" style="grid-column:${col};grid-row:${row};"></div>`);
-        continue;
-      }
-      const field = owner ? fields.find((item) => item.key === owner[0]) : null;
-      const item = owner?.[1];
-      cells.push(`<div class="layout-cell" data-row="${row}" data-col="${col}" style="grid-column: ${col} / span ${item ? item.colSpan : 1}; grid-row: ${row} / span ${item ? item.rowSpan : 1};">${field ? `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}"><span>${escapeHtml(field.label || field.key)}${field.type === 'subtable' ? ' <small>子表單</small>' : ''}</span><button class="settings-btn" type="button" title="設定">⚙️</button><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span></div>` : ''}</div>`);
-    }
-  }
-  const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}">${escapeHtml(field.label || field.key)}${field.type === 'subtable' ? ' <small>子表單</small>' : ''}</div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
-  const previewFields = fields.filter((field) => placed.has(field.key)).map((field) => {
+  const gridLines = [];
+  for (let row = 1; row <= layout.rows; row += 1) for (let col = 1; col <= layout.columns; col += 1) gridLines.push(`<div class="layout-grid-slot" data-row="${row}" data-col="${col}" style="grid-column:${col};grid-row:${row};"></div>`);
+  const placedFields = fields.filter((field) => placed.has(field.key)).map((field) => {
     const item = layout.fields[field.key];
-    return `<div class="ragic-view-field" style="--form-row:${item.row};--form-col:${item.col};--form-colspan:${item.colSpan};--form-rowspan:${item.rowSpan};"><div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${escapeHtml(designerPreviewValue(field))}</div></div>`;
+    const size = `${item.width ? `width:${item.width}px;` : ''}${item.height ? `height:${item.height}px;min-height:${item.height}px;` : ''}`;
+    return `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}" style="grid-column:${item.col} / span ${item.colSpan};grid-row:${item.row} / span ${item.rowSpan};${size}"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small>${field.type === 'subtable' ? '<button class="subtable-edit-btn" type="button">編輯子表格</button>' : ''}<button class="settings-btn" type="button" title="設定">⚙️</button><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span></div>`;
+  }).join('');
+  const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small><button class="settings-btn" type="button">⚙️</button><button class="remove-btn" type="button">×</button></div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
+  const previewFields = fields.filter((field) => placed.has(field.key) && !field.hidden).map((field) => {
+    const item = layout.fields[field.key];
+    const size = `${item.width ? `width:${item.width}px;` : ''}${item.height ? `height:${item.height}px;min-height:${item.height}px;` : ''}`;
+    return `<div class="ragic-view-field" style="--form-row:${item.row};--form-col:${item.col};--form-colspan:${item.colSpan};--form-rowspan:${item.rowSpan};${size}"><div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value">${field.type === 'subtable' ? '<table><tbody><tr><td>子表格預覽</td></tr></tbody></table>' : escapeHtml(designerPreviewValue(field))}</div></div>`;
   }).join('') || '<div class="designer-preview-empty">拖入欄位後顯示預覽</div>';
-  panel.innerHTML = `<div class="layout-designer">
-    <div class="layout-unplaced"><div class="layout-unplaced-fields"><span class="layout-section-label">未放置的欄位：</span>${unplaced}</div><button class="secondary btn-add-layout-field" type="button">+新增</button></div>
-    <div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數: <select id="gridCols">${colsSelect}</select></label><label>列數: <select id="gridRows">${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="btn-auto-layout secondary" type="button">自動排版</button><button class="btn-save-layout primary" type="button">儲存排版</button></div></div>
-    <div class="layout-grid-section"><div class="layout-grid" aria-label="排版表格拖曳區" style="grid-template-columns: repeat(${layout.columns}, minmax(92px, 1fr));">${cells.join('')}</div></div>
-    <div class="layout-preview"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${previewFields}</div></div>
-  </div>`;
+  panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols">${colsSelect}</select></label><label>列數：<select id="gridRows">${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="btn-add-layout-field secondary" type="button">＋ 新增欄位</button><button class="btn-save-layout primary" type="button">💾 儲存排版</button><button class="btn-preview-layout secondary" type="button">👁 預覽</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列）</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, minmax(92px, 1fr));grid-template-rows:repeat(${layout.rows}, minmax(48px, 1fr));">${gridLines.join('')}${placedFields}</div></div><aside id="layoutFieldSettingsPanel" class="layout-field-settings" hidden></aside></div><div class="layout-preview"><h3>即時預覽</h3><div class="ragic-form-grid ragic-view-grid" style="--form-columns:${layout.columns}">${previewFields}</div></div></div>`;
 };
 const updateDesignerFieldByKey = (fieldKey, patcher) => {
   const row = document.querySelector(`#ragicDesignerModal .designer-field[data-field-key="${window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\\"')}"]`);
@@ -1671,11 +1691,13 @@ const typeSelectOptions = (selected = 'text') => FIELD_TYPE_GROUPS.map((group) =
 
 const openLayoutFieldSettings = (fieldKey) => {
   const field = readDesigner(document.querySelector('#ragicDesignerModal .designer-body') || document.createElement('div')).find((item) => item.key === fieldKey);
+  const layout = currentDesignerLayout();
   if (!field) return;
+  const item = layout.fields[fieldKey] || { row: 0, col: 0, colSpan: 1, rowSpan: 1 };
   let panel = document.querySelector('#layoutFieldSettingsPanel');
-  if (!panel) { panel = document.createElement('div'); panel.id = 'layoutFieldSettingsPanel'; panel.className = 'layout-field-settings'; document.querySelector('#ragicDesignerModal .ragic-modal-card')?.appendChild(panel); }
+  if (!panel) return;
   const options = optionList(field).map((option) => `<input data-option value="${escapeHtml(option)}" placeholder="選項">`).join('');
-  panel.innerHTML = `<label>欄位名稱:<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>類型:<select data-setting-type>${typeSelectOptions(field.type)}</select></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><div data-option-list>${options || '<input data-option placeholder="選項">'}</div><button class="secondary" data-add-option type="button">+新增選項</button></div><div class="layout-settings-actions"><button class="primary" data-confirm-settings type="button">確認</button><button class="danger" data-remove-settings-field type="button">移除欄位</button></div>`;
+  panel.innerHTML = `<h3>欄位屬性設定</h3><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><label>預設值<input data-setting-default value="${escapeHtml(field.defaultValue || '')}"></label><label>欄位說明<textarea data-setting-help rows="2">${escapeHtml(field.help || '')}</textarea></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><div data-option-list>${options || '<input data-option placeholder="選項">'}</div><button class="secondary" data-add-option type="button">+新增選項</button></div><fieldset><legend>尺寸與位置</legend><label>起始列<input data-layout-row type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.row || 1)}"></label><label>起始欄<input data-layout-col type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.col || 1)}"></label><label>跨列<input data-layout-rowspan type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.rowSpan || 1)}"></label><label>跨欄<input data-layout-colspan type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.colSpan || 1)}"></label><label>寬度<input data-layout-width type="number" min="40" placeholder="自動" value="${escapeHtml(item.width || field.formWidth || '')}"></label><label>高度<input data-layout-height type="number" min="32" placeholder="自動" value="${escapeHtml(item.height || field.formHeight || '')}"></label></fieldset><div class="setting-checks"><label><input data-setting-required type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label><input data-setting-readonly type="checkbox" ${field.readonly ? 'checked' : ''}> 唯讀</label><label><input data-setting-hidden type="checkbox" ${field.hidden ? 'checked' : ''}> 隱藏</label></div>${field.type === 'subtable' ? '<button class="secondary" data-edit-subtable type="button">編輯子表格</button>' : ''}<div class="layout-settings-actions"><button class="primary" data-confirm-settings type="button">確認</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button></div>`;
   panel.hidden = false;
   panel.dataset.fieldKey = fieldKey;
 };
@@ -1705,13 +1727,87 @@ const updateLayoutDesignerState = (patcher) => {
 const attachLayoutDesignerEvents = (panel) => {
   if (!panel || panel.dataset.layoutEventsBound === 'true') return;
   panel.dataset.layoutEventsBound = 'true';
-  panel.addEventListener('dragstart', (event) => { const item = event.target.closest('[data-field-key]'); if (!item || event.target.closest('[data-resize], .remove-btn')) return; event.dataTransfer.setData('text/plain', item.dataset.fieldKey); });
-  panel.addEventListener('dragover', (event) => { const cell = event.target.closest('.layout-cell:not(.layout-cell-occupied)'); if (!cell) return; event.preventDefault(); cell.classList.add('drag-over'); });
-  panel.addEventListener('dragleave', (event) => event.target.closest('.layout-cell')?.classList.remove('drag-over'));
-  panel.addEventListener('drop', (event) => { const cell = event.target.closest('.layout-cell:not(.layout-cell-occupied)'); const key = event.dataTransfer.getData('text/plain'); if (!cell || !key) return; event.preventDefault(); updateLayoutDesignerState((layout, fields) => { const field = fields.find((item) => item.key === key); const candidate = { row: Number(cell.dataset.row), col: Number(cell.dataset.col), colSpan: field?.type === 'subtable' ? layout.columns : 1, rowSpan: 1 }; if (candidate.col + candidate.colSpan - 1 > layout.columns) candidate.col = 1; if (field?.type === 'subtable' && candidate.row < layout.rows - 1) candidate.row = layout.rows; if (isLayoutAreaFree(layout, key, candidate)) layout.fields[key] = candidate; }); });
-  panel.addEventListener('click', (event) => { const remove = event.target.closest('.remove-btn'); if (remove) updateLayoutDesignerState((layout) => { delete layout.fields[remove.closest('[data-field-key]').dataset.fieldKey]; }); });
-  panel.addEventListener('change', (event) => { if (!event.target.matches('#gridCols, #gridRows')) return; updateLayoutDesignerState((layout) => { layout.columns = Number(panel.querySelector('#gridCols').value); layout.rows = Number(panel.querySelector('#gridRows').value); }); });
-  panel.addEventListener('mousedown', (event) => { const handle = event.target.closest('[data-resize]'); if (!handle) return; event.preventDefault(); const fieldKey = handle.closest('[data-field-key]').dataset.fieldKey; const startX = event.pageX; const startY = event.pageY; const type = handle.dataset.resize; const start = { ...currentDesignerLayout().fields[fieldKey] }; const move = (moveEvent) => updateLayoutDesignerState((layout) => { const next = { ...start }; if (type === 'col') next.colSpan = Math.min(layout.columns - next.col + 1, Math.max(1, start.colSpan + Math.round((moveEvent.pageX - startX) / 90))); else next.rowSpan = Math.min(layout.rows - next.row + 1, Math.max(1, start.rowSpan + Math.round((moveEvent.pageY - startY) / 60))); if (isLayoutAreaFree(layout, fieldKey, next)) layout.fields[fieldKey] = next; }); const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); }; document.addEventListener('mousemove', move); document.addEventListener('mouseup', up); });
+  let dragKey = '';
+  const candidateFromPoint = (grid, x, y, start = {}) => {
+    const m = getLayoutCellMetrics(grid);
+    const col = Math.min(Number(grid.dataset.columns), Math.max(1, Math.floor((x - m.rect.left) / (m.cellW + m.gapX)) + 1));
+    const row = Math.min(Number(grid.dataset.rows), Math.max(1, Math.floor((y - m.rect.top) / (m.cellH + m.gapY)) + 1));
+    return clampLayoutItem({ ...start, row, col }, currentDesignerLayout());
+  };
+  panel.addEventListener('dragstart', (event) => {
+    const item = event.target.closest('[data-field-key]');
+    if (!item || event.target.closest('[data-resize], .remove-btn, .settings-btn')) return;
+    dragKey = item.dataset.fieldKey;
+    event.dataTransfer.setData('text/plain', dragKey);
+    item.classList.add('is-dragging');
+  });
+  panel.addEventListener('dragover', (event) => {
+    const grid = event.target.closest('.layout-grid');
+    if (!grid) return;
+    event.preventDefault();
+    const key = event.dataTransfer.getData('text/plain') || dragKey;
+    const layout = currentDesignerLayout();
+    const current = layout.fields[key] || { colSpan: 1, rowSpan: 1 };
+    const candidate = candidateFromPoint(grid, event.clientX, event.clientY, current);
+    grid.querySelector('.layout-drop-preview')?.remove();
+    const preview = document.createElement('div');
+    preview.className = `layout-drop-preview ${isLayoutAreaFree(layout, key, candidate) ? 'is-valid' : 'is-invalid'}`;
+    preview.style.cssText = `grid-column:${candidate.col} / span ${candidate.colSpan};grid-row:${candidate.row} / span ${candidate.rowSpan};`;
+    grid.appendChild(preview);
+  });
+  panel.addEventListener('dragleave', (event) => { if (!event.relatedTarget || !panel.contains(event.relatedTarget)) panel.querySelector('.layout-drop-preview')?.remove(); });
+  panel.addEventListener('drop', (event) => {
+    const grid = event.target.closest('.layout-grid');
+    const key = event.dataTransfer.getData('text/plain') || dragKey;
+    if (!grid || !key) return;
+    event.preventDefault();
+    panel.querySelector('.layout-drop-preview')?.remove();
+    updateLayoutDesignerState((layout) => {
+      const current = layout.fields[key] || { colSpan: 1, rowSpan: 1 };
+      const candidate = candidateFromPoint(grid, event.clientX, event.clientY, current);
+      if (isLayoutAreaFree(layout, key, candidate)) layout.fields[key] = candidate;
+    });
+  });
+  panel.addEventListener('dragend', () => { dragKey = ''; panel.querySelector('.layout-drop-preview')?.remove(); panel.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging')); });
+  panel.addEventListener('click', (event) => {
+    const remove = event.target.closest('.remove-btn');
+    if (remove) { updateLayoutDesignerState((layout) => { delete layout.fields[remove.closest('[data-field-key]').dataset.fieldKey]; }); return; }
+    if (event.target.closest('.btn-preview-layout')) panel.querySelector('.layout-preview')?.scrollIntoView({ block: 'nearest' });
+  });
+  panel.addEventListener('change', (event) => {
+    if (!event.target.matches('#gridCols, #gridRows')) return;
+    updateLayoutDesignerState((layout) => {
+      layout.columns = Number(panel.querySelector('#gridCols').value);
+      layout.rows = Number(panel.querySelector('#gridRows').value);
+      Object.entries(layout.fields || {}).forEach(([key, item]) => {
+        const next = clampLayoutItem(item, layout);
+        if (isLayoutAreaFree(layout, key, next)) layout.fields[key] = next;
+        else delete layout.fields[key];
+      });
+    });
+  });
+  panel.addEventListener('mousedown', (event) => {
+    const handle = event.target.closest('[data-resize]');
+    if (!handle) return;
+    event.preventDefault();
+    const fieldKey = handle.closest('[data-field-key]').dataset.fieldKey;
+    const startX = event.pageX, startY = event.pageY, type = handle.dataset.resize;
+    const start = { ...currentDesignerLayout().fields[fieldKey] };
+    const grid = panel.querySelector('.layout-grid');
+    const metrics = getLayoutCellMetrics(grid);
+    const move = (moveEvent) => {
+      const dCol = Math.round((moveEvent.pageX - startX) / Math.max(1, metrics.cellW + metrics.gapX));
+      const dRow = Math.round((moveEvent.pageY - startY) / Math.max(1, metrics.cellH + metrics.gapY));
+      updateLayoutDesignerState((layout) => {
+        const next = { ...start };
+        if (type === 'col' || type === 'both') next.colSpan = Math.min(layout.columns - next.col + 1, Math.max(1, start.colSpan + dCol));
+        if (type === 'row' || type === 'both') next.rowSpan = Math.min(layout.rows - next.row + 1, Math.max(1, start.rowSpan + dRow));
+        if (isLayoutAreaFree(layout, fieldKey, next)) layout.fields[fieldKey] = next;
+      });
+    };
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+  });
 };
 
 const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; renderLayoutDesigner(); updateDesignerPreview(); };
@@ -1881,7 +1977,7 @@ const initRagicPage = async (config) => {
     if (event.target.closest('[data-add-option]')) panel.querySelector('[data-option-list]').insertAdjacentHTML('beforeend', '<input data-option placeholder="選項">');
     if (event.target.matches('[data-setting-type]')) panel.querySelector('.setting-options').hidden = !['select','multiselect'].includes(event.target.value);
     if (event.target.closest('[data-remove-settings-field]')) { updateLayoutDesignerState((layout) => { delete layout.fields[panel.dataset.fieldKey]; }); panel.hidden = true; }
-    if (event.target.closest('[data-confirm-settings]')) { const key = panel.dataset.fieldKey; updateDesignerFieldByKey(key, (row) => { row.querySelector('[data-role="label"]').value = panel.querySelector('[data-setting-label]').value; row.querySelector('[data-role="type"]').value = panel.querySelector('[data-setting-type]').value; row.querySelector('[data-role="options"]').value = [...panel.querySelectorAll('[data-option]')].map((input) => input.value.trim()).filter(Boolean).join('\n'); }); panel.hidden = true; }
+    if (event.target.closest('[data-confirm-settings]')) { const key = panel.dataset.fieldKey; updateDesignerFieldByKey(key, (row) => { row.querySelector('[data-role="label"]').value = panel.querySelector('[data-setting-label]').value; row.querySelector('[data-role="type"]').value = panel.querySelector('[data-setting-type]').value; row.querySelector('[data-role="options"]').value = [...panel.querySelectorAll('[data-option]')].map((input) => input.value.trim()).filter(Boolean).join('\n'); row.querySelector('[data-role="required"]').checked = panel.querySelector('[data-setting-required]')?.checked || false; row.querySelector('[data-role="width"]').value = panel.querySelector('[data-layout-width]')?.value || ''; row.querySelector('[data-role="default"]').value = panel.querySelector('[data-setting-default]')?.value || ''; row.querySelector('[data-role="help"]').value = panel.querySelector('[data-setting-help]')?.value || ''; row.querySelector('[data-role="readonly"]').value = panel.querySelector('[data-setting-readonly]')?.checked ? '1' : ''; row.querySelector('[data-role="hidden"]').value = panel.querySelector('[data-setting-hidden]')?.checked ? '1' : ''; }); updateLayoutDesignerState((layout) => { const key = panel.dataset.fieldKey; const candidate = clampLayoutItem({ row: panel.querySelector('[data-layout-row]')?.value, col: panel.querySelector('[data-layout-col]')?.value, rowSpan: panel.querySelector('[data-layout-rowspan]')?.value, colSpan: panel.querySelector('[data-layout-colspan]')?.value, width: panel.querySelector('[data-layout-width]')?.value, height: panel.querySelector('[data-layout-height]')?.value }, layout); if (isLayoutAreaFree(layout, key, candidate)) layout.fields[key] = candidate; }); panel.hidden = true; }
   });
   document.querySelector('#layoutDesignerPanel')?.addEventListener('click', async (event) => {
     if (!event.target.closest('.btn-save-layout')) return;
