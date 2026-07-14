@@ -3404,3 +3404,39 @@ body {
 .form-field-resizable .resize-handle-bottom { position: absolute; bottom: -2px; left: 0; right: 0; height: 4px; cursor: row-resize; background: transparent; z-index: 5; }
 .form-field-resizable .resize-handle-bottom:hover, .form-field-resizable .resize-handle-bottom.resizing { background: #1976d2; }
 .form-field-resizable .ragic-view-label, .form-field-resizable .ragic-view-value { overflow: hidden; text-overflow: ellipsis; }
+
+/* Unified grid drag layout editor */
+#ragicDesignerModal .ragic-modal-card { width: min(1180px, calc(100vw - 24px)); max-height: 94vh; }
+#layoutDesignerPanel { overflow: hidden !important; }
+.layout-designer { display: grid; grid-template-rows: auto auto minmax(230px, 1fr) 220px; height: calc(94vh - 72px); min-height: 0; background: var(--surface, #fff); }
+.layout-toolbar { order: 0; padding: 12px 18px; border-bottom: 1px solid var(--border); background: #fff; }
+.layout-unplaced { order: 1; max-height: 88px; overflow: auto; padding: 10px 18px; border-bottom: 1px solid var(--border); background: #fbfdff; }
+.layout-unplaced-fields { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.layout-workbench { order: 2; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; min-height: 0; padding: 14px 18px; overflow: hidden; }
+.layout-grid-section { min-height: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; overflow: hidden; border: 0; }
+.layout-grid-section h3 { margin: 0; text-align: center; font-size: 14px; }
+.layout-grid { position: relative; height: 200px; min-height: 200px; max-height: 200px; overflow: auto; display: grid; gap: 4px; padding: 8px; border: 1px solid #d8e0ef; border-radius: 12px; background: linear-gradient(#f8fbff, #f8fbff); }
+.layout-grid-slot { min-width: 72px; min-height: 44px; border: 1px dashed #cbd5e1; border-radius: 8px; background: rgba(255,255,255,.72); pointer-events: none; }
+.layout-field { z-index: 2; align-self: stretch; justify-self: stretch; min-width: 0; min-height: 44px; background: rgba(255,255,255,.95); border: 1px solid #3b82f6; border-radius: 8px; color: #1e40af; box-shadow: 0 8px 22px rgba(37,99,235,.14); cursor: grab; padding: 8px 34px 8px 12px; display: grid; align-content: center; gap: 2px; position: relative; overflow: hidden; }
+.layout-field b, .layout-field-chip b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layout-field small, .layout-field-chip small { font-size: 11px; color: #64748b; }
+.layout-field-subtable { border-color: #8b5cf6; background: #fbf7ff; color: #6d28d9; }
+.layout-field-chip { display: inline-grid; grid-template-columns: auto auto auto; align-items: center; gap: 6px; background: #fff; border: 1px solid #cbd5e1; border-radius: 999px; padding: 6px 10px; cursor: grab; }
+.layout-field-chip .settings-btn, .layout-field-chip .remove-btn { position: static; border: 0; background: transparent; width: auto; height: auto; color: inherit; }
+.layout-field .settings-btn { position: absolute; top: 4px; right: 24px; border: 0; background: transparent; cursor: pointer; }
+.layout-field .remove-btn { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border: 0; border-radius: 50%; background: #ef4444; color: #fff; cursor: pointer; }
+.layout-field .resize-handle-right { position: absolute; right: 0; top: 25%; width: 7px; height: 50%; border-radius: 4px 0 0 4px; background: #2563eb; cursor: col-resize; }
+.layout-field .resize-handle-bottom { position: absolute; left: 25%; bottom: 0; width: 50%; height: 7px; border-radius: 4px 4px 0 0; background: #2563eb; cursor: row-resize; }
+.layout-field .resize-handle-corner { position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; background: linear-gradient(135deg, transparent 45%, #2563eb 46%); cursor: nwse-resize; }
+.layout-drop-preview { z-index: 4; border: 2px dashed #2563eb; background: rgba(37,99,235,.14); border-radius: 10px; pointer-events: none; }
+.layout-drop-preview.is-invalid { border-color: #ef4444; background: rgba(239,68,68,.12); }
+.layout-field.is-dragging { opacity: .45; }
+.layout-preview { order: 3; height: 220px; max-height: 220px; overflow: auto; padding: 12px 18px; border-top: 1px solid var(--border); background: #fff; }
+.layout-preview .ragic-form-grid { display: grid; grid-template-columns: repeat(var(--form-columns, 5), minmax(120px, 1fr)); grid-auto-rows: minmax(52px, auto); }
+.layout-field-settings { position: static; width: auto; max-height: 100%; overflow: auto; display: grid; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: none; }
+.layout-field-settings[hidden] { display: none; }
+.layout-field-settings h3 { margin: 0; }
+.layout-field-settings fieldset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; border: 1px solid var(--border); border-radius: 10px; }
+.setting-checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.subtable-edit-btn { justify-self: start; border: 1px solid #8b5cf6; color: #6d28d9; background: #fff; border-radius: 999px; font-size: 11px; padding: 2px 8px; }
+@media (max-width: 900px) { .layout-workbench { grid-template-columns: 1fr; overflow: auto; } .layout-field-settings { max-height: 220px; } }
