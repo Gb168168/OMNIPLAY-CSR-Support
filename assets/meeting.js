@@ -1,4 +1,5 @@
 const meetingDb = window.omniplayDb;
+const meetingStorage = window.omniplayStorage;
 const meetingCollection = meetingDb?.collection('meeting');
 const meetingStaffCollection = meetingDb?.collection('staff');
 const meetingSettingsDoc = meetingDb?.collection('meetingSettings').doc('staffList');
@@ -20,6 +21,7 @@ const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
 const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
 const MAX_IMAGE_BYTES = 900 * 1024;
+const MAX_MEETING_FILE_BYTES = 500 * 1024 * 1024;
 
 if (!window._multiSelectClickBound) {
   document.addEventListener('click', () => {
@@ -226,12 +228,62 @@ const currentRowsByKey = async (key) => readRows(key);
 const renderMeetingFiles = () => {
   const list = document.querySelector('#meetingFileList');
   if (!list) return;
-  list.innerHTML = meetingState.files.map((file, index) => `<div class="meeting-file-item"><a href="${escapeHtml(file.dataUrl)}" download="${escapeHtml(file.name)}">${escapeHtml(file.name)}</a><button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`).join('');
+  list.innerHTML = meetingState.files.map((file, index) => {
+    const href = file.url || file.dataUrl || file.objectUrl || '#';
+    const isPending = file.pending || file.file;
+    const target = href === '#' || isPending ? '' : ' target="_blank" rel="noopener"';
+    return `<div class="meeting-file-item"><a href="${escapeHtml(href)}" download="${escapeHtml(file.name)}"${target}>${escapeHtml(file.name)}</a>${isPending ? '<span class="meeting-file-status">待儲存上傳</span>' : ''}<button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`;
+  }).join('');
 };
 
 const addMeetingFiles = async (files) => {
-  for (const file of files) meetingState.files.push({ name: file.name, type: file.type || 'application/octet-stream', dataUrl: await readFileAsDataUrl(file) });
+  for (const file of files) {
+    if (file.size > MAX_MEETING_FILE_BYTES) throw new Error(`${file.name} 超過 500MB，請選擇較小的檔案`);
+    meetingState.files.push({
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+      objectUrl: URL.createObjectURL(file),
+      pending: true,
+      file
+    });
+  }
   renderMeetingFiles();
+};
+
+const safeStorageName = (name) => String(name || 'file').replace(/[\\/#?%*:|"<>]/g, '_');
+
+const uploadMeetingFiles = async () => {
+  const pendingFiles = meetingState.files.filter((file) => file.file || file.pending);
+  if (!pendingFiles.length) return meetingState.files;
+  if (!meetingStorage) throw new Error('Firebase Storage 尚未完成初始化，無法上傳影片或檔案。');
+  const serial = document.querySelector('#meetingSerial')?.value?.trim() || getNextSerial();
+  const recordKey = meetingState.currentId || serial || `new-${Date.now()}`;
+  const uploadedFiles = [];
+  for (const fileItem of meetingState.files) {
+    if (!fileItem.file && !fileItem.pending) {
+      uploadedFiles.push(fileItem);
+      continue;
+    }
+    const file = fileItem.file;
+    const path = `meeting-files/${recordKey}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeStorageName(file.name)}`;
+    const ref = meetingStorage.ref(path);
+    const snapshot = await ref.put(file, { contentType: file.type || 'application/octet-stream' });
+    const url = await snapshot.ref.getDownloadURL();
+    uploadedFiles.push({
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+      path,
+      url
+    });
+  }
+  meetingState.files.forEach((fileItem) => {
+    if (fileItem.objectUrl) URL.revokeObjectURL(fileItem.objectUrl);
+  });
+  meetingState.files = uploadedFiles;
+  renderMeetingFiles();
+  return uploadedFiles;
 };
 
 const renderStaffSettings = () => {
@@ -402,7 +454,7 @@ const readForm = async () => {
   morningAttendees: [...document.querySelector('#meetingMorningAttendees').selectedOptions].map((option) => option.value),
   eveningAttendees: [...document.querySelector('#meetingEveningAttendees').selectedOptions].map((option) => option.value),
   note: document.querySelector('#meetingNote').value.trim(),
-  files: meetingState.files,
+  files: await uploadMeetingFiles(),
   tabs,
   techRows: tabs[0]?.rows || [],
   csRows: tabs[1]?.rows || []
