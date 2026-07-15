@@ -3479,17 +3479,96 @@ body {
 /* 設計表格：強制隱藏舊版欄位清單，避免覆蓋新版排版工作台 */
 #ragicDesignerModal .designer-body[hidden] { display: none !important; }
 
-/* 設計表格：依需求移除即時預覽後，放大工作區與右側設定欄 */
-#ragicDesignerModal .layout-workbench { grid-template-columns: minmax(0, 1fr) 640px; }
-#ragicDesignerModal .layout-canvas { grid-template-rows: minmax(0, 1fr); }
-#ragicDesignerModal .layout-grid { min-height: 420px; }
-#ragicDesignerModal .layout-grid-slot { min-width: 56px; }
-#ragicDesignerModal .layout-side-panel { min-width: 440px; }
+/* 設計表格：
+   移除即時預覽後，放大左側工作區與右側設定欄，
+   並避免右側子欄位內容被撐出或截斷。
+*/
+
+#ragicDesignerModal .layout-workbench {
+  grid-template-columns: minmax(0, 1fr) 640px;
+}
+
+#ragicDesignerModal .layout-canvas {
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+}
+
+#ragicDesignerModal .layout-grid {
+  min-height: 420px;
+}
+
+#ragicDesignerModal .layout-grid-slot {
+  min-width: 56px;
+}
+
+/* 右側設定欄 */
+#ragicDesignerModal .layout-side-panel {
+  min-width: 0;
+  width: 640px;
+  max-width: 100%;
+  font-size: 13px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+#ragicDesignerModal .layout-side-panel h3 {
+  font-size: 14px;
+}
+
+#ragicDesignerModal .layout-side-panel h4,
+#ragicDesignerModal .layout-side-panel legend {
+  font-size: 13px;
+}
+
+#ragicDesignerModal .layout-side-panel label,
+#ragicDesignerModal .layout-side-panel p,
+#ragicDesignerModal .layout-side-panel button,
+#ragicDesignerModal .layout-side-panel input,
+#ragicDesignerModal .layout-side-panel select,
+#ragicDesignerModal .layout-side-panel textarea {
+  font-size: 12px;
+}
+
+/* 右側內容間距 */
 #ragicDesignerModal .layout-add-card,
-#ragicDesignerModal .layout-field-settings { padding: 20px 22px; }
-#ragicDesignerModal .layout-type-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#ragicDesignerModal .layout-field-settings {
+  min-width: 0;
+  padding: 14px 16px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* 所有內部元素使用 border-box，避免寬度超出 */
+#ragicDesignerModal .layout-side-panel *,
+#ragicDesignerModal .layout-field-settings * {
+  box-sizing: border-box;
+}
+
+/* 輸入框與下拉選單可縮小，不要撐破容器 */
+#ragicDesignerModal .layout-side-panel input,
+#ragicDesignerModal .layout-side-panel select,
+#ragicDesignerModal .layout-side-panel textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 欄位類型按鈕排列 */
+#ragicDesignerModal .layout-type-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* 小螢幕改成上下排列 */
 @media (max-width: 900px) {
-  #ragicDesignerModal .layout-workbench { grid-template-columns: 1fr; }
-  #ragicDesignerModal .layout-side-panel { min-width: 0; }
-  #ragicDesignerModal .layout-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #ragicDesignerModal .layout-workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #ragicDesignerModal .layout-side-panel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #ragicDesignerModal .layout-type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
