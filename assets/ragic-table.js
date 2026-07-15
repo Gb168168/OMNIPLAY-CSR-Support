@@ -943,12 +943,24 @@ const renderDisplayValue = (field, value) => {
   const text = String(valueToText(value));
   return text ? escapeHtml(text).replace(/\n/g, '<br>') : '<span class="ragic-view-empty">—</span>';
 };
+const subtableViewColumnWidth = (sub = {}) => normalizeFormFieldSize(sub.formWidth ?? sub.width, MIN_FORM_FIELD_WIDTH);
+const subtableViewCellStyle = (sub = {}) => {
+  const width = subtableViewColumnWidth(sub);
+  const height = normalizeFormFieldSize(sub.formHeight, MIN_FORM_FIELD_HEIGHT);
+  return `${width ? `width:${width}px;min-width:${width}px;max-width:${width}px;` : ''}${height ? `height:${height}px;` : ''}`;
+};
 const renderSubtableView = (field, rows = []) => {
   const subfields = field.fields || [];
   const bodyRows = (Array.isArray(rows) ? rows : []).filter((item) => item && Object.values(item).some((value) => Array.isArray(value) ? value.length : value));
   if (!subfields.length) return '<div class="ragic-view-empty">尚未設定子欄位</div>';
   if (!bodyRows.length) return '<div class="ragic-view-empty">無資料</div>';
-return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable"><thead><tr>${subfields.map((sub) => `<th class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${sub.formWidth ? `width:${normalizeFormFieldSize(sub.formWidth, MIN_FORM_FIELD_WIDTH)}px;min-width:${normalizeFormFieldSize(sub.formWidth, MIN_FORM_FIELD_WIDTH)}px;` : ''}${sub.formHeight ? `height:${normalizeFormFieldSize(sub.formHeight, MIN_FORM_FIELD_HEIGHT)}px;` : ''}">${escapeHtml(sub.label || sub.key)}</th>`).join('')}</tr></thead><tbody>${bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${sub.formWidth ? `width:${normalizeFormFieldSize(sub.formWidth, MIN_FORM_FIELD_WIDTH)}px;min-width:${normalizeFormFieldSize(sub.formWidth, MIN_FORM_FIELD_WIDTH)}px;` : ''}${sub.formHeight ? `height:${normalizeFormFieldSize(sub.formHeight, MIN_FORM_FIELD_HEIGHT)}px;` : ''}">${renderDisplayValue(sub, item[sub.key])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const colgroup = `<colgroup>${subfields.map((sub) => {
+    const width = subtableViewColumnWidth(sub);
+    return `<col${width ? ` style="width:${width}px;min-width:${width}px;max-width:${width}px;"` : ''}>`;
+  }).join('')}</colgroup>`;
+  const header = subfields.map((sub) => `<th class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}">${escapeHtml(sub.label || sub.key)}</th>`).join('');
+  const body = bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}">${renderDisplayValue(sub, item[sub.key])}</td>`).join('')}</tr>`).join('');
+  return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable">${colgroup}<thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
 };
 const renderViewForm = (form, record = {}) => {
   const grid = document.createElement('div');
