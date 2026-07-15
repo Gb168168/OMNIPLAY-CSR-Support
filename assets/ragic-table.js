@@ -1716,6 +1716,26 @@ const getLayoutCellMetrics = (grid) => {
   const gapY = Number.parseFloat(styles.rowGap) || 0;
   return { rect, gapX, gapY, cellW: (rect.width - gapX * ((Number(grid.dataset.columns) || 1) - 1)) / (Number(grid.dataset.columns) || 1), cellH: (rect.height - gapY * ((Number(grid.dataset.rows) || 1) - 1)) / (Number(grid.dataset.rows) || 1) };
 };
+const layoutSpanWidth = (grid, colSpan = 1) => {
+  if (!grid) return null;
+  const metrics = getLayoutCellMetrics(grid);
+  const span = normalizeFormLayoutNumber(colSpan, { min: 1, max: Number(grid.dataset.columns) || 1, fallback: 1 });
+  const width = (metrics.cellW * span) + (metrics.gapX * Math.max(0, span - 1));
+  return Number.isFinite(width) && width > 0 ? Math.round(width) : null;
+};
+const refreshLayoutWidthHint = (panel = document.querySelector('#layoutFieldSettingsPanel')) => {
+  const hint = panel?.querySelector('[data-layout-width-hint]');
+  if (!hint) return;
+  const explicitWidth = normalizeFieldWidth(panel.querySelector('[data-layout-width]')?.value);
+  if (explicitWidth) {
+    hint.textContent = `目前套用寬度：${explicitWidth}px`;
+    return;
+  }
+  const grid = document.querySelector('#layoutDesignerPanel .layout-grid');
+  const colSpan = panel.querySelector('[data-layout-colspan]')?.value || 1;
+  const spanWidth = layoutSpanWidth(grid, colSpan);
+  hint.textContent = spanWidth ? `跨欄 ${colSpan} 欄約 ${spanWidth}px` : '跨欄寬度會依目前畫布寬度計算';
+};
 const renderLayoutDesigner = () => {
   const modal = document.querySelector('#ragicDesignerModal');
   const panel = modal?.querySelector('#layoutDesignerPanel');
@@ -1764,12 +1784,13 @@ const openLayoutFieldSettings = (fieldKey) => {
   let panel = document.querySelector('#layoutFieldSettingsPanel');
   if (!panel) return;
   const options = optionList(field).map((option) => `<input data-option value="${escapeHtml(option)}" placeholder="選項">`).join('');
-  panel.innerHTML = `<h3>欄位屬性設定</h3><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><label>預設值<input data-setting-default value="${escapeHtml(field.defaultValue || '')}"></label><label>欄位說明<textarea data-setting-help rows="2">${escapeHtml(field.help || '')}</textarea></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><div data-option-list>${options || '<input data-option placeholder="選項">'}</div><button class="secondary" data-add-option type="button">+新增選項</button></div><fieldset><legend>尺寸與位置</legend><label>起始列<input data-layout-row type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.row || 1)}"></label><label>起始欄<input data-layout-col type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.col || 1)}"></label><label>跨列<input data-layout-rowspan type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.rowSpan || 1)}"></label><label>跨欄<input data-layout-colspan type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.colSpan || 1)}"></label><label>寬度<input data-layout-width type="number" min="40" placeholder="自動" value="${escapeHtml(item.width || field.formWidth || '')}"></label><label>高度(px)<input data-layout-height type="number" min="32" value="${escapeHtml(layoutHeightValue(item, field))}"></label></fieldset><div class="setting-checks"><label><input data-setting-required type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label><input data-setting-readonly type="checkbox" ${field.readonly ? 'checked' : ''}> 唯讀</label><label><input data-setting-hidden type="checkbox" ${field.hidden ? 'checked' : ''}> 隱藏</label></div>${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}<div class="layout-settings-actions"><button class="primary" data-confirm-settings type="button">確認</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button></div>`;
+  panel.innerHTML = `<h3>欄位屬性設定</h3><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><label>預設值<input data-setting-default value="${escapeHtml(field.defaultValue || '')}"></label><label>欄位說明<textarea data-setting-help rows="2">${escapeHtml(field.help || '')}</textarea></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><div data-option-list>${options || '<input data-option placeholder="選項">'}</div><button class="secondary" data-add-option type="button">+新增選項</button></div><fieldset><legend>尺寸與位置</legend><label>起始列<input data-layout-row type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.row || 1)}"></label><label>起始欄<input data-layout-col type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.col || 1)}"></label><label>跨列<input data-layout-rowspan type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.rowSpan || 1)}"></label><label>跨欄<input data-layout-colspan type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.colSpan || 1)}"><small data-layout-width-hint></small></label><label>寬度<input data-layout-width type="number" min="40" placeholder="自動" value="${escapeHtml(item.width || field.formWidth || '')}"></label><label>高度(px)<input data-layout-height type="number" min="32" value="${escapeHtml(layoutHeightValue(item, field))}"></label></fieldset><div class="setting-checks"><label><input data-setting-required type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label><input data-setting-readonly type="checkbox" ${field.readonly ? 'checked' : ''}> 唯讀</label><label><input data-setting-hidden type="checkbox" ${field.hidden ? 'checked' : ''}> 隱藏</label></div>${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}<div class="layout-settings-actions"><button class="primary" data-confirm-settings type="button">確認</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button></div>`;
   panel.hidden = false;
   panel.dataset.fieldKey = fieldKey;
   const subfieldList = panel.querySelector('[data-setting-subfields]');
   if (subfieldList) (field.fields || []).forEach((child) => subfieldList.appendChild(fieldDesigner(child, true)));
   refreshSubfieldWidthSummary(panel);
+  refreshLayoutWidthHint(panel);
 };
 
 const autoLayoutFields = (layout, fields) => {
@@ -2062,6 +2083,7 @@ const initRagicPage = async (config) => {
   });
   document.querySelector('#ragicDesignerModal')?.addEventListener('input', (event) => {
     if (event.target?.matches('[data-role="width"], [data-layout-width]')) syncSubtableWidthFromEvent(event.target);
+    if (event.target?.matches('[data-layout-width], [data-layout-colspan], [data-layout-col]')) refreshLayoutWidthHint(event.target.closest('#layoutFieldSettingsPanel'));
   });
   document.querySelector('#layoutDesignerPanel')?.addEventListener('click', async (event) => {
     if (!event.target.closest('.btn-save-layout')) return;
