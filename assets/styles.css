@@ -3112,10 +3112,10 @@ textarea,
 .form-view-mode .field-value img:hover {
   opacity: 0.85;
 }
-.ragic-view-subtable-wrap { max-height: none; margin: 0; padding: 0; }
-.ragic-view-subtable { width: 100%; border-collapse: collapse; }
+.ragic-view-subtable-wrap { max-height: none; margin: 0; padding: 0; overflow-x: auto; }
+.ragic-view-subtable { width: max-content; min-width: 100%; table-layout: fixed; border-collapse: collapse; }
 .ragic-view-subtable th,
-.ragic-view-subtable td { text-align: left; vertical-align: top; }
+.ragic-view-subtable td { text-align: left; vertical-align: top; overflow: hidden; overflow-wrap: anywhere; word-break: break-word; }
 
 .col-resizer {
   position: absolute;
