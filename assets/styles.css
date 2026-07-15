@@ -3480,7 +3480,7 @@ body {
 #ragicDesignerModal .designer-body[hidden] { display: none !important; }
 
 /* 設計表格：依需求移除即時預覽後，放大工作區與右側設定欄 */
-#ragicDesignerModal .layout-workbench { grid-template-columns: minmax(0, 1fr) 440px; }
+#ragicDesignerModal .layout-workbench { grid-template-columns: minmax(0, 1fr) 640px; }
 #ragicDesignerModal .layout-canvas { grid-template-rows: minmax(0, 1fr); }
 #ragicDesignerModal .layout-grid { min-height: 420px; }
 #ragicDesignerModal .layout-grid-slot { min-width: 56px; }
