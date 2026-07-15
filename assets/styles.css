@@ -3442,7 +3442,8 @@ body {
 @media (max-width: 900px) { .layout-workbench { grid-template-columns: 1fr; overflow: auto; } .layout-field-settings { max-height: 220px; } }
 
 /* 設計表格：新版排版設計器（接近白底拖曳式工作台） */
-#ragicDesignerModal .ragic-modal-card { width: min(1520px, calc(100vw - 24px)); }
+#ragicDesignerModal { padding: 8px; }
+#ragicDesignerModal .ragic-modal-card { width: min(1800px, calc(100vw - 16px)); max-height: calc(100vh - 16px); }
 .layout-designer { grid-template-rows: auto auto minmax(0, 1fr); height: calc(94vh - 72px); background: #fff; color: #172033; }
 .layout-toolbar { background: #fff; padding: 16px 24px; }
 .layout-toolbar select { min-width: 88px; min-height: 38px; border: 1px solid #d8e0ef; border-radius: 8px; background: #fff; color: #172033; padding: 0 12px; }
