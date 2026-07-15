@@ -2851,6 +2851,25 @@ textarea,
   font-weight: 900;
 }
 
+.designer-subfield-total {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid rgba(96, 165, 250, .35);
+  border-radius: 999px;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, .16);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.designer-subfield-total.is-complete {
+  color: #bbf7d0;
+  border-color: rgba(74, 222, 128, .35);
+  background: rgba(22, 163, 74, .16);
+}
+
 .designer-columns-per-row {
   display: grid;
   grid-template-columns: auto 72px auto;
