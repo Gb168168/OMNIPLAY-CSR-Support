@@ -225,15 +225,76 @@ const renderTabs = (tabs = meetingState.tabs) => {
 
 const currentRowsByKey = async (key) => readRows(key);
 
+const meetingFileUrl = (file) => file?.url || file?.dataUrl || file?.objectUrl || '';
+const isPreviewableMeetingFile = (file) => String(file?.type || '').startsWith('video/') || String(file?.type || '').startsWith('image/') || String(file?.type || '').includes('pdf');
+
 const renderMeetingFiles = () => {
   const list = document.querySelector('#meetingFileList');
   if (!list) return;
   list.innerHTML = meetingState.files.map((file, index) => {
-    const href = file.url || file.dataUrl || file.objectUrl || '#';
+    const href = meetingFileUrl(file);
     const isPending = file.pending || file.file;
-    const target = href === '#' || isPending ? '' : ' target="_blank" rel="noopener"';
-    return `<div class="meeting-file-item"><a href="${escapeHtml(href)}" download="${escapeHtml(file.name)}"${target}>${escapeHtml(file.name)}</a>${isPending ? '<span class="meeting-file-status">待儲存上傳</span>' : ''}<button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`;
+    const previewButton = href && isPreviewableMeetingFile(file) ? `<button class="secondary meeting-file-action" type="button" data-preview-file="${index}">預覽</button>` : '';
+    const downloadButton = href ? `<button class="secondary meeting-file-action" type="button" data-download-file="${index}">下載</button>` : '';
+    return `<div class="meeting-file-item"><span class="meeting-file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>${previewButton}${downloadButton}${isPending ? '<span class="meeting-file-status">待儲存上傳</span>' : ''}<button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`;
   }).join('');
+};
+
+
+const openMeetingFilePreview = (file) => {
+  const modal = document.querySelector('#meetingFilePreviewModal');
+  const title = document.querySelector('#meetingFilePreviewTitle');
+  const body = document.querySelector('#meetingFilePreviewBody');
+  const url = meetingFileUrl(file);
+  if (!modal || !title || !body || !url) return;
+  const type = String(file.type || '');
+  title.textContent = file.name || '檔案預覽';
+  if (type.startsWith('video/')) {
+    body.innerHTML = `<video class="meeting-file-preview-media" src="${escapeHtml(url)}" controls playsinline preload="metadata"></video>`;
+  } else if (type.startsWith('image/')) {
+    body.innerHTML = `<img class="meeting-file-preview-media" src="${escapeHtml(url)}" alt="${escapeHtml(file.name || '檔案預覽')}">`;
+  } else if (type.includes('pdf')) {
+    body.innerHTML = `<iframe class="meeting-file-preview-frame" src="${escapeHtml(url)}" title="${escapeHtml(file.name || 'PDF 預覽')}"></iframe>`;
+  } else {
+    body.innerHTML = '<p class="meeting-file-status">此檔案類型不支援內嵌預覽，請下載後查看。</p>';
+  }
+  modal.hidden = false;
+};
+
+const closeMeetingFilePreview = () => {
+  const modal = document.querySelector('#meetingFilePreviewModal');
+  const body = document.querySelector('#meetingFilePreviewBody');
+  if (body) body.innerHTML = '';
+  if (modal) modal.hidden = true;
+};
+
+const clickDownloadLink = (url, filename) => {
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename || 'meeting-file';
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
+const downloadMeetingFile = async (file) => {
+  const url = meetingFileUrl(file);
+  if (!url) return;
+  if (url.startsWith('blob:') || url.startsWith('data:')) {
+    clickDownloadLink(url, file.name);
+    return;
+  }
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('download failed');
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    clickDownloadLink(objectUrl, file.name);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch (error) {
+    window.open(url, '_blank', 'noopener');
+  }
 };
 
 const addMeetingFiles = async (files) => {
@@ -625,9 +686,20 @@ document.querySelector('#meetingFileDropZone')?.addEventListener('paste', (event
   addMeetingFiles(files).catch((error) => alert(error.message || '檔案讀取失敗，請稍後再試。'));
 });
 document.querySelector('#meetingFileList')?.addEventListener('click', (event) => {
+  const previewIndex = event.target.closest('[data-preview-file]')?.dataset.previewFile;
+  if (previewIndex !== undefined) {
+    openMeetingFilePreview(meetingState.files[Number(previewIndex)]);
+    return;
+  }
+  const downloadIndex = event.target.closest('[data-download-file]')?.dataset.downloadFile;
+  if (downloadIndex !== undefined) {
+    downloadMeetingFile(meetingState.files[Number(downloadIndex)]).catch(() => alert('檔案下載失敗，請稍後再試。'));
+    return;
+  }
   const index = event.target.closest('[data-remove-file]')?.dataset.removeFile;
   if (index === undefined) return;
-  meetingState.files.splice(Number(index), 1);
+  meetingState.files.splice(Number(index), 1);const [removedFile] = meetingState.files.splice(Number(index), 1);
+  if (removedFile?.objectUrl) URL.revokeObjectURL(removedFile.objectUrl);
   renderMeetingFiles();
 });
 document.querySelector('#staffSettingsButton')?.addEventListener('click', () => {
@@ -689,5 +761,7 @@ document.querySelector('#deleteMeetingButton')?.addEventListener('click', async 
 });
 document.querySelector('#closeMeetingImageModal')?.addEventListener('click', closeImagePreview);
 document.querySelector('#meetingImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'meetingImageModal') closeImagePreview(); });
+document.querySelector('#closeMeetingFilePreviewModal')?.addEventListener('click', closeMeetingFilePreview);
+document.querySelector('#meetingFilePreviewModal')?.addEventListener('click', (event) => { if (event.target.id === 'meetingFilePreviewModal') closeMeetingFilePreview(); });
 
 initMeetingPage();
