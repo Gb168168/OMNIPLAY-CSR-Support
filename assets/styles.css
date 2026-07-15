@@ -3437,7 +3437,9 @@ body {
 .layout-field-settings[hidden] { display: none; }
 .layout-field-settings h3 { margin: 0; }
 .layout-field-settings fieldset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; border: 1px solid var(--border); border-radius: 10px; }
-.setting-checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.setting-checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.setting-checks label { display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; min-height: 24px; line-height: 1.2; white-space: nowrap; }
+.setting-checks input[type="checkbox"] { flex: 0 0 auto; width: 14px; height: 14px; min-width: 14px; min-height: 14px; margin: 0; padding: 0; }
 .subtable-edit-btn { justify-self: start; border: 1px solid #8b5cf6; color: #6d28d9; background: #fff; border-radius: 999px; font-size: 11px; padding: 2px 8px; }
 @media (max-width: 900px) { .layout-workbench { grid-template-columns: 1fr; overflow: auto; } .layout-field-settings { max-height: 220px; } }
 
