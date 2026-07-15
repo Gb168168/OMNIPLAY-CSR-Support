@@ -119,7 +119,8 @@ const applyFormLayout = (element, field = {}) => {
   const row = normalizeFormLayoutNumber(layoutItem.row ?? field.formRow);
   const columns = activeLayout.columns || 5;
   const col = normalizeFormLayoutNumber(layoutItem.col ?? field.formCol, { max: columns });
-  const colSpan = normalizeFormLayoutNumber(layoutItem.colSpan ?? field.formColSpan, { max: columns, fallback: 1 });
+  const hasExplicitSubtableSpan = layoutItem.colSpan !== undefined || field.formColSpan !== undefined;
+  const colSpan = normalizeFormLayoutNumber(layoutItem.colSpan ?? field.formColSpan, { max: columns, fallback: field.type === 'subtable' && !hasExplicitSubtableSpan ? columns : 1 });
   const rowSpan = normalizeFormLayoutNumber(layoutItem.rowSpan ?? field.formRowSpan, { max: activeLayout.rows || 10, fallback: 1 });
   element.classList.add('form-field');
   element.dataset.type = field.type || 'text';
@@ -131,7 +132,7 @@ const applyFormLayout = (element, field = {}) => {
   element.style.setProperty('--form-rowspan', rowSpan || 1);
   const layoutWidth = normalizeFormFieldSize(layoutItem.width ?? field.formWidth, MIN_FORM_FIELD_WIDTH);
   const layoutHeight = normalizeFormFieldSize(layoutItem.height ?? field.formHeight, MIN_FORM_FIELD_HEIGHT);
-  if (layoutItem.width || field.formWidth) element.style.width = `${layoutWidth}px`;
+  if (layoutItem.width || (field.formWidth && field.type !== 'subtable')) element.style.width = `${layoutWidth}px`;
   if (layoutItem.height || field.formHeight) {
     if (field.type === 'subtable') {
       element.style.minHeight = `${layoutHeight}px`;
