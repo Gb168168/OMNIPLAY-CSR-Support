@@ -943,7 +943,7 @@ const renderDisplayValue = (field, value) => {
   const text = String(valueToText(value));
   return text ? escapeHtml(text).replace(/\n/g, '<br>') : '<span class="ragic-view-empty">—</span>';
 };
-const subtableViewColumnWidth = (sub = {}) => normalizeFormFieldSize(sub.formWidth ?? sub.width, MIN_FORM_FIELD_WIDTH);
+const subtableViewColumnWidth = (sub = {}) => normalizeFieldWidth(sub.formWidth ?? sub.width);
 const subtableViewCellStyle = (sub = {}) => {
   const width = subtableViewColumnWidth(sub);
   const height = normalizeFormFieldSize(sub.formHeight, MIN_FORM_FIELD_HEIGHT);
@@ -954,13 +954,16 @@ const renderSubtableView = (field, rows = []) => {
   const bodyRows = (Array.isArray(rows) ? rows : []).filter((item) => item && Object.values(item).some((value) => Array.isArray(value) ? value.length : value));
   if (!subfields.length) return '<div class="ragic-view-empty">尚未設定子欄位</div>';
   if (!bodyRows.length) return '<div class="ragic-view-empty">無資料</div>';
-  const colgroup = `<colgroup>${subfields.map((sub) => {
-    const width = subtableViewColumnWidth(sub);
+  const columnWidths = subfields.map(subtableViewColumnWidth);
+  const explicitTableWidth = columnWidths.every(Boolean) ? columnWidths.reduce((sum, width) => sum + width, 0) : null;
+  const colgroup = `<colgroup>${subfields.map((sub, index) => {
+    const width = columnWidths[index];
     return `<col${width ? ` style="width:${width}px;min-width:${width}px;max-width:${width}px;"` : ''}>`;
   }).join('')}</colgroup>`;
+  const tableStyle = explicitTableWidth ? ` style="width:${explicitTableWidth}px;min-width:${explicitTableWidth}px;"` : '';
   const header = subfields.map((sub) => `<th class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}">${escapeHtml(sub.label || sub.key)}</th>`).join('');
   const body = bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}">${renderDisplayValue(sub, item[sub.key])}</td>`).join('')}</tr>`).join('');
-  return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable">${colgroup}<thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
+  return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable"${tableStyle}>${colgroup}<thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
 };
 const renderViewForm = (form, record = {}) => {
   const grid = document.createElement('div');
