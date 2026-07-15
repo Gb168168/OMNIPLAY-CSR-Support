@@ -1512,7 +1512,8 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   text-align: center;
 }
 .ragic-subtable { margin: 0 18px 18px; border: 1px solid var(--border); border-radius: 18px; }
-.ragic-form-grid > .ragic-subtable { margin: 0; overflow: hidden; }
+.ragic-form-grid > .ragic-subtable { margin: 0; overflow: visible; align-self: start; }
+.ragic-form-grid > .ragic-subtable.form-field[style*="--form-rowspan"] { height: auto; }
 .ragic-subtable table { width: 100%; border-collapse: collapse; }
 .ragic-subtable th, .ragic-subtable td { padding: 10px; border-bottom: 1px solid var(--border); }
 .ragic-subtable th { color: var(--text); background: var(--table-head); }
