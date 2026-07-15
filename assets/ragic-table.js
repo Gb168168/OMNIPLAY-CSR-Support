@@ -1564,6 +1564,42 @@ const SUBFIELD_TYPES = [
   { value: 'link', label: '連結' }
 ];
 
+
+const subfieldWidthSummary = (container) => {
+  const rows = [...(container?.querySelectorAll(':scope > .designer-field') || [])];
+  const widths = rows.map((row) => normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value));
+  const total = widths.reduce((sum, width) => sum + (width || 0), 0);
+  return { total, count: rows.length, complete: rows.length > 0 && widths.every(Boolean) };
+};
+const refreshSubfieldWidthSummary = (scope = document) => {
+  scope.querySelectorAll('.designer-subfields, .setting-subtable-fields').forEach((section) => {
+    const list = section.querySelector('.designer-subfield-list');
+    const badge = section.querySelector('[data-subfield-total-width]');
+    if (!list || !badge) return;
+    const { total, count, complete } = subfieldWidthSummary(list);
+    badge.textContent = complete ? `欄框總寬度：${total}px` : `欄框總寬度：${count ? `${total}px（尚有自動欄寬）` : '0px'}`;
+    badge.classList.toggle('is-complete', complete);
+  });
+};
+const syncSubtableParentWidth = (subfieldList) => {
+  const section = subfieldList?.closest('.designer-subfields, .setting-subtable-fields');
+  const { total, complete } = subfieldWidthSummary(subfieldList);
+  if (!complete || !total) return;
+  if (section?.classList.contains('designer-subfields')) {
+    const parentRow = section.closest('.designer-field');
+    const widthInput = parentRow?.querySelector(':scope > .designer-width [data-role="width"]');
+    if (widthInput) widthInput.value = total;
+  } else if (section?.classList.contains('setting-subtable-fields')) {
+    const layoutWidth = section.closest('#layoutFieldSettingsPanel')?.querySelector('[data-layout-width]');
+    if (layoutWidth) layoutWidth.value = total;
+  }
+};
+const syncSubtableWidthFromEvent = (target) => {
+  const list = target?.closest?.('.designer-subfield-list');
+  if (list) syncSubtableParentWidth(list);
+  refreshSubfieldWidthSummary(target?.closest?.('.designer-subfields, .setting-subtable-fields') || document);
+};
+
 const fieldDesigner = (field = {}, nested = false) => {
   const row = document.createElement('div');
   row.className = `designer-field field-row${nested ? ' designer-subfield-row' : ''}`;
@@ -1577,7 +1613,9 @@ const fieldDesigner = (field = {}, nested = false) => {
     row.addEventListener('click', (event) => {
       if (event.target.matches('[data-remove]')) {
         event.stopPropagation();
+        const list = row.parentElement;
         row.remove();
+        syncSubtableWidthFromEvent(list);
         updateDesignerPreview();
       }
     });
@@ -1590,19 +1628,22 @@ const fieldDesigner = (field = {}, nested = false) => {
     return options ? `<optgroup label="${escapeHtml(group.label)}">${options}</optgroup>` : '';
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
-  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-form-layout" aria-label="表單排版"><label><span>列</span><input data-role="form-row" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formRow) ?? '')}"></label><label><span>欄</span><input data-role="form-col" type="number" min="1" max="4" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formCol, { max: 4 }) ?? '')}"></label><label><span>跨欄</span><input data-role="form-colspan" type="number" min="1" max="4" step="1" inputmode="numeric" value="${escapeHtml(normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 }))}"></label></div><input data-role="default" type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-role="help" type="hidden" value="${escapeHtml(field.help || '')}"><input data-role="readonly" type="hidden" value="${field.readonly ? '1' : ''}"><input data-role="hidden" type="hidden" value="${field.hidden ? '1' : ''}"><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
+  row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-form-layout" aria-label="表單排版"><label><span>列</span><input data-role="form-row" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formRow) ?? '')}"></label><label><span>欄</span><input data-role="form-col" type="number" min="1" max="4" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formCol, { max: 4 }) ?? '')}"></label><label><span>跨欄</span><input data-role="form-colspan" type="number" min="1" max="4" step="1" inputmode="numeric" value="${escapeHtml(normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 }))}"></label></div><input data-role="default" type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-role="help" type="hidden" value="${escapeHtml(field.help || '')}"><input data-role="readonly" type="hidden" value="${field.readonly ? '1' : ''}"><input data-role="hidden" type="hidden" value="${field.hidden ? '1' : ''}"><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
   const sub = row.querySelector('.designer-subfields');
   const subList = row.querySelector('.designer-subfield-list');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
   (field.fields || []).forEach((child) => subList.appendChild(fieldDesigner(child, true)));
   row.addEventListener('click', (event) => {
     if (event.target.matches('[data-remove]') && event.target.closest('.designer-field') === row) {
+      const list = row.parentElement;
       row.remove();
+      syncSubtableWidthFromEvent(list);
       updateDesignerPreview();
     }
     if (event.target.matches('[data-add-subfield]')) {
       event.stopPropagation();
       subList.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true));
+      syncSubtableWidthFromEvent(subList);
       updateDesignerPreview();
     }
   });
@@ -1612,6 +1653,7 @@ const fieldDesigner = (field = {}, nested = false) => {
   });
   enableDesignerDrag(row);
   sync();
+  refreshSubfieldWidthSummary(row);
   return row;
 };
 const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => {
@@ -1718,11 +1760,12 @@ const openLayoutFieldSettings = (fieldKey) => {
   let panel = document.querySelector('#layoutFieldSettingsPanel');
   if (!panel) return;
   const options = optionList(field).map((option) => `<input data-option value="${escapeHtml(option)}" placeholder="選項">`).join('');
-  panel.innerHTML = `<h3>欄位屬性設定</h3><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><label>預設值<input data-setting-default value="${escapeHtml(field.defaultValue || '')}"></label><label>欄位說明<textarea data-setting-help rows="2">${escapeHtml(field.help || '')}</textarea></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><div data-option-list>${options || '<input data-option placeholder="選項">'}</div><button class="secondary" data-add-option type="button">+新增選項</button></div><fieldset><legend>尺寸與位置</legend><label>起始列<input data-layout-row type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.row || 1)}"></label><label>起始欄<input data-layout-col type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.col || 1)}"></label><label>跨列<input data-layout-rowspan type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.rowSpan || 1)}"></label><label>跨欄<input data-layout-colspan type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.colSpan || 1)}"></label><label>寬度<input data-layout-width type="number" min="40" placeholder="自動" value="${escapeHtml(item.width || field.formWidth || '')}"></label><label>高度<input data-layout-height type="number" min="32" placeholder="自動" value="${escapeHtml(item.height || field.formHeight || '')}"></label></fieldset><div class="setting-checks"><label><input data-setting-required type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label><input data-setting-readonly type="checkbox" ${field.readonly ? 'checked' : ''}> 唯讀</label><label><input data-setting-hidden type="checkbox" ${field.hidden ? 'checked' : ''}> 隱藏</label></div>${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}<div class="layout-settings-actions"><button class="primary" data-confirm-settings type="button">確認</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button></div>`;
+  panel.innerHTML = `<h3>欄位屬性設定</h3><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><label>預設值<input data-setting-default value="${escapeHtml(field.defaultValue || '')}"></label><label>欄位說明<textarea data-setting-help rows="2">${escapeHtml(field.help || '')}</textarea></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><div data-option-list>${options || '<input data-option placeholder="選項">'}</div><button class="secondary" data-add-option type="button">+新增選項</button></div><fieldset><legend>尺寸與位置</legend><label>起始列<input data-layout-row type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.row || 1)}"></label><label>起始欄<input data-layout-col type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.col || 1)}"></label><label>跨列<input data-layout-rowspan type="number" min="1" max="${layout.rows}" value="${escapeHtml(item.rowSpan || 1)}"></label><label>跨欄<input data-layout-colspan type="number" min="1" max="${layout.columns}" value="${escapeHtml(item.colSpan || 1)}"></label><label>寬度<input data-layout-width type="number" min="40" placeholder="自動" value="${escapeHtml(item.width || field.formWidth || '')}"></label><label>高度<input data-layout-height type="number" min="32" placeholder="自動" value="${escapeHtml(item.height || field.formHeight || '')}"></label></fieldset><div class="setting-checks"><label><input data-setting-required type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label><input data-setting-readonly type="checkbox" ${field.readonly ? 'checked' : ''}> 唯讀</label><label><input data-setting-hidden type="checkbox" ${field.hidden ? 'checked' : ''}> 隱藏</label></div>${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}<div class="layout-settings-actions"><button class="primary" data-confirm-settings type="button">確認</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button></div>`;
   panel.hidden = false;
   panel.dataset.fieldKey = fieldKey;
   const subfieldList = panel.querySelector('[data-setting-subfields]');
   if (subfieldList) (field.fields || []).forEach((child) => subfieldList.appendChild(fieldDesigner(child, true)));
+  refreshSubfieldWidthSummary(panel);
 };
 
 const autoLayoutFields = (layout, fields) => {
@@ -1980,7 +2023,10 @@ const initRagicPage = async (config) => {
   document.querySelector('.designer-body')?.addEventListener('input', (event) => {
     updateDesignerPreview();
     renderLayoutDesigner();
-    if (event.target?.matches('[data-role="width"]')) saveDesignerSchema();
+    if (event.target?.matches('[data-role="width"]')) {
+      syncSubtableWidthFromEvent(event.target);
+      saveDesignerSchema();
+    }
   });
   document.querySelector('#addFieldButton')?.addEventListener('click', () => { const body = document.querySelector('.designer-body'); body.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新欄位', type: 'text' })); updateDesignerPreview(); renderLayoutDesigner(); });
   document.querySelector('#ragicDesignerModal')?.addEventListener('click', (event) => {
@@ -2006,9 +2052,12 @@ const initRagicPage = async (config) => {
     if (!panel) return;
     if (event.target.closest('[data-add-option]')) panel.querySelector('[data-option-list]').insertAdjacentHTML('beforeend', '<input data-option placeholder="選項">');
     if (event.target.matches('[data-setting-type]')) panel.querySelector('.setting-options').hidden = !['select','multiselect'].includes(event.target.value);
-    if (event.target.closest('[data-add-setting-subfield]')) { panel.querySelector('[data-setting-subfields]')?.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true)); return; }
+    if (event.target.closest('[data-add-setting-subfield]')) { const list = panel.querySelector('[data-setting-subfields]'); list?.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true)); syncSubtableWidthFromEvent(list); return; }
     if (event.target.closest('[data-remove-settings-field]')) { const key = panel.dataset.fieldKey; if (!confirm('確定刪除此欄位？')) return; removeDesignerFieldByKey(key); updateLayoutDesignerState((layout) => { delete layout.fields[key]; }); panel.hidden = true; return; }
     if (event.target.closest('[data-confirm-settings]')) { const key = panel.dataset.fieldKey; updateDesignerFieldByKey(key, (row) => { row.querySelector('[data-role="label"]').value = panel.querySelector('[data-setting-label]').value; row.querySelector('[data-role="type"]').value = panel.querySelector('[data-setting-type]').value; row.querySelector('[data-role="options"]').value = [...panel.querySelectorAll('[data-option]')].map((input) => input.value.trim()).filter(Boolean).join('\n'); row.querySelector('[data-role="required"]').checked = panel.querySelector('[data-setting-required]')?.checked || false; row.querySelector('[data-role="width"]').value = panel.querySelector('[data-layout-width]')?.value || ''; row.querySelector('[data-role="default"]').value = panel.querySelector('[data-setting-default]')?.value || ''; row.querySelector('[data-role="help"]').value = panel.querySelector('[data-setting-help]')?.value || ''; row.querySelector('[data-role="readonly"]').value = panel.querySelector('[data-setting-readonly]')?.checked ? '1' : ''; row.querySelector('[data-role="hidden"]').value = panel.querySelector('[data-setting-hidden]')?.checked ? '1' : ''; const settingSubfields = panel.querySelector('[data-setting-subfields]'); if (settingSubfields) { const targetSubfields = row.querySelector('.designer-subfield-list'); targetSubfields.innerHTML = ''; readDesigner(settingSubfields).forEach((child) => targetSubfields.appendChild(fieldDesigner(child, true))); const columnsPerRow = panel.querySelector('[data-setting-columns-per-row]')?.value || ''; const targetColumns = row.querySelector('[data-role="columns-per-row"]'); if (targetColumns) targetColumns.value = columnsPerRow; } }); updateLayoutDesignerState((layout) => { const key = panel.dataset.fieldKey; const candidate = clampLayoutItem({ row: panel.querySelector('[data-layout-row]')?.value, col: panel.querySelector('[data-layout-col]')?.value, rowSpan: panel.querySelector('[data-layout-rowspan]')?.value, colSpan: panel.querySelector('[data-layout-colspan]')?.value, width: panel.querySelector('[data-layout-width]')?.value, height: panel.querySelector('[data-layout-height]')?.value }, layout); if (isLayoutAreaFree(layout, key, candidate)) layout.fields[key] = candidate; }); panel.hidden = true; }
+  });
+  document.querySelector('#ragicDesignerModal')?.addEventListener('input', (event) => {
+    if (event.target?.matches('[data-role="width"], [data-layout-width]')) syncSubtableWidthFromEvent(event.target);
   });
   document.querySelector('#layoutDesignerPanel')?.addEventListener('click', async (event) => {
     if (!event.target.closest('.btn-save-layout')) return;
