@@ -3478,3 +3478,18 @@ body {
 
 /* 設計表格：強制隱藏舊版欄位清單，避免覆蓋新版排版工作台 */
 #ragicDesignerModal .designer-body[hidden] { display: none !important; }
+
+/* 設計表格：依需求移除即時預覽後，放大工作區與右側設定欄 */
+#ragicDesignerModal .layout-workbench { grid-template-columns: minmax(0, 1fr) 440px; }
+#ragicDesignerModal .layout-canvas { grid-template-rows: minmax(0, 1fr); }
+#ragicDesignerModal .layout-grid { min-height: 420px; }
+#ragicDesignerModal .layout-grid-slot { min-width: 56px; }
+#ragicDesignerModal .layout-side-panel { min-width: 440px; }
+#ragicDesignerModal .layout-add-card,
+#ragicDesignerModal .layout-field-settings { padding: 20px 22px; }
+#ragicDesignerModal .layout-type-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) {
+  #ragicDesignerModal .layout-workbench { grid-template-columns: 1fr; }
+  #ragicDesignerModal .layout-side-panel { min-width: 0; }
+  #ragicDesignerModal .layout-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
