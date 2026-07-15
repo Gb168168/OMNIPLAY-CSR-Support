@@ -3474,3 +3474,6 @@ body {
 .layout-field-settings textarea { width: 100%; min-height: 70px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
 .layout-field-settings input, .layout-field-settings select { border: 1px solid #d8e0ef; border-radius: 8px; background: #fff; }
 @media (max-width: 900px) { .layout-workbench { grid-template-columns: 1fr; overflow: auto; } .layout-canvas { grid-template-rows: auto auto; overflow: visible; } .layout-side-panel { border-left: 0; border-top: 1px solid #e2e8f0; } }
+
+/* 設計表格：強制隱藏舊版欄位清單，避免覆蓋新版排版工作台 */
+#ragicDesignerModal .designer-body[hidden] { display: none !important; }
