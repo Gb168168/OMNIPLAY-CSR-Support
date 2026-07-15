@@ -53,7 +53,7 @@
             <div class="meeting-info-cell"><label for="meetingMorningAttendeesDisplay">早 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingMorningAttendees"><select id="meetingMorningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingMorningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
             <div class="meeting-info-cell"><label for="meetingSerial">編號</label><input id="meetingSerial" type="text" readonly></div>
             <div class="meeting-info-cell"><label for="meetingEveningAttendeesDisplay">晚 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingEveningAttendees"><select id="meetingEveningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingEveningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
-            <div class="meeting-info-cell meeting-info-files"><label for="meetingFileInput">檔案</label><div class="meeting-file-upload" id="meetingFileDropZone" tabindex="0"><div>選擇檔案 或 Ctrl+V 貼上檔案</div><input id="meetingFileInput" type="file" multiple><div class="meeting-file-list" id="meetingFileList"></div></div></div><div class="meeting-info-cell meeting-info-note"><label for="meetingNote">備註</label><input id="meetingNote" type="text" autocomplete="off"></div>
+            <div class="meeting-info-cell meeting-info-files"><label for="meetingFileInput">檔案</label><div class="meeting-file-upload" id="meetingFileDropZone" tabindex="0"><div>選擇檔案 或 Ctrl+V 貼上檔案</div><input id="meetingFileInput" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"><div class="meeting-file-list" id="meetingFileList"></div></div></div><div class="meeting-info-cell meeting-info-note"><label for="meetingNote">備註</label><input id="meetingNote" type="text" autocomplete="off"></div>
           </section>
 
           <section class="meeting-tabs-section" aria-label="會議內容分頁">
@@ -89,6 +89,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js"></script>
   <script src="../assets/meeting.js"></script>
