@@ -79,6 +79,69 @@
       font-size: 14px;
       color: #1e40af;
     }
+    .linked-report-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .linked-report-form-field {
+      display: flex;
+      flex-direction: column;
+    }
+    .linked-report-form-field label {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #333;
+    }
+    .linked-report-form-field input,
+    .linked-report-form-field select,
+    .linked-report-form-field textarea {
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .linked-report-form-field input:focus,
+    .linked-report-form-field select:focus,
+    .linked-report-form-field textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .linked-report-form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 20px;
+    }
+    .linked-report-form-actions button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .linked-report-form-actions .btn-cancel {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .linked-report-form-actions .btn-cancel:hover {
+      background: #e5e7eb;
+    }
+    .linked-report-form-actions .btn-submit {
+      background: #3b82f6;
+      color: white;
+    }
+    .linked-report-form-actions .btn-submit:hover {
+      background: #2563eb;
+    }
   </style>
 </head>
 <body>
@@ -131,7 +194,11 @@
         <div class="linked-report-info">
           💡 提示：下方欄位已自動填入日誌中的相關信息，您可以調整後提交。
         </div>
-        <form id="linkedReportForm"></form>
+        <div class="linked-report-form-grid" id="linkedReportFormGrid"></div>
+        <div class="linked-report-form-actions">
+          <button class="btn-cancel" id="cancelLinkedReport" type="button">取消</button>
+          <button class="btn-submit" id="submitLinkedReport" type="button">提交提報</button>
+        </div>
       </div>
     </div>
   </div>
@@ -194,11 +261,11 @@
         const modal = document.getElementById('linkedReportModal');
         modal.classList.remove('show');
         this.currentLogData = null;
-        document.getElementById('linkedReportForm').innerHTML = '';
+        document.getElementById('linkedReportFormGrid').innerHTML = '';
       },
       
       renderReportForm: function(logRecord) {
-        const form = document.getElementById('linkedReportForm');
+        const grid = document.getElementById('linkedReportFormGrid');
         
         // 構建提報表單的字段（對應 report.html 中的字段）
         const reportFields = [
@@ -210,10 +277,9 @@
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
           { key: 'status', label: '狀態', type: 'select', value: '', options: ['待處理', '處理中', '已完成', '暫緩'] },
           { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', value: logRecord.staff || '' },
-          { key: 'note', label: '備註', type: 'textarea', value: '' }
         ];
         
-        let formHtml = '<div class="ragic-form-grid" style="--form-columns: 2;">';
+        let formHtml = '';
         
         reportFields.forEach(field => {
           let controlHtml = '';
@@ -225,46 +291,26 @@
               <option value="">請選擇</option>
               ${field.options.map(opt => `<option value="${opt}" ${field.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
             </select>`;
-          } else if (field.type === 'textarea') {
-            controlHtml = `<textarea rows="3" data-field-key="${field.key}">${this.escapeHtml(field.value)}</textarea>`;
           } else {
             controlHtml = `<input type="text" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
           }
           
           formHtml += `
-            <label class="ragic-field" style="--form-row: auto; --form-col: auto;">
-              <span>${field.label}</span>
+            <div class="linked-report-form-field">
+              <label>${field.label}</label>
               ${controlHtml}
-            </label>
+            </div>
           `;
         });
         
-        formHtml += '</div>';
-        
-        formHtml += `
-          <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
-            <button class="secondary" id="cancelLinkedReport" type="button">取消</button>
-            <button class="primary" id="submitLinkedReport" type="button">提交提報</button>
-          </div>
-        `;
-        
-        form.innerHTML = formHtml;
-        
-        // 事件監聽
-        document.getElementById('cancelLinkedReport').addEventListener('click', () => {
-          this.closeModal();
-        });
-        
-        document.getElementById('submitLinkedReport').addEventListener('click', () => {
-          this.submitReport();
-        });
+        grid.innerHTML = formHtml;
       },
       
       submitReport: function() {
-        const form = document.getElementById('linkedReportForm');
+        const grid = document.getElementById('linkedReportFormGrid');
         const formData = {};
         
-        form.querySelectorAll('[data-field-key]').forEach(field => {
+        grid.querySelectorAll('[data-field-key]').forEach(field => {
           formData[field.dataset.fieldKey] = field.value;
         });
         
@@ -296,29 +342,57 @@
       }
     };
 
-    // 勾選連動提報時的處理
-    const originalRenderForm = window.renderForm;
-    window.renderForm = function(record, options) {
-      originalRenderForm.call(this, record, options);
-      
-      // 在表單渲染後，為連動提報勾選框添加事件
-      setTimeout(() => {
-        const linkedReportCheckbox = document.querySelector('[name="linked_report"]');
-        if (linkedReportCheckbox) {
-          linkedReportCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-              window.linkedReportManager.openModal(record);
-              // 取消勾選（提報提交後用戶可決定是否真的勾選）
-              this.checked = false;
-            }
-          });
-        }
-      }, 0);
+    // 在表單加載完成後，為連動提報勾選框添加事件
+    const observeCheckboxChange = () => {
+      const linkedReportCheckbox = document.querySelector('[name="linked_report"]');
+      if (linkedReportCheckbox && !linkedReportCheckbox.dataset.listenerBound) {
+        linkedReportCheckbox.dataset.listenerBound = 'true';
+        linkedReportCheckbox.addEventListener('change', function() {
+          if (this.checked) {
+            // 取得當前表單的記錄數據
+            const formFields = document.querySelectorAll('#ragicForm [name]');
+            const currentLogData = {};
+            
+            formFields.forEach(field => {
+              if (field.name && field.name !== 'linked_report') {
+                currentLogData[field.name] = field.value;
+              }
+            });
+            
+            window.linkedReportManager.openModal(currentLogData);
+            // 勾選後自動取消勾選狀態
+            this.checked = false;
+          }
+        });
+      }
     };
+
+    // 監控 DOM 變化，當表單被渲染時添加事件
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('#ragicFormView:not([hidden]) #ragicForm')) {
+        observeCheckboxChange();
+      }
+    });
+
+    observer.observe(document.querySelector('#ragicFormView'), {
+      childList: true,
+      subtree: true
+    });
+
+    // 初始檢查
+    observeCheckboxChange();
 
     // 浮窗關閉按鈕事件
     document.getElementById('closeLinkedReportModal').addEventListener('click', () => {
       window.linkedReportManager.closeModal();
+    });
+
+    document.getElementById('cancelLinkedReport').addEventListener('click', () => {
+      window.linkedReportManager.closeModal();
+    });
+
+    document.getElementById('submitLinkedReport').addEventListener('click', () => {
+      window.linkedReportManager.submitReport();
     });
 
     // 點擊浮窗背景也可以關閉
