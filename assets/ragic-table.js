@@ -1,3 +1,26 @@
+
+const LOG_FORM_LAYOUT = { columns: 6, rows: 4, columnGap: 12, rowGap: 10, fieldHeight: 64, textareaHeight: 178 };
+const LOG_SUBTABLE_COLUMN_RATIOS = [2, 1, 2, 1, 2, 1];
+const LOG_LIST_WIDTHS = { issue: 360, note: 260, image: 90, file: 90, serial: 110, date: 150 };
+const LOG_FIELD_LAYOUT_BY_LABEL = {
+  '發生時間': { row: 1, col: 1 }, '接洽人員': { row: 1, col: 2 }, '客戶': { row: 1, col: 3 }, '分類': { row: 1, col: 4 }, '狀態': { row: 1, col: 5 }, '編號': { row: 1, col: 6 },
+  '完成時間': { row: 2, col: 1 }, '完成人員': { row: 2, col: 2 }, '更新日期': { row: 2, col: 3 }, '圖片': { row: 2, col: 4 }, '檔案': { row: 2, col: 5 }, '提報連結': { row: 2, col: 6 },
+  '問題描述': { row: 3, col: 1, colSpan: 3, rowSpan: 2, textarea: true }, '備註': { row: 3, col: 4, colSpan: 2, rowSpan: 2, textarea: true }, '連動提報': { row: 3, col: 6 }
+};
+const LOG_TO_REPORT_FIELD_MAP = {
+  date: { logLabel: '發生時間', fallbackLogLabels: ['日期'], reportLabel: '日期' },
+  shift: { logLabel: '班別', reportLabel: '班別' },
+  department: { logLabel: '部門', reportLabel: '部門' },
+  customer: { logLabel: '客戶', reportLabel: '客戶' },
+  reporter: { logLabel: '接洽人員', fallbackLogLabels: ['人員', '提報者'], reportLabel: '提報者' },
+  number: { logLabel: '編號', reportKey: 'sourceLogNumber' },
+  reportLink: { logLabel: '提報連結' }
+};
+const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').includes('日誌');
+const isReportModule = (config = RAGIC_STATE?.config) => String(config?.collection || config?.dataCollection || '') === 'report' || String(config?.title || '').includes('提報');
+const findFieldByLabel = (fields, label, fallbacks = []) => (fields || []).find((f) => [label, ...fallbacks].includes(f.label)) || null;
+const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
+
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
 
 const FIELD_TYPE_GROUPS = [
@@ -85,23 +108,25 @@ const normalizeFormLayoutOverride = (override = {}) => {
 
 const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
   const source = formLayout && typeof formLayout === 'object' ? formLayout : {};
-  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
-  const rows = normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
+  const fixedLog = isLogModule();
+  const columns = fixedLog ? LOG_FORM_LAYOUT.columns : normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
+  const rows = fixedLog ? LOG_FORM_LAYOUT.rows : normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
   const sourceFields = source.fields && typeof source.fields === 'object' ? source.fields : {};
   const fieldKeys = new Set((fields || []).map((field) => field.key).filter(Boolean));
   const nextFields = {};
   Object.entries(sourceFields).forEach(([key, layout]) => {
     if (fieldKeys.size && !fieldKeys.has(key)) return;
-    const row = normalizeFormLayoutNumber(layout?.row, { min: 1, max: rows });
-    const col = normalizeFormLayoutNumber(layout?.col, { min: 1, max: columns });
+    const fixed = isLogModule() ? logFieldLayoutFor((fields || []).find((field) => field.key === key) || { label: key }) : null;
+    const row = normalizeFormLayoutNumber(fixed?.row ?? layout?.row, { min: 1, max: rows });
+    const col = normalizeFormLayoutNumber(fixed?.col ?? layout?.col, { min: 1, max: columns });
     if (!row || !col) return;
     nextFields[key] = {
       row,
       col,
-      colSpan: normalizeFormLayoutNumber(layout?.colSpan, { min: 1, max: columns - col + 1, fallback: 1 }),
-      rowSpan: normalizeFormLayoutNumber(layout?.rowSpan, { min: 1, max: rows - row + 1, fallback: 1 }),
-      width: normalizeFormLayoutNumber(layout?.width ?? layout?.formWidth, { min: 40, max: 2000, fallback: null }),
-      height: normalizeFormLayoutNumber(layout?.height ?? layout?.formHeight, { min: 32, max: 2000, fallback: null })
+      colSpan: normalizeFormLayoutNumber(fixed?.colSpan ?? layout?.colSpan, { min: 1, max: columns - col + 1, fallback: 1 }),
+      rowSpan: normalizeFormLayoutNumber(fixed?.rowSpan ?? layout?.rowSpan, { min: 1, max: rows - row + 1, fallback: 1 }),
+      width: fixed ? null : normalizeFormLayoutNumber(layout?.width ?? layout?.formWidth, { min: 40, max: 2000, fallback: null }),
+      height: fixed ? (fixed.textarea ? LOG_FORM_LAYOUT.textareaHeight : LOG_FORM_LAYOUT.fieldHeight) : normalizeFormLayoutNumber(layout?.height ?? layout?.formHeight, { min: 32, max: 2000, fallback: null })
     };
   });
   return { columns, rows, fields: nextFields };
@@ -247,7 +272,17 @@ const DEFAULT_FORM_FIELD_HEIGHT = 48;
 const DEFAULT_SUBTABLE_FIELD_HEIGHT = 180;
 const normalizeFormFieldSize = (value, min = 1) => { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? Math.max(min, Math.round(parsed)) : null; };
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
-const fieldColumnWidth = (field = {}) => normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
+const fieldColumnWidth = (field = {}) => {
+  if (isLogModule()) {
+    if (field.label === '問題描述') return LOG_LIST_WIDTHS.issue;
+    if (field.label === '備註') return LOG_LIST_WIDTHS.note;
+    if (field.type === 'image') return LOG_LIST_WIDTHS.image;
+    if (field.type === 'file') return LOG_LIST_WIDTHS.file;
+    if (field.type === 'serial' || field.label === '編號') return LOG_LIST_WIDTHS.serial;
+    if (['date','datetime','updatedDate'].includes(field.type)) return LOG_LIST_WIDTHS.date;
+  }
+  return normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
+};
 const defaultFormFieldHeight = (field = {}) => field.type === 'subtable' ? DEFAULT_SUBTABLE_FIELD_HEIGHT : DEFAULT_FORM_FIELD_HEIGHT;
 const layoutHeightValue = (item = {}, field = {}) => normalizeFormLayoutNumber(item.height ?? field.formHeight, { min: MIN_FORM_FIELD_HEIGHT, max: 2000, fallback: defaultFormFieldHeight(field) });
 const columnWidthStyle = (width) => width ? ` style="--col-width: ${width}px; min-width: ${width}px !important; width: ${width}px;"` : '';
@@ -419,6 +454,17 @@ const renderIconActions = (record = {}) => {
   </td>`;
 };
 
+
+const mergeLogConfigFields = (schema = {}, config = {}) => {
+  if (!isLogModule(config)) return schema;
+  const existing = Array.isArray(schema.fields) ? schema.fields : [];
+  const byKey = new Map(existing.map((field) => [field.key, field]));
+  const defaults = [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])];
+  const merged = defaults.map((field) => ({ ...field, ...(byKey.get(field.key) || {}), label: field.label || byKey.get(field.key)?.label, type: field.type || byKey.get(field.key)?.type }));
+  existing.forEach((field) => { if (!merged.some((item) => item.key === field.key)) merged.push(field); });
+  return { ...schema, fields: merged, formLayout: { ...(schema.formLayout || {}), columns: LOG_FORM_LAYOUT.columns, rows: LOG_FORM_LAYOUT.rows } };
+};
+
 const makeDefaultSchema = (config) => applyFormLayoutOverrides(normalizeSchema({
   fields: [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])]
 }), config);
@@ -477,6 +523,7 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
 
 const createControl = (field, value = '', subfield = false) => {
   if (field.type === 'multiselect') return createMultiSelectControl(field, value, subfield);
+  if (field.type === 'checkbox' || field.type === 'boolean') { const input = document.createElement('input'); input.type = 'checkbox'; input.name = subfield ? '' : field.key; if (subfield) input.dataset.subfield = field.key; input.checked = value === true || value === 'true' || value === '1'; return input; }
   let input;
   if (field.type === 'textarea') { input = document.createElement('textarea'); input.rows = field.rows || 4; }
   else if (field.type === 'select') {
@@ -876,6 +923,7 @@ const getFormData = async () => {
       const container = input.closest('.image-upload-area');
       data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (getFileInputValue(input)));
     }
+    else if (field.type === 'checkbox' || field.type === 'boolean') data[field.key] = input.checked;
     else data[field.key] = input.value.trim();
   }
   assertImageTotalWithinLimit(allImages);
@@ -946,6 +994,7 @@ const renderDisplayValue = (field, value) => {
     return `<div class="ragic-view-images">${images.map((src, index) => `<img class="ragic-view-image" src="${escapeHtml(src)}" alt="${escapeHtml(field.label || '圖片')} ${index + 1}" title="點擊放大檢視">`).join('')}</div>`;
   }
   if (field?.type === 'file') return renderFileCell(value, field.label || '檔案') || '<span class="ragic-view-empty">—</span>';
+  if (field?.type === 'checkbox' || field?.type === 'boolean') return value ? '是' : '否';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '<span class="ragic-view-empty">—</span>';
   if (field?.type === 'date') return escapeHtml(displayDate(value)) || '<span class="ragic-view-empty">—</span>';
   if (field?.type === 'datetime') return escapeHtml(displayDateTime(value)) || '<span class="ragic-view-empty">—</span>';
@@ -971,9 +1020,79 @@ const renderSubtableView = (field, rows = []) => {
   }).join('')}</colgroup>`;
   const tableStyle = explicitTableWidth ? ` style="width:${explicitTableWidth}px;min-width:${explicitTableWidth}px;"` : '';
   const header = subfields.map((sub) => `<th class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}">${escapeHtml(sub.label || sub.key)}</th>`).join('');
-  const body = bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}">${renderDisplayValue(sub, item[sub.key])}</td>`).join('')}</tr>`).join('');
+  const body = bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}"><div class="ragic-view-value field-value">${renderDisplayValue(sub, item[sub.key])}</div></td>`).join('')}</tr>`).join('');
   return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable"${tableStyle}>${colgroup}<thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
 };
+
+const buildReportUrl = (reportId) => `report.html?id=${encodeURIComponent(reportId)}`;
+const reportLinkField = () => findFieldByLabel(getFields(), LOG_TO_REPORT_FIELD_MAP.reportLink.logLabel);
+const logNumberValue = (record) => { const f = findFieldByLabel(getFields(), LOG_TO_REPORT_FIELD_MAP.number.logLabel); return f ? record[f.key] : (record.serial || ''); };
+const buildReportPayloadFromLog = (record = {}) => {
+  const reportFields = RAGIC_STATE.reportFields || [];
+  const payload = { sourceLogId: record.id, sourceLogNumber: logNumberValue(record), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  Object.values(LOG_TO_REPORT_FIELD_MAP).forEach((map) => {
+    if (!map.reportLabel) return;
+    const logField = findFieldByLabel(getFields(), map.logLabel, map.fallbackLogLabels || []);
+    const reportField = findFieldByLabel(reportFields, map.reportLabel);
+    if (reportField) payload[reportField.key] = logField ? (record[logField.key] || '') : '';
+  });
+  return payload;
+};
+const ensureReportSchemaLoaded = async () => {
+  if (RAGIC_STATE.reportFields) return RAGIC_STATE.reportFields;
+  const doc = await window.omniplayDb?.collection('report_schema').doc('active').get();
+  RAGIC_STATE.reportFields = normalizeSchema(doc?.exists ? doc.data() : {}).fields || [];
+  return RAGIC_STATE.reportFields;
+};
+const setLinkedReportPending = (pending) => {
+  const input = document.querySelector('#linkedReportToggle');
+  const card = document.querySelector('.linked-report-card');
+  if (input) input.disabled = pending;
+  card?.classList.toggle('is-loading', pending);
+};
+const handleLinkedReportToggle = async (checked) => {
+  const record = currentRecord();
+  if (!record?.id || !canUse('edit') || RAGIC_STATE.linkedReportPending) return;
+  const previous = Boolean(record.linkedReport);
+  RAGIC_STATE.linkedReportPending = true; setLinkedReportPending(true);
+  try {
+    if (!checked) {
+      await RAGIC_STATE.collection.doc(record.id).set({ linkedReport: false, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      Object.assign(record, { linkedReport: false });
+      alert('已停止連動，既有提報資料仍保留');
+      renderForm(record, { mode: 'view' });
+      return;
+    }
+    await ensureReportSchemaLoaded();
+    const reportCollection = window.omniplayDb.collection('report');
+    const found = await reportCollection.where('sourceLogId', '==', record.id).limit(1).get();
+    const payload = buildReportPayloadFromLog(record);
+    let reportId = '';
+    if (!found.empty) { reportId = found.docs[0].id; await reportCollection.doc(reportId).set(payload, { merge: true }); }
+    else { const ref = await reportCollection.add({ ...payload, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); reportId = ref.id; }
+    const linkField = reportLinkField();
+    const reportUrl = buildReportUrl(reportId);
+    const logPatch = { linkedReport: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (linkField) logPatch[linkField.key] = reportUrl;
+    await RAGIC_STATE.collection.doc(record.id).set(logPatch, { merge: true });
+    Object.assign(record, logPatch, { linkedReport: true });
+    alert('連動提報已建立／更新');
+    renderForm(record, { mode: 'view' });
+  } catch (error) {
+    console.error(error);
+    const input = document.querySelector('#linkedReportToggle'); if (input) input.checked = previous;
+    alert(error.message || '連動提報失敗，請稍後再試。');
+  } finally { RAGIC_STATE.linkedReportPending = false; setLinkedReportPending(false); }
+};
+const createLinkedReportCard = (record = {}) => {
+  const item = document.createElement('div');
+  item.className = `ragic-view-field linked-report-card ${record.linkedReport ? 'is-linked' : ''}`;
+  item.style.setProperty('--form-row', '3'); item.style.setProperty('--form-col', '6'); item.style.setProperty('--form-colspan', '1'); item.style.setProperty('--form-rowspan', '1');
+  item.innerHTML = `<div><div class="ragic-view-label">連動提報</div><div class="ragic-view-value">勾選後將日誌資料帶入提報表單</div></div><label class="linked-report-switch"><input id="linkedReportToggle" type="checkbox" ${record.linkedReport ? 'checked' : ''} ${RAGIC_STATE.linkedReportPending ? 'disabled' : ''}><span></span></label>`;
+  item.querySelector('input')?.addEventListener('change', (event) => handleLinkedReportToggle(event.target.checked));
+  return item;
+};
+
 const renderViewForm = (form, record = {}) => {
   const grid = document.createElement('div');
   grid.className = 'ragic-form-grid ragic-view-grid';
@@ -987,6 +1106,7 @@ const renderViewForm = (form, record = {}) => {
     grid.appendChild(item);
   });
   titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
+  if (isLogModule()) grid.appendChild(createLinkedReportCard(record));
   getFields().filter((field) => field.type === 'subtable').forEach((field) => {
     const section = document.createElement('section');
     section.className = 'ragic-subtable ragic-view-subtable-section';
@@ -1748,6 +1868,7 @@ const renderLayoutDesigner = () => {
   if (!panel || !body) return;
   const fields = readDesigner(body);
   const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
+  const fixedLogLayout = isLogModule();
   const rowsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
   const colsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
   const placed = placedLayoutKeys(layout);
@@ -1756,11 +1877,11 @@ const renderLayoutDesigner = () => {
   const placedFields = fields.filter((field) => placed.has(field.key)).map((field) => {
     const item = layout.fields[field.key];
     const size = `${item.width ? `width:${item.width}px;` : ''}${item.height ? `height:${item.height}px;min-height:${item.height}px;` : ''}`;
-    return `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}" style="grid-column:${item.col} / span ${item.colSpan};grid-row:${item.row} / span ${item.rowSpan};${size}"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small>${field.type === 'subtable' ? '<button class="subtable-edit-btn" type="button">編輯子表格</button>' : ''}<button class="settings-btn" type="button" title="設定">⚙️</button><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span></div>`;
+    return `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="${fixedLogLayout ? 'false' : 'true'}" data-field-key="${escapeHtml(field.key)}" style="grid-column:${item.col} / span ${item.colSpan};grid-row:${item.row} / span ${item.rowSpan};${size}"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small>${field.type === 'subtable' ? '<button class="subtable-edit-btn" type="button">編輯子表格</button>' : ''}<button class="settings-btn" type="button" title="設定">⚙️</button>${fixedLogLayout ? '' : '<button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>'}</div>`;
   }).join('');
-  const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="true" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button><button class="remove-btn" type="button" aria-label="移除欄位">×</button></div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
+  const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="${fixedLogLayout ? 'false' : 'true'}" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button><button class="remove-btn" type="button" aria-label="移除欄位">×</button></div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
   const fieldTypeButtons = FIELD_TYPES.map((type) => `<button class="layout-type-button" data-add-layout-field data-field-type="${escapeHtml(type.value)}" type="button"><span>${escapeHtml(type.label)}</span></button>`).join('');
-  panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols">${colsSelect}</select></label><label>列數：<select id="gridRows">${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="btn-add-layout-field secondary" type="button">＋ 新增欄位</button><button class="btn-save-layout primary" type="button">💾 儲存排版</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列）</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, minmax(76px, 1fr));grid-template-rows:repeat(${layout.rows}, minmax(48px, 1fr));">${gridLines.join('')}${placedFields}</div></div></main><aside class="layout-side-panel"><section class="layout-add-card"><h3>新增欄位</h3><p>選擇欄位類型</p><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings"><div class="layout-settings-empty">請點選欄位以編輯屬性</div></aside></aside></div></div>`;
+  panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions">${fixedLogLayout ? '<span class="layout-locked-note">日誌使用系統固定 6 欄 × 4 列版型</span>' : '<button class="btn-add-layout-field secondary" type="button">＋ 新增欄位</button>'}<button class="btn-save-layout primary" type="button">💾 儲存排版</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列）</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, minmax(76px, 1fr));grid-template-rows:repeat(${layout.rows}, minmax(48px, 1fr));">${gridLines.join('')}${placedFields}</div></div></main><aside class="layout-side-panel"><section class="layout-add-card"><h3>新增欄位</h3><p>選擇欄位類型</p><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings"><div class="layout-settings-empty">請點選欄位以編輯屬性</div></aside></aside></div></div>`;
 };
 const updateDesignerFieldByKey = (fieldKey, patcher) => {
   const escapedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\\"');
@@ -1831,6 +1952,7 @@ const attachLayoutDesignerEvents = (panel) => {
     return clampLayoutItem({ ...start, row, col }, currentDesignerLayout());
   };
   panel.addEventListener('dragstart', (event) => {
+    if (isLogModule()) return;
     const item = event.target.closest('[data-field-key]');
     if (!item || event.target.closest('[data-resize], .remove-btn, .settings-btn')) return;
     dragKey = item.dataset.fieldKey;
@@ -1838,6 +1960,7 @@ const attachLayoutDesignerEvents = (panel) => {
     item.classList.add('is-dragging');
   });
   panel.addEventListener('dragover', (event) => {
+    if (isLogModule()) return;
     const grid = event.target.closest('.layout-grid');
     if (!grid) return;
     event.preventDefault();
@@ -1853,6 +1976,7 @@ const attachLayoutDesignerEvents = (panel) => {
   });
   panel.addEventListener('dragleave', (event) => { if (!event.relatedTarget || !panel.contains(event.relatedTarget)) panel.querySelector('.layout-drop-preview')?.remove(); });
   panel.addEventListener('drop', (event) => {
+    if (isLogModule()) return;
     const grid = event.target.closest('.layout-grid');
     const key = event.dataTransfer.getData('text/plain') || dragKey;
     if (!grid || !key) return;
@@ -1877,6 +2001,7 @@ const attachLayoutDesignerEvents = (panel) => {
     if (event.target.closest('.btn-preview-layout')) panel.querySelector('.layout-preview')?.scrollIntoView({ block: 'nearest' });
   });
   panel.addEventListener('change', (event) => {
+    if (isLogModule()) return;
     if (!event.target.matches('#gridCols, #gridRows')) return;
     updateLayoutDesignerState((layout) => {
       layout.columns = Number(panel.querySelector('#gridCols').value);
@@ -1889,6 +2014,7 @@ const attachLayoutDesignerEvents = (panel) => {
     });
   });
   panel.addEventListener('mousedown', (event) => {
+    if (isLogModule()) return;
     const handle = event.target.closest('[data-resize]');
     if (!handle) return;
     event.preventDefault();
@@ -1973,6 +2099,7 @@ const getNextSerial = async (collection, fieldKey) => {
 };
 
 const applySystemFieldValues = async (data, existingData = {}, collection = null) => {
+  if (isLogModule() && data.linkedReport === undefined) data.linkedReport = Boolean(existingData.linkedReport);
   for (const field of getFields()) {
     if (field.type === 'createdDate') data[field.key] = existingData[field.key] || formatLocalDateTime();
     if (field.type === 'updatedDate') data[field.key] = formatLocalDateTime();
@@ -2006,7 +2133,7 @@ const setupRagicFormActions = () => {
 };
 const initRagicPage = async (config) => {
   await waitForPermissions();
-  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
+  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; document.body?.classList.toggle('is-log-module', isLogModule(RAGIC_STATE.config)); RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
   window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
   window.togglePin = async (docId) => {
     const currentUser = currentRagicUser();
@@ -2072,7 +2199,7 @@ const initRagicPage = async (config) => {
   
   document.querySelector('#layoutDesignerPanel')?.addEventListener('click', (event) => {
     const addButton = event.target.closest('[data-add-layout-field], .btn-add-layout-field');
-    if (addButton) { const body = document.querySelector('.designer-body'); const type = addButton.dataset.fieldType || 'text'; const typeLabel = FIELD_TYPES.find((item) => item.value === type)?.label || '新欄位'; body.appendChild(fieldDesigner({ key: generateFieldKey(), label: typeLabel, type })); updateDesignerPreview(); renderLayoutDesigner(); return; }
+    if (addButton) { if (isLogModule()) return; const body = document.querySelector('.designer-body'); const type = addButton.dataset.fieldType || 'text'; const typeLabel = FIELD_TYPES.find((item) => item.value === type)?.label || '新欄位'; body.appendChild(fieldDesigner({ key: generateFieldKey(), label: typeLabel, type })); updateDesignerPreview(); renderLayoutDesigner(); return; }
     if (event.target.closest('.btn-auto-layout')) { if (!confirm('這會清除目前的排版，確定嗎？')) return; updateLayoutDesignerState(autoLayoutFields); return; }
     const settings = event.target.closest('.settings-btn, .layout-field');
     if (settings && !event.target.closest('.remove-btn, [data-resize]')) openLayoutFieldSettings(settings.closest('[data-field-key]')?.dataset.fieldKey);
@@ -2082,7 +2209,7 @@ const initRagicPage = async (config) => {
     if (!panel) return;
     if (event.target.closest('[data-add-option]')) panel.querySelector('[data-option-list]').insertAdjacentHTML('beforeend', '<input data-option placeholder="選項">');
     if (event.target.matches('[data-setting-type]')) panel.querySelector('.setting-options').hidden = !['select','multiselect'].includes(event.target.value);
-    if (event.target.closest('[data-add-setting-subfield]')) { const list = panel.querySelector('[data-setting-subfields]'); list?.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true)); syncSubtableWidthFromEvent(list); return; }
+    if (event.target.closest('[data-add-setting-subfield]') && !isLogModule()) { const list = panel.querySelector('[data-setting-subfields]'); list?.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true)); syncSubtableWidthFromEvent(list); return; }
     if (event.target.closest('[data-remove-settings-field]')) { const key = panel.dataset.fieldKey; if (!confirm('確定刪除此欄位？')) return; removeDesignerFieldByKey(key); updateLayoutDesignerState((layout) => { delete layout.fields[key]; }); panel.hidden = true; return; }
     if (event.target.closest('[data-confirm-settings]')) { const key = panel.dataset.fieldKey; updateDesignerFieldByKey(key, (row) => { row.querySelector('[data-role="label"]').value = panel.querySelector('[data-setting-label]').value; row.querySelector('[data-role="type"]').value = panel.querySelector('[data-setting-type]').value; row.querySelector('[data-role="options"]').value = [...panel.querySelectorAll('[data-option]')].map((input) => input.value.trim()).filter(Boolean).join('\n'); row.querySelector('[data-role="required"]').checked = panel.querySelector('[data-setting-required]')?.checked || false; row.querySelector('[data-role="width"]').value = panel.querySelector('[data-layout-width]')?.value || ''; row.querySelector('[data-role="default"]').value = panel.querySelector('[data-setting-default]')?.value || ''; row.querySelector('[data-role="help"]').value = panel.querySelector('[data-setting-help]')?.value || ''; row.querySelector('[data-role="readonly"]').value = panel.querySelector('[data-setting-readonly]')?.checked ? '1' : ''; row.querySelector('[data-role="hidden"]').value = panel.querySelector('[data-setting-hidden]')?.checked ? '1' : ''; const settingSubfields = panel.querySelector('[data-setting-subfields]'); if (settingSubfields) { const targetSubfields = row.querySelector('.designer-subfield-list'); targetSubfields.innerHTML = ''; readDesigner(settingSubfields).forEach((child) => targetSubfields.appendChild(fieldDesigner(child, true))); const columnsPerRow = panel.querySelector('[data-setting-columns-per-row]')?.value || ''; const targetColumns = row.querySelector('[data-role="columns-per-row"]'); if (targetColumns) targetColumns.value = columnsPerRow; } }); updateLayoutDesignerState((layout) => { const key = panel.dataset.fieldKey; const candidate = clampLayoutItem({ row: panel.querySelector('[data-layout-row]')?.value, col: panel.querySelector('[data-layout-col]')?.value, rowSpan: panel.querySelector('[data-layout-rowspan]')?.value, colSpan: panel.querySelector('[data-layout-colspan]')?.value, width: panel.querySelector('[data-layout-width]')?.value, height: panel.querySelector('[data-layout-height]')?.value }, layout); if (isLayoutAreaFree(layout, key, candidate)) layout.fields[key] = candidate; }); panel.hidden = true; }
   });
@@ -2174,7 +2301,7 @@ const initRagicPage = async (config) => {
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
   schemaDoc.onSnapshot(async (doc) => {
     if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true });
-    const loadedSchema = doc.exists ? applyFormLayoutOverrides(doc.data(), config) : makeDefaultSchema(config);
+    const loadedSchema = doc.exists ? applyFormLayoutOverrides(mergeLogConfigFields(doc.data(), config), config) : makeDefaultSchema(config);
     if (doc.exists && fixDuplicateKeys(loadedSchema.fields || [])) {
       await schemaDoc.set({ ...loadedSchema, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
@@ -2183,5 +2310,5 @@ const initRagicPage = async (config) => {
     applyRagicPermissionUi();
     applyFilters();
   });
-  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyRagicPermissionUi(); applyFilters(); });
+  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data(), ...(isLogModule() && doc.data().linkedReport === undefined ? { linkedReport: false } : {}) })); applyRagicPermissionUi(); applyFilters(); });
 };
