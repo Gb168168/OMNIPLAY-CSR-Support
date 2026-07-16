@@ -3665,3 +3665,5 @@ body.is-log-module .ragic-table td.col-textarea { white-space: nowrap; overflow:
 body.is-log-module .ragic-table td.col-content *,
 body.is-log-module .ragic-table td.col-textarea * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.is-log-module .ragic-table thead th { position: sticky; top: 0; z-index: 2; }
+.linked-report-modal-card { width: min(1280px, calc(100vw - 24px)); height: min(860px, calc(100vh - 24px)); display: flex; flex-direction: column; overflow: hidden; }
+.linked-report-modal-card iframe { flex: 1; width: 100%; min-height: 0; border: 0; background: #f8fafc; }
