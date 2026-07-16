@@ -10,6 +10,76 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+  <style>
+    .linked-report-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .linked-report-modal.show {
+      display: flex;
+    }
+    .linked-report-modal-content {
+      background: white;
+      border-radius: 8px;
+      max-width: 90%;
+      width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .linked-report-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+    .linked-report-modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .linked-report-modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .linked-report-modal-close:hover {
+      color: #000;
+      background: #e5e7eb;
+      border-radius: 4px;
+    }
+    .linked-report-form-wrapper {
+      padding: 20px;
+    }
+    .linked-report-info {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #1e40af;
+    }
+  </style>
 </head>
 <body>
   <section class="app-shell" aria-label="客服系統主畫面">
@@ -50,6 +120,22 @@
     </main>
   </section>
 
+  <!-- 連動提報浮窗 -->
+  <div class="linked-report-modal" id="linkedReportModal">
+    <div class="linked-report-modal-content">
+      <div class="linked-report-modal-header">
+        <h2>連動提報</h2>
+        <button class="linked-report-modal-close" id="closeLinkedReportModal" type="button">✕</button>
+      </div>
+      <div class="linked-report-form-wrapper">
+        <div class="linked-report-info">
+          💡 提示：下方欄位已自動填入日誌中的相關信息，您可以調整後提交。
+        </div>
+        <form id="linkedReportForm"></form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -64,7 +150,10 @@
         { key: 'date', label: '日期', type: 'date', defaultToday: true },
         { key: 'shift', label: '班別', type: 'select', options: ['早班', '中班', '晚班', '大夜'] },
         { key: 'staff', label: '人員', type: 'text' },
+        { key: 'department', label: '部門', type: 'text' },
+        { key: 'customer', label: '客戶', type: 'text' },
         { key: 'category', label: '分類', type: 'text' },
+        { key: 'linked_report', label: '連動提報', type: 'checkbox' },
         { key: 'items', label: '日誌明細', type: 'subtable', fields: [
           { key: 'time', label: '時間', type: 'time' },
           { key: 'content', label: '事項內容', type: 'textarea' },
@@ -77,11 +166,166 @@
           '日期': { row: 1, col: 1 },
           '班別': { row: 1, col: 2 },
           '人員': { row: 1, col: 3 },
-          '分類': { row: 1, col: 4 },
-          '日誌明細': { row: 2, col: 1, colSpan: 5 }
+          '部門': { row: 1, col: 4 },
+          '客戶': { row: 1, col: 5 },
+          '分類': { row: 1, col: 6 },
+          '連動提報': { row: 2, col: 1 },
+          '日誌明細': { row: 3, col: 1, colSpan: 6 }
         }
       },
       listColumns: ['date', 'shift', 'staff', 'category']
+    });
+
+    // 連動提報功能
+    window.linkedReportManager = {
+      currentLogData: null,
+      
+      openModal: function(logRecord) {
+        this.currentLogData = logRecord;
+        const modal = document.getElementById('linkedReportModal');
+        
+        // 構建提報表單
+        this.renderReportForm(logRecord);
+        
+        modal.classList.add('show');
+      },
+      
+      closeModal: function() {
+        const modal = document.getElementById('linkedReportModal');
+        modal.classList.remove('show');
+        this.currentLogData = null;
+        document.getElementById('linkedReportForm').innerHTML = '';
+      },
+      
+      renderReportForm: function(logRecord) {
+        const form = document.getElementById('linkedReportForm');
+        
+        // 構建提報表單的字段（對應 report.html 中的字段）
+        const reportFields = [
+          { key: 'date', label: '日期', type: 'date', value: logRecord.date || '' },
+          { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
+          { key: 'category', label: '部門', type: 'text', value: logRecord.department || '' },
+          { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
+          { key: 'content', label: '級數', type: 'text', value: '' },
+          { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
+          { key: 'status', label: '狀態', type: 'select', value: '', options: ['待處理', '處理中', '已完成', '暫緩'] },
+          { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', value: logRecord.staff || '' },
+          { key: 'note', label: '備註', type: 'textarea', value: '' }
+        ];
+        
+        let formHtml = '<div class="ragic-form-grid" style="--form-columns: 2;">';
+        
+        reportFields.forEach(field => {
+          let controlHtml = '';
+          
+          if (field.type === 'date') {
+            controlHtml = `<input type="date" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
+          } else if (field.type === 'select') {
+            controlHtml = `<select data-field-key="${field.key}">
+              <option value="">請選擇</option>
+              ${field.options.map(opt => `<option value="${opt}" ${field.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+            </select>`;
+          } else if (field.type === 'textarea') {
+            controlHtml = `<textarea rows="3" data-field-key="${field.key}">${this.escapeHtml(field.value)}</textarea>`;
+          } else {
+            controlHtml = `<input type="text" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
+          }
+          
+          formHtml += `
+            <label class="ragic-field" style="--form-row: auto; --form-col: auto;">
+              <span>${field.label}</span>
+              ${controlHtml}
+            </label>
+          `;
+        });
+        
+        formHtml += '</div>';
+        
+        formHtml += `
+          <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="secondary" id="cancelLinkedReport" type="button">取消</button>
+            <button class="primary" id="submitLinkedReport" type="button">提交提報</button>
+          </div>
+        `;
+        
+        form.innerHTML = formHtml;
+        
+        // 事件監聽
+        document.getElementById('cancelLinkedReport').addEventListener('click', () => {
+          this.closeModal();
+        });
+        
+        document.getElementById('submitLinkedReport').addEventListener('click', () => {
+          this.submitReport();
+        });
+      },
+      
+      submitReport: function() {
+        const form = document.getElementById('linkedReportForm');
+        const formData = {};
+        
+        form.querySelectorAll('[data-field-key]').forEach(field => {
+          formData[field.dataset.fieldKey] = field.value;
+        });
+        
+        // 取得 Firebase collection
+        const reportCollection = window.omniplayDb?.collection('workReports');
+        if (!reportCollection) {
+          alert('Firebase 未初始化，請稍後再試');
+          return;
+        }
+        
+        // 新增提報記錄
+        reportCollection.add({
+          ...formData,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+          alert('提報已成功提交！');
+          this.closeModal();
+        }).catch(error => {
+          console.error('提報失敗：', error);
+          alert('提報失敗，請稍後再試');
+        });
+      },
+      
+      escapeHtml: function(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    };
+
+    // 勾選連動提報時的處理
+    const originalRenderForm = window.renderForm;
+    window.renderForm = function(record, options) {
+      originalRenderForm.call(this, record, options);
+      
+      // 在表單渲染後，為連動提報勾選框添加事件
+      setTimeout(() => {
+        const linkedReportCheckbox = document.querySelector('[name="linked_report"]');
+        if (linkedReportCheckbox) {
+          linkedReportCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+              window.linkedReportManager.openModal(record);
+              // 取消勾選（提報提交後用戶可決定是否真的勾選）
+              this.checked = false;
+            }
+          });
+        }
+      }, 0);
+    };
+
+    // 浮窗關閉按鈕事件
+    document.getElementById('closeLinkedReportModal').addEventListener('click', () => {
+      window.linkedReportManager.closeModal();
+    });
+
+    // 點擊浮窗背景也可以關閉
+    document.getElementById('linkedReportModal').addEventListener('click', (e) => {
+      if (e.target.id === 'linkedReportModal') {
+        window.linkedReportManager.closeModal();
+      }
     });
   </script>
 </body>
