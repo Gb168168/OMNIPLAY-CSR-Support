@@ -2134,6 +2134,72 @@ const attachLayoutDesignerEvents = (panel) => {
       });
     });
   });
+  panel.addEventListener('pointerdown', (event) => {
+    const source = event.target.closest('.layout-field-chip, .layout-field');
+    if (!source || event.target.closest('[data-resize], .remove-btn, .settings-btn, button, input, select, textarea')) return;
+    if (source.getAttribute('draggable') === 'false') return;
+    const fieldKey = source.dataset.fieldKey;
+    if (!fieldKey) return;
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const beginDragDistance = 4;
+    let pointerDragging = false;
+    const cleanupPreview = () => panel.querySelector('.layout-drop-preview')?.remove();
+    const showPreview = (clientX, clientY) => {
+      const grid = document.elementFromPoint(clientX, clientY)?.closest?.('.layout-grid');
+      cleanupPreview();
+      if (!grid || !panel.contains(grid)) return null;
+      const layout = currentDesignerLayout();
+      const current = layout.fields[fieldKey] || { colSpan: 1, rowSpan: 1 };
+      const candidate = candidateFromPoint(grid, clientX, clientY, current);
+      const preview = document.createElement('div');
+      preview.className = `layout-drop-preview ${isLayoutAreaFree(layout, fieldKey, candidate) ? 'is-valid' : 'is-invalid'}`;
+      preview.style.cssText = `grid-column:${candidate.col} / span ${candidate.colSpan};grid-row:${candidate.row} / span ${candidate.rowSpan};`;
+      grid.appendChild(preview);
+      return { grid, layout, candidate };
+    };
+    const move = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      const moved = Math.abs(moveEvent.clientX - startX) + Math.abs(moveEvent.clientY - startY);
+      if (!pointerDragging && moved < beginDragDistance) return;
+      pointerDragging = true;
+      moveEvent.preventDefault();
+      dragKey = fieldKey;
+      source.classList.add('is-dragging');
+      showPreview(moveEvent.clientX, moveEvent.clientY);
+    };
+    const up = (upEvent) => {
+      if (upEvent.pointerId !== pointerId) return;
+      panel.releasePointerCapture?.(pointerId);
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
+      source.classList.remove('is-dragging');
+      if (pointerDragging) {
+        upEvent.preventDefault();
+        const result = showPreview(upEvent.clientX, upEvent.clientY);
+        cleanupPreview();
+        if (result?.grid && isLayoutAreaFree(result.layout, fieldKey, result.candidate)) {
+          updateLayoutDesignerState((layout) => { layout.fields[fieldKey] = result.candidate; });
+        }
+      }
+      dragKey = '';
+    };
+    const cancel = () => {
+      panel.releasePointerCapture?.(pointerId);
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
+      source.classList.remove('is-dragging');
+      cleanupPreview();
+      dragKey = '';
+    };
+    panel.setPointerCapture?.(pointerId);
+    document.addEventListener('pointermove', move, { passive: false });
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+  });
   panel.addEventListener('mousedown', (event) => {
     const handle = event.target.closest('[data-resize]');
     if (!handle) return;
