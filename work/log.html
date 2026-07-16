@@ -220,7 +220,7 @@
         { key: 'department', label: '部門', type: 'text', formRow: 1, formCol: 4 },
         { key: 'customer', label: '客戶', type: 'text', formRow: 1, formCol: 5 },
         { key: 'category', label: '分類', type: 'text', formRow: 2, formCol: 1 },
-        { key: 'linked_report', label: '連動提報', type: 'checkbox', formRow: 2, formCol: 2 },
+        { key: 'linked_handover', label: '連接交接', type: 'checkbox', formRow: 2, formCol: 2, linkedHandover: true },
         { key: 'items', label: '日誌明細', type: 'subtable', formRow: 3, formCol: 1, formColSpan: 5, fields: [
           { key: 'time', label: '時間', type: 'time' },
           { key: 'content', label: '事項內容', type: 'textarea' },
@@ -234,7 +234,7 @@
         { label: '部門', formRow: 1, formCol: 4 },
         { label: '客戶', formRow: 1, formCol: 5 },
         { label: '分類', formRow: 2, formCol: 1 },
-        { label: '連動提報', formRow: 2, formCol: 2 },
+        { label: '連接交接', formRow: 2, formCol: 2 },
         { label: '日誌明細', formRow: 3, formCol: 1, formColSpan: 5 }
       ],
       listColumns: ['date', 'shift', 'staff', 'category']
