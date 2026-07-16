@@ -12,9 +12,13 @@ const DEFAULT_REPORT_FIELDS = [
   { key: 'date', label: '日期', type: 'date' },
   { key: 'reporter', label: '班別', type: 'text' },
   { key: 'category', label: '部門', type: 'text' },
+  { key: 'subject', label: '分類', type: 'text' },
+  { key: 'content', label: '級數', type: 'text' },
   { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text' },
+  { key: 'status', label: '狀態', type: 'select' },
   { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text' },
-  { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'link' }
+  { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'link' },
+  { key: 'note', label: '備註', type: 'textarea' }
 ];
 const LOG_TO_REPORT_FIELD_MAP = {
   date: { logLabel: '發生時間', fallbackLogLabels: ['日期'], reportLabel: '日期', transform: (value) => normalizeDateValue(value).slice(0, 10) },
@@ -660,6 +664,10 @@ const createField = (field, value = '') => {
   const wrap = document.createElement('label'); wrap.className = `ragic-field ragic-field-${field.type || 'text'}`; wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   applyFormLayout(wrap, field);
   const control = createControl(field, value);
+  if (isLogModule() && field.label === '連動提報' && control?.type === 'checkbox') {
+    control.id = 'linkedReportToggle';
+    control.addEventListener('change', (event) => handleLinkedReportToggle(event.target.checked));
+  }
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
   return wrap;
 };
@@ -1034,7 +1042,6 @@ const renderSubtableView = (field, rows = []) => {
 };
 
 const buildReportUrl = (reportId) => `report.html?id=${encodeURIComponent(reportId)}`;
-const absoluteReportUrl = (reportId) => new URL(buildReportUrl(reportId), window.location.href).href;
 const reportLinkField = () => findFieldByLabel(getFields(), LOG_TO_REPORT_FIELD_MAP.reportLink.logLabel);
 const logNumberValue = (record) => { const f = findFieldByLabel(getFields(), LOG_TO_REPORT_FIELD_MAP.number.logLabel); return f ? record[f.key] : (record.serial || ''); };
 const buildReportPayloadFromLog = (record = {}) => {
@@ -1062,19 +1069,84 @@ const ensureReportSchemaLoaded = async () => {
   return RAGIC_STATE.reportFields;
 };
 
+const linkedReportModalFields = () => {
+  const reportFields = RAGIC_STATE.reportFields || DEFAULT_REPORT_FIELDS;
+  return ['日期', '班別', '部門', '客戶', '提報者', '日誌連結']
+    .map((label) => findFieldByLabel(reportFields, label))
+    .filter(Boolean);
+};
 const ensureLinkedReportModal = () => {
   let modal = document.querySelector('#linkedReportModal');
   if (modal) return modal;
-  document.body.insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="linkedReportModal" hidden><div class="ragic-modal-card linked-report-modal-card"><div class="ragic-form-toolbar"><h2>連動提報表單</h2><button class="ghost" id="closeLinkedReportModalButton" type="button">關閉</button></div><iframe title="連動提報表單"></iframe></div></div>');
+  document.body.insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="linkedReportModal" hidden><div class="ragic-modal-card linked-report-modal-card"><div class="ragic-form-toolbar"><h2>連動提報表單</h2><button class="ghost" id="closeLinkedReportModalButton" type="button">關閉</button></div><form id="linkedReportForm" class="linked-report-form"></form></div></div>');
   modal = document.querySelector('#linkedReportModal');
-  modal.querySelector('#closeLinkedReportModalButton')?.addEventListener('click', () => { modal.hidden = true; });
-  modal.addEventListener('click', (event) => { if (event.target === modal) modal.hidden = true; });
   return modal;
 };
-const openLinkedReportModal = (reportId) => {
+const closeLinkedReportModal = ({ reset = false } = {}) => {
+  const modal = document.querySelector('#linkedReportModal');
+  const input = document.querySelector('#linkedReportToggle');
+  if (modal) modal.hidden = true;
+  if (reset && input) input.checked = Boolean(currentRecord()?.linkedReport);
+  RAGIC_STATE.linkedReportPending = false;
+  setLinkedReportPending(false);
+};
+const readLinkedReportFormData = (form, payload = {}) => {
+  const next = { ...payload };
+  form.querySelectorAll('[data-report-field]').forEach((input) => {
+    next[input.dataset.reportField] = input.value;
+  });
+  return next;
+};
+const openLinkedReportModal = ({ record, reportId = '', payload = {} }) => {
   const modal = ensureLinkedReportModal();
-  const iframe = modal.querySelector('iframe');
-  if (iframe) iframe.src = absoluteReportUrl(reportId);
+  const form = modal.querySelector('#linkedReportForm');
+  const fields = linkedReportModalFields();
+  form.innerHTML = `
+    <div class="linked-report-help">已自動帶入此日誌的日期、班別、部門、客戶與提報者；確認後才會建立／更新提報。</div>
+    <div class="linked-report-grid">
+      ${fields.map((field) => {
+        const type = field.type === 'date' ? 'date' : (field.type === 'link' ? 'url' : 'text');
+        const readonly = field.type === 'link' ? ' readonly' : '';
+        return `<label><span>${escapeHtml(field.label)}</span><input data-report-field="${escapeHtml(field.key)}" name="${escapeHtml(field.key)}" type="${type}" value="${escapeHtml(payload[field.key] || '')}"${readonly}></label>`;
+      }).join('')}
+    </div>
+    <div class="linked-report-actions">
+      <button class="secondary" id="cancelLinkedReportButton" type="button">取消</button>
+      <button class="primary" type="submit">確認連動提報</button>
+    </div>
+  `;
+  modal.querySelector('#closeLinkedReportModalButton')?.addEventListener('click', () => closeLinkedReportModal({ reset: true }), { once: true });
+  modal.onclick = (event) => { if (event.target === modal) closeLinkedReportModal({ reset: true }); };
+  form.querySelector('#cancelLinkedReportButton')?.addEventListener('click', () => closeLinkedReportModal({ reset: true }));
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton?.textContent || '確認連動提報';
+    if (submitButton) { submitButton.disabled = true; submitButton.textContent = '儲存中...'; }
+    try {
+      const reportCollection = window.omniplayDb.collection('report');
+      const nextPayload = readLinkedReportFormData(form, payload);
+      let nextReportId = reportId;
+      if (nextReportId) await reportCollection.doc(nextReportId).set(nextPayload, { merge: true });
+      else {
+        const ref = await reportCollection.add({ ...nextPayload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        nextReportId = ref.id;
+      }
+      const linkField = reportLinkField();
+      const reportUrl = buildReportUrl(nextReportId);
+      const logPatch = { linkedReport: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      if (linkField) logPatch[linkField.key] = reportUrl;
+      await RAGIC_STATE.collection.doc(record.id).set(logPatch, { merge: true });
+      Object.assign(record, logPatch, { linkedReport: true });
+      closeLinkedReportModal();
+      renderForm(record, { mode: 'view' });
+    } catch (error) {
+      console.error(error);
+      alert(error.message || '連動提報儲存失敗，請稍後再試。');
+    } finally {
+      if (submitButton) { submitButton.disabled = false; submitButton.textContent = originalText; }
+    }
+  };
   modal.hidden = false;
 };
 const setLinkedReportPending = (pending) => {
@@ -1085,7 +1157,12 @@ const setLinkedReportPending = (pending) => {
 };
 const handleLinkedReportToggle = async (checked) => {
   const record = currentRecord();
-  if (!record?.id || !canUse('edit') || RAGIC_STATE.linkedReportPending) return;
+  if (!record?.id) {
+    const input = document.querySelector('#linkedReportToggle'); if (input) input.checked = false;
+    alert('請先儲存日誌後，再勾選連動提報。');
+    return;
+  }
+  if (!canUse('edit') || RAGIC_STATE.linkedReportPending) return;
   const previous = Boolean(record.linkedReport);
   RAGIC_STATE.linkedReportPending = true; setLinkedReportPending(true);
   try {
@@ -1100,22 +1177,15 @@ const handleLinkedReportToggle = async (checked) => {
     const reportCollection = window.omniplayDb.collection('report');
     const found = await reportCollection.where('sourceLogId', '==', record.id).limit(1).get();
     const payload = buildReportPayloadFromLog(record);
-    let reportId = '';
-    if (!found.empty) { reportId = found.docs[0].id; await reportCollection.doc(reportId).set(payload, { merge: true }); }
-    else { const ref = await reportCollection.add({ ...payload, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); reportId = ref.id; }
-    const linkField = reportLinkField();
-    const reportUrl = buildReportUrl(reportId);
-    const logPatch = { linkedReport: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    if (linkField) logPatch[linkField.key] = reportUrl;
-    await RAGIC_STATE.collection.doc(record.id).set(logPatch, { merge: true });
-    Object.assign(record, logPatch, { linkedReport: true });
-    openLinkedReportModal(reportId);
-    renderForm(record, { mode: 'view' });
+    const reportId = found.empty ? '' : found.docs[0].id;
+    if (!found.empty) Object.assign(payload, found.docs[0].data(), payload);
+    openLinkedReportModal({ record, reportId, payload });
   } catch (error) {
     console.error(error);
     const input = document.querySelector('#linkedReportToggle'); if (input) input.checked = previous;
     alert(error.message || '連動提報失敗，請稍後再試。');
-  } finally { RAGIC_STATE.linkedReportPending = false; setLinkedReportPending(false); }
+  RAGIC_STATE.linkedReportPending = false; setLinkedReportPending(false);
+  }
 };
 const createLinkedReportCard = (record = {}) => {
   const item = document.createElement('div');
