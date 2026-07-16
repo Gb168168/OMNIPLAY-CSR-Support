@@ -2119,6 +2119,61 @@ const applySystemFieldValues = async (data, existingData = {}, collection = null
   return data;
 };
 
+const normalizedFieldIdentity = (field = {}) => `${String(field.label || '').trim()}::${String(field.type || 'text').trim()}`;
+const handoverSchemaFallback = () => makeDefaultSchema({
+  title: '交接',
+  collection: 'workHandover',
+  fields: [
+    { key: 'date', label: '日期', type: 'date', defaultToday: true },
+    { key: 'shift', label: '班別', type: 'select', options: ['早班', '晚班'] },
+    { key: 'department', label: '部門', type: 'text' },
+    { key: 'category', label: '分類', type: 'text' },
+    { key: 'status', label: '狀態', type: 'select', options: ['已完成', '處理中', '必看⚠️'] },
+    { key: 'item', label: '交接事項', type: 'textarea' },
+    { key: 'note', label: '備註', type: 'textarea' },
+    { key: 'publisher', label: '建立者', type: 'text' },
+    { key: 'finisher', label: '完成者', type: 'text' },
+    { key: 'link', label: '連結', type: 'link' },
+    { key: 'serial', label: '編號', type: 'serial' },
+    { key: 'attachment', label: '檔案', type: 'file' },
+    { key: 'image', label: '圖片', type: 'image' }
+  ]
+});
+
+const loadHandoverFieldsForLinking = async (db) => {
+  const schemaCollection = SCHEMA_MAP.handover || 'handover_schema';
+  try {
+    const doc = await db.collection(schemaCollection).doc('active').get();
+    const schema = doc.exists ? normalizeSchema(doc.data()) : handoverSchemaFallback();
+    return schema.fields || [];
+  } catch (error) {
+    console.warn('讀取交接表格結構失敗，改用預設交接欄位。', error);
+    return handoverSchemaFallback().fields || [];
+  }
+};
+
+const syncLinkedHandoverFields = async ({ data = {}, logId = '' } = {}) => {
+  if (!isLogModule() || !logId) return;
+  const db = window.omniplayDb;
+  if (!db) return;
+  const linkedFields = getFields().filter((field) => field.linkedHandover);
+  if (!linkedFields.length) return;
+  const targetFields = await loadHandoverFieldsForLinking(db);
+  const targetByIdentity = new Map(targetFields.map((field) => [normalizedFieldIdentity(field), field]));
+  const linkedData = {};
+  linkedFields.forEach((sourceField) => {
+    const targetField = targetByIdentity.get(normalizedFieldIdentity(sourceField));
+    if (!targetField || targetField.type === 'serial') return;
+    if (data[sourceField.key] !== undefined) linkedData[targetField.key] = data[sourceField.key];
+  });
+  if (!Object.keys(linkedData).length) return;
+  await db.collection(COLLECTION_MAP.workHandover || 'handover').doc(`log_${logId}`).set({
+    ...linkedData,
+    linkedLogId: logId,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+};
+
 const setupRagicFormActions = () => {
   const deleteButton = document.querySelector('#deleteButton');
   const cancelButton = document.querySelector('#backToListButton');
@@ -2272,14 +2327,17 @@ const initRagicPage = async (config) => {
       const existingRecord = RAGIC_STATE.currentId ? RAGIC_STATE.records.find((record) => record.id === RAGIC_STATE.currentId) || {} : {};
       const data = await applySystemFieldValues(await getFormData(), existingRecord, collection);
       data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-      if (RAGIC_STATE.currentId) {
+      let savedId = RAGIC_STATE.currentId;
+      if (savedId) {
         if (!existingRecord?.createdAt) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        await collection.doc(RAGIC_STATE.currentId).set(data, { merge: true });
-      renderForm({ ...existingRecord, ...data, id: RAGIC_STATE.currentId }, { mode: 'view' });
+        await collection.doc(savedId).set(data, { merge: true });
+        renderForm({ ...existingRecord, ...data, id: savedId }, { mode: 'view' });
       } else {
-        await collection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-        document.querySelector('#backToListButton').click();
+        const docRef = collection.doc();
+        savedId = docRef.id;
+        await docRef.set({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() 
       }
+      await syncLinkedHandoverFields({ data, logId: savedId });                   
       document.querySelector('#backToListButton').click();
     } catch (error) {
       console.error(error);
