@@ -214,32 +214,29 @@
       title: '日誌',
       collection: 'workLogs',
       fields: [
-        { key: 'date', label: '日期', type: 'date', defaultToday: true },
-        { key: 'shift', label: '班別', type: 'select', options: ['早班', '中班', '晚班', '大夜'] },
-        { key: 'staff', label: '人員', type: 'text' },
-        { key: 'department', label: '部門', type: 'text' },
-        { key: 'customer', label: '客戶', type: 'text' },
-        { key: 'category', label: '分類', type: 'text' },
-        { key: 'linked_report', label: '連動提報', type: 'checkbox' },
-        { key: 'items', label: '日誌明細', type: 'subtable', fields: [
+        { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
+        { key: 'shift', label: '班別', type: 'select', options: ['早班', '中班', '晚班', '大夜'], formRow: 1, formCol: 2 },
+        { key: 'staff', label: '人員', type: 'text', formRow: 1, formCol: 3 },
+        { key: 'department', label: '部門', type: 'text', formRow: 1, formCol: 4 },
+        { key: 'customer', label: '客戶', type: 'text', formRow: 1, formCol: 5 },
+        { key: 'category', label: '分類', type: 'text', formRow: 2, formCol: 1 },
+        { key: 'linked_report', label: '連動提報', type: 'checkbox', formRow: 2, formCol: 2 },
+        { key: 'items', label: '日誌明細', type: 'subtable', formRow: 3, formCol: 1, formColSpan: 5, fields: [
           { key: 'time', label: '時間', type: 'time' },
           { key: 'content', label: '事項內容', type: 'textarea' },
           { key: 'note', label: '備註', type: 'textarea' }
         ]}
       ],
-      formLayout: {
-        columns: 6,
-        fields: {
-          '日期': { row: 1, col: 1 },
-          '班別': { row: 1, col: 2 },
-          '人員': { row: 1, col: 3 },
-          '部門': { row: 1, col: 4 },
-          '客戶': { row: 1, col: 5 },
-          '分類': { row: 1, col: 6 },
-          '連動提報': { row: 2, col: 1 },
-          '日誌明細': { row: 3, col: 1, colSpan: 6 }
-        }
-      },
+      formLayout: [
+        { label: '日期', formRow: 1, formCol: 1 },
+        { label: '班別', formRow: 1, formCol: 2 },
+        { label: '人員', formRow: 1, formCol: 3 },
+        { label: '部門', formRow: 1, formCol: 4 },
+        { label: '客戶', formRow: 1, formCol: 5 },
+        { label: '分類', formRow: 2, formCol: 1 },
+        { label: '連動提報', formRow: 2, formCol: 2 },
+        { label: '日誌明細', formRow: 3, formCol: 1, formColSpan: 5 }
+      ],
       listColumns: ['date', 'shift', 'staff', 'category']
     });
 
