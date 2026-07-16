@@ -1252,7 +1252,23 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key])));
     titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
     form.appendChild(grid);
-    getFields().filter((field) => field.type === 'subtable').forEach((field) => { const section = document.createElement('section'); section.className = 'ragic-subtable'; applyFormLayout(section, field); section.dataset.subtable = field.key; section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`; const body = section.querySelector('tbody'); ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item))); section.querySelector('button').addEventListener('click', () => { if (canUse('edit')) { const row = renderSubtableRow(field); body.appendChild(row); row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea); } }); grid.appendChild(section); });
+    getFields().filter((field) => field.type === 'subtable').forEach((field) => {
+     const section = document.createElement('section');
+      section.className = 'ragic-subtable';
+      if (!fixedLogLayout) applyFormLayout(section, field);
+      section.dataset.subtable = field.key;
+      section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
+      const body = section.querySelector('tbody');
+      ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item)));
+      section.querySelector('button').addEventListener('click', () => {
+        if (canUse('edit')) {
+          const row = renderSubtableRow(field);
+          body.appendChild(row);
+          row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
+        }
+      });
+      (fixedLogLayout ? form : grid).appendChild(section);
+    });
     form.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
     setFormEditable(form);
   }
