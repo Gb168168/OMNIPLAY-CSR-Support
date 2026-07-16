@@ -61,18 +61,35 @@
       title: '日誌',
       collection: 'workLogs',
       fields: [
-        { key: 'date', label: '日期', type: 'date', defaultToday: true },
-        { key: 'shift', label: '班別', type: 'select', options: ['早班', '中班', '晚班', '大夜'] },
-        { key: 'staff', label: '人員', type: 'text' },
+        { key: 'occurredAt', label: '發生時間', type: 'datetime' },
+        { key: 'contactPerson', label: '接洽人員', type: 'text' },
+        { key: 'customer', label: '客戶', type: 'text' },
         { key: 'category', label: '分類', type: 'text' },
-        { key: 'items', label: '日誌明細', type: 'subtable', fields: [
-          { key: 'time', label: '時間', type: 'time' },
-          { key: 'content', label: '事項內容', type: 'textarea' },
-          { key: 'note', label: '備註', type: 'textarea' }
+        { key: 'status', label: '狀態', type: 'select', options: ['待處理', '處理中', '已完成', '暫緩'] },
+        { key: 'serial', label: '編號', type: 'serial' },
+        { key: 'completedAt', label: '完成時間', type: 'datetime' },
+        { key: 'completedBy', label: '完成人員', type: 'text' },
+        { key: 'updatedDate', label: '更新日期', type: 'updatedDate' },
+        { key: 'image', label: '圖片', type: 'image' },
+        { key: 'file', label: '檔案', type: 'file' },
+        { key: 'reportLink', label: '提報連結', type: 'link' },
+        { key: 'issueDescription', label: '問題描述', type: 'textarea', rows: 5 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 5 },
+        { key: 'linkedReport', label: '連動提報', type: 'checkbox', defaultValue: false },
+        { key: 'shift', label: '班別', type: 'text' },
+        { key: 'department', label: '部門', type: 'text' },
+        { key: 'items', label: '內容', type: 'subtable', fields: [
+          { key: 'customer', label: '客戶', type: 'textarea', rows: 4 },
+          { key: 'customerImage', label: '圖片', type: 'image' },
+          { key: 'serviceTech', label: '客服／技術', type: 'textarea', rows: 4 },
+          { key: 'serviceTechImage', label: '圖片', type: 'image' },
+          { key: 'businessAm', label: '業務／AM', type: 'textarea', rows: 4 },
+          { key: 'businessAmImage', label: '圖片', type: 'image' }
         ]}
       ],
       formLayout: {
-        columns: 5,
+        columns: 6,
+        rows: 4,
         fields: {
           '發生時間': { row: 1, col: 1 },
           '接洽人員': { row: 1, col: 2 },
@@ -89,7 +106,7 @@
           '圖片': { row: 3, col: 5 }
         }
       },
-      listColumns: ['date', 'shift', 'staff', 'category']
+      listColumns: ['occurredAt', 'contactPerson', 'customer', 'category', 'status', 'serial', 'issueDescription', 'note', 'image', 'file', 'reportLink']
     });
   </script>
 </body>
