@@ -1094,10 +1094,14 @@ const createLinkedReportCard = (record = {}) => {
 };
 
 const renderViewForm = (form, record = {}) => {
+  const fixedLogLayout = isLogModule();
   const grid = document.createElement('div');
   grid.className = 'ragic-form-grid ragic-view-grid';
   applyFormGridLayout(grid);
-  getFields().filter((field) => field.type !== 'subtable').forEach((field) => {
+  getFields().filter((field) => {
+    if (field.type === 'subtable') return false;
+    return !fixedLogLayout || Boolean(logFieldLayoutFor(field));
+  }).forEach((field) => {
     const item = document.createElement('div');
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}`;
     applyFormLayout(item, field);
@@ -1105,18 +1109,19 @@ const renderViewForm = (form, record = {}) => {
     appendFormResizeHandles(item, field);
     grid.appendChild(item);
   });
-  titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
-  if (isLogModule()) grid.appendChild(createLinkedReportCard(record));
+  if (!fixedLogLayout) titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
+  if (fixedLogLayout) grid.appendChild(createLinkedReportCard(record));
+  form.appendChild(grid);
+  
   getFields().filter((field) => field.type === 'subtable').forEach((field) => {
     const section = document.createElement('section');
     section.className = 'ragic-subtable ragic-view-subtable-section';
-    applyFormLayout(section, field);
+    if (!fixedLogLayout) applyFormLayout(section, field);
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
     appendFormResizeHandles(section, field);
-    grid.appendChild(section);
+    form.appendChild(section);
   });
-  form.appendChild(grid);
   form.querySelectorAll('.ragic-view-subtable-section').forEach((section) => {
     const parentField = getFields().find((field) => field.key === section.dataset.subtable);
     section.querySelectorAll('.ragic-view-subfield[data-subfield-key]').forEach((cell) => {
