@@ -2077,7 +2077,6 @@ const attachLayoutDesignerEvents = (panel) => {
     return clampLayoutItem({ ...start, row, col }, currentDesignerLayout());
   };
   panel.addEventListener('dragstart', (event) => {
-    if (isLogModule()) return;
     const item = event.target.closest('[data-field-key]');
     if (!item || event.target.closest('[data-resize], .remove-btn, .settings-btn')) return;
     dragKey = item.dataset.fieldKey;
@@ -2085,7 +2084,6 @@ const attachLayoutDesignerEvents = (panel) => {
     item.classList.add('is-dragging');
   });
   panel.addEventListener('dragover', (event) => {
-    if (isLogModule()) return;
     const grid = event.target.closest('.layout-grid');
     if (!grid) return;
     event.preventDefault();
@@ -2101,7 +2099,6 @@ const attachLayoutDesignerEvents = (panel) => {
   });
   panel.addEventListener('dragleave', (event) => { if (!event.relatedTarget || !panel.contains(event.relatedTarget)) panel.querySelector('.layout-drop-preview')?.remove(); });
   panel.addEventListener('drop', (event) => {
-    if (isLogModule()) return;
     const grid = event.target.closest('.layout-grid');
     const key = event.dataTransfer.getData('text/plain') || dragKey;
     if (!grid || !key) return;
@@ -2126,7 +2123,6 @@ const attachLayoutDesignerEvents = (panel) => {
     if (event.target.closest('.btn-preview-layout')) panel.querySelector('.layout-preview')?.scrollIntoView({ block: 'nearest' });
   });
   panel.addEventListener('change', (event) => {
-    if (isLogModule()) return;
     if (!event.target.matches('#gridCols, #gridRows')) return;
     updateLayoutDesignerState((layout) => {
       layout.columns = Number(panel.querySelector('#gridCols').value);
@@ -2139,7 +2135,6 @@ const attachLayoutDesignerEvents = (panel) => {
     });
   });
   panel.addEventListener('mousedown', (event) => {
-    if (isLogModule()) return;
     const handle = event.target.closest('[data-resize]');
     if (!handle) return;
     event.preventDefault();
@@ -2324,7 +2319,7 @@ const initRagicPage = async (config) => {
   
   document.querySelector('#layoutDesignerPanel')?.addEventListener('click', (event) => {
     const addButton = event.target.closest('[data-add-layout-field], .btn-add-layout-field');
-    if (addButton) { if (isLogModule()) return; const body = document.querySelector('.designer-body'); const type = addButton.dataset.fieldType || 'text'; const typeLabel = FIELD_TYPES.find((item) => item.value === type)?.label || '新欄位'; body.appendChild(fieldDesigner({ key: generateFieldKey(), label: typeLabel, type })); updateDesignerPreview(); renderLayoutDesigner(); return; }
+    if (addButton) { const body = document.querySelector('.designer-body'); const type = addButton.dataset.fieldType || 'text'; const typeLabel = FIELD_TYPES.find((item) => item.value === type)?.label || '新欄位'; body.appendChild(fieldDesigner({ key: generateFieldKey(), label: typeLabel, type })); updateDesignerPreview(); renderLayoutDesigner(); return; }
     if (event.target.closest('.btn-auto-layout')) { if (!confirm('這會清除目前的排版，確定嗎？')) return; updateLayoutDesignerState(autoLayoutFields); return; }
     const settings = event.target.closest('.settings-btn, .layout-field');
     if (settings && !event.target.closest('.remove-btn, [data-resize]')) openLayoutFieldSettings(settings.closest('[data-field-key]')?.dataset.fieldKey);
@@ -2334,7 +2329,7 @@ const initRagicPage = async (config) => {
     if (!panel) return;
     if (event.target.closest('[data-add-option]')) panel.querySelector('[data-option-list]').insertAdjacentHTML('beforeend', '<input data-option placeholder="選項">');
     if (event.target.matches('[data-setting-type]')) panel.querySelector('.setting-options').hidden = !['select','multiselect'].includes(event.target.value);
-    if (event.target.closest('[data-add-setting-subfield]') && !isLogModule()) { const list = panel.querySelector('[data-setting-subfields]'); list?.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true)); syncSubtableWidthFromEvent(list); return; }
+    if (event.target.closest('[data-add-setting-subfield]')) { const list = panel.querySelector('[data-setting-subfields]'); list?.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true)); syncSubtableWidthFromEvent(list); return; }
     if (event.target.closest('[data-remove-settings-field]')) { const key = panel.dataset.fieldKey; if (!confirm('確定刪除此欄位？')) return; removeDesignerFieldByKey(key); updateLayoutDesignerState((layout) => { delete layout.fields[key]; }); panel.hidden = true; return; }
     if (event.target.closest('[data-confirm-settings]')) { const key = panel.dataset.fieldKey; updateDesignerFieldByKey(key, (row) => { row.querySelector('[data-role="label"]').value = panel.querySelector('[data-setting-label]').value; row.querySelector('[data-role="type"]').value = panel.querySelector('[data-setting-type]').value; row.querySelector('[data-role="options"]').value = [...panel.querySelectorAll('[data-option]')].map((input) => input.value.trim()).filter(Boolean).join('\n'); row.querySelector('[data-role="required"]').checked = panel.querySelector('[data-setting-required]')?.checked || false; row.querySelector('[data-role="width"]').value = panel.querySelector('[data-layout-width]')?.value || ''; row.querySelector('[data-role="default"]').value = panel.querySelector('[data-setting-default]')?.value || ''; row.querySelector('[data-role="help"]').value = panel.querySelector('[data-setting-help]')?.value || ''; row.querySelector('[data-role="readonly"]').value = panel.querySelector('[data-setting-readonly]')?.checked ? '1' : ''; row.querySelector('[data-role="hidden"]').value = panel.querySelector('[data-setting-hidden]')?.checked ? '1' : ''; const settingSubfields = panel.querySelector('[data-setting-subfields]'); if (settingSubfields) { const targetSubfields = row.querySelector('.designer-subfield-list'); targetSubfields.innerHTML = ''; readDesigner(settingSubfields).forEach((child) => targetSubfields.appendChild(fieldDesigner(child, true))); const columnsPerRow = panel.querySelector('[data-setting-columns-per-row]')?.value || ''; const targetColumns = row.querySelector('[data-role="columns-per-row"]'); if (targetColumns) targetColumns.value = columnsPerRow; } }); updateLayoutDesignerState((layout) => { const key = panel.dataset.fieldKey; const candidate = clampLayoutItem({ row: panel.querySelector('[data-layout-row]')?.value, col: panel.querySelector('[data-layout-col]')?.value, rowSpan: panel.querySelector('[data-layout-rowspan]')?.value, colSpan: panel.querySelector('[data-layout-colspan]')?.value, width: panel.querySelector('[data-layout-width]')?.value, height: panel.querySelector('[data-layout-height]')?.value }, layout); if (isLayoutAreaFree(layout, key, candidate)) layout.fields[key] = candidate; }); panel.hidden = true; }
   });
