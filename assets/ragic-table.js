@@ -444,11 +444,21 @@ const renderIconActions = (record = {}) => {
 };
 
 
+const defaultConfigFields = (config = {}) => [
+  ...(config.fields || []),
+  ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])
+];
+
 const mergeLogConfigFields = (schema = {}, config = {}) => {
   if (!isLogModule(config)) return schema;
-  const defaults = [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])];
-  return { ...schema, fields: defaults, formLayout: config.formLayout || schema.formLayout };
+  const schemaFields = Array.isArray(schema.fields) ? schema.fields : [];
+  return {
+    ...schema,
+    fields: schemaFields.length ? schemaFields : defaultConfigFields(config),
+    formLayout: schema.formLayout || config.formLayout
+  };
 };
+
 
 const makeDefaultSchema = (config) => applyFormLayoutOverrides(normalizeSchema({
   fields: [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])]
