@@ -7,8 +7,17 @@ const LOG_FIELD_LAYOUT_BY_LABEL = {
   '完成時間': { row: 2, col: 1 }, '完成人員': { row: 2, col: 2 }, '更新日期': { row: 2, col: 3 }, '圖片': { row: 2, col: 4 }, '檔案': { row: 2, col: 5 }, '提報連結': { row: 2, col: 6 },
   '問題描述': { row: 3, col: 1, colSpan: 3, rowSpan: 2, textarea: true }, '備註': { row: 3, col: 4, colSpan: 2, rowSpan: 2, textarea: true }, '連動提報': { row: 3, col: 6 }
 };
+
+const DEFAULT_REPORT_FIELDS = [
+  { key: 'date', label: '日期', type: 'date' },
+  { key: 'reporter', label: '班別', type: 'text' },
+  { key: 'category', label: '部門', type: 'text' },
+  { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text' },
+  { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text' },
+  { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'link' }
+];
 const LOG_TO_REPORT_FIELD_MAP = {
-  date: { logLabel: '發生時間', fallbackLogLabels: ['日期'], reportLabel: '日期' },
+  date: { logLabel: '發生時間', fallbackLogLabels: ['日期'], reportLabel: '日期', transform: (value) => normalizeDateValue(value).slice(0, 10) },
   shift: { logLabel: '班別', reportLabel: '班別' },
   department: { logLabel: '部門', reportLabel: '部門' },
   customer: { logLabel: '客戶', reportLabel: '客戶' },
@@ -1025,24 +1034,48 @@ const renderSubtableView = (field, rows = []) => {
 };
 
 const buildReportUrl = (reportId) => `report.html?id=${encodeURIComponent(reportId)}`;
+const absoluteReportUrl = (reportId) => new URL(buildReportUrl(reportId), window.location.href).href;
 const reportLinkField = () => findFieldByLabel(getFields(), LOG_TO_REPORT_FIELD_MAP.reportLink.logLabel);
 const logNumberValue = (record) => { const f = findFieldByLabel(getFields(), LOG_TO_REPORT_FIELD_MAP.number.logLabel); return f ? record[f.key] : (record.serial || ''); };
 const buildReportPayloadFromLog = (record = {}) => {
   const reportFields = RAGIC_STATE.reportFields || [];
   const payload = { sourceLogId: record.id, sourceLogNumber: logNumberValue(record), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  const logUrl = record.id ? new URL(`log.html?id=${encodeURIComponent(record.id)}`, window.location.href).href : '';
   Object.values(LOG_TO_REPORT_FIELD_MAP).forEach((map) => {
     if (!map.reportLabel) return;
     const logField = findFieldByLabel(getFields(), map.logLabel, map.fallbackLogLabels || []);
     const reportField = findFieldByLabel(reportFields, map.reportLabel);
-    if (reportField) payload[reportField.key] = logField ? (record[logField.key] || '') : '';
+    if (reportField) {
+      const rawValue = logField ? (record[logField.key] || '') : '';
+      payload[reportField.key] = typeof map.transform === 'function' ? map.transform(rawValue) : rawValue;
+    }
   });
+  const logLinkField = findFieldByLabel(reportFields, '日誌連結');
+  if (logLinkField) payload[logLinkField.key] = logUrl;
   return payload;
 };
 const ensureReportSchemaLoaded = async () => {
   if (RAGIC_STATE.reportFields) return RAGIC_STATE.reportFields;
   const doc = await window.omniplayDb?.collection('report_schema').doc('active').get();
-  RAGIC_STATE.reportFields = normalizeSchema(doc?.exists ? doc.data() : {}).fields || [];
+  const schemaFields = normalizeSchema(doc?.exists ? doc.data() : {}).fields || [];
+  RAGIC_STATE.reportFields = schemaFields.length ? schemaFields : DEFAULT_REPORT_FIELDS;
   return RAGIC_STATE.reportFields;
+};
+
+const ensureLinkedReportModal = () => {
+  let modal = document.querySelector('#linkedReportModal');
+  if (modal) return modal;
+  document.body.insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="linkedReportModal" hidden><div class="ragic-modal-card linked-report-modal-card"><div class="ragic-form-toolbar"><h2>連動提報表單</h2><button class="ghost" id="closeLinkedReportModalButton" type="button">關閉</button></div><iframe title="連動提報表單"></iframe></div></div>');
+  modal = document.querySelector('#linkedReportModal');
+  modal.querySelector('#closeLinkedReportModalButton')?.addEventListener('click', () => { modal.hidden = true; });
+  modal.addEventListener('click', (event) => { if (event.target === modal) modal.hidden = true; });
+  return modal;
+};
+const openLinkedReportModal = (reportId) => {
+  const modal = ensureLinkedReportModal();
+  const iframe = modal.querySelector('iframe');
+  if (iframe) iframe.src = absoluteReportUrl(reportId);
+  modal.hidden = false;
 };
 const setLinkedReportPending = (pending) => {
   const input = document.querySelector('#linkedReportToggle');
@@ -1076,7 +1109,7 @@ const handleLinkedReportToggle = async (checked) => {
     if (linkField) logPatch[linkField.key] = reportUrl;
     await RAGIC_STATE.collection.doc(record.id).set(logPatch, { merge: true });
     Object.assign(record, logPatch, { linkedReport: true });
-    alert('連動提報已建立／更新');
+    openLinkedReportModal(reportId);
     renderForm(record, { mode: 'view' });
   } catch (error) {
     console.error(error);
@@ -1236,6 +1269,7 @@ const setRagicViewMode = (mode) => {
 const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) => {
   RAGIC_STATE.currentId = record.id || null;
   RAGIC_STATE.formMode = mode;
+  const fixedLogLayout = isLogModule();
   setRagicViewMode('form');
   const formView = document.querySelector('#ragicFormView');
   const legacyTitle = formView.querySelector('h2');
