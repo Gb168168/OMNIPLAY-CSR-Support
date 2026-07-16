@@ -5,33 +5,10 @@ const LOG_LIST_WIDTHS = { issue: 360, note: 260, image: 90, file: 90, serial: 11
 const LOG_FIELD_LAYOUT_BY_LABEL = {
   '發生時間': { row: 1, col: 1 }, '接洽人員': { row: 1, col: 2 }, '客戶': { row: 1, col: 3 }, '分類': { row: 1, col: 4 }, '狀態': { row: 1, col: 5 }, '編號': { row: 1, col: 6 },
   '完成時間': { row: 2, col: 1 }, '完成人員': { row: 2, col: 2 }, '更新日期': { row: 2, col: 3 }, '圖片': { row: 2, col: 4 }, '檔案': { row: 2, col: 5 }, '提報連結': { row: 2, col: 6 },
-  '問題描述': { row: 3, col: 1, colSpan: 3, rowSpan: 2, textarea: true }, '備註': { row: 3, col: 4, colSpan: 2, rowSpan: 2, textarea: true }, '連動提報': { row: 3, col: 6 }
+  '問題描述': { row: 3, col: 1, colSpan: 3, rowSpan: 2, textarea: true }, '備註': { row: 3, col: 4, colSpan: 2, rowSpan: 2, textarea: true }
 };
 
-const DEFAULT_REPORT_FIELDS = [
-  { key: 'date', label: '日期', type: 'date' },
-  { key: 'reporter', label: '班別', type: 'text' },
-  { key: 'category', label: '部門', type: 'text' },
-  { key: 'subject', label: '分類', type: 'text' },
-  { key: 'content', label: '級數', type: 'text' },
-  { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text' },
-  { key: 'status', label: '狀態', type: 'select' },
-  { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text' },
-  { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'link' },
-  { key: 'note', label: '備註', type: 'textarea' }
-];
-const LOG_TO_REPORT_FIELD_MAP = {
-  date: { logLabel: '發生時間', fallbackLogLabels: ['日期'], reportLabel: '日期', transform: (value) => normalizeDateValue(value).slice(0, 10) },
-  shift: { logLabel: '班別', reportLabel: '班別' },
-  department: { logLabel: '部門', reportLabel: '部門' },
-  customer: { logLabel: '客戶', reportLabel: '客戶' },
-  reporter: { logLabel: '接洽人員', fallbackLogLabels: ['人員', '提報者'], reportLabel: '提報者' },
-  number: { logLabel: '編號', reportKey: 'sourceLogNumber' },
-  reportLink: { logLabel: '提報連結' }
-};
 const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').includes('日誌');
-const isReportModule = (config = RAGIC_STATE?.config) => String(config?.collection || config?.dataCollection || '') === 'report' || String(config?.title || '').includes('提報');
-const findFieldByLabel = (fields, label, fallbacks = []) => (fields || []).find((f) => [label, ...fallbacks].includes(f.label)) || null;
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
@@ -121,15 +98,14 @@ const normalizeFormLayoutOverride = (override = {}) => {
 
 const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
   const source = formLayout && typeof formLayout === 'object' ? formLayout : {};
-  const fixedLog = isLogModule();
-  const columns = fixedLog ? LOG_FORM_LAYOUT.columns : normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
-  const rows = fixedLog ? LOG_FORM_LAYOUT.rows : normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
+  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
+  const rows = normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
   const sourceFields = source.fields && typeof source.fields === 'object' ? source.fields : {};
   const fieldKeys = new Set((fields || []).map((field) => field.key).filter(Boolean));
   const nextFields = {};
   Object.entries(sourceFields).forEach(([key, layout]) => {
     if (fieldKeys.size && !fieldKeys.has(key)) return;
-    const fixed = isLogModule() ? logFieldLayoutFor((fields || []).find((field) => field.key === key) || { label: key }) : null;
+    const fixed = null;
     const row = normalizeFormLayoutNumber(fixed?.row ?? layout?.row, { min: 1, max: rows });
     const col = normalizeFormLayoutNumber(fixed?.col ?? layout?.col, { min: 1, max: columns });
     if (!row || !col) return;
@@ -470,12 +446,8 @@ const renderIconActions = (record = {}) => {
 
 const mergeLogConfigFields = (schema = {}, config = {}) => {
   if (!isLogModule(config)) return schema;
-  const existing = Array.isArray(schema.fields) ? schema.fields : [];
-  const byKey = new Map(existing.map((field) => [field.key, field]));
   const defaults = [...(config.fields || []), ...(config.subtable ? [{ ...config.subtable, type: 'subtable', fields: config.subtable.fields || [] }] : [])];
-  const merged = defaults.map((field) => ({ ...field, ...(byKey.get(field.key) || {}), label: field.label || byKey.get(field.key)?.label, type: field.type || byKey.get(field.key)?.type }));
-  existing.forEach((field) => { if (!merged.some((item) => item.key === field.key)) merged.push(field); });
-  return { ...schema, fields: merged, formLayout: { ...(schema.formLayout || {}), columns: LOG_FORM_LAYOUT.columns, rows: LOG_FORM_LAYOUT.rows } };
+  return { ...schema, fields: defaults, formLayout: config.formLayout || schema.formLayout };
 };
 
 const makeDefaultSchema = (config) => applyFormLayoutOverrides(normalizeSchema({
@@ -664,10 +636,6 @@ const createField = (field, value = '') => {
   const wrap = document.createElement('label'); wrap.className = `ragic-field ragic-field-${field.type || 'text'}`; wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   applyFormLayout(wrap, field);
   const control = createControl(field, value);
-  if (isLogModule() && field.label === '連動提報' && control?.type === 'checkbox') {
-    control.id = 'linkedReportToggle';
-    control.addEventListener('change', (event) => handleLinkedReportToggle(event.target.checked));
-  }
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
   return wrap;
 };
@@ -1041,163 +1009,8 @@ const renderSubtableView = (field, rows = []) => {
   return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable"${tableStyle}>${colgroup}<thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
 };
 
-const buildReportUrl = (reportId) => `report.html?id=${encodeURIComponent(reportId)}`;
-const reportLinkField = () => findFieldByLabel(getFields(), LOG_TO_REPORT_FIELD_MAP.reportLink.logLabel);
-const logNumberValue = (record) => { const f = findFieldByLabel(getFields(), LOG_TO_REPORT_FIELD_MAP.number.logLabel); return f ? record[f.key] : (record.serial || ''); };
-const buildReportPayloadFromLog = (record = {}) => {
-  const reportFields = RAGIC_STATE.reportFields || [];
-  const payload = { sourceLogId: record.id, sourceLogNumber: logNumberValue(record), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-  const logUrl = record.id ? new URL(`log.html?id=${encodeURIComponent(record.id)}`, window.location.href).href : '';
-  Object.values(LOG_TO_REPORT_FIELD_MAP).forEach((map) => {
-    if (!map.reportLabel) return;
-    const logField = findFieldByLabel(getFields(), map.logLabel, map.fallbackLogLabels || []);
-    const reportField = findFieldByLabel(reportFields, map.reportLabel);
-    if (reportField) {
-      const rawValue = logField ? (record[logField.key] || '') : '';
-      payload[reportField.key] = typeof map.transform === 'function' ? map.transform(rawValue) : rawValue;
-    }
-  });
-  const logLinkField = findFieldByLabel(reportFields, '日誌連結');
-  if (logLinkField) payload[logLinkField.key] = logUrl;
-  return payload;
-};
-const ensureReportSchemaLoaded = async () => {
-  if (RAGIC_STATE.reportFields) return RAGIC_STATE.reportFields;
-  const doc = await window.omniplayDb?.collection('report_schema').doc('active').get();
-  const schemaFields = normalizeSchema(doc?.exists ? doc.data() : {}).fields || [];
-  RAGIC_STATE.reportFields = schemaFields.length ? schemaFields : DEFAULT_REPORT_FIELDS;
-  return RAGIC_STATE.reportFields;
-};
-
-const linkedReportModalFields = () => {
-  const reportFields = RAGIC_STATE.reportFields || DEFAULT_REPORT_FIELDS;
-  return ['日期', '班別', '部門', '客戶', '提報者', '日誌連結']
-    .map((label) => findFieldByLabel(reportFields, label))
-    .filter(Boolean);
-};
-const ensureLinkedReportModal = () => {
-  let modal = document.querySelector('#linkedReportModal');
-  if (modal) return modal;
-  document.body.insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="linkedReportModal" hidden><div class="ragic-modal-card linked-report-modal-card"><div class="ragic-form-toolbar"><h2>連動提報表單</h2><button class="ghost" id="closeLinkedReportModalButton" type="button">關閉</button></div><form id="linkedReportForm" class="linked-report-form"></form></div></div>');
-  modal = document.querySelector('#linkedReportModal');
-  return modal;
-};
-const closeLinkedReportModal = ({ reset = false } = {}) => {
-  const modal = document.querySelector('#linkedReportModal');
-  const input = document.querySelector('#linkedReportToggle');
-  if (modal) modal.hidden = true;
-  if (reset && input) input.checked = Boolean(currentRecord()?.linkedReport);
-  RAGIC_STATE.linkedReportPending = false;
-  setLinkedReportPending(false);
-};
-const readLinkedReportFormData = (form, payload = {}) => {
-  const next = { ...payload };
-  form.querySelectorAll('[data-report-field]').forEach((input) => {
-    next[input.dataset.reportField] = input.value;
-  });
-  return next;
-};
-const openLinkedReportModal = ({ record, reportId = '', payload = {} }) => {
-  const modal = ensureLinkedReportModal();
-  const form = modal.querySelector('#linkedReportForm');
-  const fields = linkedReportModalFields();
-  form.innerHTML = `
-    <div class="linked-report-help">已自動帶入此日誌的日期、班別、部門、客戶與提報者；確認後才會建立／更新提報。</div>
-    <div class="linked-report-grid">
-      ${fields.map((field) => {
-        const type = field.type === 'date' ? 'date' : (field.type === 'link' ? 'url' : 'text');
-        const readonly = field.type === 'link' ? ' readonly' : '';
-        return `<label><span>${escapeHtml(field.label)}</span><input data-report-field="${escapeHtml(field.key)}" name="${escapeHtml(field.key)}" type="${type}" value="${escapeHtml(payload[field.key] || '')}"${readonly}></label>`;
-      }).join('')}
-    </div>
-    <div class="linked-report-actions">
-      <button class="secondary" id="cancelLinkedReportButton" type="button">取消</button>
-      <button class="primary" type="submit">確認連動提報</button>
-    </div>
-  `;
-  modal.querySelector('#closeLinkedReportModalButton')?.addEventListener('click', () => closeLinkedReportModal({ reset: true }), { once: true });
-  modal.onclick = (event) => { if (event.target === modal) closeLinkedReportModal({ reset: true }); };
-  form.querySelector('#cancelLinkedReportButton')?.addEventListener('click', () => closeLinkedReportModal({ reset: true }));
-  form.onsubmit = async (event) => {
-    event.preventDefault();
-    const submitButton = form.querySelector('button[type="submit"]');
-    const originalText = submitButton?.textContent || '確認連動提報';
-    if (submitButton) { submitButton.disabled = true; submitButton.textContent = '儲存中...'; }
-    try {
-      const reportCollection = window.omniplayDb.collection('report');
-      const nextPayload = readLinkedReportFormData(form, payload);
-      let nextReportId = reportId;
-      if (nextReportId) await reportCollection.doc(nextReportId).set(nextPayload, { merge: true });
-      else {
-        const ref = await reportCollection.add({ ...nextPayload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-        nextReportId = ref.id;
-      }
-      const linkField = reportLinkField();
-      const reportUrl = buildReportUrl(nextReportId);
-      const logPatch = { linkedReport: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-      if (linkField) logPatch[linkField.key] = reportUrl;
-      await RAGIC_STATE.collection.doc(record.id).set(logPatch, { merge: true });
-      Object.assign(record, logPatch, { linkedReport: true });
-      closeLinkedReportModal();
-      renderForm(record, { mode: 'view' });
-    } catch (error) {
-      console.error(error);
-      alert(error.message || '連動提報儲存失敗，請稍後再試。');
-    } finally {
-      if (submitButton) { submitButton.disabled = false; submitButton.textContent = originalText; }
-    }
-  };
-  modal.hidden = false;
-};
-const setLinkedReportPending = (pending) => {
-  const input = document.querySelector('#linkedReportToggle');
-  const card = document.querySelector('.linked-report-card');
-  if (input) input.disabled = pending;
-  card?.classList.toggle('is-loading', pending);
-};
-const handleLinkedReportToggle = async (checked) => {
-  const record = currentRecord();
-  if (!record?.id) {
-    const input = document.querySelector('#linkedReportToggle'); if (input) input.checked = false;
-    alert('請先儲存日誌後，再勾選連動提報。');
-    return;
-  }
-  if (!canUse('edit') || RAGIC_STATE.linkedReportPending) return;
-  const previous = Boolean(record.linkedReport);
-  RAGIC_STATE.linkedReportPending = true; setLinkedReportPending(true);
-  try {
-    if (!checked) {
-      await RAGIC_STATE.collection.doc(record.id).set({ linkedReport: false, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      Object.assign(record, { linkedReport: false });
-      alert('已停止連動，既有提報資料仍保留');
-      renderForm(record, { mode: 'view' });
-      return;
-    }
-    await ensureReportSchemaLoaded();
-    const reportCollection = window.omniplayDb.collection('report');
-    const found = await reportCollection.where('sourceLogId', '==', record.id).limit(1).get();
-    const payload = buildReportPayloadFromLog(record);
-    const reportId = found.empty ? '' : found.docs[0].id;
-    if (!found.empty) Object.assign(payload, found.docs[0].data(), payload);
-    openLinkedReportModal({ record, reportId, payload });
-  } catch (error) {
-    console.error(error);
-    const input = document.querySelector('#linkedReportToggle'); if (input) input.checked = previous;
-    alert(error.message || '連動提報失敗，請稍後再試。');
-  RAGIC_STATE.linkedReportPending = false; setLinkedReportPending(false);
-  }
-};
-const createLinkedReportCard = (record = {}) => {
-  const item = document.createElement('div');
-  item.className = `ragic-view-field linked-report-card ${record.linkedReport ? 'is-linked' : ''}`;
-  item.style.setProperty('--form-row', '3'); item.style.setProperty('--form-col', '6'); item.style.setProperty('--form-colspan', '1'); item.style.setProperty('--form-rowspan', '1');
-  item.innerHTML = `<div><div class="ragic-view-label">連動提報</div><div class="ragic-view-value">勾選後將日誌資料帶入提報表單</div></div><label class="linked-report-switch"><input id="linkedReportToggle" type="checkbox" ${record.linkedReport ? 'checked' : ''} ${RAGIC_STATE.linkedReportPending ? 'disabled' : ''}><span></span></label>`;
-  item.querySelector('input')?.addEventListener('change', (event) => handleLinkedReportToggle(event.target.checked));
-  return item;
-};
-
 const renderViewForm = (form, record = {}) => {
-  const fixedLogLayout = isLogModule();
+  const fixedLogLayout = false;
   const grid = document.createElement('div');
   grid.className = 'ragic-form-grid ragic-view-grid';
   applyFormGridLayout(grid);
@@ -1213,7 +1026,6 @@ const renderViewForm = (form, record = {}) => {
     grid.appendChild(item);
   });
   if (!fixedLogLayout) titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
-  if (fixedLogLayout) grid.appendChild(createLinkedReportCard(record));
   form.appendChild(grid);
   
   getFields().filter((field) => field.type === 'subtable').forEach((field) => {
@@ -1339,7 +1151,7 @@ const setRagicViewMode = (mode) => {
 const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) => {
   RAGIC_STATE.currentId = record.id || null;
   RAGIC_STATE.formMode = mode;
-  const fixedLogLayout = isLogModule();
+  const fixedLogLayout = false;
   setRagicViewMode('form');
   const formView = document.querySelector('#ragicFormView');
   const legacyTitle = formView.querySelector('h2');
@@ -1993,7 +1805,7 @@ const renderLayoutDesigner = () => {
   if (!panel || !body) return;
   const fields = readDesigner(body);
   const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
-  const fixedLogLayout = isLogModule();
+  const fixedLogLayout = false;
   const rowsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
   const colsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
   const placed = placedLayoutKeys(layout);
@@ -2286,7 +2098,6 @@ const getNextSerial = async (collection, fieldKey) => {
 };
 
 const applySystemFieldValues = async (data, existingData = {}, collection = null) => {
-  if (isLogModule() && data.linkedReport === undefined) data.linkedReport = Boolean(existingData.linkedReport);
   for (const field of getFields()) {
     if (field.type === 'createdDate') data[field.key] = existingData[field.key] || formatLocalDateTime();
     if (field.type === 'updatedDate') data[field.key] = formatLocalDateTime();
@@ -2497,5 +2308,5 @@ const initRagicPage = async (config) => {
     applyRagicPermissionUi();
     applyFilters();
   });
-  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data(), ...(isLogModule() && doc.data().linkedReport === undefined ? { linkedReport: false } : {}) })); applyRagicPermissionUi(); applyFilters(); });
+  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyRagicPermissionUi(); applyFilters(); });
 };
