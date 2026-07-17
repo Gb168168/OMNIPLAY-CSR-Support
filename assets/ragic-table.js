@@ -11,8 +11,7 @@ const LOG_FIELD_LAYOUT_BY_LABEL = {
 const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').includes('日誌');
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
-const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null, deepLinkOpened: false };
-window.RAGIC_STATE = RAGIC_STATE;
+const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
 
 const FIELD_TYPE_GROUPS = [
   { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
@@ -103,7 +102,7 @@ const normalizeFormLayoutOverride = (override = {}) => {
 
 const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
   const source = formLayout && typeof formLayout === 'object' ? formLayout : {};
-  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 10, fallback: 5 });
+  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
   const rows = normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
   const explicitSourceFields = source.fields && typeof source.fields === 'object' ? source.fields : {};
   // 舊版表單把座標存在欄位本身；設計器第一次開啟時自動轉成 formLayout.fields。
@@ -473,25 +472,10 @@ const defaultConfigFields = (config = {}) => [
 
 const mergeLogConfigFields = (schema = {}, config = {}) => {
   if (!isLogModule(config) && !config.enforceConfigFields) return schema;
-  const configuredFields = defaultConfigFields(config);
-  const savedFields = Array.isArray(schema.fields) ? schema.fields : [];
-  const savedByKey = new Map(savedFields.map((field) => [field.key, field]));
-  const configuredKeys = new Set(configuredFields.map((field) => field.key));
-  const mergedFields = configuredFields.map((field) => {
-    const saved = savedByKey.get(field.key);
-    if (!saved) return field;
-    return { ...field, ...saved, key: field.key, required: Boolean(field.required || saved.required) };
-  });
-  savedFields.forEach((field) => {
-    if (!configuredKeys.has(field.key)) mergedFields.push(field);
-  });
-  const savedLayout = schema.formLayout && typeof schema.formLayout === 'object' && Object.keys(schema.formLayout.fields || {}).length
-    ? schema.formLayout
-    : null;
   return {
     ...schema,
-    fields: mergedFields,
-    formLayout: savedLayout || config.formLayout
+    fields: defaultConfigFields(config),
+    formLayout: config.formLayout
   };
 };
 
@@ -574,7 +558,6 @@ const createControl = (field, value = '', subfield = false) => {
     input = document.createElement('input');
     input.type = field.type === 'datetime' ? 'datetime-local' : (field.type === 'link' ? 'url' : (field.type === 'image' || field.type === 'file' ? 'file' : (field.type || 'text')));
     if (field.type === 'image') { input.accept = 'image/*'; input.multiple = true; }
-    if (field.type === 'file' && isLogModule()) input.multiple = true;
   }
   input.name = subfield ? '' : field.key;
   input.required = field.type === 'image' || field.type === 'file' || readonlyFieldTypes.has(field.type) ? false : Boolean(field.required);
@@ -594,19 +577,7 @@ const inlineValue = (value, field) => {
   return String(value ?? '');
 };
 const autoGrowTextarea = (textarea) => {
-  if (!textarea) return;
-  textarea.style.height = 'auto';
-  const height = Math.min(420, Math.max(132, textarea.scrollHeight));
-  textarea.style.height = `${height}px`;
-  textarea.style.maxHeight = '420px';
-  textarea.style.overflowY = textarea.scrollHeight > 420 ? 'auto' : 'hidden';
-};
-const bindAutoGrowTextarea = (textarea) => {
-  if (!textarea || textarea.dataset.autoGrowBound === 'true') return;
-  textarea.dataset.autoGrowBound = 'true';
-  textarea.classList.add('log-auto-grow-textarea');
-  textarea.addEventListener('input', () => autoGrowTextarea(textarea));
-  requestAnimationFrame(() => autoGrowTextarea(textarea));
+  textarea.style.height = '';
 };
 const createInlineEditor = (field, value) => {
   const currentValue = inlineValue(value, field);
@@ -702,7 +673,6 @@ const createField = (field, value = '') => {
   applyFormLayout(wrap, field);
   const control = createControl(field, value);
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
-  if (isLogModule() && field.key === 'issue' && field.type === 'textarea') bindAutoGrowTextarea(control);
   return wrap;
 };
 
@@ -778,27 +748,6 @@ const createRemoveButton = (fieldKey, title = '刪除圖片', container = null, 
 
 const showFilePreview = (payload, container) => {
   if (!container || !payload) return;
-  if (isLogModule()) {
-    const files = (Array.isArray(payload) ? payload : [payload]).filter(Boolean).map((file) => typeof file === 'string' ? { name: '檔案', size: 0, data: file } : file);
-    const input = container.querySelector('input[type="file"]');
-    const fieldKey = container.dataset.field || input?.name || '';
-    if (input) input.dataset.fileValue = JSON.stringify(files);
-    delete container.dataset.fileCleared;
-    container.querySelector('.log-file-compact-list')?.remove();
-    container.querySelectorAll('.log-file-compact-row').forEach((row) => row.remove());
-    if (!files.length) return;
-    const list = document.createElement('div'); list.className = 'log-file-compact-list';
-    files.forEach((file, index) => {
-      const src = file.data || ''; const isImage = String(src).startsWith('data:image') || String(file.type || '').startsWith('image/');
-      const row = document.createElement('div'); row.className = 'ragic-file-preview image-preview-item log-file-compact-row';
-      row.innerHTML = `<span class="log-file-compact-name" title="${escapeHtml(file.name || '檔案')}">📎 ${escapeHtml(file.name || '檔案')}</span><small>${escapeHtml(formatFileSize(file.size))}</small><button class="secondary log-file-preview-button" type="button">預覽</button><a class="secondary log-file-download-button" href="${escapeHtml(src)}" download="${escapeHtml(file.name || 'download')}">下載</a>`;
-      row.querySelector('.log-file-preview-button').addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); if (isImage) openImagePreview(src, file.name || '圖片'); else window.open(src, '_blank', 'noopener'); });
-      row.appendChild(createRemoveButton(fieldKey, '刪除檔案', container, () => { const next = [...files]; next.splice(index, 1); showFilePreview(next, container); if (!next.length) container.dataset.fileCleared = 'true'; }));
-      list.appendChild(row);
-    });
-    container.appendChild(list);
-    return;
-  }
   const file = typeof payload === 'string' ? { name: '檔案', size: 0, data: payload } : payload;
   const input = container.querySelector('input[type="file"]');
   const fieldKey = container.dataset.field || input?.name || '';
@@ -874,17 +823,10 @@ const showImagePreview = (base64List, container, label = container?.dataset.file
   delete container.dataset.fileCleared;
   container.querySelector('.ragic-file-preview')?.remove();
   container.querySelector('.image-preview-list')?.remove();
-  container.querySelector('.log-image-preview-toolbar')?.remove();
   container.querySelectorAll('.image-preview-item').forEach((item) => item.remove());
   if (!images.length) return;
-  if (isLogModule()) {
-    const toolbar = document.createElement('div');
-    toolbar.className = 'log-image-preview-toolbar';
-    toolbar.innerHTML = `<strong>共 ${images.length} 張圖片</strong><button class="secondary log-image-toggle" type="button">展開全部</button>`;
-    container.appendChild(toolbar);
-  }
   const list = document.createElement('div');
-  list.className = `image-preview-list${isLogModule() ? ' log-image-preview-list is-collapsed' : ''}`;
+  list.className = 'image-preview-list';
   images.forEach((base64, index) => {
     const preview = document.createElement('div');
     preview.className = 'image-preview-item image-upload-preview';
@@ -903,13 +845,6 @@ const showImagePreview = (base64List, container, label = container?.dataset.file
     list.appendChild(preview);
   });
   container.appendChild(list);
-  if (isLogModule()) {
-    container.querySelector('.log-image-toggle')?.addEventListener('click', (event) => {
-      event.preventDefault(); event.stopPropagation();
-      const collapsed = list.classList.toggle('is-collapsed');
-      event.currentTarget.textContent = collapsed ? '展開全部' : '收合';
-    });
-  }
 };
 
 const getImageInputValues = (input) => {
@@ -934,11 +869,7 @@ const processImageFiles = async (files, container) => {
 };
 
 const processGenericFile = async (file, container) => {
-  const input = container?.querySelector('input[type="file"]');
-  const current = isLogModule() ? (Array.isArray(getFileInputValue(input)) ? getFileInputValue(input) : (getFileInputValue(input) ? [getFileInputValue(input)] : [])) : [];
-  const next = await fileToBase64Payload(file);
-  showFilePreview(isLogModule() ? [...current, next] : next, container);
-  if (input) input.value = '';
+  showFilePreview(await fileToBase64Payload(file), container);
 };
 
 const handleImagePaste = async (event, imageArea) => {
@@ -952,7 +883,7 @@ const handleImagePaste = async (event, imageArea) => {
     const file = item.getAsFile();
     if (imageArea.dataset.fileType === 'file') {
       await processGenericFile(file, imageArea);
-      if (!isLogModule()) break;
+      break;
     }
     if (file) files.push(file);
   }
@@ -1011,7 +942,7 @@ const getFormData = async () => {
       allImages.push(...images);
     } else if (field.type === 'file') {
       const container = input.closest('.image-upload-area');
-      data[field.key] = container?.dataset.fileCleared === 'true' ? (isLogModule() ? [] : '') : (input.files?.[0] && !isLogModule() ? await fileToBase64Payload(input.files[0]) : getFileInputValue(input));
+      data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (getFileInputValue(input)));
     }
     else if (field.type === 'checkbox' || field.type === 'boolean') data[field.key] = input.checked;
     else data[field.key] = input.value.trim();
@@ -1040,10 +971,7 @@ const attachImageUploadArea = (imageArea) => {
   const input = imageArea.querySelector('input[type="file"]');
   input?.addEventListener('change', async () => {
     if (!input.files?.[0]) return;
-    try {
-      if (imageArea.dataset.fileType === 'file') { for (const file of input.files) await processGenericFile(file, imageArea); }
-      else await processImageFiles(input.files, imageArea);
-    }
+    try { imageArea.dataset.fileType === 'file' ? await processGenericFile(input.files[0], imageArea) : await processImageFiles(input.files, imageArea); }
     catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
   });
   imageArea.addEventListener('paste', (event) => handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。')));
@@ -1128,7 +1056,6 @@ const renderViewForm = (form, record = {}) => {
   }).forEach((field) => {
     const item = document.createElement('div');
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}`;
-    item.dataset.fieldKey = field.key;
     applyFormLayout(item, field);
     item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${renderDisplayValue(field, record[field.key])}</div>`;
     appendFormResizeHandles(item, field);
@@ -1172,10 +1099,8 @@ const renderFormToolbar = () => {
     actions.insertAdjacentHTML('beforeend', '<button class="edit-btn" id="ragicEditRecord" type="button">✏️編輯</button>');
   }
   if (!RAGIC_STATE.currentId || RAGIC_STATE.formMode === 'edit') {
-    actions.insertAdjacentHTML('beforeend', RAGIC_STATE.currentId
-      ? '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>'
-      : '<button class="btn-secondary" id="ragicCloseForm" type="button">取消</button>');
     actions.insertAdjacentHTML('beforeend', '<button class="save-btn" form="ragicForm" type="submit">儲存</button>');
+    if (RAGIC_STATE.currentId) actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>');
     } else if (RAGIC_STATE.currentId) {
     actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCloseForm" type="button">取消</button>');
   }
@@ -1184,7 +1109,7 @@ const renderFormToolbar = () => {
     deleteButton.className = 'btn-delete';
     deleteButton.type = 'button';
     deleteButton.textContent = '刪除';
-    actions.prepend(deleteButton);
+    actions.appendChild(deleteButton);
   }
   const index = currentFilteredIndex();
   const prev = legacyToolbar.querySelector('#ragicPrevRecord');
@@ -1217,7 +1142,6 @@ const renderSubtableRow = (field, item = {}) => {
     fieldWrap.innerHTML = `<span>${escapeHtml(sub.label || sub.key)}${sub.required ? ' *' : ''}</span>`;
     const control = createControl(sub, item[sub.key], true);
     fieldWrap.appendChild(sub.type === 'image' || sub.type === 'file' ? createFileUploadArea(sub, control, item[sub.key], { subfield: true }) : control);
-    if (isLogModule() && sub.type === 'textarea') bindAutoGrowTextarea(control);
     fieldsGrid.appendChild(fieldWrap);
   });
   
@@ -1326,7 +1250,6 @@ const renderCell = (record, field) => {
   const key = field.key;
   const value = record[key];
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
-  if (field?.type === 'checkbox' || field?.type === 'boolean') return value ? '是' : '否';
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
@@ -1335,10 +1258,31 @@ const renderCell = (record, field) => {
   if (field?.type === 'textarea' && text.length > 50) return `${escapeHtml(text.slice(0, 50))}...`;
   return escapeHtml(text);
 };
-const openImagePreview = (src, label = '圖片') => {
+const IMAGE_PREVIEW_STATE = { sources: [], index: 0, label: '圖片' };
+const renderImagePreview = () => {
   const modal = document.querySelector('#ragicImageModal');
-  modal.querySelector('h2').textContent = label;
-  modal.querySelector('img').src = src;
+  if (!modal || !IMAGE_PREVIEW_STATE.sources.length) return;
+  const total = IMAGE_PREVIEW_STATE.sources.length;
+  const index = Math.min(Math.max(0, IMAGE_PREVIEW_STATE.index), total - 1);
+  IMAGE_PREVIEW_STATE.index = index;
+  modal.querySelector('h2').textContent = IMAGE_PREVIEW_STATE.label;
+  modal.querySelector('img').src = IMAGE_PREVIEW_STATE.sources[index];
+  const counter = modal.querySelector('#ragicImageCounter');
+  if (counter) counter.textContent = `${index + 1} / ${total}`;
+  modal.querySelectorAll('[data-image-step]').forEach((button) => { button.disabled = total < 2; });
+};
+const stepImagePreview = (step) => {
+  const total = IMAGE_PREVIEW_STATE.sources.length;
+  if (total < 2) return;
+  IMAGE_PREVIEW_STATE.index = (IMAGE_PREVIEW_STATE.index + step + total) % total;
+  renderImagePreview();
+};
+const openImagePreview = (src, label = '圖片', sources = [src], selectedIndex = 0) => {
+  const modal = document.querySelector('#ragicImageModal');
+  IMAGE_PREVIEW_STATE.sources = (Array.isArray(sources) ? sources : [src]).filter(Boolean);
+  IMAGE_PREVIEW_STATE.index = Math.max(0, selectedIndex);
+  IMAGE_PREVIEW_STATE.label = label;
+  renderImagePreview();
   modal.hidden = false;
 };
 const closeImagePreview = () => {
@@ -1346,6 +1290,8 @@ const closeImagePreview = () => {
   if (!modal) return;
   modal.hidden = true;
   modal.querySelector('img').removeAttribute('src');
+  IMAGE_PREVIEW_STATE.sources = [];
+  IMAGE_PREVIEW_STATE.index = 0;
 };
 const ragicPageSizeKey = () => `ragicPageSize:${RAGIC_STATE.config?.collection || 'default'}`;
 const getTotalPages = () => Math.max(1, Math.ceil(RAGIC_STATE.filtered.length / RAGIC_STATE.pageSize));
@@ -2302,7 +2248,6 @@ const setupRagicFormActions = () => {
   }
 };
 const initRagicPage = async (config) => {
-  window.renderRagicRecord = (record, options = { mode: 'view' }) => renderForm(record, options);
   await waitForPermissions();
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; document.body?.classList.toggle('is-log-module', isLogModule(RAGIC_STATE.config)); RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
   window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
@@ -2344,12 +2289,14 @@ const initRagicPage = async (config) => {
   document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><div class="designer-header-actions"><button class="primary" id="saveSchemaButton" type="button">儲存</button><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div></div><div class="designer-body" hidden></div><div id="layoutDesignerPanel"></div></div></div>');
   }
   if (!document.querySelector('#ragicImageModal')) {
-    document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><img alt="放大圖片預覽"></div></div>');
+    document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><div class="ragic-image-counter" id="ragicImageCounter">1 / 1</div><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><div class="ragic-image-stage"><button class="ragic-image-nav ragic-image-prev" data-image-step="-1" type="button" aria-label="上一張">‹</button><img alt="放大圖片預覽"><button class="ragic-image-nav ragic-image-next" data-image-step="1" type="button" aria-label="下一張">›</button></div></div></div>');
   }
   document.querySelector('#designTableButton')?.addEventListener('click', openDesigner);
   document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);
   document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
+  document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { const button = event.target.closest('[data-image-step]'); if (button) stepImagePreview(Number(button.dataset.imageStep)); });
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
+  document.addEventListener('keydown', (event) => { if (document.querySelector('#ragicImageModal:not([hidden])')) { if (event.key === 'ArrowLeft') stepImagePreview(-1); if (event.key === 'ArrowRight') stepImagePreview(1); if (event.key === 'Escape') closeImagePreview(); } });
   document.querySelector('.designer-body')?.addEventListener('input', (event) => {
     updateDesignerPreview();
     renderLayoutDesigner();
@@ -2415,7 +2362,10 @@ const initRagicPage = async (config) => {
     const viewImage = event.target.closest('.ragic-view-image, .ragic-view-field .field-value img, .form-view-mode .field-value img');
     if (viewImage && event.currentTarget.contains(viewImage)) {
       event.preventDefault();
-      openImagePreview(viewImage.currentSrc || viewImage.src, viewImage.alt || '圖片');
+      const gallery = viewImage.closest('.ragic-view-images');
+      const images = gallery ? [...gallery.querySelectorAll('.ragic-view-image')] : [viewImage];
+      const sources = images.map((image) => image.currentSrc || image.src).filter(Boolean);
+      openImagePreview(viewImage.currentSrc || viewImage.src, viewImage.alt || '圖片', sources, Math.max(0, images.indexOf(viewImage)));
     }
   });
   document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？\n資料將不再存在🚫')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
@@ -2485,13 +2435,5 @@ const initRagicPage = async (config) => {
     applyRagicPermissionUi();
     applyFilters();
   });
-  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-    RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    applyRagicPermissionUi(); applyFilters();
-    if (!RAGIC_STATE.deepLinkOpened) {
-      const recordId = new URLSearchParams(window.location.search).get('record');
-      const linkedRecord = recordId ? RAGIC_STATE.records.find((record) => record.id === recordId) : null;
-      if (linkedRecord) { RAGIC_STATE.deepLinkOpened = true; renderForm(linkedRecord, { mode: 'view' }); }
-    }
-  });
+  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyRagicPermissionUi(); applyFilters(); });
 };
