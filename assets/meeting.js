@@ -196,17 +196,41 @@ const setFormEditable = () => {
   document.querySelector('#newRecordButton').hidden = !editable;
 };
 
+const meetingStatusInfo = (record = {}) => {
+  const manualStatus = String(record.status || '');
+  const manual = {
+    completed: { key: 'completed', label: '已完成', icon: '✅' },
+    postponed: { key: 'postponed', label: '延期', icon: '⏸️' },
+    cancelled: { key: 'cancelled', label: '取消', icon: '❌' }
+  };
+  if (manual[manualStatus]) return manual[manualStatus];
+  const dateText = String(record.date || '');
+  const timeText = String(record.time || '00:00');
+  const meetingAt = new Date(`${dateText}T${timeText || '00:00'}`);
+  if (!dateText || Number.isNaN(meetingAt.getTime())) return { key: 'scheduled', label: '待召開', icon: '🗓️' };
+  const now = new Date();
+  if (!manualStatus && meetingAt < new Date(now.getFullYear(), now.getMonth(), now.getDate())) return manual.completed;
+  const minutesUntil = (meetingAt.getTime() - now.getTime()) / 60000;
+  if (minutesUntil > 30) return { key: 'scheduled', label: '待召開', icon: '🗓️' };
+  if (minutesUntil > 0) return { key: 'soon', label: '即將開始', icon: '🔔' };
+  return { key: 'active', label: '進行中', icon: '🟢' };
+};
+
 const renderList = () => {
   const body = document.querySelector('#meetingTableBody');
-  body.innerHTML = meetingState.records.map((record) => `
-    <tr data-id="${escapeHtml(record.id)}" tabindex="0">
+  body.innerHTML = meetingState.records.map((record) => {
+    const status = meetingStatusInfo(record);
+    return `
+    <tr class="meeting-status-row meeting-status-${status.key}" data-id="${escapeHtml(record.id)}" tabindex="0">
+      <td><span class="meeting-status-badge meeting-status-badge-${status.key}">${status.icon} ${status.label}</span></td>
       <td>${escapeHtml(record.date || '')}</td>
       <td>${escapeHtml(record.time || '')}</td>
       <td>${escapeHtml(record.chair || '')}</td>
       <td>${escapeHtml(record.recorder || '')}</td>
       <td>${escapeHtml(record.serial || record.number || '')}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 };
 
 const showList = () => {
@@ -443,6 +467,7 @@ const showForm = (record = {}) => {
   populateLocationSelect();
   document.querySelector('#meetingLocation').value = MEETING_LOCATIONS.includes(record.location) ? record.location : MEETING_LOCATIONS[0];
   document.querySelector('#meetingSerial').value = record.serial || record.number || getNextSerial();
+  document.querySelector('#meetingStatus').value = record.status || (meetingStatusInfo(record).key === 'completed' ? 'completed' : 'auto');
   document.querySelector('#meetingNote').value = record.note || '';
   populateStaffSelects();
   setSelectValue(document.querySelector('#meetingChair'), record.chair || '');
@@ -585,6 +610,7 @@ const readForm = async () => {
   time: document.querySelector('#meetingTime').value,
   location: document.querySelector('#meetingLocation').value.trim(),
   serial: document.querySelector('#meetingSerial').value.trim() || getNextSerial(),
+  status: document.querySelector('#meetingStatus').value || 'auto',
   chair: document.querySelector('#meetingChair').value,
   recorder: document.querySelector('#meetingRecorder').value,
   morningAttendees: [...document.querySelector('#meetingMorningAttendees').selectedOptions].map((option) => option.value),
