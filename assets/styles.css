@@ -3735,6 +3735,28 @@ body {
 .reminder-alarm-actions { display: flex; justify-content: center; gap: 12px; }
 @keyframes reminderPulse { from { transform: scale(1); } to { transform: scale(1.025); } }
 
+.ragic-actions[hidden] { display: none !important; }
+.is-log-module #ragicForm .ragic-field-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.is-log-module #ragicForm .ragic-field-checkbox > input[type="checkbox"] {
+  order: -1;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+.is-log-module #ragicForm .ragic-field-checkbox > span {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
 /* 日誌檢視模式使用縮圖，避免圖片把問題描述與備註推離畫面。 */
 .is-log-module .ragic-view-grid .ragic-view-field-image .ragic-view-value {
   max-height: 104px;
