@@ -3533,6 +3533,11 @@ body {
 
 /* 設計表格：強制隱藏舊版欄位清單，避免覆蓋新版排版工作台 */
 #ragicDesignerModal .designer-body[hidden] { display: none !important; }
+#ragicDesignerModal .designer-header-actions { display: flex; align-items: center; gap: 10px; }
+#ragicDesignerModal .layout-field,
+#ragicDesignerModal .layout-field-chip { touch-action: none; user-select: none; }
+#ragicDesignerModal .layout-field.is-dragging,
+#ragicDesignerModal .layout-field-chip.is-dragging { cursor: grabbing; opacity: .55; }
 
 /* 設計表格：
    移除即時預覽後，放大左側工作區與右側設定欄，
