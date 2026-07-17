@@ -527,7 +527,7 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
 
 const createControl = (field, value = '', subfield = false) => {
   if (field.type === 'multiselect') return createMultiSelectControl(field, value, subfield);
-  if (field.type === 'checkbox' || field.type === 'boolean') { const input = document.createElement('input'); input.type = 'checkbox'; input.name = subfield ? '' : field.key; if (subfield) input.dataset.subfield = field.key; input.checked = value === true || value === 'true' || value === '1'; return input; }
+  if (field.type === 'checkbox' || field.type === 'boolean') { const input = document.createElement('input'); input.type = 'checkbox'; input.name = subfield ? '' : field.key; if (subfield) input.dataset.subfield = field.key; input.checked = value === true || value === 'true' || value === '1' || ((value === '' || value == null) && field.defaultValue === true); return input; }
   let input;
   if (field.type === 'textarea') { input = document.createElement('textarea'); input.rows = field.rows || 4; }
   else if (field.type === 'select') {
