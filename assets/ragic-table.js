@@ -2229,6 +2229,8 @@ const initRagicPage = async (config) => {
     button.id = 'designTableButton';
     button.type = 'button';
     button.textContent = '⚙️ 設計表格';
+    button.hidden = false;
+    button.disabled = false;
     if (!button.parentElement) topbarActions.insertBefore(button, userPill || null);
   } else {
     designButton?.remove();
@@ -2335,7 +2337,7 @@ const initRagicPage = async (config) => {
       } else {
         const docRef = collection.doc();
         savedId = docRef.id;
-        await docRef.set({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+        await docRef.set({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
       }
       await syncLinkedHandoverFields({ data, logId: savedId });                   
       document.querySelector('#backToListButton').click();
@@ -2366,7 +2368,7 @@ const initRagicPage = async (config) => {
   });
   document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (button) { event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); return; } });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
-  if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); return; }
+  if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); applyRagicPermissionUi(); return; }
   schemaDoc.onSnapshot(async (doc) => {
     if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true });
     const loadedSchema = doc.exists ? applyFormLayoutOverrides(mergeLogConfigFields(doc.data(), config), config) : makeDefaultSchema(config);
