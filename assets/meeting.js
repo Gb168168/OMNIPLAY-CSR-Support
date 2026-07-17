@@ -23,7 +23,7 @@ const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
 const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
 const MAX_IMAGE_BYTES = 900 * 1024;
-const MAX_MEETING_FILE_BYTES = 2 * 1024 * 1024 * 1024;
+const MAX_MEETING_FILE_BYTES = 3 * 1024 * 1024 * 1024;
 
 if (!window._multiSelectClickBound) {
   document.addEventListener('click', () => {
@@ -307,7 +307,7 @@ const downloadMeetingFile = async (file) => {
 
 const addMeetingFiles = async (files) => {
   for (const file of files) {
-    if (file.size > MAX_MEETING_FILE_BYTES) throw new Error(`${file.name} 超過 2GB，請選擇較小的檔案`);
+    if (file.size > MAX_MEETING_FILE_BYTES) throw new Error(`${file.name} 超過 3GB，請選擇較小的檔案`);
     meetingState.files.push({
       name: file.name,
       type: file.type || 'application/octet-stream',
@@ -322,13 +322,15 @@ const addMeetingFiles = async (files) => {
 
 const safeStorageName = (name) => String(name || 'file').replace(/[\\/#?%*:|"<>]/g, '_');
 
-const uploadMeetingFiles = async () => {
+const uploadMeetingFiles = async (onProgress = () => {}) => {
   const pendingFiles = meetingState.files.filter((file) => file.file || file.pending);
   if (!pendingFiles.length) return meetingState.files;
   if (!meetingStorage) throw new Error('Firebase Storage 尚未完成初始化，無法上傳影片或檔案。');
   const serial = document.querySelector('#meetingSerial')?.value?.trim() || getNextSerial();
   const recordKey = meetingState.currentId || serial || `new-${Date.now()}`;
   const uploadedFiles = [];
+  const totalBytes = pendingFiles.reduce((sum, item) => sum + Number(item.file?.size || item.size || 0), 0);
+  let completedBytes = 0;
   for (const fileItem of meetingState.files) {
     if (!fileItem.file && !fileItem.pending) {
       uploadedFiles.push(fileItem);
@@ -337,8 +339,16 @@ const uploadMeetingFiles = async () => {
     const file = fileItem.file;
     const path = `meeting-files/${recordKey}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeStorageName(file.name)}`;
     const ref = meetingStorage.ref(path);
-    const snapshot = await ref.put(file, { contentType: file.type || 'application/octet-stream' });
+    const uploadTask = ref.put(file, { contentType: file.type || 'application/octet-stream' });
+    const snapshot = await new Promise((resolve, reject) => {
+      uploadTask.on('state_changed', (progress) => {
+        const transferred = completedBytes + progress.bytesTransferred;
+        const percent = totalBytes ? Math.min(100, Math.round((transferred / totalBytes) * 100)) : 100;
+        onProgress({ percent, fileName: file.name, transferred, totalBytes });
+      }, reject, () => resolve(uploadTask.snapshot));
+    });
     const url = await snapshot.ref.getDownloadURL();
+    completedBytes += file.size;
     uploadedFiles.push({
       name: file.name,
       type: file.type || 'application/octet-stream',
@@ -541,7 +551,7 @@ const readForm = async () => {
   morningAttendees: [...document.querySelector('#meetingMorningAttendees').selectedOptions].map((option) => option.value),
   eveningAttendees: [...document.querySelector('#meetingEveningAttendees').selectedOptions].map((option) => option.value),
   note: document.querySelector('#meetingNote').value.trim(),
-  files: await uploadMeetingFiles(),
+  files: meetingState.files.filter((file) => !file.file && !file.pending),
   tabs,
   techRows: tabs[0]?.rows || [],
   csRows: tabs[1]?.rows || []
@@ -773,18 +783,35 @@ document.querySelector('#meetingForm')?.addEventListener('submit', async (event)
   const originalText = saveButton.textContent;
   saveButton.disabled = true;
   saveButton.textContent = '儲存中...';
+  let meetingSaved = false;
   try {
     const data = await readForm();
     data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-    if (meetingState.currentId) await meetingCollection.doc(meetingState.currentId).set(data, { merge: true });
-    else await meetingCollection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    let recordRef;
+    if (meetingState.currentId) {
+      recordRef = meetingCollection.doc(meetingState.currentId);
+      await recordRef.set(data, { merge: true });
+    } else {
+      recordRef = await meetingCollection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      meetingState.currentId = recordRef.id;
+    }
+    meetingSaved = true;
+    const hasPendingFiles = meetingState.files.some((file) => file.file || file.pending);
+    if (hasPendingFiles) {
+      const uploadedFiles = await uploadMeetingFiles(({ percent, fileName }) => {
+        saveButton.textContent = `上傳 ${percent}%`;
+        saveButton.title = `正在上傳：${fileName}`;
+      });
+      await recordRef.set({ files: uploadedFiles, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }
     showList();
   } catch (error) {
     console.error(error);
-    alert(error.message || '儲存失敗，請稍後再試。');
+    alert(meetingSaved ? `會議內容已儲存，但附件上傳失敗：${error.message || '請稍後再試。'}` : (error.message || '儲存失敗，請稍後再試。'));
   } finally {
     saveButton.disabled = false;
     saveButton.textContent = originalText;
+    saveButton.removeAttribute('title');
   }
 });
 document.querySelector('#deleteMeetingButton')?.addEventListener('click', async () => {
