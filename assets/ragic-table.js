@@ -11,7 +11,8 @@ const LOG_FIELD_LAYOUT_BY_LABEL = {
 const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').includes('日誌');
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
-const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
+const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null, deepLinkOpened: false };
+window.RAGIC_STATE = RAGIC_STATE;
 
 const FIELD_TYPE_GROUPS = [
   { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
@@ -1295,6 +1296,7 @@ const renderCell = (record, field) => {
   const key = field.key;
   const value = record[key];
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
+  if (field?.type === 'checkbox' || field?.type === 'boolean') return value ? '是' : '否';
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
@@ -2452,5 +2454,13 @@ const initRagicPage = async (config) => {
     applyRagicPermissionUi();
     applyFilters();
   });
-  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyRagicPermissionUi(); applyFilters(); });
+  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+    RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    applyRagicPermissionUi(); applyFilters();
+    if (!RAGIC_STATE.deepLinkOpened) {
+      const recordId = new URLSearchParams(window.location.search).get('record');
+      const linkedRecord = recordId ? RAGIC_STATE.records.find((record) => record.id === recordId) : null;
+      if (linkedRecord) { RAGIC_STATE.deepLinkOpened = true; renderForm(linkedRecord, { mode: 'view' }); }
+    }
+  });
 };
