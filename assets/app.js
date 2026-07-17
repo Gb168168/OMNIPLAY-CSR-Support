@@ -1,5 +1,5 @@
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/OMNIPLAY-CSR-Support/sw.js');
+  navigator.serviceWorker.register('/OMNIPLAY-CSR-Support/sw.js?v=20260718-2', { updateViaCache: 'none' });
 }
 
 const sidebar = document.querySelector('#sidebar');
