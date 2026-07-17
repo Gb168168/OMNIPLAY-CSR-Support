@@ -209,7 +209,7 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js?v=20260718-2"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260718-9"></script>
+  <script src="../assets/ragic-table.js?v=20260718-10"></script>
   <script src="../assets/reminders.js?v=20260718-1"></script>
   <script>
     initRagicPage({
@@ -285,6 +285,7 @@
         { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 3 },
         { key: 'note', label: '備註', type: 'textarea', rows: 6, formRow: 4, formCol: 4, formColSpan: 4 },
         { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 1, formCol: 7 },
+        { key: 'linked_report_url', label: '提報連結', type: 'link', formRow: 2, formCol: 7 },
         { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 2, formCol: 6 },
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: false, formRow: 1, formCol: 6 },
         { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 6, formRow: 5, formCol: 1, formColSpan: 7, fields: [
@@ -328,9 +329,9 @@
         const reportFields = [
           { key: 'date', label: '日期', type: 'date', value: String(logRecord.date || '').slice(0, 10) },
           { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
-          { key: 'category', label: '部門', type: 'select', value: '', options: ['技術', '商務'] },
+          { key: 'category', label: '部門', type: 'select', value: logRecord.report_department || '', options: ['技術', '商務'], required: true },
           { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
-          { key: 'content', label: '級數', type: 'select', value: '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'] },
+          { key: 'content', label: '級數', type: 'select', value: logRecord.report_level || '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'], required: true },
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
           { key: 'status', label: '狀態（由日誌帶入）', type: 'select', value: logRecord.status || '', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], locked: true },
           { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', value: logRecord.contact || '' },
@@ -358,7 +359,7 @@
           
           formHtml += `
             <div class="linked-report-form-field">
-              <label>${field.label}</label>
+              <label>${field.label}${field.required ? ' *' : ''}</label>
               ${controlHtml}
             </div>
           `;
@@ -374,6 +375,15 @@
         grid.querySelectorAll('[data-field-key]').forEach(field => {
           formData[field.dataset.fieldKey] = field.value;
         });
+        if (!formData.category || !formData.content) {
+          alert('部門與級數為必填欄位');
+          return;
+        }
+        const sourceLogId = window.RAGIC_STATE?.currentId || '';
+        if (!sourceLogId) {
+          alert('請先儲存日誌，再使用連動提報');
+          return;
+        }
         
         // 取得 Firebase collection
         const reportCollection = window.omniplayDb?.collection('report');
@@ -387,9 +397,21 @@
           ...formData,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          sourceLogId: window.RAGIC_STATE?.currentId || '',
+          sourceLogId,
           sourceLogUrl: window.location.href
-        }).then(() => {
+        }).then(async (reportRef) => {
+          const reportUrl = `${window.location.origin}${window.location.pathname.replace(/\/work\/log\.html$/, '/work/report.html')}?record=${encodeURIComponent(reportRef.id)}`;
+          await window.omniplayDb.collection('log').doc(sourceLogId).set({
+            linked_report: true,
+            linked_report_url: reportUrl,
+            report_department: formData.category,
+            report_level: formData.content,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          const linkedCheckbox = document.querySelector('[name="linked_report"]');
+          const linkedUrl = document.querySelector('[name="linked_report_url"]');
+          if (linkedCheckbox) linkedCheckbox.checked = true;
+          if (linkedUrl) linkedUrl.value = reportUrl;
           alert('提報已成功提交！');
           this.closeModal();
         }).catch(error => {
@@ -412,6 +434,11 @@
         linkedReportCheckbox.dataset.listenerBound = 'true';
         linkedReportCheckbox.addEventListener('change', function() {
           if (this.checked) {
+            if (!window.RAGIC_STATE?.currentId) {
+              this.checked = false;
+              alert('請先儲存日誌，再使用連動提報');
+              return;
+            }
             // 取得當前表單的記錄數據
             const formFields = document.querySelectorAll('#ragicForm [name]');
             const currentLogData = {};
