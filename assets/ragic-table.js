@@ -1154,8 +1154,8 @@ const renderFormToolbar = () => {
     actions.insertAdjacentHTML('beforeend', '<button class="edit-btn" id="ragicEditRecord" type="button">✏️編輯</button>');
   }
   if (!RAGIC_STATE.currentId || RAGIC_STATE.formMode === 'edit') {
+    actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>');
     actions.insertAdjacentHTML('beforeend', '<button class="save-btn" form="ragicForm" type="submit">儲存</button>');
-    if (RAGIC_STATE.currentId) actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>');
     } else if (RAGIC_STATE.currentId) {
     actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCloseForm" type="button">取消</button>');
   }
@@ -2410,7 +2410,7 @@ const initRagicPage = async (config) => {
     const prevRecord = event.target.closest('#ragicPrevRecord');
     const nextRecord = event.target.closest('#ragicNextRecord');
     if (editButton) { event.preventDefault(); const record = currentRecord(); if (record && canUse('edit')) renderForm(record, { mode: 'edit' }); }
-    if (cancelEdit) { event.preventDefault(); const record = currentRecord(); if (record) renderForm(record, { mode: 'view' }); }
+    if (cancelEdit) { event.preventDefault(); const record = currentRecord(); if (record) renderForm(record, { mode: 'view' }); else document.querySelector('#backToListButton')?.click(); }
     if (closeForm) { event.preventDefault(); document.querySelector('#backToListButton')?.click(); }
     if (prevRecord) { event.preventDefault(); openRecordAtIndex(currentFilteredIndex() - 1); }
     if (nextRecord) { event.preventDefault(); openRecordAtIndex(currentFilteredIndex() + 1); }
