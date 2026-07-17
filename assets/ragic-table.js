@@ -239,7 +239,13 @@ const fixDuplicateKeys = (fields = []) => {
   return changed;
 };
 const getFields = () => RAGIC_STATE.schema?.fields || [];
-const listFields = () => getFields().filter((field) => field.type !== 'subtable');
+const listFields = () => {
+  const fields = getFields().filter((field) => field.type !== 'subtable');
+  const configuredKeys = RAGIC_STATE.config?.listColumns;
+  if (!Array.isArray(configuredKeys) || !configuredKeys.length) return fields;
+  const fieldsByKey = new Map(fields.map((field) => [field.key, field]));
+  return configuredKeys.map((key) => fieldsByKey.get(key)).filter(Boolean);
+};
 const listColumns = () => listFields().map((field) => field.key);
 const fieldByKey = (key) => getFields().find((field) => field.key === key);
 const optionList = (field) => Array.isArray(field.options) ? field.options : String(field.options || '').split('\n').map((item) => item.trim()).filter(Boolean);
