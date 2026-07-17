@@ -1561,6 +1561,9 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   border-radius: 2px;
   accent-color: var(--primary);
 }
+.is-log-module #ragicFormView > .ragic-actions {
+  display: none !important;
+}
 .subtable-row-field {
   display: grid;
   gap: 6px;
