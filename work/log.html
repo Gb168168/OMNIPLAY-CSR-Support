@@ -214,30 +214,75 @@
       title: '日誌',
       collection: 'workLogs',
       fields: [
-        { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
-        { key: 'shift', label: '班別', type: 'select', options: ['早班', '晚班'], formRow: 1, formCol: 2 },
-        { key: 'staff', label: '人員', type: 'text', formRow: 1, formCol: 3 },
-        { key: 'department', label: '部門', type: 'text', formRow: 1, formCol: 4 },
-        { key: 'customer', label: '客戶', type: 'text', formRow: 1, formCol: 5 },
-        { key: 'category', label: '分類', type: 'text', formRow: 2, formCol: 1 },
-        { key: 'linked_handover', label: '連接交接', type: 'checkbox', formRow: 2, formCol: 2, linkedHandover: true },
-        { key: 'items', label: '日誌明細', type: 'subtable', formRow: 3, formCol: 1, formColSpan: 5, fields: [
-          { key: 'time', label: '時間', type: 'time' },
-          { key: 'content', label: '事項內容', type: 'textarea' },
-          { key: 'note', label: '備註', type: 'textarea' }
+        { key: 'date', label: '日期', type: 'datetime', required: true, defaultNow: true, formRow: 1, formCol: 1 },
+        { key: 'shift', label: '班別', type: 'select', required: true, options: ['早班', '晚班', '大夜班'], formRow: 1, formCol: 2 },
+        { key: 'customer', label: '客戶', type: 'select', required: true, options: [
+          '客服提報',
+          'OKB x OMNIPLAY x CSR Support',
+          'OKB x OP x API Integration Tech Support',
+          'Filbet x OP x 遊戲營運',
+          'Filbet x OP x API Integration Group',
+          'S5 x OP x API by Nextral',
+          'S5.com x OP x API',
+          'Playtime x OMNIPLAY x CSR Support',
+          'Playtime X OMNIPLAY X API',
+          'OMNIPLAY X Digiplus Integration(BP)',
+          'Omniplay X Digiplus 客服(BP)',
+          'DF-OP 菲律宾合规API 介接群',
+          'DF X OMNIPLAY X 客服',
+          'OCMS X OMNIPLAY ( 技術群 ）',
+          'CFO x OP x 技術服務群',
+          '新客戶',
+          'CasinoPlus x OMNIPLAY x Integration Group',
+          'Solaire x OMNIPLAY (OP)x API Group',
+          'Digitalwin x OMNIPLAY x API Group',
+          'Luckyworld x OMNIPLAY x API group',
+          'OKFUN x GSPH x OP x Tech Support',
+          'Juan 365 x Omnipaly x API Group',
+          'IGO-NP x OMNIPLAY x API Group',
+          'Okada x OMNIPLAY x API Group',
+          'NuStar X OMNIPLAY X API',
+          'PW-OKADAPLAY X OP X API',
+          'Pin77 X OMNIPLAY X API',
+          'PWNWR X OMNIPLAY X API',
+          'Hann X OMNIPLAY X API',
+          'YOYO X OMNIPLAY X API',
+          'PWAP X OMNIPLAY X API',
+          'PWBB X OMNIPLAY X API',
+          'VIVO X OMNIPLAY X API',
+          'PWNN X OMNIPLAY X API',
+          'LORA X OMNIPLAY X API',
+          'RWN2 X OMNIPLAY X API',
+          'FBM X OMNIPLAY X API'
+        ], formRow: 1, formCol: 3 },
+        { key: 'status', label: '狀態', type: 'select', required: true, options: ['待處理', '處理中', '已完成', '暫緩'], formRow: 1, formCol: 4 },
+        { key: 'category', label: '分類', type: 'select', required: true, options: ['一般問題', '遊戲異常', '金流問題', '帳號問題', '活動問題', '其他'], formRow: 2, formCol: 1 },
+        { key: 'contact', label: '接洽者', type: 'select', options: ['客服', '技術', '業務／AM', '其他'], formRow: 2, formCol: 2 },
+        { key: 'completed_by', label: '完成者', type: 'select', options: [
+          '佳臻', '晴心', '澄希', '茗雅',
+          '------',
+          '中魁', 'Rondo', '技術／IT', '業務／AM', '行銷／PM',
+          '------',
+          '于慧', '芯瑜', '志忠'
+        ], formRow: 2, formCol: 3 },
+        { key: 'completed_at', label: '完成時間', type: 'datetime', formRow: 2, formCol: 4 },
+        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 1 },
+        { key: 'images', label: '圖片', type: 'image', formRow: 3, formCol: 2 },
+        { key: 'files', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
+        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 3, formCol: 4 },
+        { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 2 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 6, formRow: 4, formCol: 3, formColSpan: 2 },
+        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 6, formRow: 5, formCol: 1, formColSpan: 4, fields: [
+          { key: 'customer_content', label: '客戶', type: 'textarea', rows: 4, width: 240 },
+          { key: 'customer_image', label: '圖片', type: 'image', width: 120 },
+          { key: 'support_content', label: '客服／技術', type: 'textarea', rows: 4, width: 240 },
+          { key: 'support_image', label: '圖片', type: 'image', width: 120 },
+          { key: 'am_content', label: '業務／AM', type: 'textarea', rows: 4, width: 240 },
+          { key: 'am_image', label: '圖片', type: 'image', width: 120 }
         ]}
       ],
-      formLayout: [
-        { label: '日期', formRow: 1, formCol: 1 },
-        { label: '班別', formRow: 1, formCol: 2 },
-        { label: '人員', formRow: 1, formCol: 3 },
-        { label: '部門', formRow: 1, formCol: 4 },
-        { label: '客戶', formRow: 1, formCol: 5 },
-        { label: '分類', formRow: 2, formCol: 1 },
-        { label: '連接交接', formRow: 2, formCol: 2 },
-        { label: '日誌明細', formRow: 3, formCol: 1, formColSpan: 5 }
-      ],
-      listColumns: ['date', 'shift', 'staff', 'category']
+      formLayout: { columns: 4, rows: 5 },
+      listColumns: ['date', 'shift', 'customer', 'status', 'category', 'contact', 'completed_by', 'updated_time']
     });
 
     // 連動提報功能
@@ -266,14 +311,15 @@
         
         // 構建提報表單的字段（對應 report.html 中的字段）
         const reportFields = [
-          { key: 'date', label: '日期', type: 'date', value: logRecord.date || '' },
+          { key: 'date', label: '日期', type: 'date', value: String(logRecord.date || '').slice(0, 10) },
           { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
-          { key: 'category', label: '部門', type: 'text', value: logRecord.department || '' },
+          { key: 'category', label: '部門', type: 'text', value: '' },
           { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
           { key: 'content', label: '級數', type: 'text', value: '' },
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
-          { key: 'status', label: '狀態', type: 'select', value: '', options: ['待處理', '處理中', '已完成', '暫緩'] },
-          { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', value: logRecord.staff || '' },
+          { key: 'status', label: '狀態', type: 'select', value: logRecord.status || '', options: ['待處理', '處理中', '已完成', '暫緩'] },
+          { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', value: logRecord.contact || '' },
+          { key: 'issue', label: '問題描述', type: 'textarea', value: logRecord.issue || '' },
         ];
         
         let formHtml = '';
@@ -288,6 +334,8 @@
               <option value="">請選擇</option>
               ${field.options.map(opt => `<option value="${opt}" ${field.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
             </select>`;
+          } else if (field.type === 'textarea') {
+            controlHtml = `<textarea rows="4" data-field-key="${field.key}">${this.escapeHtml(field.value)}</textarea>`;
           } else {
             controlHtml = `<input type="text" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
           }
@@ -312,7 +360,7 @@
         });
         
         // 取得 Firebase collection
-        const reportCollection = window.omniplayDb?.collection('workReports');
+        const reportCollection = window.omniplayDb?.collection('report');
         if (!reportCollection) {
           alert('Firebase 未初始化，請稍後再試');
           return;
@@ -322,7 +370,9 @@
         reportCollection.add({
           ...formData,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          sourceLogId: window.RAGIC_STATE?.currentId || '',
+          sourceLogUrl: window.location.href
         }).then(() => {
           alert('提報已成功提交！');
           this.closeModal();
