@@ -1,8 +1,23 @@
 (() => {
+  if (window.__csrRemindersLoaded) return;
+  window.__csrRemindersLoaded = true;
+  const textValue = (value) => String(value ?? '').trim() || '—';
+  const dateValue = (value) => {
+    const date = value?.toDate?.() || (value ? new Date(value) : null);
+    if (!date || Number.isNaN(date.getTime())) return textValue(String(value || '').slice(0, 10));
+    return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  };
+  const detailText = (r, type) => {
+    const shift = type === 'report' ? r.reporter : r.shift;
+    const customer = type === 'report' ? r.field_1783792645702_pi66u : r.customer;
+    const department = r.processing_department || r.department || (type === 'report' ? r.category : '');
+    const description = r.issue || r.description || (type === 'report' ? (r.note || r.subject) : r.item) || '';
+    return [`日期：${dateValue(r.date)}`, `班別：${textValue(shift)}`, `客戶：${textValue(customer)}`, `狀態：${textValue(r.status)}`, `編號：${textValue(r.serial)}`, `處理部門：${textValue(department)}`, `描述：${textValue(description)}`].join('\n');
+  };
   const MODULES = {
-    log: { title: '日誌提醒', path: 'work/log.html', text: (r) => r.issue || r.customer || r.serial || '日誌事項' },
+    log: { title: '日誌提醒', path: 'work/log.html', text: (r) => detailText(r, 'log') },
     handover: { title: '交接提醒', path: 'work/handover.html', text: (r) => r.item || r.note || r.serial || '交接事項' },
-    report: { title: '提報提醒', path: 'work/report.html', text: (r) => r.subject || r.note || r.serial || '提報事項' }
+    report: { title: '提報提醒', path: 'work/report.html', text: (r) => detailText(r, 'report') }
   };
   const ROOT = '/OMNIPLAY-CSR-Support/';
   const state = { timers: new Map(), ringing: null, audio: null };
@@ -90,5 +105,7 @@
       if (token) await db.collection('notification_tokens').doc(token).set({ token, module: moduleName(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent }, { merge: true });
     } catch (error) { console.warn('背景推播尚未完成設定', error); }
   };
-  document.addEventListener('DOMContentLoaded', () => { ensureUi(); watch(); if ('Notification' in window && Notification.permission === 'granted') registerPushToken(); });
+  const init = () => { ensureUi(); watch(); if ('Notification' in window && Notification.permission === 'granted') registerPushToken(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+  else init();
 })();
