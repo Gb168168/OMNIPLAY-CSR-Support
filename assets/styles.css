@@ -3736,12 +3736,9 @@ body {
 @keyframes reminderPulse { from { transform: scale(1); } to { transform: scale(1.025); } }
 
 /* 日誌檢視模式使用縮圖，避免圖片把問題描述與備註推離畫面。 */
-.is-log-module .ragic-view-grid .ragic-view-field-image {
-  height: 150px !important;
-  min-height: 150px !important;
-  max-height: 150px !important;
-  overflow: auto !important;
-  align-self: start;
+.is-log-module .ragic-view-grid .ragic-view-field-image .ragic-view-value {
+  max-height: 104px;
+  overflow: hidden;
 }
 .is-log-module .ragic-view-images {
   display: flex;
