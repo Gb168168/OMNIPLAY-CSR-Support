@@ -284,9 +284,9 @@
         { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 4 },
         { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 2 },
         { key: 'note', label: '備註', type: 'textarea', rows: 6, formRow: 4, formCol: 3, formColSpan: 2 },
-        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 5, formCol: 1, formColSpan: 4 },
-        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 7, formCol: 1 },
-        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 7, formCol: 2 },
+        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 5, formCol: 1, formColSpan: 1 },
+        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 },
         { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 6, formRow: 6, formCol: 1, formColSpan: 4, fields: [
           { key: 'customer_content', label: '客戶', type: 'textarea', rows: 4, width: 240 },
           { key: 'customer_image', label: '圖片', type: 'image', width: 120 },
@@ -296,7 +296,7 @@
           { key: 'am_image', label: '圖片', type: 'image', width: 120 }
         ]}
       ],
-      formLayout: { columns: 4, rows: 7 },
+      formLayout: { columns: 4, rows: 6 },
       listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time', 'serial']
     });
 
