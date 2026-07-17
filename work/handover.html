@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>交接｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260718-3" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260718-12" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="../assets/icon-192.png" />
 </head>
-<body>
+<body data-reminder-module="handover">
   <section class="app-shell" aria-label="客服系統主畫面">
     <aside id="sidebar"></aside>
     <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
@@ -55,7 +55,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js?v=20260718-3"></script>
-  <script src="../assets/ragic-table.js?v=20260718-3"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/ragic-table.js?v=20260718-4"></script>
+  <script src="../assets/reminders.js?v=20260718-1"></script>
   <script>
     initRagicPage({
       title: '交接',
@@ -75,7 +77,9 @@
         { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 2 },
         { key: 'attachment', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
         { key: 'image', label: '圖片', type: 'image', formRow: 2, formCol: 4, formRowSpan: 2 },
-        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 5, formCol: 1 }
+        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 5, formCol: 1 },
+        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 }
       ],
       formLayout: [
         { label: '日期', formRow: 1, formCol: 1 },
@@ -93,7 +97,9 @@
         { label: '檔案', formRow: 3, formCol: 3 },
         { label: '交接事項', formRow: 4, formCol: 1, formColSpan: 2 },
         { label: '備註', formRow: 4, formCol: 3, formColSpan: 2 },
-        { label: '更新時間', formRow: 5, formCol: 1 }
+        { label: '更新時間', formRow: 5, formCol: 1 },
+        { label: '提醒時間', formRow: 5, formCol: 2 },
+        { label: '啟用提醒', formRow: 5, formCol: 3 }
       ],
       listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'image', 'attachment', 'updated_time', 'serial']
     });
