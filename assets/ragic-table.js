@@ -473,10 +473,13 @@ const defaultConfigFields = (config = {}) => [
 
 const mergeLogConfigFields = (schema = {}, config = {}) => {
   if (!isLogModule(config) && !config.enforceConfigFields) return schema;
+  const savedLayout = schema.formLayout && typeof schema.formLayout === 'object' && Object.keys(schema.formLayout.fields || {}).length
+    ? schema.formLayout
+    : null;
   return {
     ...schema,
     fields: defaultConfigFields(config),
-    formLayout: config.formLayout
+    formLayout: savedLayout || config.formLayout
   };
 };
 
