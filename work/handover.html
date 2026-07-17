@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>交接｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260718-3" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -54,12 +54,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
-  <script src="../assets/app.js"></script>
-  <script src="../assets/ragic-table.js"></script>
+  <script src="../assets/app.js?v=20260718-3"></script>
+  <script src="../assets/ragic-table.js?v=20260718-3"></script>
   <script>
     initRagicPage({
       title: '交接',
       collection: 'workHandover',
+      enforceConfigFields: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
         { key: 'shift', label: '班別', type: 'select', options: ['早班', '晚班'], formRow: 1, formCol: 2 },
@@ -68,12 +69,13 @@
         { key: 'status', label: '狀態', type: 'select', options: ['已完成', '處理中', '必看⚠️'], formRow: 2, formCol: 2 },
         { key: 'item', label: '交接事項', type: 'textarea', rows: 5, formRow: 4, formCol: 1, formColSpan: 2 },
         { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 3, formColSpan: 2 },
-        { key: 'publisher', label: '建立者', type: 'text', formRow: 2, formCol: 1 },
+        { key: 'publisher', label: '發佈者', type: 'text', formRow: 2, formCol: 1 },
         { key: 'finisher', label: '完成者', type: 'text', formRow: 2, formCol: 3 },
         { key: 'link', label: '連結', type: 'link', formRow: 3, formCol: 1 },
         { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 2 },
         { key: 'attachment', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
-        { key: 'image', label: '圖片', type: 'image', formRow: 2, formCol: 4, formRowSpan: 2 }
+        { key: 'image', label: '圖片', type: 'image', formRow: 2, formCol: 4, formRowSpan: 2 },
+        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 5, formCol: 1 }
       ],
       formLayout: [
         { label: '日期', formRow: 1, formCol: 1 },
@@ -90,9 +92,10 @@
         { label: '編號', formRow: 3, formCol: 2 },
         { label: '檔案', formRow: 3, formCol: 3 },
         { label: '交接事項', formRow: 4, formCol: 1, formColSpan: 2 },
-        { label: '備註', formRow: 4, formCol: 3, formColSpan: 2 }
+        { label: '備註', formRow: 4, formCol: 3, formColSpan: 2 },
+        { label: '更新時間', formRow: 5, formCol: 1 }
       ],
-      listColumns: ['date', 'shift', 'department', 'category', 'status', 'publisher']
+      listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'image', 'attachment', 'updated_time', 'serial']
     });
   </script>
 </body>
