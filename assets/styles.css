@@ -1527,7 +1527,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .is-log-module .log-subtable-six-column {
   grid-template-columns: minmax(220px, 2fr) minmax(110px, 1fr) minmax(220px, 2fr) minmax(110px, 1fr) minmax(220px, 2fr) minmax(110px, 1fr);
 }
-.is-log-module .log-subtable-six-column textarea { min-height: 132px; resize: vertical; }
+.is-log-module .log-subtable-six-column textarea { min-height: 132px; max-height: 420px; resize: none; }
 .is-log-module .log-subtable-six-column .image-upload-area { min-height: 132px; }
 .is-log-module .ragic-view-subtable-wrap { width: 100%; overflow-x: auto; }
 .is-log-module .ragic-view-subtable {
@@ -1546,8 +1546,9 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .is-log-module .ragic-view-subtable td:nth-child(1) .field-value,
 .is-log-module .ragic-view-subtable td:nth-child(3) .field-value,
 .is-log-module .ragic-view-subtable td:nth-child(5) .field-value {
-  height: 132px;
-  max-height: 132px;
+  min-height: 132px;
+  height: auto;
+  max-height: 420px;
   overflow-y: auto;
   padding: 8px;
   white-space: pre-wrap;
@@ -1561,6 +1562,8 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 .is-log-module .ragic-view-subtable .ragic-view-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
 .is-log-module .ragic-view-subtable .ragic-view-image { width: 100%; height: 72px; max-height: 72px; object-fit: cover; border-radius: 8px; }
+.is-log-module .log-auto-grow-textarea { min-height: 132px; max-height: 420px !important; overflow-y: hidden; }
+.is-log-module .ragic-view-field[data-field-key="issue"] .field-value { min-height: 132px; height: auto; max-height: 420px; overflow-y: auto; }
 .is-log-module [name="updated_time"] { background: var(--table-row); cursor: not-allowed; }
 .is-log-module [name="linked_report"] { width: 20px; height: 20px; accent-color: var(--primary); }
 .is-log-module .form-field[data-type="checkbox"] {
