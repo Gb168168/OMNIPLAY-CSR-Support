@@ -558,6 +558,7 @@ const createControl = (field, value = '', subfield = false) => {
     input = document.createElement('input');
     input.type = field.type === 'datetime' ? 'datetime-local' : (field.type === 'link' ? 'url' : (field.type === 'image' || field.type === 'file' ? 'file' : (field.type || 'text')));
     if (field.type === 'image') { input.accept = 'image/*'; input.multiple = true; }
+    if (field.type === 'file' && isLogModule()) input.multiple = true;
   }
   input.name = subfield ? '' : field.key;
   input.required = field.type === 'image' || field.type === 'file' || readonlyFieldTypes.has(field.type) ? false : Boolean(field.required);
@@ -748,6 +749,27 @@ const createRemoveButton = (fieldKey, title = '刪除圖片', container = null, 
 
 const showFilePreview = (payload, container) => {
   if (!container || !payload) return;
+  if (isLogModule()) {
+    const files = (Array.isArray(payload) ? payload : [payload]).filter(Boolean).map((file) => typeof file === 'string' ? { name: '檔案', size: 0, data: file } : file);
+    const input = container.querySelector('input[type="file"]');
+    const fieldKey = container.dataset.field || input?.name || '';
+    if (input) input.dataset.fileValue = JSON.stringify(files);
+    delete container.dataset.fileCleared;
+    container.querySelector('.log-file-compact-list')?.remove();
+    container.querySelectorAll('.log-file-compact-row').forEach((row) => row.remove());
+    if (!files.length) return;
+    const list = document.createElement('div'); list.className = 'log-file-compact-list';
+    files.forEach((file, index) => {
+      const src = file.data || ''; const isImage = String(src).startsWith('data:image') || String(file.type || '').startsWith('image/');
+      const row = document.createElement('div'); row.className = 'ragic-file-preview image-preview-item log-file-compact-row';
+      row.innerHTML = `<span class="log-file-compact-name" title="${escapeHtml(file.name || '檔案')}">📎 ${escapeHtml(file.name || '檔案')}</span><small>${escapeHtml(formatFileSize(file.size))}</small><button class="secondary log-file-preview-button" type="button">預覽</button><a class="secondary log-file-download-button" href="${escapeHtml(src)}" download="${escapeHtml(file.name || 'download')}">下載</a>`;
+      row.querySelector('.log-file-preview-button').addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); if (isImage) openImagePreview(src, file.name || '圖片'); else window.open(src, '_blank', 'noopener'); });
+      row.appendChild(createRemoveButton(fieldKey, '刪除檔案', container, () => { const next = [...files]; next.splice(index, 1); showFilePreview(next, container); if (!next.length) container.dataset.fileCleared = 'true'; }));
+      list.appendChild(row);
+    });
+    container.appendChild(list);
+    return;
+  }
   const file = typeof payload === 'string' ? { name: '檔案', size: 0, data: payload } : payload;
   const input = container.querySelector('input[type="file"]');
   const fieldKey = container.dataset.field || input?.name || '';
@@ -823,10 +845,17 @@ const showImagePreview = (base64List, container, label = container?.dataset.file
   delete container.dataset.fileCleared;
   container.querySelector('.ragic-file-preview')?.remove();
   container.querySelector('.image-preview-list')?.remove();
+  container.querySelector('.log-image-preview-toolbar')?.remove();
   container.querySelectorAll('.image-preview-item').forEach((item) => item.remove());
   if (!images.length) return;
+  if (isLogModule()) {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'log-image-preview-toolbar';
+    toolbar.innerHTML = `<strong>共 ${images.length} 張圖片</strong><button class="secondary log-image-toggle" type="button">展開全部</button>`;
+    container.appendChild(toolbar);
+  }
   const list = document.createElement('div');
-  list.className = 'image-preview-list';
+  list.className = `image-preview-list${isLogModule() ? ' log-image-preview-list is-collapsed' : ''}`;
   images.forEach((base64, index) => {
     const preview = document.createElement('div');
     preview.className = 'image-preview-item image-upload-preview';
@@ -845,6 +874,13 @@ const showImagePreview = (base64List, container, label = container?.dataset.file
     list.appendChild(preview);
   });
   container.appendChild(list);
+  if (isLogModule()) {
+    container.querySelector('.log-image-toggle')?.addEventListener('click', (event) => {
+      event.preventDefault(); event.stopPropagation();
+      const collapsed = list.classList.toggle('is-collapsed');
+      event.currentTarget.textContent = collapsed ? '展開全部' : '收合';
+    });
+  }
 };
 
 const getImageInputValues = (input) => {
@@ -869,7 +905,11 @@ const processImageFiles = async (files, container) => {
 };
 
 const processGenericFile = async (file, container) => {
-  showFilePreview(await fileToBase64Payload(file), container);
+  const input = container?.querySelector('input[type="file"]');
+  const current = isLogModule() ? (Array.isArray(getFileInputValue(input)) ? getFileInputValue(input) : (getFileInputValue(input) ? [getFileInputValue(input)] : [])) : [];
+  const next = await fileToBase64Payload(file);
+  showFilePreview(isLogModule() ? [...current, next] : next, container);
+  if (input) input.value = '';
 };
 
 const handleImagePaste = async (event, imageArea) => {
@@ -883,7 +923,7 @@ const handleImagePaste = async (event, imageArea) => {
     const file = item.getAsFile();
     if (imageArea.dataset.fileType === 'file') {
       await processGenericFile(file, imageArea);
-      break;
+      if (!isLogModule()) break;
     }
     if (file) files.push(file);
   }
@@ -942,7 +982,7 @@ const getFormData = async () => {
       allImages.push(...images);
     } else if (field.type === 'file') {
       const container = input.closest('.image-upload-area');
-      data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (getFileInputValue(input)));
+      data[field.key] = container?.dataset.fileCleared === 'true' ? (isLogModule() ? [] : '') : (input.files?.[0] && !isLogModule() ? await fileToBase64Payload(input.files[0]) : getFileInputValue(input));
     }
     else if (field.type === 'checkbox' || field.type === 'boolean') data[field.key] = input.checked;
     else data[field.key] = input.value.trim();
@@ -971,7 +1011,10 @@ const attachImageUploadArea = (imageArea) => {
   const input = imageArea.querySelector('input[type="file"]');
   input?.addEventListener('change', async () => {
     if (!input.files?.[0]) return;
-    try { imageArea.dataset.fileType === 'file' ? await processGenericFile(input.files[0], imageArea) : await processImageFiles(input.files, imageArea); }
+    try {
+      if (imageArea.dataset.fileType === 'file') { for (const file of input.files) await processGenericFile(file, imageArea); }
+      else await processImageFiles(input.files, imageArea);
+    }
     catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
   });
   imageArea.addEventListener('paste', (event) => handleImagePaste(event, imageArea).catch((error) => alert(error.message || '圖片處理失敗，請稍後再試。')));
