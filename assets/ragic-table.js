@@ -485,10 +485,12 @@ const defaultConfigFields = (config = {}) => [
 
 const mergeLogConfigFields = (schema = {}, config = {}) => {
   if (!isLogModule(config) && !config.enforceConfigFields) return schema;
+  const savedLayout = schema.formLayout && typeof schema.formLayout === 'object' ? schema.formLayout : null;
+  const hasSavedPositions = Boolean(savedLayout?.fields && Object.keys(savedLayout.fields).length);
   return {
     ...schema,
     fields: defaultConfigFields(config),
-    formLayout: config.formLayout
+    formLayout: hasSavedPositions ? savedLayout : config.formLayout
   };
 };
 
