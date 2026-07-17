@@ -951,6 +951,34 @@ const getFormData = async () => {
   return data;
 };
 
+const validateLogCompletionRules = () => {
+  if (!isLogModule()) return true;
+  const control = (key) => document.querySelector(`#ragicForm [name="${key}"]`);
+  const value = (key) => String(control(key)?.value || '').trim();
+  const completedBy = value('completed_by');
+  const completedAt = value('completed_at');
+  const errors = [];
+  let firstInvalid = null;
+  const requireControl = (key, message, valid = Boolean(value(key))) => {
+    if (valid) return;
+    errors.push(message);
+    firstInvalid ||= control(key);
+  };
+  if (completedBy && !completedAt) requireControl('completed_at', '已填寫完成者，完成時間為必填');
+  if (completedAt && !completedBy) requireControl('completed_by', '已填寫完成時間，完成者為必填');
+  if (!completedBy && !completedAt) {
+    requireControl('reminder_enabled', '尚未完成時，必須勾選啟用提醒', Boolean(control('reminder_enabled')?.checked));
+    requireControl('reminder_at', '尚未完成時，提醒時間為必填');
+    requireControl('processing_department', '尚未完成時，處理部門為必填');
+    requireControl('note', '尚未完成時，備註必須填入詢問部門的日期時間');
+  }
+  if (!errors.length) return true;
+  alert(`請完成以下欄位：\n• ${errors.join('\n• ')}`);
+  firstInvalid?.focus();
+  firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return false;
+};
+
 const createFileUploadArea = (field, control, value = '', { subfield = false } = {}) => {
   const fileArea = document.createElement('div');
   fileArea.className = 'image-upload-area';
@@ -2377,6 +2405,7 @@ const initRagicPage = async (config) => {
       return;
     }
     if (!canUse('edit')) return alert('您沒有編輯權限');
+    if (!validateLogCompletionRules()) return;
     const saveButton = document.querySelector('button[form="ragicForm"][type="submit"]');
     const originalText = saveButton?.textContent || '儲存';
     if (saveButton) { saveButton.disabled = true; saveButton.textContent = '儲存中...'; }
