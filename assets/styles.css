@@ -1524,6 +1524,13 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   gap: 8px;
   align-items: start;
 }
+.is-log-module .log-subtable-six-column {
+  grid-template-columns: minmax(220px, 2fr) minmax(110px, 1fr) minmax(220px, 2fr) minmax(110px, 1fr) minmax(220px, 2fr) minmax(110px, 1fr);
+}
+.is-log-module .log-subtable-six-column textarea { min-height: 132px; resize: vertical; }
+.is-log-module .log-subtable-six-column .image-upload-area { min-height: 132px; }
+.is-log-module [name="updated_time"] { background: var(--table-row); cursor: not-allowed; }
+.is-log-module [name="linked_report"] { width: 20px; height: 20px; accent-color: var(--primary); }
 .subtable-row-field {
   display: grid;
   gap: 6px;
