@@ -23,6 +23,7 @@
           <p>客服會議歷程與決議。</p>
         </div>
         <div class="topbar-actions">
+          <button class="secondary" id="designMeetingTableButton" type="button" hidden>⚙️ 設計表格</button>
           <div class="user-pill">● 已連線 Firebase</div>
         </div>
       </header>
@@ -67,6 +68,17 @@
         </div>
       </section>
 
+      <div class="ragic-modal" id="meetingTableDesignModal" hidden>
+        <div class="ragic-modal-card staff-settings-card">
+          <div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeMeetingTableDesignModal" type="button">關閉</button></div>
+          <div class="staff-settings-body">
+            <label for="meetingDefaultTabsInput">預設會議內容分頁（每行一個分頁名稱）</label>
+            <textarea id="meetingDefaultTabsInput" rows="8" placeholder="技術會議&#10;客服會議"></textarea>
+            <button class="primary" id="saveMeetingTableDesignButton" type="button">儲存設計</button>
+          </div>
+        </div>
+      </div>
+      
       <div class="ragic-modal" id="staffSettingsModal" hidden>
         <div class="ragic-modal-card staff-settings-card">
           <div class="ragic-form-toolbar"><h2>人員設定</h2><button class="ghost" id="closeStaffSettingsModal" type="button">關閉</button></div>
