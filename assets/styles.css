@@ -3651,3 +3651,39 @@ body {
 .meeting-list-table tbody tr.meeting-status-soon td { background-color: rgba(255, 237, 213, .34); }
 .meeting-list-table tbody tr.meeting-status-active td { background-color: rgba(209, 250, 229, .34); }
 .meeting-list-table tbody tr.meeting-status-cancelled td { opacity: .72; }
+
+/* 會議編輯頁只使用主內容區捲動，避免內外兩層 overflow 互相鎖住。 */
+.main:has(#meetingFormView:not([hidden])),
+.main-content:has(#meetingFormView:not([hidden])) {
+  display: block;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+#meetingFormView:not([hidden]) {
+  display: block;
+  min-height: auto;
+  overflow: visible;
+}
+
+#meetingFormView > .meeting-form {
+  min-height: auto;
+  overflow: visible;
+}
+
+#meetingFormView > .ragic-form-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
+}
+
+#meetingFormView > .ragic-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--surface);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, .08);
+}
