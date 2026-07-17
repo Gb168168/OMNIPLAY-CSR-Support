@@ -24,6 +24,7 @@ const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
 const MAX_IMAGE_BYTES = 900 * 1024;
 const MAX_MEETING_FILE_BYTES = 3 * 1024 * 1024 * 1024;
+const MEETING_UPLOAD_STALL_MS = 30 * 1000;
 
 if (!window._multiSelectClickBound) {
   document.addEventListener('click', () => {
@@ -235,6 +236,13 @@ const currentRowsByKey = async (key) => readRows(key);
 
 const meetingFileUrl = (file) => file?.url || file?.dataUrl || file?.objectUrl || '';
 const isPreviewableMeetingFile = (file) => String(file?.type || '').startsWith('video/') || String(file?.type || '').startsWith('image/') || String(file?.type || '').includes('pdf');
+const formatMeetingBytes = (bytes = 0) => {
+  const size = Number(bytes) || 0;
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 ** 2) return `${(size / 1024).toFixed(1)} KB`;
+  if (size < 1024 ** 3) return `${(size / 1024 ** 2).toFixed(1)} MB`;
+  return `${(size / 1024 ** 3).toFixed(2)} GB`;
+};
 
 const renderMeetingFiles = () => {
   const list = document.querySelector('#meetingFileList');
@@ -244,7 +252,7 @@ const renderMeetingFiles = () => {
     const isPending = file.pending || file.file;
     const previewButton = href && isPreviewableMeetingFile(file) ? `<button class="secondary meeting-file-action" type="button" data-preview-file="${index}">預覽</button>` : '';
     const downloadButton = href ? `<button class="secondary meeting-file-action" type="button" data-download-file="${index}">下載</button>` : '';
-    return `<div class="meeting-file-item"><span class="meeting-file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>${previewButton}${downloadButton}${isPending ? '<span class="meeting-file-status">待儲存上傳</span>' : ''}<button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`;
+    return `<div class="meeting-file-item"><span class="meeting-file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>${previewButton}${downloadButton}${isPending ? `<span class="meeting-file-status">${escapeHtml(file.uploadStatus || '待儲存上傳')}</span>` : ''}<button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`;
   }).join('');
 };
 
@@ -341,11 +349,42 @@ const uploadMeetingFiles = async (onProgress = () => {}) => {
     const ref = meetingStorage.ref(path);
     const uploadTask = ref.put(file, { contentType: file.type || 'application/octet-stream' });
     const snapshot = await new Promise((resolve, reject) => {
+      const startedAt = Date.now();
+      let lastTransferred = 0;
+      let lastProgressAt = Date.now();
+      let lastRenderedAt = 0;
+      fileItem.uploadStatus = '正在建立上傳連線…';
+      renderMeetingFiles();
+      const stallTimer = setInterval(() => {
+        if (Date.now() - lastProgressAt < MEETING_UPLOAD_STALL_MS) return;
+        clearInterval(stallTimer);
+        reject(new Error(`「${file.name}」30 秒沒有傳輸資料。請檢查 Firebase Storage 是否為 Blaze 方案、儲存權限及網路連線。`));
+        uploadTask.cancel();
+      }, 1000);
       uploadTask.on('state_changed', (progress) => {
+        if (progress.bytesTransferred > lastTransferred) {
+          lastTransferred = progress.bytesTransferred;
+          lastProgressAt = Date.now();
+        }
         const transferred = completedBytes + progress.bytesTransferred;
-        const percent = totalBytes ? Math.min(100, Math.round((transferred / totalBytes) * 100)) : 100;
-        onProgress({ percent, fileName: file.name, transferred, totalBytes });
-      }, reject, () => resolve(uploadTask.snapshot));
+        const percent = totalBytes ? Math.min(100, (transferred / totalBytes) * 100) : 100;
+        const elapsedSeconds = Math.max(1, (Date.now() - startedAt) / 1000);
+        const bytesPerSecond = progress.bytesTransferred / elapsedSeconds;
+        fileItem.uploadStatus = progress.bytesTransferred
+          ? `${formatMeetingBytes(progress.bytesTransferred)} / ${formatMeetingBytes(progress.totalBytes)} · ${formatMeetingBytes(bytesPerSecond)}/s`
+          : '正在建立上傳連線…';
+        if (Date.now() - lastRenderedAt >= 500) {
+          lastRenderedAt = Date.now();
+          renderMeetingFiles();
+        }
+        onProgress({ percent, fileName: file.name, transferred, totalBytes, bytesPerSecond });
+      }, (error) => {
+        clearInterval(stallTimer);
+        reject(error);
+      }, () => {
+        clearInterval(stallTimer);
+        resolve(uploadTask.snapshot);
+      });
     });
     const url = await snapshot.ref.getDownloadURL();
     completedBytes += file.size;
@@ -798,9 +837,9 @@ document.querySelector('#meetingForm')?.addEventListener('submit', async (event)
     meetingSaved = true;
     const hasPendingFiles = meetingState.files.some((file) => file.file || file.pending);
     if (hasPendingFiles) {
-      const uploadedFiles = await uploadMeetingFiles(({ percent, fileName }) => {
-        saveButton.textContent = `上傳 ${percent}%`;
-        saveButton.title = `正在上傳：${fileName}`;
+      const uploadedFiles = await uploadMeetingFiles(({ percent, fileName, transferred, totalBytes, bytesPerSecond }) => {
+        saveButton.textContent = `上傳 ${percent.toFixed(2)}%`;
+        saveButton.title = `正在上傳：${fileName}｜${formatMeetingBytes(transferred)} / ${formatMeetingBytes(totalBytes)}｜${formatMeetingBytes(bytesPerSecond)}/s`;
       });
       await recordRef.set({ files: uploadedFiles, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
