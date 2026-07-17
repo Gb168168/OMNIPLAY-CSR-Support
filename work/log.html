@@ -209,7 +209,7 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260718-6"></script>
+  <script src="../assets/ragic-table.js?v=20260718-7"></script>
   <script src="../assets/reminders.js?v=20260718-1"></script>
   <script>
     initRagicPage({
@@ -263,7 +263,7 @@
           '前端 (技術)', '後端 (技術)', '對接 (問題)', '帳務 (問題)',
           '遊戲 (問題)', '後台 (問題)', '待定(請勿濫用)'
         ], formRow: 2, formCol: 1 },
-        { key: 'contact', label: '接洽者', type: 'select', options: [
+        { key: 'contact', label: '接洽者', type: 'select', required: true, options: [
           '佳臻', '晴心', '澄希', '茗雅',
           '------',
           '中魁', 'Rondo', '技術／IT', '業務／AM', '行銷／PM',
@@ -283,7 +283,7 @@
         { key: 'files', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
         { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 4 },
         { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 2 },
-        { key: 'note', label: '備註', type: 'textarea', rows: 6, formRow: 4, formCol: 3, formColSpan: 2 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 6, placeholder: '未完成時，請填入詢問部門的日期時間', formRow: 4, formCol: 3, formColSpan: 2 },
         { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 5, formCol: 1, formColSpan: 1 },
         { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 },
