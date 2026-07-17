@@ -1099,8 +1099,10 @@ const renderFormToolbar = () => {
     actions.insertAdjacentHTML('beforeend', '<button class="edit-btn" id="ragicEditRecord" type="button">✏️編輯</button>');
   }
   if (!RAGIC_STATE.currentId || RAGIC_STATE.formMode === 'edit') {
+    actions.insertAdjacentHTML('beforeend', RAGIC_STATE.currentId
+      ? '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>'
+      : '<button class="btn-secondary" id="ragicCloseForm" type="button">取消</button>');
     actions.insertAdjacentHTML('beforeend', '<button class="save-btn" form="ragicForm" type="submit">儲存</button>');
-    if (RAGIC_STATE.currentId) actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>');
     } else if (RAGIC_STATE.currentId) {
     actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCloseForm" type="button">取消</button>');
   }
@@ -1109,7 +1111,7 @@ const renderFormToolbar = () => {
     deleteButton.className = 'btn-delete';
     deleteButton.type = 'button';
     deleteButton.textContent = '刪除';
-    actions.appendChild(deleteButton);
+    actions.prepend(deleteButton);
   }
   const index = currentFilteredIndex();
   const prev = legacyToolbar.querySelector('#ragicPrevRecord');
