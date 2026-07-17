@@ -38,7 +38,7 @@
         <div class="ragic-table-wrap">
           <table class="ragic-table meeting-list-table">
             <thead>
-              <tr><th>日期</th><th>時間</th><th>主持</th><th>紀錄</th><th>編號</th></tr>
+              <tr><th>狀態</th><th>日期</th><th>時間</th><th>主持</th><th>紀錄</th><th>編號</th></tr>
             </thead>
             <tbody id="meetingTableBody"></tbody>
           </table>
@@ -54,6 +54,7 @@
             <div class="meeting-info-cell"><label for="meetingTime">時間</label><input id="meetingTime" type="time" required></div>
             <div class="meeting-info-cell"><label for="meetingRecorder">紀錄</label><div class="combo-select"><input id="meetingRecorder" type="text" list="meetingStaffOptions" data-staff-combo required autocomplete="off"><button class="combo-clear" type="button" data-clear-combo="meetingRecorder" aria-label="清除紀錄">×</button></div></div>
             <div class="meeting-info-cell"><label for="meetingLocation">地點</label><select id="meetingLocation"></select></div>
+            <div class="meeting-info-cell"><label for="meetingStatus">會議狀態</label><select id="meetingStatus"><option value="auto">自動判斷</option><option value="completed">已完成</option><option value="postponed">延期</option><option value="cancelled">取消</option></select></div>
             <div class="meeting-info-cell"><label for="meetingMorningAttendeesDisplay">早 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingMorningAttendees"><select id="meetingMorningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingMorningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
             <div class="meeting-info-cell"><label for="meetingSerial">編號</label><input id="meetingSerial" type="text" readonly></div>
             <div class="meeting-info-cell"><label for="meetingEveningAttendeesDisplay">晚 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingEveningAttendees"><select id="meetingEveningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingEveningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
@@ -113,7 +114,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
-  <script src="../assets/app.js?v=20260718-8"></script>
-  <script src="../assets/meeting.js?v=20260718-8"></script>
+  <script src="../assets/app.js?v=20260718-9"></script>
+  <script src="../assets/meeting.js?v=20260718-9"></script>
 </body>
 </html>
