@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>提報｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260718-12" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="../assets/icon-192.png" />
 </head>
-<body>
+<body data-reminder-module="report">
   <section class="app-shell" aria-label="客服系統主畫面">
     <aside id="sidebar"></aside>
     <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
@@ -52,11 +52,14 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js"></script>
-  <script src="../assets/ragic-table.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/ragic-table.js?v=20260718-4"></script>
+  <script src="../assets/reminders.js?v=20260718-1"></script>
   <script>
     initRagicPage({
       title: '提報',
       collection: 'report',
+      enforceConfigFields: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
         { key: 'reporter', label: '班別', type: 'text', formRow: 1, formCol: 2 },
@@ -73,7 +76,9 @@
         { key: 'field_1783889793781_euuc0', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 3 },
         { key: 'field_1783889767182_tuy8x', label: '檔案', type: 'file', formRow: 3, formCol: 4 },
         { key: 'field_1783793551894_qk3ol', label: '圖片', type: 'image', formRow: 3, formCol: 5, formRowSpan: 2 },
-        { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 3, formColSpan: 2 }
+        { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 3, formColSpan: 2 },
+        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 4, formCol: 5 },
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 5 }
       ],
       subtable: {
         key: 'field_1783793415787_ht9q7',
@@ -109,6 +114,8 @@
           '圖片': { row: 3, col: 5, rowSpan: 2 },
           '標題': { key: 'field_1783793415787_ht9q7', row: 4, col: 1, colSpan: 2, _titleOnly: true },
           '備註': { row: 4, col: 3, colSpan: 2 },
+          '提醒時間': { row: 4, col: 5 },
+          '啟用提醒': { row: 5, col: 5 },
           '子表單': { row: 5, col: 1, colSpan: 5 }
         }
       },
