@@ -23,7 +23,7 @@ const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
 const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.6;
 const MAX_IMAGE_BYTES = 900 * 1024;
-const MAX_MEETING_FILE_BYTES = 500 * 1024 * 1024;
+const MAX_MEETING_FILE_BYTES = 1024 * 1024 * 1024;
 
 if (!window._multiSelectClickBound) {
   document.addEventListener('click', () => {
@@ -307,7 +307,7 @@ const downloadMeetingFile = async (file) => {
 
 const addMeetingFiles = async (files) => {
   for (const file of files) {
-    if (file.size > MAX_MEETING_FILE_BYTES) throw new Error(`${file.name} 超過 500MB，請選擇較小的檔案`);
+    if (file.size > MAX_MEETING_FILE_BYTES) throw new Error(`${file.name} 超過 1GB，請選擇較小的檔案`);
     meetingState.files.push({
       name: file.name,
       type: file.type || 'application/octet-stream',
