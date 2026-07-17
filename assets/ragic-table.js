@@ -274,15 +274,20 @@ if (!window._multiSelectClickBound) {
 }
 if (!window._ragicSelectBackspaceBound) {
   document.addEventListener('keydown', (event) => {
-    const select = event.target.closest?.('select');
-    if (!select || select.multiple || event.key !== 'Backspace') return;
+    if (event.key !== 'Backspace' && event.code !== 'Backspace' && event.keyCode !== 8) return;
+    const eventSelect = event.target?.tagName === 'SELECT' ? event.target : null;
+    const activeSelect = document.activeElement?.tagName === 'SELECT' ? document.activeElement : null;
+    const select = eventSelect || activeSelect;
+    if (!select || select.multiple) return;
     if (!select.closest('#ragicForm, .ragic-table, .ragic-subtable, #ragicDesignerModal')) return;
     event.preventDefault();
+    event.stopPropagation();
     if (![...select.options].some((option) => option.value === '')) select.insertAdjacentHTML('afterbegin', '<option value="">請選擇</option>');
     select.value = '';
+    select.selectedIndex = [...select.options].findIndex((option) => option.value === '');
     select.dispatchEvent(new Event('input', { bubbles: true }));
     select.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  }, true);
   window._ragicSelectBackspaceBound = true;
 }
 const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', report: 'RPT-', tracking: 'TRK-', alert: 'ALT-', knowledge: 'KB-', ai_database: 'AI-' };
