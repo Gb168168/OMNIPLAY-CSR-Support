@@ -236,8 +236,7 @@ const getPagePermission = (page = currentPageKey()) => {
   if (isOmniplayAdmin()) return { ...FULL_PERMISSION };
   const pages = getStoredPermissions().pages;
   if (!pages) return { ...EMPTY_PERMISSION };
-  if (!pages[page]) return { ...FULL_PERMISSION };
-  return { ...EMPTY_PERMISSION, ...(pages[page] || {}) };
+  return { ...FULL_PERMISSION, ...(pages[page] || {}) };
 };
 const canUse = (pageOrAction, maybeAction) => {
   const page = maybeAction ? pageOrAction : currentPageKey();
