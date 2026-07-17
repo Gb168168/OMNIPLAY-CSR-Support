@@ -2518,6 +2518,8 @@ textarea,
   justify-content: flex-start;
 }
 .meeting-image-preview img { width: 64px; height: 48px; }
+.meeting-image-preview-list { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; max-height: 220px; overflow-y: auto; }
+.meeting-image-preview-list .meeting-image-preview { width: auto; min-width: 112px; margin-top: 4px; }
 
 @media (max-width: 900px) {
   .meeting-info-table { grid-template-columns: 1fr; }
@@ -3671,6 +3673,11 @@ body {
 .meeting-file-preview-body { padding: 18px; }
 .meeting-file-preview-media { display: block; width: 100%; max-height: 72vh; object-fit: contain; border-radius: 16px; background: #000; }
 .meeting-file-preview-frame { width: 100%; height: 72vh; border: 0; border-radius: 16px; background: #fff; }
+#meetingImageModal .ragic-image-modal-card,
+#meetingFilePreviewModal .meeting-file-preview-card { width: min(1500px, calc(100vw - 16px)); max-height: 96vh; }
+#meetingImageModal .ragic-image-modal-card img { max-width: calc(100% - 20px); max-height: 84vh; }
+#meetingFilePreviewModal .meeting-file-preview-media { max-height: 84vh; }
+#meetingFilePreviewModal .meeting-file-preview-frame { height: 84vh; }
 
 /* 會議紀錄狀態 */
 .meeting-status-badge { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 94px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; white-space: nowrap; }
