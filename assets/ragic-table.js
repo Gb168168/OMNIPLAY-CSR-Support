@@ -102,7 +102,7 @@ const normalizeFormLayoutOverride = (override = {}) => {
 
 const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
   const source = formLayout && typeof formLayout === 'object' ? formLayout : {};
-  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
+  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 10, fallback: 5 });
   const rows = normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
   const explicitSourceFields = source.fields && typeof source.fields === 'object' ? source.fields : {};
   // 舊版表單把座標存在欄位本身；設計器第一次開啟時自動轉成 formLayout.fields。
@@ -133,7 +133,7 @@ const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
       height: fixed ? (fixed.textarea ? LOG_FORM_LAYOUT.textareaHeight : LOG_FORM_LAYOUT.fieldHeight) : normalizeFormLayoutNumber(layout?.height ?? layout?.formHeight, { min: 32, max: 2000, fallback: null })
     };
   });
-  return { columns, rows, fields: nextFields };
+  return { columns, rows, fields: nextFields, version: String(source.version || '') };
 };
 const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   if (!grid) return grid;
@@ -492,10 +492,13 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
   if (!isLogModule(config) && !config.enforceConfigFields) return schema;
   const savedLayout = schema.formLayout && typeof schema.formLayout === 'object' ? schema.formLayout : null;
   const hasSavedPositions = Boolean(savedLayout?.fields && Object.keys(savedLayout.fields).length);
+  const configuredVersion = String(config.formLayout?.version || '');
+  const savedVersion = String(savedLayout?.version || '');
+  const useConfiguredPreset = Boolean(configuredVersion && configuredVersion !== savedVersion);
   return {
     ...schema,
     fields: defaultConfigFields(config),
-    formLayout: hasSavedPositions ? savedLayout : config.formLayout
+    formLayout: useConfiguredPreset ? config.formLayout : (hasSavedPositions ? savedLayout : config.formLayout)
   };
 };
 
