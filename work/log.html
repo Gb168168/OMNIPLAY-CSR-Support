@@ -328,12 +328,13 @@
         const reportFields = [
           { key: 'date', label: '日期', type: 'date', value: String(logRecord.date || '').slice(0, 10) },
           { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
-          { key: 'category', label: '部門', type: 'text', value: '' },
+          { key: 'category', label: '部門', type: 'select', value: '', options: ['技術', '商務'] },
           { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
-          { key: 'content', label: '級數', type: 'text', value: '' },
+          { key: 'content', label: '級數', type: 'select', value: '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'] },
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
-          { key: 'status', label: '狀態', type: 'select', value: logRecord.status || '', options: ['待處理', '處理中', '已完成', '暫緩'] },
+          { key: 'status', label: '狀態（由日誌帶入）', type: 'select', value: logRecord.status || '', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], locked: true },
           { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', value: logRecord.contact || '' },
+          { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'text', value: window.location.href, locked: true },
           { key: 'issue', label: '問題描述', type: 'textarea', value: logRecord.issue || '' },
         ];
         
@@ -345,14 +346,14 @@
           if (field.type === 'date') {
             controlHtml = `<input type="date" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
           } else if (field.type === 'select') {
-            controlHtml = `<select data-field-key="${field.key}">
+            controlHtml = `<select data-field-key="${field.key}" ${field.locked ? 'disabled' : ''}>
               <option value="">請選擇</option>
               ${field.options.map(opt => `<option value="${opt}" ${field.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
             </select>`;
           } else if (field.type === 'textarea') {
             controlHtml = `<textarea rows="4" data-field-key="${field.key}">${this.escapeHtml(field.value)}</textarea>`;
           } else {
-            controlHtml = `<input type="text" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
+            controlHtml = `<input type="text" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}" ${field.locked ? 'readonly' : ''}>`;
           }
           
           formHtml += `
