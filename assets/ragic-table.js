@@ -473,12 +473,24 @@ const defaultConfigFields = (config = {}) => [
 
 const mergeLogConfigFields = (schema = {}, config = {}) => {
   if (!isLogModule(config) && !config.enforceConfigFields) return schema;
+  const configuredFields = defaultConfigFields(config);
+  const savedFields = Array.isArray(schema.fields) ? schema.fields : [];
+  const savedByKey = new Map(savedFields.map((field) => [field.key, field]));
+  const configuredKeys = new Set(configuredFields.map((field) => field.key));
+  const mergedFields = configuredFields.map((field) => {
+    const saved = savedByKey.get(field.key);
+    if (!saved) return field;
+    return { ...field, ...saved, key: field.key, required: Boolean(field.required || saved.required) };
+  });
+  savedFields.forEach((field) => {
+    if (!configuredKeys.has(field.key)) mergedFields.push(field);
+  });
   const savedLayout = schema.formLayout && typeof schema.formLayout === 'object' && Object.keys(schema.formLayout.fields || {}).length
     ? schema.formLayout
     : null;
   return {
     ...schema,
-    fields: defaultConfigFields(config),
+    fields: mergedFields,
     formLayout: savedLayout || config.formLayout
   };
 };
