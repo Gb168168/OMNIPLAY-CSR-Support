@@ -102,7 +102,7 @@ const normalizeFormLayoutOverride = (override = {}) => {
 
 const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
   const source = formLayout && typeof formLayout === 'object' ? formLayout : {};
-  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
+  const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 10, fallback: 5 });
   const rows = normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
   const explicitSourceFields = source.fields && typeof source.fields === 'object' ? source.fields : {};
   // 舊版表單把座標存在欄位本身；設計器第一次開啟時自動轉成 formLayout.fields。
