@@ -287,6 +287,7 @@
         { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 5, formCol: 1, formColSpan: 1 },
         { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 },
+        { key: 'processing_department', label: '處理部門', type: 'select', options: ['技術', '商務'], formRow: 5, formCol: 4 },
         { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 6, formRow: 6, formCol: 1, formColSpan: 4, fields: [
           { key: 'customer_content', label: '客戶', type: 'textarea', rows: 4, width: 240 },
           { key: 'customer_image', label: '圖片', type: 'image', width: 120 },
@@ -328,7 +329,7 @@
         const reportFields = [
           { key: 'date', label: '日期', type: 'date', value: String(logRecord.date || '').slice(0, 10) },
           { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
-          { key: 'category', label: '部門', type: 'select', value: '', options: ['技術', '商務'] },
+          { key: 'category', label: '部門', type: 'select', value: logRecord.processing_department || '', options: ['技術', '商務'] },
           { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
           { key: 'content', label: '級數', type: 'select', value: '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'] },
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
