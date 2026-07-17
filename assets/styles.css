@@ -3687,3 +3687,33 @@ body {
   background: var(--surface);
   box-shadow: 0 -8px 24px rgba(15, 23, 42, .08);
 }
+
+/* 會議列表：固定頁首，表格內容在剩餘高度內垂直捲動。 */
+.main:has(#meetingListView:not([hidden])),
+.main-content:has(#meetingListView:not([hidden])) {
+  overflow: hidden !important;
+}
+
+#meetingListView:not([hidden]) {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#meetingListView > .ragic-toolbar {
+  flex: 0 0 auto;
+}
+
+#meetingListView > .ragic-table-wrap {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  max-height: none !important;
+  overflow-x: auto !important;
+  overflow-y: scroll !important;
+  overscroll-behavior: contain;
+  scrollbar-width: auto;
+  -webkit-overflow-scrolling: touch;
+}
