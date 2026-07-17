@@ -36,6 +36,10 @@ const SCHEMA_MAP = { handover: 'handover_schema', log: 'log_schema', report: 're
 const normalizeKey = (text, fallback = 'field') => String(text || fallback).trim().replace(/[^\w\u4e00-\u9fa5]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase() || `${fallback}_${Date.now()}`;
 const valueToText = (value) => Array.isArray(value) ? value.join('、') : (value?.toDate ? formatLocalDateTime(value.toDate()) : (value?.name && value?.data ? `${value.name} (${formatFileSize(value.size)})` : (value ?? '')));
 const formatLocalDateTime = (date = new Date()) => date.toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+const currentDateTimeInputValue = (date = new Date()) => {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
 const formatFileSize = (bytes = 0) => { const size = Number(bytes) || 0; if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / 1024 / 1024).toFixed(1)} MB`; };
 const today = () => new Date().toISOString().slice(0, 10);
 const normalizeDateValue = (value) => {
@@ -451,11 +455,10 @@ const defaultConfigFields = (config = {}) => [
 
 const mergeLogConfigFields = (schema = {}, config = {}) => {
   if (!isLogModule(config)) return schema;
-  const schemaFields = Array.isArray(schema.fields) ? schema.fields : [];
   return {
     ...schema,
-    fields: schemaFields.length ? schemaFields : defaultConfigFields(config),
-    formLayout: schema.formLayout || config.formLayout
+    fields: defaultConfigFields(config),
+    formLayout: config.formLayout
   };
 };
 
@@ -523,7 +526,13 @@ const createControl = (field, value = '', subfield = false) => {
   if (field.type === 'textarea') { input = document.createElement('textarea'); input.rows = field.rows || 4; }
   else if (field.type === 'select') {
     input = document.createElement('select');
-    optionList(field).forEach((option) => { const opt = document.createElement('option'); opt.value = option; opt.textContent = option; input.appendChild(opt); });
+    optionList(field).forEach((option) => {
+      const opt = document.createElement('option');
+      opt.value = option;
+      opt.textContent = option;
+      if (/^-{3,}$/.test(option)) { opt.disabled = true; opt.textContent = '──────────'; }
+      input.appendChild(opt);
+    });
   } else if (readonlyFieldTypes.has(field.type)) {
     input = document.createElement('input');
     input.type = 'text';
@@ -539,7 +548,7 @@ const createControl = (field, value = '', subfield = false) => {
   if (subfield) input.dataset.subfield = field.key;
   if (field.type !== 'image' && field.type !== 'file') {
     const controlValue = field.type === 'date' || field.type === 'datetime' ? normalizeDateValue(value) : value;
-    input.value = controlValue || field.defaultValue || (field.type === 'date' && !subfield ? today() : '');
+    input.value = controlValue || field.defaultValue || (field.type === 'datetime' && field.defaultNow && !subfield ? currentDateTimeInputValue() : (field.type === 'updatedDate' && !subfield ? formatLocalDateTime() : (field.type === 'date' && !subfield ? today() : '')));
   }
   return input;
 };
@@ -1108,6 +1117,7 @@ const renderSubtableRow = (field, item = {}) => {
   const fieldsGrid = document.createElement('div');
   fieldsGrid.className = 'subtable-row-fields';
   fieldsGrid.style.setProperty('--subtable-cols', normalizeSubtableColumnsPerRow(field.columnsPerRow));
+  if (isLogModule() && (field.fields || []).length === 6) fieldsGrid.classList.add('log-subtable-six-column');
 
   (field.fields || []).forEach((sub) => {
     const fieldWrap = document.createElement('label');
