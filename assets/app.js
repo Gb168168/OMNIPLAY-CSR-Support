@@ -2,6 +2,14 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/OMNIPLAY-CSR-Support/sw.js?v=20260718-3', { updateViaCache: 'none' });
 }
 
+// 所有客服系統頁面都載入共用提醒監聽器。
+if (!document.querySelector('script[data-csr-reminders]')) {
+  const reminderScript = document.createElement('script');
+  reminderScript.src = `${window.location.pathname.includes('/work/') || window.location.pathname.includes('/service/') || window.location.pathname.includes('/meeting/') || window.location.pathname.includes('/resource/') ? '../' : ''}assets/reminders.js?v=20260718-2`;
+  reminderScript.dataset.csrReminders = 'true';
+  document.head.appendChild(reminderScript);
+}
+
 const sidebar = document.querySelector('#sidebar');
 
 const isIndexPage = /(^|\/)index\.html$/.test(window.location.pathname) || window.location.pathname.endsWith('/');
