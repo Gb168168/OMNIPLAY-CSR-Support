@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260718-2" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -207,8 +207,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
-  <script src="../assets/app.js"></script>
-  <script src="../assets/ragic-table.js"></script>
+  <script src="../assets/app.js?v=20260718-2"></script>
+  <script src="../assets/ragic-table.js?v=20260718-2"></script>
   <script>
     initRagicPage({
       title: '日誌',
@@ -279,10 +279,11 @@
         { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 1 },
         { key: 'images', label: '圖片', type: 'image', formRow: 3, formCol: 2 },
         { key: 'files', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
-        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 3, formCol: 4 },
+        { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 4 },
         { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 2 },
         { key: 'note', label: '備註', type: 'textarea', rows: 6, formRow: 4, formCol: 3, formColSpan: 2 },
-        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 6, formRow: 5, formCol: 1, formColSpan: 4, fields: [
+        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 5, formCol: 1, formColSpan: 4 },
+        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 6, formRow: 6, formCol: 1, formColSpan: 4, fields: [
           { key: 'customer_content', label: '客戶', type: 'textarea', rows: 4, width: 240 },
           { key: 'customer_image', label: '圖片', type: 'image', width: 120 },
           { key: 'support_content', label: '客服／技術', type: 'textarea', rows: 4, width: 240 },
@@ -291,8 +292,8 @@
           { key: 'am_image', label: '圖片', type: 'image', width: 120 }
         ]}
       ],
-      formLayout: { columns: 4, rows: 5 },
-      listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time']
+      formLayout: { columns: 4, rows: 6 },
+      listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time', 'serial']
     });
 
     // 連動提報功能
