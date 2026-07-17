@@ -272,6 +272,19 @@ if (!window._multiSelectClickBound) {
   document.addEventListener('click', () => document.querySelectorAll('.multi-select-dropdown.show').forEach((dropdown) => dropdown.classList.remove('show')));
   window._multiSelectClickBound = true;
 }
+if (!window._ragicSelectBackspaceBound) {
+  document.addEventListener('keydown', (event) => {
+    const select = event.target.closest?.('select');
+    if (!select || select.multiple || event.key !== 'Backspace') return;
+    if (!select.closest('#ragicForm, .ragic-table, .ragic-subtable, #ragicDesignerModal')) return;
+    event.preventDefault();
+    if (![...select.options].some((option) => option.value === '')) select.insertAdjacentHTML('afterbegin', '<option value="">請選擇</option>');
+    select.value = '';
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  window._ragicSelectBackspaceBound = true;
+}
 const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', report: 'RPT-', tracking: 'TRK-', alert: 'ALT-', knowledge: 'KB-', ai_database: 'AI-' };
 const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
 const inlineReadonlyFieldTypes = new Set([...readonlyFieldTypes, 'image', 'file', 'subtable']);
@@ -543,6 +556,10 @@ const createControl = (field, value = '', subfield = false) => {
   if (field.type === 'textarea') { input = document.createElement('textarea'); input.rows = field.rows || 4; }
   else if (field.type === 'select') {
     input = document.createElement('select');
+    const emptyOption = document.createElement('option');
+    emptyOption.value = '';
+    emptyOption.textContent = '請選擇';
+    input.appendChild(emptyOption);
     optionList(field).forEach((option) => {
       const opt = document.createElement('option');
       opt.value = option;
