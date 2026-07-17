@@ -104,7 +104,18 @@ const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
   const source = formLayout && typeof formLayout === 'object' ? formLayout : {};
   const columns = normalizeFormLayoutNumber(source.columns, { min: 3, max: 6, fallback: 5 });
   const rows = normalizeFormLayoutNumber(source.rows, { min: 2, max: 10, fallback: 4 });
-  const sourceFields = source.fields && typeof source.fields === 'object' ? source.fields : {};
+  const explicitSourceFields = source.fields && typeof source.fields === 'object' ? source.fields : {};
+  // 舊版表單把座標存在欄位本身；設計器第一次開啟時自動轉成 formLayout.fields。
+  const sourceFields = Object.keys(explicitSourceFields).length ? explicitSourceFields : Object.fromEntries((fields || [])
+    .filter((field) => field?.key && field.formRow && field.formCol)
+    .map((field) => [field.key, {
+      row: field.formRow,
+      col: field.formCol,
+      colSpan: field.formColSpan || 1,
+      rowSpan: field.formRowSpan || 1,
+      width: field.formWidth || null,
+      height: field.formHeight || null
+    }]));
   const fieldKeys = new Set((fields || []).map((field) => field.key).filter(Boolean));
   const nextFields = {};
   Object.entries(sourceFields).forEach(([key, layout]) => {
