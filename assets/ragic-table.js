@@ -579,7 +579,19 @@ const inlineValue = (value, field) => {
   return String(value ?? '');
 };
 const autoGrowTextarea = (textarea) => {
-  textarea.style.height = '';
+  if (!textarea) return;
+  textarea.style.height = 'auto';
+  const height = Math.min(420, Math.max(132, textarea.scrollHeight));
+  textarea.style.height = `${height}px`;
+  textarea.style.maxHeight = '420px';
+  textarea.style.overflowY = textarea.scrollHeight > 420 ? 'auto' : 'hidden';
+};
+const bindAutoGrowTextarea = (textarea) => {
+  if (!textarea || textarea.dataset.autoGrowBound === 'true') return;
+  textarea.dataset.autoGrowBound = 'true';
+  textarea.classList.add('log-auto-grow-textarea');
+  textarea.addEventListener('input', () => autoGrowTextarea(textarea));
+  requestAnimationFrame(() => autoGrowTextarea(textarea));
 };
 const createInlineEditor = (field, value) => {
   const currentValue = inlineValue(value, field);
@@ -675,6 +687,7 @@ const createField = (field, value = '') => {
   applyFormLayout(wrap, field);
   const control = createControl(field, value);
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
+  if (isLogModule() && field.key === 'issue' && field.type === 'textarea') bindAutoGrowTextarea(control);
   return wrap;
 };
 
@@ -1100,6 +1113,7 @@ const renderViewForm = (form, record = {}) => {
   }).forEach((field) => {
     const item = document.createElement('div');
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}`;
+    item.dataset.fieldKey = field.key;
     applyFormLayout(item, field);
     item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${renderDisplayValue(field, record[field.key])}</div>`;
     appendFormResizeHandles(item, field);
@@ -1188,6 +1202,7 @@ const renderSubtableRow = (field, item = {}) => {
     fieldWrap.innerHTML = `<span>${escapeHtml(sub.label || sub.key)}${sub.required ? ' *' : ''}</span>`;
     const control = createControl(sub, item[sub.key], true);
     fieldWrap.appendChild(sub.type === 'image' || sub.type === 'file' ? createFileUploadArea(sub, control, item[sub.key], { subfield: true }) : control);
+    if (isLogModule() && sub.type === 'textarea') bindAutoGrowTextarea(control);
     fieldsGrid.appendChild(fieldWrap);
   });
   
