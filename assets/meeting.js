@@ -3,6 +3,7 @@ const meetingStorage = window.omniplayStorage;
 const meetingCollection = meetingDb?.collection('meeting');
 const meetingStaffCollection = meetingDb?.collection('staff');
 const meetingSettingsDoc = meetingDb?.collection('meetingSettings').doc('staffList');
+const meetingDesignDoc = meetingDb?.collection('meetingSettings').doc('tableDesign');
 
 const meetingState = {
   records: [],
@@ -15,7 +16,8 @@ const meetingState = {
   staffLoaded: false
 };
 
-const DEFAULT_MEETING_TABS = ['技術會議', '客服會議'];
+const FALLBACK_MEETING_TABS = ['技術會議', '客服會議'];
+let DEFAULT_MEETING_TABS = [...FALLBACK_MEETING_TABS];
 const MEETING_LOCATIONS = ['2F', '3F'];
 const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
 const MAX_IMAGE_WIDTH = 800;
@@ -38,6 +40,7 @@ const visibleMeetingStaff = (staff) => activeStaff(staff) && String(staff.name |
 const staffName = (staff) => staff.name || staff.code || staff.account || '未命名';
 const canEditMeeting = () => window.canUse?.('edit') !== false;
 const canDeleteMeeting = () => window.canUse?.('delete') === true;
+const canDesignMeeting = () => window.canUse?.('design') === true;
 const existingRecord = () => meetingState.records.find((record) => record.id === meetingState.currentId) || {};
 
 const getNextSerial = () => {
@@ -179,6 +182,11 @@ const setFormEditable = () => {
     button.hidden = !editable;
     button.disabled = !editable;
   });
+  const designButton = document.querySelector('#designMeetingTableButton');
+  if (designButton) {
+    designButton.hidden = !canDesignMeeting();
+    designButton.disabled = !canDesignMeeting();
+  }
   const deleteButton = document.querySelector('#deleteMeetingButton');
   if (deleteButton) {
     deleteButton.hidden = !meetingState.currentId || !canDeleteMeeting();
@@ -355,6 +363,24 @@ const renderStaffSettings = () => {
 
 const saveStaffSettings = async () => {
   await meetingSettingsDoc?.set({ names: staffNames(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+};
+
+const renderMeetingTableDesign = () => {
+  const input = document.querySelector('#meetingDefaultTabsInput');
+  if (input) input.value = DEFAULT_MEETING_TABS.join('\n');
+};
+
+const saveMeetingTableDesign = async () => {
+  if (!canDesignMeeting()) return alert('您沒有設計權限');
+  const tabs = String(document.querySelector('#meetingDefaultTabsInput')?.value || '')
+    .split(/\n+/)
+    .map((name) => name.trim())
+    .filter(Boolean);
+  DEFAULT_MEETING_TABS = tabs.length ? tabs : [...FALLBACK_MEETING_TABS];
+  await meetingDesignDoc?.set({ defaultTabs: DEFAULT_MEETING_TABS, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  renderMeetingTableDesign();
+  document.querySelector('#meetingTableDesignModal').hidden = true;
+  alert('會議紀錄表格設計已儲存');
 };
 
 const showForm = (record = {}) => {
@@ -556,6 +582,11 @@ const initMeetingPage = async () => {
     populateStaffSelects();
     setFormEditable();
   });
+  meetingDesignDoc?.onSnapshot((doc) => {
+    const tabs = doc.exists ? (doc.data().defaultTabs || []) : [];
+    DEFAULT_MEETING_TABS = Array.isArray(tabs) && tabs.length ? tabs : [...FALLBACK_MEETING_TABS];
+    renderMeetingTableDesign();
+  }, (error) => console.error('讀取會議表格設計失敗：', error));
   meetingSettingsDoc?.onSnapshot((doc) => {
     const names = doc.exists ? (doc.data().names || []) : [];
     meetingState.staff = names.length ? names : [...meetingState.defaultStaff];
@@ -702,6 +733,13 @@ document.querySelector('#meetingFileList')?.addEventListener('click', (event) =>
   if (removedFile?.objectUrl) URL.revokeObjectURL(removedFile.objectUrl);
   renderMeetingFiles();
 });
+document.querySelector('#designMeetingTableButton')?.addEventListener('click', () => {
+  if (!canDesignMeeting()) return alert('您沒有設計權限');
+  renderMeetingTableDesign();
+  document.querySelector('#meetingTableDesignModal').hidden = false;
+});
+document.querySelector('#closeMeetingTableDesignModal')?.addEventListener('click', () => { document.querySelector('#meetingTableDesignModal').hidden = true; });
+document.querySelector('#saveMeetingTableDesignButton')?.addEventListener('click', saveMeetingTableDesign);
 document.querySelector('#staffSettingsButton')?.addEventListener('click', () => {
   renderStaffSettings();
   document.querySelector('#staffSettingsModal').hidden = false;
