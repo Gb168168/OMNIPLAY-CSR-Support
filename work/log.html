@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260718-21" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260718-12" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -207,9 +207,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
-  <script src="../assets/app.js?v=20260718-2"></script>
+  <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260718-14"></script>
+  <script src="../assets/ragic-table.js?v=20260718-5"></script>
   <script src="../assets/reminders.js?v=20260718-1"></script>
   <script>
     initRagicPage({
@@ -278,17 +278,16 @@
           '于慧', '芯瑜', '志忠'
         ], formRow: 2, formCol: 3 },
         { key: 'completed_at', label: '完成時間', type: 'datetime', formRow: 2, formCol: 4 },
-        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 1, formCol: 5 },
-        { key: 'images', label: '圖片', type: 'image', formRow: 3, formCol: 1, formColSpan: 2 },
-        { key: 'files', label: '檔案', type: 'file', formRow: 3, formCol: 3, formColSpan: 2 },
-        { key: 'serial', label: '編號', type: 'serial', formRow: 2, formCol: 5 },
-        { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 3 },
-        { key: 'note', label: '備註', type: 'textarea', rows: 6, formRow: 4, formCol: 4, formColSpan: 4 },
-        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 1, formCol: 7 },
-        { key: 'linked_report_url', label: '提報連結', type: 'link', formRow: 2, formCol: 7 },
-        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 2, formCol: 6 },
-        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: false, formRow: 1, formCol: 6 },
-        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 6, formRow: 5, formCol: 1, formColSpan: 7, fields: [
+        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 1 },
+        { key: 'images', label: '圖片', type: 'image', formRow: 3, formCol: 2 },
+        { key: 'files', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
+        { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 4 },
+        { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 2 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 6, formRow: 4, formCol: 3, formColSpan: 2 },
+        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 5, formCol: 1, formColSpan: 1 },
+        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 },
+        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 6, formRow: 6, formCol: 1, formColSpan: 4, fields: [
           { key: 'customer_content', label: '客戶', type: 'textarea', rows: 4, width: 240 },
           { key: 'customer_image', label: '圖片', type: 'image', width: 120 },
           { key: 'support_content', label: '客服／技術', type: 'textarea', rows: 4, width: 240 },
@@ -297,7 +296,7 @@
           { key: 'am_image', label: '圖片', type: 'image', width: 120 }
         ]}
       ],
-      formLayout: { columns: 7, rows: 5 },
+      formLayout: { columns: 4, rows: 6 },
       listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time', 'serial']
     });
 
@@ -329,9 +328,9 @@
         const reportFields = [
           { key: 'date', label: '日期', type: 'date', value: String(logRecord.date || '').slice(0, 10) },
           { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
-          { key: 'category', label: '部門', type: 'select', value: logRecord.report_department || '', options: ['技術', '商務'], required: true },
+          { key: 'category', label: '部門', type: 'select', value: '', options: ['技術', '商務'] },
           { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
-          { key: 'content', label: '級數', type: 'select', value: logRecord.report_level || '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'], required: true },
+          { key: 'content', label: '級數', type: 'select', value: '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'] },
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
           { key: 'status', label: '狀態（由日誌帶入）', type: 'select', value: logRecord.status || '', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], locked: true },
           { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', value: logRecord.contact || '' },
@@ -347,7 +346,7 @@
           if (field.type === 'date') {
             controlHtml = `<input type="date" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
           } else if (field.type === 'select') {
-            controlHtml = `<select data-field-key="${field.key}" ${field.locked ? 'disabled' : ''} ${field.required ? 'required aria-required="true"' : ''}>
+            controlHtml = `<select data-field-key="${field.key}" ${field.locked ? 'disabled' : ''}>
               <option value="">請選擇</option>
               ${field.options.map(opt => `<option value="${opt}" ${field.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
             </select>`;
@@ -359,7 +358,7 @@
           
           formHtml += `
             <div class="linked-report-form-field">
-              <label>${field.label}${field.required ? ' *' : ''}</label>
+              <label>${field.label}</label>
               ${controlHtml}
             </div>
           `;
@@ -375,15 +374,6 @@
         grid.querySelectorAll('[data-field-key]').forEach(field => {
           formData[field.dataset.fieldKey] = field.value;
         });
-        if (!formData.category || !formData.content) {
-          alert('部門與級數為必填欄位');
-          return;
-        }
-        const sourceLogId = window.RAGIC_STATE?.currentId || '';
-        if (!sourceLogId) {
-          alert('請先儲存日誌，再使用連動提報');
-          return;
-        }
         
         // 取得 Firebase collection
         const reportCollection = window.omniplayDb?.collection('report');
@@ -397,28 +387,11 @@
           ...formData,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          sourceLogId,
+          sourceLogId: window.RAGIC_STATE?.currentId || '',
           sourceLogUrl: window.location.href
-        }).then(async (reportRef) => {
-          const reportUrl = `${window.location.origin}${window.location.pathname.replace(/\/work\/log\.html$/, '/work/report.html')}?record=${encodeURIComponent(reportRef.id)}`;
-          await window.omniplayDb.collection('log').doc(sourceLogId).set({
-            linked_report: true,
-            linked_report_url: reportUrl,
-            report_department: formData.category,
-            report_level: formData.content,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
-          const linkedCheckbox = document.querySelector('[name="linked_report"]');
-          const linkedUrl = document.querySelector('[name="linked_report_url"]');
-          if (linkedCheckbox) linkedCheckbox.checked = true;
-          if (linkedUrl) linkedUrl.value = reportUrl;
-          const currentRecord = window.RAGIC_STATE.records.find((record) => record.id === sourceLogId) || {};
-          const updatedRecord = { ...currentRecord, id: sourceLogId, linked_report: true, linked_report_url: reportUrl, report_department: formData.category, report_level: formData.content };
-          window.RAGIC_STATE.records = window.RAGIC_STATE.records.map((record) => record.id === sourceLogId ? updatedRecord : record);
-          window.RAGIC_STATE.filtered = window.RAGIC_STATE.filtered.map((record) => record.id === sourceLogId ? updatedRecord : record);
+        }).then(() => {
           alert('提報已成功提交！');
           this.closeModal();
-          window.renderRagicRecord?.(updatedRecord, { mode: 'view' });
         }).catch(error => {
           console.error('提報失敗：', error);
           alert('提報失敗，請稍後再試');
@@ -439,15 +412,9 @@
         linkedReportCheckbox.dataset.listenerBound = 'true';
         linkedReportCheckbox.addEventListener('change', function() {
           if (this.checked) {
-            if (!window.RAGIC_STATE?.currentId) {
-              this.checked = false;
-              alert('請先儲存日誌，再使用連動提報');
-              return;
-            }
             // 取得當前表單的記錄數據
             const formFields = document.querySelectorAll('#ragicForm [name]');
-            const savedRecord = window.RAGIC_STATE.records.find((record) => record.id === window.RAGIC_STATE.currentId) || {};
-            const currentLogData = { ...savedRecord };
+            const currentLogData = {};
             
             formFields.forEach(field => {
               if (field.name && field.name !== 'linked_report') {
