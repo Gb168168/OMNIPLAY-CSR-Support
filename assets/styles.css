@@ -3638,3 +3638,16 @@ body {
 .meeting-file-preview-body { padding: 18px; }
 .meeting-file-preview-media { display: block; width: 100%; max-height: 72vh; object-fit: contain; border-radius: 16px; background: #000; }
 .meeting-file-preview-frame { width: 100%; height: 72vh; border: 0; border-radius: 16px; background: #fff; }
+
+/* 會議紀錄狀態 */
+.meeting-status-badge { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 94px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; white-space: nowrap; }
+.meeting-status-badge-scheduled { color: #1d4ed8; background: #dbeafe; }
+.meeting-status-badge-soon { color: #9a3412; background: #ffedd5; }
+.meeting-status-badge-active { color: #047857; background: #d1fae5; }
+.meeting-status-badge-completed { color: #166534; background: #dcfce7; }
+.meeting-status-badge-postponed { color: #92400e; background: #fef3c7; }
+.meeting-status-badge-cancelled { color: #475569; background: #e2e8f0; }
+.meeting-list-table tbody tr.meeting-status-scheduled td { background-color: rgba(219, 234, 254, .28); }
+.meeting-list-table tbody tr.meeting-status-soon td { background-color: rgba(255, 237, 213, .34); }
+.meeting-list-table tbody tr.meeting-status-active td { background-color: rgba(209, 250, 229, .34); }
+.meeting-list-table tbody tr.meeting-status-cancelled td { opacity: .72; }
