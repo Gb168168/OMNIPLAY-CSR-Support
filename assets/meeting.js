@@ -488,6 +488,8 @@ const renderRows = (key, rows = []) => {
   data.forEach((row, index) => setSelectValue(body.querySelector(`[data-row-index="${index}"] [data-field="proposer"]`), row.proposer || ''));
 };
 
+const normalizeMeetingImages = (value) => Array.isArray(value) ? value.filter(Boolean) : (value ? [value] : []);
+
 const rowTemplate = (key, index, row = {}) => `
   <tr data-row-index="${index}">
     <td><select data-staff-select data-field="proposer"><option value="">請選擇</option>${staffOptions()}</select></td>
@@ -497,8 +499,8 @@ const rowTemplate = (key, index, row = {}) => `
     <td>
       <div class="image-upload-area" tabindex="0">
         <div>選擇檔案 或 Ctrl+V 貼上圖片</div>
-        <input data-field="image" type="file" accept="image/*" ${row.image ? `data-image-value="${escapeHtml(row.image)}"` : ''}>
-        ${row.image ? `<span class="ragic-file-preview meeting-image-preview image-upload-preview" data-image="${escapeHtml(row.image)}"><img src="${escapeHtml(row.image)}" alt="圖片預覽"><span>檢視</span><button class="image-preview-remove" type="button" aria-label="移除圖片">×</button></span>` : ''}
+        <input data-field="image" type="file" accept="image/*" multiple data-image-values="${escapeHtml(JSON.stringify(normalizeMeetingImages(row.images ?? row.image)))}">
+        <div class="meeting-image-preview-list">${normalizeMeetingImages(row.images ?? row.image).map((image) => `<span class="ragic-file-preview meeting-image-preview image-upload-preview" data-image="${escapeHtml(image)}"><img src="${escapeHtml(image)}" alt="圖片預覽"><span>檢視</span><button class="image-preview-remove" type="button" aria-label="移除圖片">×</button></span>`).join('')}</div>
       </div>
     </td>
     <td><button class="ghost danger" data-delete-row="${key}" type="button">刪除</button></td>
@@ -556,13 +558,14 @@ const compressImageToBase64 = async (file) => {
 const showImagePreview = (base64, container) => {
   if (!container || !base64) return;
   const input = container.querySelector('[data-field="image"]');
-  if (input) input.dataset.imageValue = base64;
-  container.querySelector('.ragic-file-preview')?.remove();
+  const images = normalizeMeetingImages(input?.dataset.imageValues ? JSON.parse(input.dataset.imageValues) : []);
+  images.push(base64);
+  if (input) input.dataset.imageValues = JSON.stringify(images);
   const preview = document.createElement('span');
   preview.className = 'ragic-file-preview meeting-image-preview image-upload-preview';
   preview.dataset.image = base64;
   preview.innerHTML = `<img src="${escapeHtml(base64)}" alt="圖片預覽"><span>檢視</span><button class="image-preview-remove" type="button" aria-label="移除圖片">×</button>`;
-  container.appendChild(preview);
+  (container.querySelector('.meeting-image-preview-list') || container).appendChild(preview);
 };
 
 const processImageFile = async (file, container) => {
@@ -573,12 +576,12 @@ const processImageFile = async (file, container) => {
 const handleImagePaste = async (event, imageArea) => {
   const items = event.clipboardData?.items;
   if (!items) return;
-  for (const item of items) {
+  const imageItems = [...items].filter((item) => item.type.startsWith('image/'));
+  if (imageItems.length) event.preventDefault();
+  for (const item of imageItems) {
     if (item.type.startsWith('image/')) {
-      event.preventDefault();
       const file = item.getAsFile();
       await processImageFile(file, imageArea);
-      break;
     }
   }
 };
@@ -591,10 +594,10 @@ const readRows = async (key) => {
     const item = {};
     for (const field of detailFields) {
       const control = row.querySelector(`[data-field="${field}"]`);
-      if (field === 'image') item.image = control.files?.[0] ? await compressImageToBase64(control.files[0]) : (control?.dataset.imageValue || previousRows[index]?.image || '');
+      if (field === 'image') item.image = normalizeMeetingImages(control?.dataset.imageValues ? JSON.parse(control.dataset.imageValues) : (previousRows[index]?.images ?? previousRows[index]?.image));
       else item[field] = control?.value?.trim() || '';
     }
-    if (Object.values(item).some(Boolean)) rows.push(item);
+    if (Object.values(item).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value))) rows.push(item);
   }
   return rows;
 };
@@ -733,7 +736,10 @@ document.querySelector('#meetingForm')?.addEventListener('click', (event) => {
 document.querySelector('#meetingForm')?.addEventListener('change', async (event) => {
   const input = event.target.closest('[data-field="image"]');
   if (!input?.files?.[0]) return;
-  try { await processImageFile(input.files[0], input.closest('.image-upload-area')); }
+  try {
+    for (const file of input.files) await processImageFile(file, input.closest('.image-upload-area'));
+    input.value = '';
+  }
   catch (error) { alert(error.message || '圖片處理失敗，請稍後再試。'); input.value = ''; }
 });
 
@@ -751,8 +757,12 @@ document.querySelector('#meetingForm')?.addEventListener('click', async (event) 
     const imageArea = removeButton.closest('.image-upload-area');
     const input = imageArea?.querySelector('[data-field="image"]');
     if (input) {
+      const previews = [...imageArea.querySelectorAll('.meeting-image-preview')];
+      const removeIndex = previews.indexOf(removeButton.closest('.meeting-image-preview'));
+      const images = normalizeMeetingImages(input.dataset.imageValues ? JSON.parse(input.dataset.imageValues) : []);
+      if (removeIndex >= 0) images.splice(removeIndex, 1);
       input.value = '';
-      delete input.dataset.imageValue;
+      input.dataset.imageValues = JSON.stringify(images);
     }
     removeButton.closest('.ragic-file-preview')?.remove();
     return;
@@ -765,7 +775,7 @@ document.querySelector('#meetingForm')?.addEventListener('click', async (event) 
         for (const field of detailFields) {
           if (field === 'image') {
             const control = row.querySelector('[data-field="image"]');
-            item.image = control?.files?.[0] ? await compressImageToBase64(control.files[0]) : (control?.dataset.imageValue || '');
+            item.image = normalizeMeetingImages(control?.dataset.imageValues ? JSON.parse(control.dataset.imageValues) : []);
           } else {
             item[field] = row.querySelector(`[data-field="${field}"]`)?.value || '';
           }
