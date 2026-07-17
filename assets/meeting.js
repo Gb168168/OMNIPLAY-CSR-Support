@@ -568,6 +568,7 @@ const openMeetingFromQuery = () => {
 
 const initMeetingPage = async () => {
   if (window.permissionReady) await window.permissionReady;
+  setFormEditable();
   meetingStaffCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
     meetingState.defaultStaff = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(visibleMeetingStaff).map(staffName);
     if (!meetingState.staffLoaded) meetingState.staff = [...meetingState.defaultStaff];
