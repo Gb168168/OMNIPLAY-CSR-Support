@@ -215,7 +215,7 @@
       collection: 'workLogs',
       fields: [
         { key: 'date', label: '日期', type: 'datetime', required: true, defaultNow: true, formRow: 1, formCol: 1 },
-        { key: 'shift', label: '班別', type: 'select', required: true, options: ['早班', '晚班', '大夜班'], formRow: 1, formCol: 2 },
+        { key: 'shift', label: '班別', type: 'select', required: true, options: ['早班', '晚班'], formRow: 1, formCol: 2 },
         { key: 'customer', label: '客戶', type: 'select', required: true, options: [
           '客服提報',
           'OKB x OMNIPLAY x CSR Support',
@@ -255,9 +255,19 @@
           'RWN2 X OMNIPLAY X API',
           'FBM X OMNIPLAY X API'
         ], formRow: 1, formCol: 3 },
-        { key: 'status', label: '狀態', type: 'select', required: true, options: ['待處理', '處理中', '已完成', '暫緩'], formRow: 1, formCol: 4 },
-        { key: 'category', label: '分類', type: 'select', required: true, options: ['一般問題', '遊戲異常', '金流問題', '帳號問題', '活動問題', '其他'], formRow: 2, formCol: 1 },
-        { key: 'contact', label: '接洽者', type: 'select', options: ['客服', '技術', '業務／AM', '其他'], formRow: 2, formCol: 2 },
+        { key: 'status', label: '狀態', type: 'select', required: true, options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], formRow: 1, formCol: 4 },
+        { key: 'category', label: '分類', type: 'select', required: true, options: [
+          '需求', '資訊', '加白', '客訴', '卡單', '注單確認',
+          '前端 (技術)', '後端 (技術)', '對接 (問題)', '帳務 (問題)',
+          '遊戲 (問題)', '後台 (問題)', '待定(請勿濫用)'
+        ], formRow: 2, formCol: 1 },
+        { key: 'contact', label: '接洽者', type: 'select', options: [
+          '佳臻', '晴心', '澄希', '茗雅',
+          '------',
+          '中魁', 'Rondo', '技術／IT', '業務／AM', '行銷／PM',
+          '------',
+          '于慧', '芯瑜', '志忠'
+        ], formRow: 2, formCol: 2 },
         { key: 'completed_by', label: '完成者', type: 'select', options: [
           '佳臻', '晴心', '澄希', '茗雅',
           '------',
