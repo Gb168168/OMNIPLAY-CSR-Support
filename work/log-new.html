@@ -611,6 +611,100 @@
       control.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
+    let logNewStaffCache = null;
+    const loadLogNewStaff = async () => {
+      if (Array.isArray(logNewStaffCache)) return logNewStaffCache;
+      const snapshot = await window.omniplayDb.collection('staff').get();
+      logNewStaffCache = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      return logNewStaffCache;
+    };
+
+    const logNewDateTimeFromMatch = (match) => {
+      let hour = Number(match[5]);
+      const period = String(match[4]).toLowerCase();
+      if ((period === '下午' || period === 'pm') && hour < 12) hour += 12;
+      if ((period === '上午' || period === 'am') && hour === 12) hour = 0;
+      const pad = (number) => String(number).padStart(2, '0');
+      return `${match[1]}-${pad(match[2])}-${pad(match[3])}T${pad(hour)}:${match[6]}`;
+    };
+
+    const lastLogNewConversationEntry = () => {
+      const pattern = /\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]\s*([^\n:：]{1,120})[:：]/g;
+      let last = null;
+      document.querySelectorAll('#ragicForm [data-subfield="conversation"]').forEach((textarea) => {
+        const text = textarea.value || '';
+        let match;
+        while ((match = pattern.exec(text))) last = { match: [...match], text, index: match.index, end: pattern.lastIndex };
+        pattern.lastIndex = 0;
+      });
+      if (!last) return null;
+      return { ...last, speaker: last.match[7].trim(), segment: last.text.slice(last.index) };
+    };
+
+    const normalizeStaffIdentity = (value = '') => String(value).toLowerCase().replace(/[👩👨💻🏃➡️📋_\-\s／/]+/g, ' ').trim();
+
+    const resolveLogNewCompleter = async (entry) => {
+      const staff = await loadLogNewStaff();
+      const speaker = normalizeStaffIdentity(entry.speaker);
+      if (speaker.includes('igaming op')) {
+        const codes = [...entry.segment.matchAll(/(?:^|[\s。.!！])[-－]\s*([a-z0-9]{1,10})(?=\s|$|[。.!！])/gi)].map((match) => match[1]);
+        if (!codes.length) return { name: '', reason: '最後一段是 igaming-op，但回覆內容沒有「-人員編號」' };
+        for (const code of [...codes].reverse()) {
+          const person = staff.find((item) => String(item.code || '').trim().toLowerCase() === code.toLowerCase());
+          if (person?.name) return { name: person.name, reason: '' };
+        }
+        return { name: '', reason: `人員管理找不到編號 ${codes.join('、')}` };
+      }
+      const person = staff.find((item) => {
+        const identities = [item.name, item.account, item.code].map(normalizeStaffIdentity).filter((value) => value.length >= 2);
+        return identities.some((identity) => speaker === identity || speaker.includes(identity) || identity.includes(speaker));
+      });
+      if (person?.name) return { name: person.name, reason: '' };
+      const teamAliases = [
+        '中魁', 'jerry hu', 'andy chou', 'jim li', 'lucas', 'anton', 'hazel', 'pc am', 'cia', 'weiliya',
+        'apple', 'diane', 'kkaren', 'crystal', 'rondo', 'leo chang', 'yeh ryan', 'chuan chia lai', '昌賢',
+        'nick', 'nina', '張家豪', 'yuting wang', 'wj', 'chang how', 'weili huang', 'ellie', 'mike yu',
+        '修全', 'tony yang', 'andrew', 'pien', 'suigetsu'
+      ];
+      const alias = teamAliases.find((name) => speaker.includes(name));
+      return alias ? { name: entry.speaker.replace(/[_-](?:商務|am|pm|rd|it|sre|dba).*$/i, '').trim(), reason: '' } : { name: '', reason: `無法將最後發言者「${entry.speaker}」對應到人員管理` };
+    };
+
+    const setLogNewSelectValue = (select, value) => {
+      if (!select || !value) return;
+      if (![...select.options].some((option) => option.value === value)) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+      select.value = value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    const bindLogNewCompletionAutoFill = () => {
+      const status = document.querySelector('#ragicForm [name="status"]');
+      if (!status || status.dataset.logNewCompletionBound) return;
+      status.dataset.logNewCompletionBound = 'true';
+      status.addEventListener('change', async () => {
+        if (status.value !== '已完成') return;
+        const entry = lastLogNewConversationEntry();
+        if (!entry) return alert('找不到對話日期時間，請確認最後一段以 [年/月/日 上午/下午 時:分] 開頭。');
+        const completedAt = document.querySelector('#ragicForm [name="completed_at"]');
+        if (completedAt) {
+          completedAt.value = logNewDateTimeFromMatch(entry.match);
+          completedAt.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        try {
+          const resolved = await resolveLogNewCompleter(entry);
+          if (resolved.name) setLogNewSelectValue(document.querySelector('#ragicForm [name="completed_by"]'), resolved.name);
+          else alert(`完成時間已自動填入，但完成者無法判斷：${resolved.reason}`);
+        } catch (error) {
+          alert(`完成時間已自動填入，但讀取人員管理失敗：${error?.message || '請確認權限'}`);
+        }
+      });
+    };
+
     // 一次性整理已儲存的日誌 NEW 對話；只更新有格式差異的 items 欄位。
     const migrateSavedLogNewConversations = async () => {
       const migrationKey = 'logNewConversationFormat:20260719-1';
@@ -837,6 +931,7 @@
     const enhanceLogNewAiUi = () => {
       bindConversationAutoFormat();
       bindLogNewConversationImages();
+      bindLogNewCompletionAutoFill();
       const section = document.querySelector('#ragicForm [data-subtable="items"]');
       const head = section?.querySelector('.ragic-subtable-head');
       if (!head || head.querySelector('[data-log-new-ai]')) return;
