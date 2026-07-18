@@ -544,7 +544,35 @@
       if (issue) issue.value = `客戶：${result.customerBrief || ''}\n客服：${result.supportBrief || ''}`;
     };
 
+    // 將聊天軟體匯出的「[日期 上午/下午 時間] 人員: 內容」自動整理成易讀格式。
+    const normalizeLogNewConversation = (value = '') => {
+      const timestamp = String.raw`\[\d{4}\/\d{1,2}\/\d{1,2}\s+(?:上午|下午|AM|PM|am|pm)\s+\d{1,2}:\d{2}(?::\d{2})?\]`;
+      const nextTimestamp = new RegExp(`([^\\r\\n])(?=${timestamp})`, 'g');
+      const speakerHeader = new RegExp(`(${timestamp}\\s*[^\\r\\n]{1,120}?[:：])[ \\t]*`, 'g');
+      return String(value)
+        .replace(/\r\n?/g, '\n')
+        .replace(nextTimestamp, '$1\n')
+        .replace(speakerHeader, '$1\n')
+        .replace(/\n{3,}/g, '\n\n');
+    };
+
+    const bindConversationAutoFormat = () => {
+      document.querySelectorAll('#ragicForm [data-subfield="conversation"]').forEach((textarea) => {
+        if (textarea.dataset.conversationFormatBound) return;
+        textarea.dataset.conversationFormatBound = 'true';
+        const format = () => {
+          const formatted = normalizeLogNewConversation(textarea.value);
+          if (formatted === textarea.value) return;
+          textarea.value = formatted;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        textarea.addEventListener('paste', () => setTimeout(format, 0));
+        textarea.addEventListener('blur', format);
+      });
+    };
+
     const enhanceLogNewAiUi = () => {
+      bindConversationAutoFormat();
       const section = document.querySelector('#ragicForm [data-subtable="items"]');
       const head = section?.querySelector('.ragic-subtable-head');
       if (!head || head.querySelector('[data-log-new-ai]')) return;
