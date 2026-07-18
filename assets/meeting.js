@@ -254,6 +254,8 @@ const renderTabs = (tabs = meetingState.tabs) => {
     return `<div class="meeting-tab-panel" data-tab-panel="${escapeHtml(key)}" ${key === meetingState.activeTab ? '' : 'hidden'}><div class="ragic-subtable-head"><h3>${escapeHtml(tab.name)}</h3><button class="secondary" type="button" data-add-row="${escapeHtml(key)}">+ 新增一列</button></div><div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="${escapeHtml(key)}"></tbody></table></div></div>`;
   }).join('');
   meetingState.tabs.forEach((tab, index) => renderRows(makeTabKey(tab.name, index), tab.rows || []));
+  // 分頁內容每次重建後，同步刷新新增、刪除等操作按鈕的顯示狀態。
+  setFormEditable();
 };
 
 const currentRowsByKey = async (key) => readRows(key);
@@ -870,6 +872,8 @@ document.querySelector('#meetingForm')?.addEventListener('submit', async (event)
       recordRef = await meetingCollection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
       meetingState.currentId = recordRef.id;
     }
+    // 新增完成後 currentId 已建立，立即顯示刪除按鈕，不必重新整理頁面。
+    setFormEditable();
     meetingSaved = true;
     const hasPendingFiles = meetingState.files.some((file) => file.file || file.pending);
     if (hasPendingFiles) {
