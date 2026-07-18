@@ -57,7 +57,7 @@
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260719-2"></script>
+  <script src="../assets/ragic-table.js?v=20260719-3"></script>
   <script>
     const reportTrackingMode = new URLSearchParams(window.location.search).get('tracking') === 'open' || sessionStorage.getItem('reportTrackingFilter') === 'open';
     sessionStorage.removeItem('reportTrackingFilter');
@@ -71,7 +71,7 @@
       enforceConfigFields: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
-        { key: 'reporter', label: '班別', type: 'text', formRow: 1, formCol: 2 },
+        { key: 'reporter', label: '班別', type: 'select', options: ['早班', '晚班'], formRow: 1, formCol: 2 },
         { key: 'category', label: '部門', type: 'select', options: ['技術', '商務'], formRow: 1, formCol: 3 },
         { key: 'subject', label: '分類', type: 'text', formRow: 1, formCol: 4 },
         { key: 'content', label: '級數', type: 'select', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'], formRow: 1, formCol: 5 },

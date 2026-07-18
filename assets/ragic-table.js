@@ -462,6 +462,50 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
 
 const currentRagicUser = () => sessionStorage.getItem('account') || sessionStorage.getItem('omniplayStaffAccount') || sessionStorage.getItem('omniplayStaffCode') || '';
 const currentRagicUserName = () => sessionStorage.getItem('omniplayStaffName') || sessionStorage.getItem('omniplayStaffCode') || sessionStorage.getItem('omniplayStaffAccount') || '';
+const monthlyShiftCache = new Map();
+const normalizeRosterShift = (value) => ['晚', '晚班', 'night', 'pm'].includes(String(value || '').trim().toLowerCase()) ? '晚班' : (value ? '早班' : '');
+const previousMonthKey = (month) => {
+  const [year, monthNumber] = String(month).split('-').map(Number);
+  const date = new Date(year, monthNumber - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+};
+const signedInRosterShift = async (dateValue) => {
+  const staffId = sessionStorage.getItem('omniplayStaffId') || '';
+  const month = String(dateValue || today()).slice(0, 7);
+  if (!staffId || !/^\d{4}-\d{2}$/.test(month) || !window.omniplayDb) return '';
+  const cacheKey = `${staffId}_${month}`;
+  if (monthlyShiftCache.has(cacheKey)) return monthlyShiftCache.get(cacheKey);
+  const previousMonth = previousMonthKey(month);
+  const leave = window.omniplayDb.collection('leave');
+  const staff = window.omniplayDb.collection('staff');
+  try {
+    const [currentDoc, monthDoc, previousDoc, previousMonthDoc, staffDoc] = await Promise.all([
+      leave.doc(`${staffId}_${month}`).get(),
+      leave.doc(month).get(),
+      leave.doc(`${staffId}_${previousMonth}`).get(),
+      leave.doc(previousMonth).get(),
+      staff.doc(staffId).get()
+    ]);
+    const raw = currentDoc.data()?.shift || monthDoc.data()?.shifts?.[staffId] || previousDoc.data()?.shift || previousMonthDoc.data()?.shifts?.[staffId] || staffDoc.data()?.shift || '';
+    const shift = normalizeRosterShift(raw);
+    if (shift) monthlyShiftCache.set(cacheKey, shift);
+    return shift;
+  } catch (error) {
+    console.warn('讀取登入人員班表失敗：', error);
+    return '';
+  }
+};
+const applySignedInRosterShift = async ({ force = false } = {}) => {
+  if (RAGIC_STATE.currentId || RAGIC_STATE.formMode !== 'edit') return;
+  const shiftField = getFields().find((field) => String(field.label || '').trim() === '班別');
+  if (!shiftField) return;
+  const shiftControl = document.querySelector(`#ragicForm [name="${CSS.escape(shiftField.key)}"]`);
+  const dateControl = document.querySelector('#ragicForm [name="date"]');
+  if (!shiftControl || (!force && shiftControl.value)) return;
+  const requestedDate = dateControl?.value || today();
+  const shift = await signedInRosterShift(requestedDate);
+  if (!RAGIC_STATE.currentId && (!dateControl || dateControl.value === requestedDate) && shift) shiftControl.value = shift;
+};
 
 const normalizeColumnText = (value = '') => String(value || '').replace(/\s+/g, '').toLowerCase();
 const ragicColumnClass = (field = {}) => {
@@ -1293,6 +1337,10 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     });
     form.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
     setFormEditable(form);
+    if (!RAGIC_STATE.currentId) {
+      form.querySelector('[name="date"]')?.addEventListener('change', () => applySignedInRosterShift({ force: true }));
+      applySignedInRosterShift();
+    }
   }
   applyRagicPermissionUi();
 };
