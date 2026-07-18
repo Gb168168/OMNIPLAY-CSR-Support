@@ -157,11 +157,12 @@ const updateTodayWorking = () => {
 
 const updateDashboard = () => {
   const reportTrackStatuses = new Set(['待辦中', '處理中', '觀察中', '追客']);
+  const normalizeReportStatus = (value) => String(value || '').trim().replace(/["']/g, '');
   const fireHandovers = dashboardState.handovers.filter((record) => record.fire === true);
   const range = getShiftRange(dashboardState.selectedShift);
   const logs = dashboardState.logs.filter((record) => isInShiftRange(record, range));
   setText('#handoverFireCount', fireHandovers.length);
-  setText('#trackingOpenCount', dashboardState.reports.filter((record) => reportTrackStatuses.has(String(record.status || '').trim())).length);
+  setText('#trackingOpenCount', dashboardState.reports.filter((record) => reportTrackStatuses.has(normalizeReportStatus(record.status))).length);
   setText('#shiftLogCount', logs.length);
   updateTodayWorking();
   updateShiftButtons();
