@@ -351,12 +351,13 @@
       
       renderReportForm: function(logRecord) {
         const grid = document.getElementById('linkedReportFormGrid');
+        const sourceDepartment = document.querySelector('#ragicForm [name="processing_department"]')?.value || logRecord.processing_department || '';
         
         // 構建提報表單的字段（對應 report.html 中的字段）
         const reportFields = [
           { key: 'date', label: '日期', type: 'date', value: String(logRecord.date || '').slice(0, 10) },
           { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
-          { key: 'category', label: '部門', type: 'select', value: logRecord.processing_department || '', options: ['技術', '商務'] },
+          { key: 'category', label: '部門（由日誌處理部門帶入）', type: 'select', value: sourceDepartment, options: ['技術', '商務'], locked: true },
           { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
           { key: 'content', label: '級數', type: 'select', value: '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'] },
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
@@ -440,6 +441,13 @@
         linkedReportCheckbox.dataset.listenerBound = 'true';
         linkedReportCheckbox.addEventListener('change', function() {
           if (this.checked) {
+            const departmentControl = document.querySelector('#ragicForm [name="processing_department"]');
+            if (!departmentControl?.value) {
+              alert('請先選擇日誌表單的「處理部門」，再建立連動提報。');
+              this.checked = false;
+              departmentControl?.focus();
+              return;
+            }
             // 取得當前表單的記錄數據
             const formFields = document.querySelectorAll('#ragicForm [name]');
             const currentLogData = {};
