@@ -800,6 +800,40 @@
       return new File([bytes], `log-new-image-${index + 1}.${mime.includes('png') ? 'png' : 'jpg'}`, { type: mime });
     };
 
+    const inferLogNewImageOwner = (conversation, imageNumber, selectedSource) => {
+      if (selectedSource === '客戶' || selectedSource === '我方團隊') return selectedSource;
+      const marker = new RegExp(`[（(]\\s*圖\\s*${imageNumber}\\s*[）)]`, 'i').exec(conversation);
+      if (!marker) return '來源待確認';
+      const beforeMarker = conversation.slice(0, marker.index);
+      const headerPattern = /\[[^\]\n]+\]\s*([^\n:：]{1,120})[:：]/g;
+      let header;
+      let speaker = '';
+      while ((header = headerPattern.exec(beforeMarker))) speaker = header[1].trim();
+      const normalizedSpeaker = speaker.toLowerCase().replace(/[_\s-]+/g, ' ');
+      const internalNames = [
+        'igaming op', '中魁', 'jerry hu', 'andy chou', 'jim li', 'lucas', 'anton', 'hazel',
+        'pc am', 'cia', 'weiliya', 'apple', 'diane', 'kkaren', 'crystal', 'rondo', 'leo chang',
+        'yeh ryan', 'chuan chia lai', '昌賢', 'nick', 'nina', '張家豪', 'yuting wang', 'chang how',
+        'weili huang', 'ellie', 'mike yu', '修全', 'tony yang', 'andrew', 'pien', 'suigetsu'
+      ];
+      return internalNames.some((name) => normalizedSpeaker.includes(name)) ? '我方團隊' : (speaker ? '客戶' : '來源待確認');
+    };
+
+    const mergeLogNewImageFindings = (analysis, findings = []) => {
+      let output = normalizeLogNewAiAnalysis(analysis);
+      const appendTo = (title, lines) => {
+        if (!lines.length) return;
+        output = output.replace(new RegExp(`(【${title}】\\n)([\\s\\S]*?)(?=\\n\\n【|$)`), (_, heading, current) => {
+          const cleanCurrent = /^(?:對話或圖片未提供|圖片未提供|未提供)[。.]?$/.test(current.trim()) ? '' : current.trim();
+          return `${heading}${[cleanCurrent, `圖片辨識：\n${lines.join('\n\n')}`].filter(Boolean).join('\n')}`;
+        });
+      };
+      appendTo('客戶問題', findings.filter((item) => item.owner === '客戶').map((item) => item.text));
+      appendTo('內部處理', findings.filter((item) => item.owner === '我方團隊').map((item) => item.text));
+      appendTo('問題判斷', findings.filter((item) => item.owner === '來源待確認').map((item) => `${item.text}\n圖片來源待確認`));
+      return output;
+    };
+
     const enhanceLogNewAiUi = () => {
       bindConversationAutoFormat();
       bindLogNewConversationImages();
@@ -829,8 +863,8 @@
             const images = getLogNewRowImages(row);
             const imageSource = row.querySelector('[data-subfield="image_source"]')?.value || '自動判斷';
             button.textContent = `✨ AI 分析中 ${index + 1}/${rows.length}`;
+            const imageFindings = [];
             if (images.length) {
-              const imageFindings = [];
               for (let imageIndex = 0; imageIndex < images.length; imageIndex += 1) {
                 button.textContent = `✨ 辨識圖${imageIndex + 1} ${index + 1}/${rows.length}`;
                 const imageResponse = await puter.ai.chat(
@@ -838,9 +872,12 @@
                   logNewImageMedia(images[imageIndex], imageIndex),
                   { model: 'gpt-5.4-nano', temperature: 0.1, max_tokens: 500 }
                 );
-                imageFindings.push(`圖${imageIndex + 1}：${logNewAiResponseText(imageResponse)}`);
+                imageFindings.push({
+                  owner: inferLogNewImageOwner(conversationText, imageIndex + 1, imageSource),
+                  text: `圖${imageIndex + 1}：${logNewAiResponseText(imageResponse)}`
+                });
               }
-              conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.join('\n\n')}`;
+              conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.map((item) => `${item.text}\n來源判斷：${item.owner}`).join('\n\n')}`;
               button.textContent = `✨ 整合分析 ${index + 1}/${rows.length}`;
             }
             const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。若標記為「客戶」或「我方團隊」，必須依該標記判斷；若為「自動判斷」，請依對話前後文、圖片內容與團隊名錄推斷，無法確定時明確寫「圖片來源待確認」，不可猜測。客戶圖片視為問題或異常證據；我方圖片視為查詢結果、後台紀錄或處理證明。請辨識圖片中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額及處理結果，並與對話互相核對。\n\n分析規則：\n1. 只能依據對話與圖片內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【客戶圖片】、【內部處理】（標示姓名／部門）、【我方圖片】、【問題判斷】、【目前進度】、【後續待辦】獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話或圖片未提供」。\n3. summary 是給下一班交接使用的短版總結，最多三句，必須包含問題、圖片重點、目前由誰或哪個部門處理、下一步。\n4. customerBrief 只寫客戶提出的問題、需求與客戶圖片重點，一至兩句。\n5. supportBrief 整合 OMNIPLAY 內部已回覆、已處理、我方圖片結果及待處理內容，一至兩句。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
@@ -853,6 +890,7 @@
             const response = await puter.ai.chat(finalPrompt, options);
             const raw = logNewAiResponseText(response);
             const result = parseLogNewAiResponse(raw);
+            result.analysis = mergeLogNewImageFindings(result.analysis, imageFindings);
             window.applyLogNewAiResult(row, result);
             briefs.push({ customerBrief: result.customerBrief || '', supportBrief: result.supportBrief || '' });
           }
