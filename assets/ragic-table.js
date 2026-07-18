@@ -1170,6 +1170,7 @@ const renderFormToolbar = () => {
     deleteButton.className = 'btn-delete';
     deleteButton.type = 'button';
     deleteButton.textContent = '刪除';
+    deleteButton.hidden = !canUse('delete') || !RAGIC_STATE.currentId;
     actions.appendChild(deleteButton);
   }
   const index = currentFilteredIndex();
