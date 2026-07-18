@@ -1152,6 +1152,9 @@ const renderFormToolbar = () => {
   const formView = document.querySelector('#ragicFormView');
   const legacyToolbar = formView?.querySelector('.ragic-form-toolbar');
   if (!legacyToolbar) return;
+  // 刪除鈕第一次開啟表單後會被搬進工具列；重建工具列前必須先保留節點，
+  // 否則 innerHTML 會把它一併移除，造成取消後再開另一筆時刪除鈕消失。
+  const deleteButton = document.querySelector('#deleteButton');
   legacyToolbar.classList.add('form-toolbar');
   const modeLabel = RAGIC_STATE.formMode === 'edit' ? '編輯' : '檢視';
   legacyToolbar.innerHTML = `<div class="form-toolbar-left"><button class="pager-btn" id="ragicPrevRecord" type="button">&lt; 上一筆</button><button class="pager-btn" id="ragicNextRecord" type="button">下一筆 &gt;</button></div><div class="form-toolbar-center ragic-form-title">${escapeHtml(modeLabel)}：${escapeHtml(formDisplayName())}</div><div class="form-toolbar-right"></div>`;
@@ -1165,7 +1168,6 @@ const renderFormToolbar = () => {
     } else if (RAGIC_STATE.currentId) {
     actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCloseForm" type="button">取消</button>');
   }
-  const deleteButton = document.querySelector('#deleteButton');
   if (deleteButton) {
     deleteButton.className = 'btn-delete';
     deleteButton.type = 'button';
