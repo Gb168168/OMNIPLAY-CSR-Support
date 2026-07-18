@@ -556,6 +556,39 @@
         .replace(/\n{3,}/g, '\n\n');
     };
 
+    // 一次性整理已儲存的日誌 NEW 對話；只更新有格式差異的 items 欄位。
+    const migrateSavedLogNewConversations = async () => {
+      const migrationKey = 'logNewConversationFormat:20260719-1';
+      if (sessionStorage.getItem(migrationKey)) return;
+      for (let attempt = 0; attempt < 20 && !window.omniplayDb; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      if (!window.omniplayDb) return;
+      try {
+        const snapshot = await window.omniplayDb.collection('log_new').get();
+        const changes = [];
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data() || {};
+          if (!Array.isArray(data.items)) return;
+          const items = data.items.map((item) => {
+            if (!item || typeof item !== 'object' || typeof item.conversation !== 'string') return item;
+            return { ...item, conversation: normalizeLogNewConversation(item.conversation) };
+          });
+          if (JSON.stringify(items) !== JSON.stringify(data.items)) changes.push({ ref: doc.ref, items });
+        });
+        for (let start = 0; start < changes.length; start += 400) {
+          const batch = window.omniplayDb.batch();
+          changes.slice(start, start + 400).forEach(({ ref, items }) => batch.update(ref, { items }));
+          await batch.commit();
+        }
+        sessionStorage.setItem(migrationKey, 'done');
+        if (changes.length) alert(`已自動整理 ${changes.length} 筆日誌 NEW 的舊對話格式。`);
+      } catch (error) {
+        console.error('整理已儲存的日誌 NEW 對話失敗：', error);
+        alert(`舊對話批次整理失敗：${error?.message || '請確認 Firebase 權限後再試'}`);
+      }
+    };
+
     const bindConversationAutoFormat = () => {
       document.querySelectorAll('#ragicForm [data-subfield="conversation"]').forEach((textarea) => {
         if (textarea.dataset.conversationFormatBound) return;
@@ -629,6 +662,7 @@
     };
     new MutationObserver(enhanceLogNewAiUi).observe(document.querySelector('#ragicFormView'), { childList: true, subtree: true });
     enhanceLogNewAiUi();
+    migrateSavedLogNewConversations();
   </script>
 </body>
 </html>
