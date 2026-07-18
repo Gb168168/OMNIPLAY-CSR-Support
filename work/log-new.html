@@ -164,6 +164,27 @@
       overflow-y: auto;
       resize: vertical;
     }
+    #ragicForm [data-subfield-container="conversation_images"] .image-preview-list {
+      counter-reset: log-new-image;
+    }
+    #ragicForm [data-subfield-container="conversation_images"] .image-preview-item {
+      counter-increment: log-new-image;
+      position: relative;
+    }
+    #ragicForm [data-subfield-container="conversation_images"] .image-preview-item::before {
+      content: "圖" counter(log-new-image);
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      z-index: 2;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, .86);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body data-reminder-module="log">
@@ -655,7 +676,8 @@
           const briefs = [];
           for (let index = 0; index < rows.length; index += 1) {
             const row = rows[index];
-            const conversation = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '（未提供文字對話）';
+            const conversationText = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '（未提供文字對話）';
+            const conversation = `${conversationText}\n\n[系統圖片對照規則：圖片依上傳順序編號。對話中的（圖1）或(圖1)對應第一張圖片，（圖2）或(圖2)對應第二張，依此類推。必須以圖片標記所在的發言段落判斷提供者；有明確圖號時優先採用此對照，沒有圖號才依圖片來源選項與上下文判斷。]`;
             const images = getLogNewRowImages(row);
             const imageSource = row.querySelector('[data-subfield="image_source"]')?.value || '自動判斷';
             button.textContent = `✨ AI 分析中 ${index + 1}/${rows.length}`;
