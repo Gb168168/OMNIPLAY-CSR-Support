@@ -142,6 +142,28 @@
     .linked-report-form-actions .btn-submit:hover {
       background: #2563eb;
     }
+    /* 日誌 NEW 的處理紀錄固定在可捲動區，避免長對話把整頁撐得過長。 */
+    #ragicForm [data-subtable="items"] > .ragic-table-wrap {
+      max-height: 380px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+    #ragicForm [data-subtable="items"] .ragic-view-subtable thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    #ragicForm [data-subtable="items"] .ragic-view-value {
+      max-height: 260px;
+      overflow-y: auto;
+      overflow-wrap: anywhere;
+    }
+    #ragicForm [data-subtable="items"] textarea {
+      max-height: 260px;
+      overflow-y: auto;
+      resize: vertical;
+    }
   </style>
 </head>
 <body data-reminder-module="log">
