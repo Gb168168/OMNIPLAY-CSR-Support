@@ -2560,6 +2560,12 @@ const initRagicPage = async (config) => {
       applyRagicPermissionUi();
       await syncLinkedHandoverFields({ data, logId: savedId });                   
       const savedRecord = { ...existingRecord, ...data, id: savedId };
+      if (isLogModule() && window.pendingLinkedReportAfterSave) {
+        window.pendingLinkedReportAfterSave = false;
+        renderForm(savedRecord, { mode: 'edit' });
+        window.setTimeout(() => window.linkedReportManager?.openModal(savedRecord), 0);
+        return;
+      }
       const sourceLog = linkedLogUrl(savedRecord);
       const becameCompleted = String(data.status || '').trim() === '已完成' && String(existingRecord.status || '').trim() !== '已完成';
       if (sourceLog && becameCompleted && await askLinkedLogRedirect()) {

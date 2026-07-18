@@ -210,7 +210,7 @@
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260719-4"></script>
+  <script src="../assets/ragic-table.js?v=20260719-5"></script>
   <script>
     initRagicPage({
       title: '日誌',
@@ -444,16 +444,17 @@
         linkedReportCheckbox.dataset.listenerBound = 'true';
         linkedReportCheckbox.addEventListener('change', function() {
           if (this.checked) {
-            if (!window.getCurrentRagicRecordId?.()) {
-              alert('請先儲存這筆日誌，再建立連動提報。');
-              this.checked = false;
-              return;
-            }
             const departmentControl = document.querySelector('#ragicForm [name="processing_department"]');
             if (!departmentControl?.value) {
               alert('請先選擇日誌表單的「處理部門」，再建立連動提報。');
               this.checked = false;
               departmentControl?.focus();
+              return;
+            }
+            if (!window.getCurrentRagicRecordId?.()) {
+              window.pendingLinkedReportAfterSave = true;
+              this.checked = false;
+              document.querySelector('#ragicForm')?.requestSubmit();
               return;
             }
             // 取得當前表單的記錄數據
