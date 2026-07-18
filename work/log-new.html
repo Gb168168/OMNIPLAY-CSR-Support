@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>日誌 NEW｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css?v=20260718-26" />
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+  <style>
+    .linked-report-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .linked-report-modal.show {
+      display: flex;
+    }
+    .linked-report-modal-content {
+      background: white;
+      border-radius: 8px;
+      max-width: 90%;
+      width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .linked-report-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+    .linked-report-modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .linked-report-modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .linked-report-modal-close:hover {
+      color: #000;
+      background: #e5e7eb;
+      border-radius: 4px;
+    }
+    .linked-report-form-wrapper {
+      padding: 20px;
+    }
+    .linked-report-info {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #1e40af;
+    }
+    .linked-report-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .linked-report-form-field {
+      display: flex;
+      flex-direction: column;
+    }
+    .linked-report-form-field label {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #333;
+    }
+    .linked-report-form-field input,
+    .linked-report-form-field select,
+    .linked-report-form-field textarea {
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .linked-report-form-field input:focus,
+    .linked-report-form-field select:focus,
+    .linked-report-form-field textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .linked-report-form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 20px;
+    }
+    .linked-report-form-actions button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .linked-report-form-actions .btn-cancel {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .linked-report-form-actions .btn-cancel:hover {
+      background: #e5e7eb;
+    }
+    .linked-report-form-actions .btn-submit {
+      background: #3b82f6;
+      color: white;
+    }
+    .linked-report-form-actions .btn-submit:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body data-reminder-module="log">
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>日誌 NEW</h1>
+          <p>每日客服作業日誌。</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="secondary" id="designTableButton" type="button">⚙️ 設計表格</button>
+          <div class="user-pill">● 已連線 Firebase</div>
+        </div>
+      </header>
+      <section class="ragic-card" id="ragicListView" aria-label="列表視圖">
+        <div class="ragic-toolbar">
+          <div><h2 id="ragicTitle"></h2><p id="ragicSubtitle"></p></div>
+          <button class="primary" id="newRecordButton" type="button">+ 新增</button>
+        </div>
+        <div class="ragic-table-wrap">
+          <table class="ragic-table">
+            <thead><tr id="ragicHeaderRow"></tr></thead>
+            <tbody id="ragicTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="ragic-card" id="ragicFormView" aria-label="主表單視圖" hidden>
+        <div class="ragic-form-toolbar"><h2></h2><button class="secondary" id="backToListButton" type="button">返回列表</button></div>
+        <form id="ragicForm"></form>
+        <div class="ragic-actions">
+          <button class="ghost danger" id="deleteButton" type="button">刪除</button>
+          <button class="primary" form="ragicForm" type="submit">儲存</button>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <!-- 連動提報浮窗 -->
+  <div class="linked-report-modal" id="linkedReportModal">
+    <div class="linked-report-modal-content">
+      <div class="linked-report-modal-header">
+        <h2>連動提報</h2>
+        <button class="linked-report-modal-close" id="closeLinkedReportModal" type="button">✕</button>
+      </div>
+      <div class="linked-report-form-wrapper">
+        <div class="linked-report-info">
+          💡 提示：下方欄位已自動填入日誌中的相關信息，您可以調整後提交。
+        </div>
+        <div class="linked-report-form-grid" id="linkedReportFormGrid"></div>
+        <div class="linked-report-form-actions">
+          <button class="btn-cancel" id="cancelLinkedReport" type="button">取消</button>
+          <button class="btn-submit" id="submitLinkedReport" type="button">提交提報</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script>
+  <script src="../assets/app.js?v=20260718-38"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/ragic-table.js?v=20260719-5"></script>
+  <script src="../assets/reminders.js?v=20260718-38"></script>
+  <script>
+    initRagicPage({
+      title: '日誌 NEW',
+      collection: 'workLogsNew',
+      dataCollection: 'log_new',
+      schemaCollection: 'log_new_schema',
+      fields: [
+        { key: 'date', label: '日期', type: 'datetime', required: true, defaultNow: true, formRow: 1, formCol: 1 },
+        { key: 'shift', label: '班別', type: 'select', required: true, options: ['早班', '晚班'], formRow: 1, formCol: 2 },
+        { key: 'customer', label: '客戶', type: 'select', required: true, options: [
+          '客服提報',
+          'OKB x OMNIPLAY x CSR Support',
+          'OKB x OP x API Integration Tech Support',
+          'Filbet x OP x 遊戲營運',
+          'Filbet x OP x API Integration Group',
+          'S5 x OP x API by Nextral',
+          'S5.com x OP x API',
+          'Playtime x OMNIPLAY x CSR Support',
+          'Playtime X OMNIPLAY X API',
+          'OMNIPLAY X Digiplus Integration(BP)',
+          'Omniplay X Digiplus 客服(BP)',
+          'DF-OP 菲律宾合规API 介接群',
+          'DF X OMNIPLAY X 客服',
+          'OCMS X OMNIPLAY ( 技術群 ）',
+          'CFO x OP x 技術服務群',
+          '新客戶',
+          'CasinoPlus x OMNIPLAY x Integration Group',
+          'Solaire x OMNIPLAY (OP)x API Group',
+          'Digitalwin x OMNIPLAY x API Group',
+          'Luckyworld x OMNIPLAY x API group',
+          'OKFUN x GSPH x OP x Tech Support',
+          'Juan 365 x Omnipaly x API Group',
+          'IGO-NP x OMNIPLAY x API Group',
+          'Okada x OMNIPLAY x API Group',
+          'NuStar X OMNIPLAY X API',
+          'PW-OKADAPLAY X OP X API',
+          'Pin77 X OMNIPLAY X API',
+          'PWNWR X OMNIPLAY X API',
+          'Hann X OMNIPLAY X API',
+          'YOYO X OMNIPLAY X API',
+          'PWAP X OMNIPLAY X API',
+          'PWBB X OMNIPLAY X API',
+          'VIVO X OMNIPLAY X API',
+          'PWNN X OMNIPLAY X API',
+          'LORA X OMNIPLAY X API',
+          'RWN2 X OMNIPLAY X API',
+          'FBM X OMNIPLAY X API'
+        ], formRow: 1, formCol: 3 },
+        { key: 'status', label: '狀態', type: 'select', required: true, options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], formRow: 1, formCol: 4 },
+        { key: 'category', label: '分類', type: 'select', required: true, options: [
+          '需求', '資訊', '加白', '客訴', '卡單', '注單確認',
+          '前端 (技術)', '後端 (技術)', '對接 (問題)', '帳務 (問題)',
+          '遊戲 (問題)', '後台 (問題)', '待定(請勿濫用)'
+        ], formRow: 2, formCol: 1 },
+        { key: 'contact', label: '接洽者', type: 'select', required: true, defaultCurrentUser: true, options: [
+          '佳臻', '晴心', '澄希', '茗雅',
+          '------',
+          '中魁', 'Rondo', '技術／IT', '業務／AM', '行銷／PM',
+          '------',
+          '于慧', '芯瑜', '志忠'
+        ], formRow: 2, formCol: 2 },
+        { key: 'completed_by', label: '完成者', type: 'select', options: [
+          '佳臻', '晴心', '澄希', '茗雅',
+          '------',
+          '中魁', 'Rondo', '技術／IT', '業務／AM', '行銷／PM',
+          '------',
+          '于慧', '芯瑜', '志忠'
+        ], formRow: 2, formCol: 3 },
+        { key: 'completed_at', label: '完成時間', type: 'datetime', formRow: 2, formCol: 4 },
+        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 1 },
+        { key: 'images', label: '圖片', type: 'image', formRow: 3, formCol: 2 },
+        { key: 'files', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
+        { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 4 },
+        { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 2 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 6, placeholder: '未完成時，請填入詢問部門的日期時間', formRow: 4, formCol: 3, formColSpan: 2 },
+        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 5, formCol: 1, formColSpan: 1 },
+        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 },
+        { key: 'processing_department', label: '處理部門', type: 'select', options: ['技術', '商務'], formRow: 5, formCol: 4 },
+        { key: 'reminder_link', label: '提醒連結', type: 'link', formRow: 2, formCol: 7 },
+        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 3, formRow: 6, formCol: 1, formColSpan: 4, fields: [
+          { key: 'conversation', label: '對話', type: 'textarea', rows: 8, width: 420, placeholder: '請貼上客戶與客服的完整對話' },
+          { key: 'ai_analysis', label: 'AI分析', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' },
+          { key: 'summary', label: '總結', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' }
+        ]}
+      ],
+      formLayout: {
+        version: 'log-layout-20260718-1',
+        columns: 7,
+        rows: 5,
+        fields: {
+          date: { row: 1, col: 1 },
+          shift: { row: 1, col: 2 },
+          customer: { row: 1, col: 3 },
+          status: { row: 1, col: 4 },
+          updated_time: { row: 1, col: 5 },
+          reminder_enabled: { row: 1, col: 6 },
+          linked_report: { row: 1, col: 7 },
+          category: { row: 2, col: 1 },
+          contact: { row: 2, col: 2 },
+          completed_by: { row: 2, col: 3 },
+          completed_at: { row: 2, col: 4 },
+          serial: { row: 2, col: 5 },
+          reminder_at: { row: 2, col: 6 },
+          reminder_link: { row: 2, col: 7 },
+          images: { row: 3, col: 1, colSpan: 4, height: 116 },
+          files: { row: 3, col: 5, colSpan: 3, height: 116 },
+          issue: { row: 4, col: 1, colSpan: 3, height: 170 },
+          note: { row: 4, col: 4, colSpan: 3, height: 170 },
+          processing_department: { row: 4, col: 7 },
+          items: { row: 5, col: 1, colSpan: 7, height: 240 }
+        }
+      },
+      listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time', 'serial']
+    });
+
+    // 連動提報功能
+    window.linkedReportManager = {
+      currentLogData: null,
+      
+      openModal: function(logRecord) {
+        this.currentLogData = logRecord;
+        const modal = document.getElementById('linkedReportModal');
+        
+        // 構建提報表單
+        this.renderReportForm(logRecord);
+        
+        modal.classList.add('show');
+      },
+      
+      closeModal: function() {
+        const modal = document.getElementById('linkedReportModal');
+        modal.classList.remove('show');
+        this.currentLogData = null;
+        document.getElementById('linkedReportFormGrid').innerHTML = '';
+      },
+      
+      renderReportForm: function(logRecord) {
+        const grid = document.getElementById('linkedReportFormGrid');
+        const sourceDepartment = document.querySelector('#ragicForm [name="processing_department"]')?.value || logRecord.processing_department || '';
+        
+        // 構建提報表單的字段（對應 report.html 中的字段）
+        const reportFields = [
+          { key: 'date', label: '日期', type: 'date', value: String(logRecord.date || '').slice(0, 10) },
+          { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
+          { key: 'category', label: '部門（由日誌處理部門帶入）', type: 'select', value: sourceDepartment, options: ['技術', '商務'], locked: true },
+          { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
+          { key: 'content', label: '級數', type: 'select', value: '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'] },
+          { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
+          { key: 'status', label: '狀態（由日誌帶入）', type: 'select', value: logRecord.status || '', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], locked: true },
+          { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'select', value: sessionStorage.getItem('omniplayStaffName') || logRecord.contact || '', options: ['佳臻', '晴心', '澄希', '茗雅', '中魁', 'Rondo', '于慧', '芯瑜', '志忠'] },
+          { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'text', value: window.location.href, locked: true },
+          { key: 'issue', label: '問題描述', type: 'textarea', value: logRecord.issue || '' },
+        ];
+        
+        let formHtml = '';
+        
+        reportFields.forEach(field => {
+          let controlHtml = '';
+          
+          if (field.type === 'date') {
+            controlHtml = `<input type="date" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
+          } else if (field.type === 'select') {
+            controlHtml = `<select data-field-key="${field.key}" ${field.locked ? 'disabled' : ''}>
+              <option value="">請選擇</option>
+              ${field.options.map(opt => `<option value="${opt}" ${field.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+            </select>`;
+          } else if (field.type === 'textarea') {
+            controlHtml = `<textarea rows="4" data-field-key="${field.key}">${this.escapeHtml(field.value)}</textarea>`;
+          } else {
+            controlHtml = `<input type="text" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}" ${field.locked ? 'readonly' : ''}>`;
+          }
+          
+          formHtml += `
+            <div class="linked-report-form-field">
+              <label>${field.label}</label>
+              ${controlHtml}
+            </div>
+          `;
+        });
+        
+        grid.innerHTML = formHtml;
+      },
+      
+      submitReport: function() {
+        const grid = document.getElementById('linkedReportFormGrid');
+        const formData = {};
+        
+        grid.querySelectorAll('[data-field-key]').forEach(field => {
+          formData[field.dataset.fieldKey] = field.value;
+        });
+        
+        // 取得 Firebase collection
+        const reportCollection = window.omniplayDb?.collection('report');
+        if (!reportCollection) {
+          alert('Firebase 未初始化，請稍後再試');
+          return;
+        }
+        
+        // 新增提報記錄
+        const sourceLogId = window.getCurrentRagicRecordId?.() || '';
+        const sourceLogUrl = sourceLogId ? `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(sourceLogId)}` : window.location.href;
+        reportCollection.add({
+          ...formData,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          sourceLogId,
+          sourceLogUrl,
+          field_1783793471256_rn925: sourceLogUrl
+        }).then(() => {
+          alert('提報已成功提交！');
+          this.closeModal();
+        }).catch(error => {
+          console.error('提報失敗：', error);
+          alert('提報失敗，請稍後再試');
+        });
+      },
+      
+      escapeHtml: function(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    };
+
+    // 在表單加載完成後，為連動提報勾選框添加事件
+    const observeCheckboxChange = () => {
+      const linkedReportCheckbox = document.querySelector('[name="linked_report"]');
+      if (linkedReportCheckbox && !linkedReportCheckbox.dataset.listenerBound) {
+        linkedReportCheckbox.dataset.listenerBound = 'true';
+        linkedReportCheckbox.addEventListener('change', function() {
+          if (this.checked) {
+            const departmentControl = document.querySelector('#ragicForm [name="processing_department"]');
+            if (!departmentControl?.value) {
+              alert('請先選擇日誌表單的「處理部門」，再建立連動提報。');
+              this.checked = false;
+              departmentControl?.focus();
+              return;
+            }
+            if (!window.getCurrentRagicRecordId?.()) {
+              window.pendingLinkedReportAfterSave = true;
+              this.checked = false;
+              document.querySelector('#ragicForm')?.requestSubmit();
+              return;
+            }
+            // 取得當前表單的記錄數據
+            const formFields = document.querySelectorAll('#ragicForm [name]');
+            const currentLogData = {};
+            
+            formFields.forEach(field => {
+              if (field.name && field.name !== 'linked_report') {
+                currentLogData[field.name] = field.value;
+              }
+            });
+            
+            window.linkedReportManager.openModal(currentLogData);
+            // 勾選後自動取消勾選狀態
+            this.checked = false;
+          }
+        });
+      }
+    };
+
+    // 監控 DOM 變化，當表單被渲染時添加事件
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('#ragicFormView:not([hidden]) #ragicForm')) {
+        observeCheckboxChange();
+      }
+    });
+
+    observer.observe(document.querySelector('#ragicFormView'), {
+      childList: true,
+      subtree: true
+    });
+
+    // 初始檢查
+    observeCheckboxChange();
+
+    // 浮窗關閉按鈕事件
+    document.getElementById('closeLinkedReportModal').addEventListener('click', () => {
+      window.linkedReportManager.closeModal();
+    });
+
+    document.getElementById('cancelLinkedReport').addEventListener('click', () => {
+      window.linkedReportManager.closeModal();
+    });
+
+    document.getElementById('submitLinkedReport').addEventListener('click', () => {
+      window.linkedReportManager.submitReport();
+    });
+
+    // 點擊浮窗背景也可以關閉
+    document.getElementById('linkedReportModal').addEventListener('click', (e) => {
+      if (e.target.id === 'linkedReportModal') {
+        window.linkedReportManager.closeModal();
+      }
+    });
+  </script>
+  <script>
+    // AI 串接預留介面：未設定後端前不會傳送對話或暴露任何 API 金鑰。
+    window.applyLogNewAiResult = (row, result = {}) => {
+      if (!row) return;
+      const analysis = row.querySelector('[data-subfield="ai_analysis"]');
+      const summary = row.querySelector('[data-subfield="summary"]');
+      const issue = document.querySelector('#ragicForm [name="issue"]');
+      if (analysis) analysis.value = result.analysis || '';
+      if (summary) summary.value = result.summary || '';
+      if (issue) issue.value = `客戶：${result.customerBrief || ''}\n客服：${result.supportBrief || ''}`;
+    };
+
+    const enhanceLogNewAiUi = () => {
+      const section = document.querySelector('#ragicForm [data-subtable="items"]');
+      const head = section?.querySelector('.ragic-subtable-head');
+      if (!head || head.querySelector('[data-log-new-ai]')) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'secondary';
+      button.dataset.logNewAi = 'true';
+      button.textContent = '✨ AI分析（尚未設定）';
+      button.addEventListener('click', () => {
+        const conversation = [...section.querySelectorAll('[data-subfield="conversation"]')].map((item) => item.value.trim()).filter(Boolean).join('\n\n');
+        if (!conversation) return alert('請先在「對話」欄位貼上客戶與客服的對話。');
+        alert('AI 尚未設定。未來連接 NAS API 或 Firebase Cloud Function 後，此按鈕會自動產生 AI分析、總結及問題描述。');
+      });
+      head.appendChild(button);
+    };
+    new MutationObserver(enhanceLogNewAiUi).observe(document.querySelector('#ragicFormView'), { childList: true, subtree: true });
+    enhanceLogNewAiUi();
+  </script>
+</body>
+</html>
+
