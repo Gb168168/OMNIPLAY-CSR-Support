@@ -24,6 +24,7 @@ const sidebarItems = [
   ] },
   { title: '作業管理', icon: '🗂️', id: 'workGroupTitle', items: [
     { label: '日誌', icon: '📒', href: 'work/log.html' },
+    { label: '日誌 NEW', icon: '✨', href: 'work/log-new.html' },
     { label: '交接', icon: '🤝', href: 'work/handover.html' },
     { label: '提報', icon: '📣', href: 'work/report.html' },
     { label: '對接追蹤', icon: '🔎', href: 'work/tracking.html' },
@@ -224,6 +225,7 @@ const PAGE_KEYS = {
   'schedule.html': 'schedule',
   'kpi.html': 'kpi',
   'log.html': 'log',
+  'log-new.html': 'log',
   'handover.html': 'handover',
   'report.html': 'report',
   'tracking.html': 'tracking',
