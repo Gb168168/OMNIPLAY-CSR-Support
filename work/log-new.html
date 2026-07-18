@@ -252,7 +252,7 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js?v=20260719-6"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260719-5"></script>
+  <script src="../assets/ragic-table.js?v=20260719-6"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="https://js.puter.com/v2/"></script>
   <script>
@@ -558,12 +558,20 @@
   <script>
     // 日誌 NEW 免費 AI 試用：使用 Puter.js，不在公開網站保存 API 金鑰。
     const normalizeLogNewAiAnalysis = (value = '') => {
-      const sections = '客戶問題|客戶圖片|內部處理|我方圖片|問題判斷|目前進度|後續待辦';
-      return String(value)
-        .replace(/\r\n?/g, '\n')
-        .replace(new RegExp(`\\s*【(${sections})】\\s*`, 'g'), (_, title, offset) => `${offset ? '\n\n' : ''}【${title}】\n`)
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
+      const raw = String(value).replace(/\r\n?/g, '\n').trim();
+      const allTitles = ['客戶問題', '客戶圖片', '內部處理', '我方圖片', '問題判斷', '目前進度', '後續待辦'];
+      const parts = {};
+      allTitles.forEach((title) => {
+        const next = allTitles.filter((item) => item !== title).join('|');
+        const match = raw.match(new RegExp(`【${title}】\\s*([\\s\\S]*?)(?=【(?:${next})】|$)`));
+        parts[title] = match?.[1]?.trim() || '';
+      });
+      if (parts['客戶圖片']) parts['客戶問題'] = [parts['客戶問題'], `圖片重點：${parts['客戶圖片']}`].filter(Boolean).join('\n');
+      if (parts['我方圖片']) parts['內部處理'] = [parts['內部處理'], `圖片結果：${parts['我方圖片']}`].filter(Boolean).join('\n');
+      if (!allTitles.some((title) => parts[title])) parts['問題判斷'] = raw;
+      return ['客戶問題', '內部處理', '問題判斷', '目前進度', '後續待辦']
+        .map((title) => `【${title}】\n${parts[title] || '對話或圖片未提供'}`)
+        .join('\n\n');
     };
 
     window.applyLogNewAiResult = (row, result = {}) => {
@@ -586,6 +594,21 @@
         .replace(nextTimestamp, '$1\n')
         .replace(speakerHeader, '$1\n')
         .replace(/\n{3,}/g, '\n\n');
+    };
+
+    const syncLogNewDateFromConversation = (value = '') => {
+      const match = String(value).match(/^\s*\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]/);
+      if (!match) return;
+      let hour = Number(match[5]);
+      const period = match[4].toLowerCase();
+      if ((period === '下午' || period === 'pm') && hour < 12) hour += 12;
+      if ((period === '上午' || period === 'am') && hour === 12) hour = 0;
+      const pad = (number) => String(number).padStart(2, '0');
+      const control = document.querySelector('#ragicForm [name="date"]');
+      if (!control) return;
+      control.value = `${match[1]}-${pad(match[2])}-${pad(match[3])}T${pad(hour)}:${match[6]}`;
+      control.dispatchEvent(new Event('input', { bubbles: true }));
+      control.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
     // 一次性整理已儲存的日誌 NEW 對話；只更新有格式差異的 items 欄位。
@@ -627,12 +650,78 @@
         textarea.dataset.conversationFormatBound = 'true';
         const format = () => {
           const formatted = normalizeLogNewConversation(textarea.value);
+          syncLogNewDateFromConversation(formatted);
           if (formatted === textarea.value) return;
           textarea.value = formatted;
           textarea.dispatchEvent(new Event('input', { bubbles: true }));
         };
         textarea.addEventListener('paste', () => setTimeout(format, 0));
         textarea.addEventListener('blur', format);
+      });
+    };
+
+    const compressLogNewConversationImage = (file) => new Promise((resolve, reject) => {
+      if (!file?.type?.startsWith('image/')) return reject(new Error('只能上傳圖片檔案'));
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('圖片讀取失敗'));
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => reject(new Error('圖片格式無法辨識'));
+        image.onload = () => {
+          const scale = Math.min(1, 640 / image.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          const context = canvas.getContext('2d');
+          context.fillStyle = '#fff';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            if (!blob) return reject(new Error('圖片壓縮失敗'));
+            const output = new FileReader();
+            output.onerror = () => reject(new Error('圖片轉換失敗'));
+            output.onload = () => resolve(output.result);
+            output.readAsDataURL(blob);
+          }, 'image/jpeg', 0.42);
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    const bindLogNewConversationImages = () => {
+      document.querySelectorAll('#ragicForm [data-subfield-container="conversation_images"]').forEach((area) => {
+        if (area.dataset.logNewImageBound) return;
+        area.dataset.logNewImageBound = 'true';
+        const input = area.querySelector('[data-subfield="conversation_images"]');
+        const process = async (files) => {
+          if (!files.length) return;
+          try {
+            let current = [];
+            try { current = JSON.parse(input.dataset.imageValue || '[]'); } catch (_) { current = []; }
+            const added = [];
+            for (const file of files) added.push(await compressLogNewConversationImage(file));
+            const images = [...(Array.isArray(current) ? current : []), ...added];
+            const totalBytes = images.reduce((total, item) => total + Math.ceil((String(item).split(',').pop()?.length || 0) * 3 / 4), 0);
+            if (totalBytes > 800 * 1024) throw new Error('對話圖片合計仍超過 800KB，請分成另一筆處理紀錄再上傳');
+            showImagePreview(images, area, '對話圖片');
+          } catch (error) {
+            alert(`對話圖片上傳失敗：${error?.message || '請改用 JPG 或 PNG 圖片'}`);
+          } finally {
+            input.value = '';
+          }
+        };
+        input?.addEventListener('change', (event) => {
+          event.stopImmediatePropagation();
+          process([...(input.files || [])]);
+        }, true);
+        area.addEventListener('paste', (event) => {
+          const files = [...(event.clipboardData?.items || [])].filter((item) => item.kind === 'file' && item.type.startsWith('image/')).map((item) => item.getAsFile()).filter(Boolean);
+          if (!files.length) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          process(files);
+        }, true);
       });
     };
 
@@ -680,8 +769,27 @@
       throw new Error('AI 回傳格式不正確');
     };
 
+    const logNewAiResponseText = (response) => {
+      if (typeof response === 'string') return response;
+      const content = response?.message?.content ?? response?.text ?? '';
+      if (typeof content === 'string') return content;
+      if (Array.isArray(content)) return content.map((item) => item?.text || '').filter(Boolean).join('\n');
+      return String(content || response || '');
+    };
+
+    const logNewImageMedia = (source, index) => {
+      if (!String(source).startsWith('data:')) return source;
+      const [header, encoded = ''] = String(source).split(',', 2);
+      const mime = header.match(/^data:([^;]+)/)?.[1] || 'image/jpeg';
+      const binary = atob(encoded);
+      const bytes = new Uint8Array(binary.length);
+      for (let offset = 0; offset < binary.length; offset += 1) bytes[offset] = binary.charCodeAt(offset);
+      return new File([bytes], `log-new-image-${index + 1}.${mime.includes('png') ? 'png' : 'jpg'}`, { type: mime });
+    };
+
     const enhanceLogNewAiUi = () => {
       bindConversationAutoFormat();
+      bindLogNewConversationImages();
       const section = document.querySelector('#ragicForm [data-subtable="items"]');
       const head = section?.querySelector('.ragic-subtable-head');
       if (!head || head.querySelector('[data-log-new-ai]')) return;
@@ -704,22 +812,32 @@
           for (let index = 0; index < rows.length; index += 1) {
             const row = rows[index];
             const conversationText = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '（未提供文字對話）';
-            const conversation = `${conversationText}\n\n[系統圖片對照規則：圖片依上傳順序編號。對話中的（圖1）或(圖1)對應第一張圖片，（圖2）或(圖2)對應第二張，依此類推。必須以圖片標記所在的發言段落判斷提供者；有明確圖號時優先採用此對照，沒有圖號才依圖片來源選項與上下文判斷。]`;
+            let conversation = `${conversationText}\n\n[系統圖片對照規則：圖片依上傳順序編號。對話中的（圖1）或(圖1)對應第一張圖片，（圖2）或(圖2)對應第二張，依此類推。必須以圖片標記所在的發言段落判斷提供者；有明確圖號時優先採用此對照，沒有圖號才依圖片來源選項與上下文判斷。]`;
             const images = getLogNewRowImages(row);
             const imageSource = row.querySelector('[data-subfield="image_source"]')?.value || '自動判斷';
             button.textContent = `✨ AI 分析中 ${index + 1}/${rows.length}`;
+            if (images.length) {
+              const imageFindings = [];
+              for (let imageIndex = 0; imageIndex < images.length; imageIndex += 1) {
+                button.textContent = `✨ 辨識圖${imageIndex + 1} ${index + 1}/${rows.length}`;
+                const imageResponse = await puter.ai.chat(
+                  `請用繁體中文客觀辨識這張客服案件截圖。這是圖${imageIndex + 1}，圖片來源設定為「${imageSource}」。請列出畫面中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額、狀態與處理結果；看不清楚或不存在的資訊請寫未辨識，不可猜測。`,
+                  logNewImageMedia(images[imageIndex], imageIndex),
+                  { model: 'gpt-5.4-nano', temperature: 0.1, max_tokens: 500 }
+                );
+                imageFindings.push(`圖${imageIndex + 1}：${logNewAiResponseText(imageResponse)}`);
+              }
+              conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.join('\n\n')}`;
+              button.textContent = `✨ 整合分析 ${index + 1}/${rows.length}`;
+            }
             const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。若標記為「客戶」或「我方團隊」，必須依該標記判斷；若為「自動判斷」，請依對話前後文、圖片內容與團隊名錄推斷，無法確定時明確寫「圖片來源待確認」，不可猜測。客戶圖片視為問題或異常證據；我方圖片視為查詢結果、後台紀錄或處理證明。請辨識圖片中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額及處理結果，並與對話互相核對。\n\n分析規則：\n1. 只能依據對話與圖片內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【客戶圖片】、【內部處理】（標示姓名／部門）、【我方圖片】、【問題判斷】、【目前進度】、【後續待辦】獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話或圖片未提供」。\n3. summary 是給下一班交接使用的短版總結，最多三句，必須包含問題、圖片重點、目前由誰或哪個部門處理、下一步。\n4. customerBrief 只寫客戶提出的問題、需求與客戶圖片重點，一至兩句。\n5. supportBrief 整合 OMNIPLAY 內部已回覆、已處理、我方圖片結果及待處理內容，一至兩句。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
             const options = {
               model: 'gpt-5.4-nano',
               temperature: 0.1,
               max_tokens: 900
             };
-            const response = images.length
-              ? await puter.ai.chat(prompt, images, false, options)
-              : await puter.ai.chat(prompt, options);
-            const raw = typeof response === 'string'
-              ? response
-              : (response?.message?.content || response?.text || String(response || ''));
+            const response = await puter.ai.chat(prompt, options);
+            const raw = logNewAiResponseText(response);
             const result = parseLogNewAiResponse(raw);
             window.applyLogNewAiResult(row, result);
             briefs.push({ customerBrief: result.customerBrief || '', supportBrief: result.supportBrief || '' });
