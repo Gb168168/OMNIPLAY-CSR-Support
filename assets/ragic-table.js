@@ -461,6 +461,7 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
 };
 
 const currentRagicUser = () => sessionStorage.getItem('account') || sessionStorage.getItem('omniplayStaffAccount') || sessionStorage.getItem('omniplayStaffCode') || '';
+const currentRagicUserName = () => sessionStorage.getItem('omniplayStaffName') || sessionStorage.getItem('omniplayStaffCode') || sessionStorage.getItem('omniplayStaffAccount') || '';
 
 const normalizeColumnText = (value = '') => String(value || '').replace(/\s+/g, '').toLowerCase();
 const ragicColumnClass = (field = {}) => {
@@ -576,7 +577,10 @@ const createControl = (field, value = '', subfield = false) => {
     emptyOption.value = '';
     emptyOption.textContent = '請選擇';
     input.appendChild(emptyOption);
-    optionList(field).forEach((option) => {
+    const selectOptions = [...optionList(field)];
+    const loginName = currentRagicUserName();
+    if (field.defaultCurrentUser && loginName && !selectOptions.includes(loginName)) selectOptions.unshift(loginName);
+    selectOptions.forEach((option) => {
       const opt = document.createElement('option');
       opt.value = option;
       opt.textContent = option;
@@ -598,7 +602,8 @@ const createControl = (field, value = '', subfield = false) => {
   if (subfield) input.dataset.subfield = field.key;
   if (field.type !== 'image' && field.type !== 'file') {
     const controlValue = field.type === 'date' || field.type === 'datetime' ? normalizeDateValue(value) : value;
-    input.value = controlValue || field.defaultValue || (field.type === 'datetime' && field.defaultNow && !subfield ? currentDateTimeInputValue() : (field.type === 'updatedDate' && !subfield ? formatLocalDateTime() : (field.type === 'date' && !subfield ? today() : '')));
+    const loginDefault = field.defaultCurrentUser && !subfield && !RAGIC_STATE.currentId ? currentRagicUserName() : '';
+    input.value = controlValue || loginDefault || field.defaultValue || (field.type === 'datetime' && field.defaultNow && !subfield ? currentDateTimeInputValue() : (field.type === 'updatedDate' && !subfield ? formatLocalDateTime() : (field.type === 'date' && !subfield ? today() : '')));
   }
   return input;
 };

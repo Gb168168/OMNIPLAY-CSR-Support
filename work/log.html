@@ -210,7 +210,7 @@
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260718-37"></script>
+  <script src="../assets/ragic-table.js?v=20260719-2"></script>
   <script>
     initRagicPage({
       title: '日誌',
@@ -263,7 +263,7 @@
           '前端 (技術)', '後端 (技術)', '對接 (問題)', '帳務 (問題)',
           '遊戲 (問題)', '後台 (問題)', '待定(請勿濫用)'
         ], formRow: 2, formCol: 1 },
-        { key: 'contact', label: '接洽者', type: 'select', required: true, options: [
+        { key: 'contact', label: '接洽者', type: 'select', required: true, defaultCurrentUser: true, options: [
           '佳臻', '晴心', '澄希', '茗雅',
           '------',
           '中魁', 'Rondo', '技術／IT', '業務／AM', '行銷／PM',
@@ -361,7 +361,7 @@
           { key: 'content', label: '級數', type: 'select', value: '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'] },
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
           { key: 'status', label: '狀態（由日誌帶入）', type: 'select', value: logRecord.status || '', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], locked: true },
-          { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', value: logRecord.contact || '' },
+          { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'select', value: sessionStorage.getItem('omniplayStaffName') || logRecord.contact || '', options: ['佳臻', '晴心', '澄希', '茗雅', '中魁', 'Rondo', '于慧', '芯瑜', '志忠'] },
           { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'text', value: window.location.href, locked: true },
           { key: 'issue', label: '問題描述', type: 'textarea', value: logRecord.issue || '' },
         ];

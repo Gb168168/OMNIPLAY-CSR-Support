@@ -57,7 +57,7 @@
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260719-1"></script>
+  <script src="../assets/ragic-table.js?v=20260719-2"></script>
   <script>
     const reportTrackingMode = new URLSearchParams(window.location.search).get('tracking') === 'open' || sessionStorage.getItem('reportTrackingFilter') === 'open';
     sessionStorage.removeItem('reportTrackingFilter');
@@ -77,7 +77,7 @@
         { key: 'content', label: '級數', type: 'select', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'], formRow: 1, formCol: 5 },
         { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', formRow: 2, formCol: 1, formColSpan: 2 },
         { key: 'status', label: '狀態', type: 'select', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], formRow: 2, formCol: 3 },
-        { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'text', formRow: 2, formCol: 4 },
+        { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'select', defaultCurrentUser: true, options: ['佳臻', '晴心', '澄希', '茗雅', '中魁', 'Rondo', '于慧', '芯瑜', '志忠'], formRow: 2, formCol: 4 },
         { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'link', formRow: 3, formCol: 4, formColSpan: 2 },
         { key: 'serial', label: '編號', type: 'serial', formRow: 2, formCol: 5 },
         { key: 'field_1783793518050_ijdc6', label: '完成者', type: 'text', formRow: 3, formCol: 1 },
