@@ -211,6 +211,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
   <script src="../assets/ragic-table.js?v=20260719-5"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
+  <script src="https://js.puter.com/v2/"></script>
   <script>
     initRagicPage({
       title: '日誌 NEW',
@@ -510,7 +511,7 @@
     });
   </script>
   <script>
-    // AI 串接預留介面：未設定後端前不會傳送對話或暴露任何 API 金鑰。
+    // 日誌 NEW 免費 AI 試用：使用 Puter.js，不在公開網站保存 API 金鑰。
     window.applyLogNewAiResult = (row, result = {}) => {
       if (!row) return;
       const analysis = row.querySelector('[data-subfield="ai_analysis"]');
@@ -529,11 +530,50 @@
       button.type = 'button';
       button.className = 'secondary';
       button.dataset.logNewAi = 'true';
-      button.textContent = '✨ AI分析（尚未設定）';
-      button.addEventListener('click', () => {
-        const conversation = [...section.querySelectorAll('[data-subfield="conversation"]')].map((item) => item.value.trim()).filter(Boolean).join('\n\n');
-        if (!conversation) return alert('請先在「對話」欄位貼上客戶與客服的對話。');
-        alert('AI 尚未設定。未來連接 NAS API 或 Firebase Cloud Function 後，此按鈕會自動產生 AI分析、總結及問題描述。');
+      button.textContent = '✨ 免費 AI 分析';
+      button.title = '對話會送至 Puter AI；首次使用可能需要登入 Puter。';
+      button.addEventListener('click', async () => {
+        const rows = [...section.querySelectorAll('.subtable-row')].filter((row) => row.querySelector('[data-subfield="conversation"]')?.value.trim());
+        if (!rows.length) return alert('請先在「對話」欄位貼上客戶與客服的完整對話。');
+        if (!window.puter?.ai?.chat) return alert('免費 AI 載入失敗，請確認網路後重新整理頁面再試。');
+        if (!confirm('即將把「對話」內容送至 Puter AI 進行分析。內容可能包含客戶資料，確定要繼續嗎？')) return;
+
+        const originalText = button.textContent;
+        button.disabled = true;
+        try {
+          const briefs = [];
+          for (let index = 0; index < rows.length; index += 1) {
+            const row = rows[index];
+            const conversation = row.querySelector('[data-subfield="conversation"]').value.trim();
+            button.textContent = `✨ AI 分析中 ${index + 1}/${rows.length}`;
+            const prompt = `你是 OMNIPLAY 客服案件分析助手。請分析以下客戶與客服對話，只能依據對話內容，不可自行捏造。請用繁體中文輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"問題原因、已做處理、待確認事項與建議下一步","summary":"給交接人員看的精簡總結","customerBrief":"客戶的問題或需求，一至兩句","supportBrief":"客服已回覆或處理的內容，一至兩句"}\n\n對話內容：\n${conversation}`;
+            const response = await puter.ai.chat(prompt, {
+              model: 'gpt-5.4-nano',
+              temperature: 0.1,
+              max_tokens: 900
+            });
+            const raw = typeof response === 'string'
+              ? response
+              : (response?.message?.content || response?.text || String(response || ''));
+            const match = raw.match(/\{[\s\S]*\}/);
+            if (!match) throw new Error('AI 回傳格式不正確');
+            const result = JSON.parse(match[0]);
+            window.applyLogNewAiResult(row, result);
+            briefs.push({ customerBrief: result.customerBrief || '', supportBrief: result.supportBrief || '' });
+          }
+          const issue = document.querySelector('#ragicForm [name="issue"]');
+          if (issue) {
+            issue.value = `客戶：${briefs.map((item) => item.customerBrief).filter(Boolean).join('；')}\n客服：${briefs.map((item) => item.supportBrief).filter(Boolean).join('；')}`;
+            issue.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          alert('AI 分析完成，已填入「AI分析」、「總結」及「問題描述」，請確認內容後再儲存。');
+        } catch (error) {
+          console.error('日誌 NEW AI 分析失敗：', error);
+          alert(`AI 分析失敗：${error?.message || '請稍後再試'}。若首次使用，請先完成 Puter 登入授權。`);
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
       });
       head.appendChild(button);
     };
@@ -542,4 +582,3 @@
   </script>
 </body>
 </html>
-
