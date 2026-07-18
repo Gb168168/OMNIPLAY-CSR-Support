@@ -653,6 +653,33 @@
       return [...new Set(images.map((item) => typeof item === 'string' ? item : (item?.data || item?.url || '')).filter(Boolean))];
     };
 
+    const parseLogNewAiResponse = (rawValue) => {
+      const raw = String(rawValue || '').replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      const objectText = raw.match(/\{[\s\S]*\}/)?.[0] || raw;
+      try {
+        const parsed = JSON.parse(objectText);
+        if (parsed && typeof parsed === 'object') return parsed;
+      } catch (_) {
+        // AI 有時會在 JSON 字串內直接輸出換行；以下改用欄位邊界容錯擷取。
+      }
+      const keys = ['analysis', 'summary', 'customerBrief', 'supportBrief'];
+      const result = {};
+      keys.forEach((key, index) => {
+        const nextKeys = keys.slice(index + 1).join('|');
+        const ending = nextKeys ? `(?=\\s*,?\\s*"(?:${nextKeys})"\\s*:|\\s*})` : '(?=\\s*})';
+        const match = objectText.match(new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"\\s*${ending}`));
+        if (!match) return;
+        result[key] = match[1]
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '')
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\')
+          .trim();
+      });
+      if (keys.every((key) => typeof result[key] === 'string')) return result;
+      throw new Error('AI 回傳格式不正確');
+    };
+
     const enhanceLogNewAiUi = () => {
       bindConversationAutoFormat();
       const section = document.querySelector('#ragicForm [data-subtable="items"]');
@@ -693,9 +720,7 @@
             const raw = typeof response === 'string'
               ? response
               : (response?.message?.content || response?.text || String(response || ''));
-            const match = raw.match(/\{[\s\S]*\}/);
-            if (!match) throw new Error('AI 回傳格式不正確');
-            const result = JSON.parse(match[0]);
+            const result = parseLogNewAiResponse(raw);
             window.applyLogNewAiResult(row, result);
             briefs.push({ customerBrief: result.customerBrief || '', supportBrief: result.supportBrief || '' });
           }
