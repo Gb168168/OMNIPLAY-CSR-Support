@@ -2458,6 +2458,9 @@ const initRagicPage = async (config) => {
         savedId = docRef.id;
         await docRef.set({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
       }
+      // 新增完成後立刻同步目前資料 ID 與刪除按鈕，不必等待快照或重新整理。
+      RAGIC_STATE.currentId = savedId;
+      applyRagicPermissionUi();
       await syncLinkedHandoverFields({ data, logId: savedId });                   
       document.querySelector('#backToListButton').click();
     } catch (error) {
