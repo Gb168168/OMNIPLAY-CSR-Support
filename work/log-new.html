@@ -586,14 +586,32 @@
 
     // 將聊天軟體匯出的「[日期 上午/下午 時間] 人員: 內容」自動整理成易讀格式。
     const normalizeLogNewConversation = (value = '') => {
-      const timestamp = String.raw`\[\d{4}\/\d{1,2}\/\d{1,2}\s+(?:上午|下午|AM|PM|am|pm)\s+\d{1,2}:\d{2}(?::\d{2})?\]`;
-      const nextTimestamp = new RegExp(`([^\\r\\n])(?=${timestamp})`, 'g');
-      const speakerHeader = new RegExp(`(${timestamp}\\s*[^\\r\\n]{1,120}?[:：])[ \\t]*`, 'g');
-      return String(value)
-        .replace(/\r\n?/g, '\n')
-        .replace(nextTimestamp, '$1\n')
-        .replace(speakerHeader, '$1\n')
-        .replace(/\n{3,}/g, '\n\n');
+      const text = String(value).replace(/\r\n?/g, '\n').trim();
+      const headerPattern = /\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]\s*[^\n:：]{1,120}?[:：]/g;
+      const entries = [];
+      let match;
+      while ((match = headerPattern.exec(text))) entries.push({ match: [...match], index: match.index, end: headerPattern.lastIndex, header: match[0].trim() });
+      if (!entries.length) return text;
+      entries.forEach((entry, index) => {
+        const nextIndex = entries[index + 1]?.index ?? text.length;
+        entry.content = text.slice(entry.end, nextIndex).replace(/\n*\s*-{6,}\s*$/g, '').trim();
+      });
+      const hour24 = (entry) => {
+        let hour = Number(entry.match[5]);
+        const period = String(entry.match[4]).toLowerCase();
+        if ((period === '下午' || period === 'pm') && hour < 12) hour += 12;
+        if ((period === '上午' || period === 'am') && hour === 12) hour = 0;
+        return hour;
+      };
+      const dateNumber = (entry) => Date.UTC(Number(entry.match[1]), Number(entry.match[2]) - 1, Number(entry.match[3]));
+      const isNightShiftContinuation = (previous, current) => dateNumber(current) - dateNumber(previous) === 86400000 && hour24(previous) >= 20 && hour24(current) < 8;
+      return entries.map((entry, index) => {
+        const body = `${entry.header}${entry.content ? `\n${entry.content}` : ''}`;
+        if (!index) return body;
+        const previous = entries[index - 1];
+        const crossedDate = dateNumber(previous) !== dateNumber(entry);
+        return `${crossedDate && !isNightShiftContinuation(previous, entry) ? '------\n\n' : ''}${body}`;
+      }).join('\n\n');
     };
 
     const syncLogNewDateFromConversation = (value = '') => {
@@ -707,7 +725,7 @@
 
     // 一次性整理已儲存的日誌 NEW 對話；只更新有格式差異的 items 欄位。
     const migrateSavedLogNewConversations = async () => {
-      const migrationKey = 'logNewConversationFormat:20260719-1';
+      const migrationKey = 'logNewConversationFormat:20260719-2';
       if (sessionStorage.getItem(migrationKey)) return;
       for (let attempt = 0; attempt < 20 && !window.omniplayDb; attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, 300));
