@@ -12,6 +12,12 @@ const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includ
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
+if (!document.querySelector('#ragicColumnMenuRuntimeStyles')) {
+  const style = document.createElement('style');
+  style.id = 'ragicColumnMenuRuntimeStyles';
+  style.textContent = '.ragic-table th.col-menu-cell{overflow:visible!important}.col-menu-dropdown[hidden]{display:none!important}.col-menu-dropdown:not([hidden]){display:block!important;z-index:10000!important}';
+  document.head.appendChild(style);
+}
 
 const FIELD_TYPE_GROUPS = [
   { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
