@@ -33,7 +33,39 @@
   const hasFired = (module, id, at) => localStorage.getItem(firedKey(module, id, at)) === '1';
   const markFired = (module, id, at) => localStorage.setItem(firedKey(module, id, at), '1');
 
+  const placeReminderButton = () => {
+    const button = document.querySelector('#enableReminderButton');
+    const topbar = document.querySelector('.topbar');
+    if (!button || !topbar) return;
+    let actions = topbar.querySelector('.topbar-actions');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.className = 'topbar-actions';
+      topbar.appendChild(actions);
+    }
+    let controls = actions.querySelector(':scope > .topbar-controls');
+    if (!controls) {
+      controls = document.createElement('div');
+      controls.className = 'topbar-controls';
+      actions.prepend(controls);
+    }
+    const userPill = topbar.querySelector('.user-pill');
+    if (userPill && userPill.parentElement !== actions) actions.appendChild(userPill);
+    const designButton = [...topbar.querySelectorAll('#designTableButton, #designMeetingTableButton')]
+      .find((item) => !item.hidden && getComputedStyle(item).display !== 'none');
+    if (designButton && designButton.parentElement !== controls) controls.prepend(designButton);
+    if (button.parentElement !== controls) controls.appendChild(button);
+    if (designButton && designButton.nextElementSibling !== button) designButton.after(button);
+    if (!designButton && controls.firstElementChild !== button) controls.prepend(button);
+  };
+
   const ensureUi = () => {
+    if (!document.querySelector('#csrReminderPositionStyles')) {
+      const style = document.createElement('style');
+      style.id = 'csrReminderPositionStyles';
+      style.textContent = '.topbar-controls{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}.topbar-controls .reminder-enable-button{white-space:nowrap}';
+      document.head.appendChild(style);
+    }
     if (!document.querySelector('#enableReminderButton')) {
       const button = document.createElement('button');
       button.id = 'enableReminderButton'; button.className = 'secondary reminder-enable-button'; button.type = 'button';
@@ -42,6 +74,7 @@
       if (actions) actions.prepend(button); else document.querySelector('.topbar .user-pill')?.before(button);
       button.addEventListener('click', enableNotifications);
     }
+    placeReminderButton();
     if (!document.querySelector('#reminderAlarmModal')) {
       document.body.insertAdjacentHTML('beforeend', `<div class="reminder-alarm" id="reminderAlarmModal" hidden><div class="reminder-alarm-card" role="alertdialog" aria-modal="true"><div class="reminder-alarm-icon">⏰</div><h2 id="reminderAlarmTitle">提醒時間到了</h2><p id="reminderAlarmText"></p><div class="reminder-alarm-actions"><button class="secondary" id="reminderSnoozeButton" type="button">稍後 5 分鐘</button><button class="primary" id="reminderStopButton" type="button">停止鈴聲</button></div></div></div>`);
       document.querySelector('#reminderStopButton').addEventListener('click', stopAlarm);
@@ -105,7 +138,15 @@
       if (token) await db.collection('notification_tokens').doc(token).set({ token, module: moduleName(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent }, { merge: true });
     } catch (error) { console.warn('背景推播尚未完成設定', error); }
   };
-  const init = () => { ensureUi(); watch(); if ('Notification' in window && Notification.permission === 'granted') registerPushToken(); };
+  const init = () => {
+    ensureUi();
+    const topbar = document.querySelector('.topbar');
+    if (topbar) new MutationObserver(placeReminderButton).observe(topbar, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
+    window.addEventListener('permissionsready', placeReminderButton);
+    window.setTimeout(placeReminderButton, 0);
+    watch();
+    if ('Notification' in window && Notification.permission === 'granted') registerPushToken();
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
 })();
