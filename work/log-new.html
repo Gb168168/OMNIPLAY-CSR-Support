@@ -534,12 +534,21 @@
   </script>
   <script>
     // 日誌 NEW 免費 AI 試用：使用 Puter.js，不在公開網站保存 API 金鑰。
+    const normalizeLogNewAiAnalysis = (value = '') => {
+      const sections = '客戶問題|內部處理|問題判斷|目前進度|後續待辦';
+      return String(value)
+        .replace(/\r\n?/g, '\n')
+        .replace(new RegExp(`\\s*【(${sections})】\\s*`, 'g'), (_, title, offset) => `${offset ? '\n\n' : ''}【${title}】\n`)
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    };
+
     window.applyLogNewAiResult = (row, result = {}) => {
       if (!row) return;
       const analysis = row.querySelector('[data-subfield="ai_analysis"]');
       const summary = row.querySelector('[data-subfield="summary"]');
       const issue = document.querySelector('#ragicForm [name="issue"]');
-      if (analysis) analysis.value = result.analysis || '';
+      if (analysis) analysis.value = normalizeLogNewAiAnalysis(result.analysis || '');
       if (summary) summary.value = result.summary || '';
       if (issue) issue.value = `客戶：${result.customerBrief || ''}\n客服：${result.supportBrief || ''}`;
     };
@@ -629,7 +638,7 @@
             const row = rows[index];
             const conversation = row.querySelector('[data-subfield="conversation"]').value.trim();
             button.textContent = `✨ AI 分析中 ${index + 1}/${rows.length}`;
-            const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n分析規則：\n1. 只能依據對話內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須清楚整理：【客戶問題】、【內部處理】（標示姓名／部門）、【問題判斷】、【目前進度】、【後續待辦】；沒有資訊請寫「對話未提供」。\n3. summary 是給下一班交接使用的短版總結，最多三句，必須包含問題、目前由誰或哪個部門處理、下一步。\n4. customerBrief 只寫客戶提出的問題或需求，一至兩句。\n5. supportBrief 整合 OMNIPLAY 內部已回覆、已處理及待處理內容，一至兩句。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
+            const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n分析規則：\n1. 只能依據對話內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【內部處理】（標示姓名／部門）、【問題判斷】、【目前進度】、【後續待辦】五個獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話未提供」。\n3. summary 是給下一班交接使用的短版總結，最多三句，必須包含問題、目前由誰或哪個部門處理、下一步。\n4. customerBrief 只寫客戶提出的問題或需求，一至兩句。\n5. supportBrief 整合 OMNIPLAY 內部已回覆、已處理及待處理內容，一至兩句。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
             const response = await puter.ai.chat(prompt, {
               model: 'gpt-5.4-nano',
               temperature: 0.1,
