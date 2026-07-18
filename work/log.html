@@ -210,7 +210,7 @@
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260719-3"></script>
+  <script src="../assets/ragic-table.js?v=20260719-4"></script>
   <script>
     initRagicPage({
       title: '日誌',
@@ -412,12 +412,15 @@
         }
         
         // 新增提報記錄
+        const sourceLogId = window.getCurrentRagicRecordId?.() || '';
+        const sourceLogUrl = sourceLogId ? `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(sourceLogId)}` : window.location.href;
         reportCollection.add({
           ...formData,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          sourceLogId: window.RAGIC_STATE?.currentId || '',
-          sourceLogUrl: window.location.href
+          sourceLogId,
+          sourceLogUrl,
+          field_1783793471256_rn925: sourceLogUrl
         }).then(() => {
           alert('提報已成功提交！');
           this.closeModal();
@@ -441,6 +444,11 @@
         linkedReportCheckbox.dataset.listenerBound = 'true';
         linkedReportCheckbox.addEventListener('change', function() {
           if (this.checked) {
+            if (!window.getCurrentRagicRecordId?.()) {
+              alert('請先儲存這筆日誌，再建立連動提報。');
+              this.checked = false;
+              return;
+            }
             const departmentControl = document.querySelector('#ragicForm [name="processing_department"]');
             if (!departmentControl?.value) {
               alert('請先選擇日誌表單的「處理部門」，再建立連動提報。');

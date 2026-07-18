@@ -12,6 +12,7 @@ const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includ
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
+window.getCurrentRagicRecordId = () => RAGIC_STATE.currentId || '';
 if (!document.querySelector('#ragicColumnMenuRuntimeStyles')) {
   const style = document.createElement('style');
   style.id = 'ragicColumnMenuRuntimeStyles';
@@ -1060,6 +1061,46 @@ const validateLogCompletionRules = () => {
   firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   return false;
 };
+
+const validateCompletedStatusRules = () => {
+  const fields = getFields();
+  const statusField = fields.find((field) => field.key === 'status' || /狀態/.test(String(field.label || '')));
+  const statusControl = statusField ? document.querySelector(`#ragicForm [name="${CSS.escape(statusField.key)}"]`) : null;
+  if (String(statusControl?.value || '').trim() !== '已完成') return true;
+  const personField = fields.find((field) => ['completed_by', 'finisher', 'completed_person'].includes(field.key) || /^(完成者|完成人員)$/.test(String(field.label || '').trim()));
+  const timeField = fields.find((field) => ['completed_at', 'completion_time'].includes(field.key) || String(field.label || '').trim() === '完成時間');
+  const personControl = personField ? document.querySelector(`#ragicForm [name="${CSS.escape(personField.key)}"]`) : null;
+  const timeControl = timeField ? document.querySelector(`#ragicForm [name="${CSS.escape(timeField.key)}"]`) : null;
+  const errors = [];
+  if (!personField) errors.push('此表單尚未設定完成人員欄位');
+  else if (!String(personControl?.value || '').trim()) errors.push('狀態為已完成時，完成人員為必填');
+  if (!timeField) errors.push('此表單尚未設定完成時間欄位');
+  else if (!String(timeControl?.value || '').trim()) errors.push('狀態為已完成時，完成時間為必填');
+  if (!errors.length) return true;
+  alert(`請完成以下欄位：\n• ${errors.join('\n• ')}`);
+  const firstInvalid = !String(personControl?.value || '').trim() ? personControl : timeControl;
+  firstInvalid?.focus();
+  firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return false;
+};
+
+const linkedLogUrl = (record = {}) => {
+  const sourceId = String(record.sourceLogId || '').trim();
+  if (sourceId) return new URL(`../work/log.html?id=${encodeURIComponent(sourceId)}`, window.location.href).href;
+  const raw = String(record.sourceLogUrl || record.field_1783793471256_rn925 || '').trim();
+  return raw.includes('work/log.html') ? raw : '';
+};
+const askLinkedLogRedirect = () => new Promise((resolve) => {
+  document.querySelector('#linkedLogCompleteModal')?.remove();
+  document.body.insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="linkedLogCompleteModal"><div class="ragic-modal-card" style="max-width:460px"><div class="ragic-form-toolbar"><h2>提報已完成</h2></div><div style="padding:24px"><p>此提報由日誌連動建立，是否前往原日誌？</p><div class="ragic-actions" style="display:flex;justify-content:flex-end;gap:12px"><button class="btn-secondary" data-linked-log-answer="no" type="button">否</button><button class="btn-primary" data-linked-log-answer="yes" type="button">是，前往日誌</button></div></div></div></div>');
+  const modal = document.querySelector('#linkedLogCompleteModal');
+  modal.addEventListener('click', (event) => {
+    const answer = event.target.closest('[data-linked-log-answer]')?.dataset.linkedLogAnswer;
+    if (!answer && event.target !== modal) return;
+    modal.remove();
+    resolve(answer === 'yes');
+  });
+});
 
 const createFileUploadArea = (field, control, value = '', { subfield = false } = {}) => {
   const fileArea = document.createElement('div');
@@ -2496,7 +2537,7 @@ const initRagicPage = async (config) => {
       return;
     }
     if (!canUse('edit')) return alert('您沒有編輯權限');
-    if (!validateLogCompletionRules()) return;
+    if (!validateCompletedStatusRules() || !validateLogCompletionRules()) return;
     const saveButton = document.querySelector('button[form="ragicForm"][type="submit"]');
     const originalText = saveButton?.textContent || '儲存';
     if (saveButton) { saveButton.disabled = true; saveButton.textContent = '儲存中...'; }
@@ -2518,6 +2559,13 @@ const initRagicPage = async (config) => {
       RAGIC_STATE.currentId = savedId;
       applyRagicPermissionUi();
       await syncLinkedHandoverFields({ data, logId: savedId });                   
+      const savedRecord = { ...existingRecord, ...data, id: savedId };
+      const sourceLog = linkedLogUrl(savedRecord);
+      const becameCompleted = String(data.status || '').trim() === '已完成' && String(existingRecord.status || '').trim() !== '已完成';
+      if (sourceLog && becameCompleted && await askLinkedLogRedirect()) {
+        window.location.href = sourceLog;
+        return;
+      }
       document.querySelector('#backToListButton').click();
     } catch (error) {
       console.error(error);

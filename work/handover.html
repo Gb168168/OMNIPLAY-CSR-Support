@@ -57,7 +57,7 @@
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260719-3"></script>
+  <script src="../assets/ragic-table.js?v=20260719-4"></script>
   <script>
     initRagicPage({
       title: '交接',
@@ -73,6 +73,7 @@
         { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 3, formColSpan: 2 },
         { key: 'publisher', label: '發佈者', type: 'text', formRow: 2, formCol: 1 },
         { key: 'finisher', label: '完成者', type: 'text', formRow: 2, formCol: 3 },
+        { key: 'completed_at', label: '完成時間', type: 'datetime', formRow: 3, formCol: 4 },
         { key: 'link', label: '連結', type: 'link', formRow: 3, formCol: 1 },
         { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 2 },
         { key: 'attachment', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
@@ -90,6 +91,7 @@
         { label: '發布者', formRow: 2, formCol: 1 },
         { label: '狀態', formRow: 2, formCol: 2 },
         { label: '完成者', formRow: 2, formCol: 3 },
+        { label: '完成時間', formRow: 3, formCol: 4 },
         { label: '圖片', formRow: 2, formCol: 4, formRowSpan: 2 },
         { label: '圖片上傳', formRow: 2, formCol: 4, formRowSpan: 2 },
         { label: '連結', formRow: 3, formCol: 1 },
@@ -101,7 +103,7 @@
         { label: '提醒時間', formRow: 5, formCol: 2 },
         { label: '啟用提醒', formRow: 5, formCol: 3 }
       ],
-      listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'image', 'attachment', 'updated_time', 'serial']
+      listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'completed_at', 'image', 'attachment', 'updated_time', 'serial']
     });
   </script>
 </body>

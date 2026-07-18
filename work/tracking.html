@@ -56,20 +56,23 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
-  <script src="../assets/ragic-table.js?v=20260718-37"></script>
+  <script src="../assets/ragic-table.js?v=20260719-4"></script>
   <script>
     initRagicPage({
       title: '對接追蹤',
       collection: 'tracking',
+      enforceConfigFields: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true },
         { key: 'target', label: '對接對象', type: 'text' },
         { key: 'item', label: '事項', type: 'textarea', rows: 5 },
         { key: 'owner', label: '負責人', type: 'text' },
         { key: 'status', label: '進度狀態', type: 'select', options: ['未開始', '進行中', '已完成', '卡關'] },
+        { key: 'completed_by', label: '完成人員', type: 'text' },
+        { key: 'completed_at', label: '完成時間', type: 'datetime' },
         { key: 'note', label: '備註', type: 'textarea', rows: 5 }
       ],
-      listColumns: ['date', 'target', 'owner', 'status']
+      listColumns: ['date', 'target', 'owner', 'status', 'completed_by', 'completed_at']
     });
   </script>
 </body>
