@@ -1493,7 +1493,9 @@ const filterMatchesRecord = (record, fieldKey, filterValue) => {
 
 const applyFilters = () => {
   const filters = Object.fromEntries(Object.entries(RAGIC_STATE.filters).map(([key, value]) => [key, normalizeFilterValue(value)]).filter(([, value]) => Array.isArray(value) ? value.length : value));
-  const filtered = RAGIC_STATE.records.filter((record) => Object.entries(filters).every(([fieldKey, filterValue]) => filterMatchesRecord(record, fieldKey, filterValue)));
+  const trackingStatuses = Array.isArray(RAGIC_STATE.config?.trackingStatuses) ? new Set(RAGIC_STATE.config.trackingStatuses.map((value) => String(value || '').trim().replace(/["']/g, ''))) : null;
+  const sourceRecords = trackingStatuses?.size ? RAGIC_STATE.records.filter((record) => trackingStatuses.has(String(record.status || '').trim().replace(/["']/g, ''))) : RAGIC_STATE.records;
+  const filtered = sourceRecords.filter((record) => Object.entries(filters).every(([fieldKey, filterValue]) => filterMatchesRecord(record, fieldKey, filterValue)));
   renderFilteredList(filtered);
   updateColumnMenuStates();
 };
@@ -2304,7 +2306,7 @@ const setupRagicFormActions = () => {
 };
 const initRagicPage = async (config) => {
   await waitForPermissions();
-  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; document.body?.classList.toggle('is-log-module', isLogModule(RAGIC_STATE.config)); RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
+  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.filters = { ...(config.initialFilters || {}) }; document.body?.classList.toggle('is-log-module', isLogModule(RAGIC_STATE.config)); RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
   window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
   window.togglePin = async (docId) => {
     const currentUser = currentRagicUser();
@@ -2323,7 +2325,7 @@ const initRagicPage = async (config) => {
     if (close) closeDesigner();
     return true;
   };
-  document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = `${config.title}列表、動態表單與表格設計維護`;
+  document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = Array.isArray(config.trackingStatuses) && config.trackingStatuses.length ? `目前篩選：${config.trackingStatuses.join('／')}` : `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
   const newRecordButton = document.querySelector('#newRecordButton');
   const designButton = document.querySelector('#designTableButton');

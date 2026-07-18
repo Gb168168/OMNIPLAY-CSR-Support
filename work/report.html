@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />\n  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />\n  <meta http-equiv="Pragma" content="no-cache" />\n  <meta http-equiv="Expires" content="0" />
   <title>提報｜OMNIPLAY 客服系統</title>
   <link rel="stylesheet" href="../assets/styles.css?v=20260718-12" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
@@ -53,12 +53,16 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js?v=20260718-4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260718-10"></script>
+  <script src="../assets/ragic-table.js?v=20260718-17"></script>
   <script src="../assets/reminders.js?v=20260718-1"></script>
   <script>
+    const reportTrackingMode = new URLSearchParams(window.location.search).get('tracking') === 'open' || sessionStorage.getItem('reportTrackingFilter') === 'open';
+    sessionStorage.removeItem('reportTrackingFilter');
     initRagicPage({
       title: '提報',
       collection: 'report',
+      trackingStatuses: reportTrackingMode ? ['待辦中', '處理中', '觀察中', '追客'] : null,
+      initialFilters: reportTrackingMode ? { status: ['待辦中', '處理中', '觀察中', '追客', '追"客"'] } : {},
       enforceConfigFields: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
