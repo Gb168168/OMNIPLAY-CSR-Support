@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>日誌 NEW -7｜OMNIPLAY 客服系統</title>
+  <title>日誌 NEW -8｜OMNIPLAY 客服系統</title>
   <link rel="stylesheet" href="../assets/styles.css?v=20260718-26" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
@@ -614,6 +614,70 @@
     #ragicForm .ragic-field-image .ragic-view-value::-webkit-scrollbar-track {
      background: #edf1f5 !important;
      border-radius: 999px !important;
+    }
+
+    /* ===== 日誌 NEW -8：檢視模式圖片加高 ===== */
+
+    #ragicForm .ragic-field-image.has-form-layout {
+     height: 340px !important;
+     min-height: 340px !important;
+     max-height: 340px !important;
+     overflow: hidden !important;
+    }
+
+    #ragicForm .ragic-field-image .ragic-view-value {
+     display: flex !important;
+     flex-flow: row nowrap !important;
+     align-items: flex-start !important;
+     gap: 14px !important;
+
+     width: 100% !important;
+     height: 300px !important;
+     min-height: 300px !important;
+     max-height: 300px !important;
+
+     overflow-x: auto !important;
+     overflow-y: hidden !important;
+
+     padding: 8px 6px 16px !important;
+     box-sizing: border-box !important;
+    }
+
+    #ragicForm .ragic-field-image .ragic-view-value > a,
+    #ragicForm .ragic-field-image .ragic-view-value > div,
+    #ragicForm .ragic-field-image .ragic-view-value > span,
+    #ragicForm .ragic-field-image .ragic-view-value .image-preview-item {
+     flex: 0 0 360px !important;
+
+     width: 360px !important;
+     min-width: 360px !important;
+     max-width: 360px !important;
+
+     height: 270px !important;
+     min-height: 270px !important;
+     max-height: 270px !important;
+
+     overflow: hidden !important;
+    }
+
+    #ragicForm .ragic-field-image .ragic-view-value img {
+     display: block !important;
+
+     width: 360px !important;
+     min-width: 360px !important;
+     max-width: 360px !important;
+
+     height: 270px !important;
+     min-height: 270px !important;
+     max-height: 270px !important;
+
+     object-fit: contain !important;
+     object-position: center !important;
+
+     background: #f3f4f6 !important;
+     border: 1px solid #dbe2ea !important;
+     border-radius: 10px !important;
+     box-sizing: border-box !important;
     }
   </style>
 </head>
