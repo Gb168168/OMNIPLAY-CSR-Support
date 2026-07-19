@@ -166,10 +166,37 @@
     }
     /* 日誌 NEW 處理紀錄：五欄、上下堆疊的固定位置。 */
     #ragicForm [data-subtable="items"] .subtable-row-fields {
-      grid-template-columns: minmax(360px, 1.4fr) minmax(280px, 1fr) minmax(360px, 1.3fr) minmax(360px, 1.3fr) minmax(420px, 1.2fr);
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, .95fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
       grid-template-rows: minmax(120px, auto) minmax(120px, auto);
-      min-width: 1812px;
+      width: 100%;
+      min-width: 0;
       align-items: stretch;
+    }
+    #ragicForm [data-subtable="items"] > .ragic-table-wrap {
+      overflow-x: hidden !important;
+    }
+    #ragicForm [data-subtable="items"] table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field,
+    #ragicForm [data-subtable="items"] .subtable-row-field > *,
+    #ragicForm [data-subtable="items"] .image-upload-area,
+    #ragicForm [data-subtable="items"] input[type="file"] {
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    #ragicForm [data-subtable="items"] .ragic-subtable-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #ragicForm [data-subtable="items"] .log-new-subtable-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
     }
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation"]) { grid-column: 1; grid-row: 1 / span 2; }
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="technical_processing"]) { grid-column: 2; grid-row: 1; }
@@ -1148,6 +1175,14 @@
       const section = document.querySelector('#ragicForm [data-subtable="items"]');
       const head = section?.querySelector('.ragic-subtable-head');
       if (!head || head.querySelector('[data-log-new-ai]')) return;
+      let actionGroup = head.querySelector('.log-new-subtable-actions');
+      if (!actionGroup) {
+        actionGroup = document.createElement('div');
+        actionGroup.className = 'log-new-subtable-actions';
+        const addDetailButton = head.querySelector(':scope > button');
+        if (addDetailButton) actionGroup.appendChild(addDetailButton);
+        head.appendChild(actionGroup);
+      }
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'secondary';
@@ -1238,7 +1273,7 @@
           }
         }
       });
-      head.appendChild(button);
+      actionGroup.appendChild(button);
     };
 
     // 設計器儲存成功並關閉後重新載入，確保最新 Firebase 排版立刻套用到日誌 NEW。
