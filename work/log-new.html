@@ -312,14 +312,14 @@
         { key: 'contact', label: '接洽者', type: 'select', required: true, defaultCurrentUser: true, options: [
           '佳臻', '晴心', '澄希', '茗雅',
           '------',
-          '中魁', 'Rondo', '技術／IT', '業務／AM', '行銷／PM',
+          '中魁', 'Rondo', '技術／IT', '商務／AM', '行銷／PM', 'PAGCOR驗證', '營銷',
           '------',
           '于慧', '芯瑜', '志忠'
         ], formRow: 2, formCol: 2 },
         { key: 'completed_by', label: '完成者', type: 'select', options: [
           '佳臻', '晴心', '澄希', '茗雅',
           '------',
-          '中魁', 'Rondo', '技術／IT', '業務／AM', '行銷／PM',
+          '中魁', 'Rondo', '技術／IT', '商務／AM', '行銷／PM', 'PAGCOR驗證', '營銷',
           '------',
           '于慧', '芯瑜', '志忠'
         ], formRow: 2, formCol: 3 },
@@ -700,7 +700,7 @@
       const speaker = normalizeStaffIdentity(responder.speaker);
       const contact = document.querySelector('#ragicForm [name="contact"]');
       if (speaker === 'j 商務' || speaker === 'j') {
-        setLogNewSelectValue(contact, '業務／AM');
+        setLogNewSelectValue(contact, '商務／AM');
         return;
       }
       if (!speaker.includes('igaming op')) return;
@@ -1117,6 +1117,22 @@
       });
       head.appendChild(button);
     };
+
+    // 設計器儲存成功並關閉後重新載入，確保最新 Firebase 排版立刻套用到日誌 NEW。
+    document.querySelector('#saveSchemaButton')?.addEventListener('click', () => {
+      let checks = 0;
+      const waitForDesignerSave = setInterval(() => {
+        checks += 1;
+        const modal = document.querySelector('#ragicDesignerModal');
+        if (modal?.hidden) {
+          clearInterval(waitForDesignerSave);
+          window.location.reload();
+        } else if (checks >= 30) {
+          clearInterval(waitForDesignerSave);
+        }
+      }, 200);
+    });
+
     new MutationObserver(enhanceLogNewAiUi).observe(document.querySelector('#ragicFormView'), { childList: true, subtree: true });
     enhanceLogNewAiUi();
     migrateSavedLogNewConversations();
