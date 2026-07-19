@@ -3778,3 +3778,27 @@ body {
   max-height: 88px !important;
   object-fit: cover;
 }
+/* ===== 側欄收合避免遮住內容 ===== */
+
+.sidebar.is-collapsed ~ .main,
+.sidebar.collapsed ~ .main {
+  padding-left: 56px;
+}
+
+.sidebar-toggle-btn {
+  top: 14px !important;
+  left: 14px !important;
+  width: 36px !important;
+  height: 36px !important;
+  z-index: 1200 !important;
+}
+
+.sidebar.is-collapsed ~ .main .ragic-form-toolbar,
+.sidebar.collapsed ~ .main .ragic-form-toolbar {
+  padding-left: 48px !important;
+}
+
+.sidebar.is-collapsed ~ .main .topbar,
+.sidebar.collapsed ~ .main .topbar {
+  padding-left: 48px !important;
+}
