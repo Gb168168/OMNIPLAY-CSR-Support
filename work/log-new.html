@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>日誌 NEW -2｜OMNIPLAY 客服系統</title>
+  <title>日誌 NEW -3｜OMNIPLAY 客服系統</title>
   <link rel="stylesheet" href="../assets/styles.css?v=20260718-26" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
@@ -386,6 +386,125 @@
      object-position: center !important;
      background: #f3f4f6 !important;
     } 
+    /* ===== 日誌 NEW：檢視與編輯圖片改為大型橫向滑動 ===== */
+
+    /* 圖片欄位容器 */
+    #ragicForm .ragic-field-image,
+    #ragicForm .ragic-field-image.has-form-layout,
+    #ragicForm [data-subfield-container="conversation_images"] {
+     width: 100% !important;
+     min-width: 0 !important;
+     height: auto !important;
+     min-height: 190px !important;
+     max-height: none !important;
+     overflow: hidden !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 編輯模式：圖片上傳區 */
+    #ragicForm .ragic-field-image > .image-upload-area,
+    #ragicForm .ragic-field-image.has-form-layout > .image-upload-area,
+    #ragicForm [data-subfield-container="conversation_images"] .image-upload-area {
+     width: 100% !important;
+     height: auto !important;
+     min-height: 175px !important;
+     max-height: none !important;
+     overflow: hidden !important;
+     padding: 8px !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 編輯模式與檢視模式：圖片列表 */
+    #ragicForm .image-preview-list,
+    #ragicForm .ragic-view-value .image-preview-list,
+    #ragicForm .ragic-view-value:has(img) {
+     display: flex !important;
+     flex-flow: row nowrap !important;
+     flex-wrap: nowrap !important;
+     align-items: flex-start !important;
+     gap: 12px !important;
+
+     width: 100% !important;
+     min-width: 0 !important;
+     height: auto !important;
+     min-height: 145px !important;
+     max-height: none !important;
+   
+     overflow-x: auto !important;
+     overflow-y: hidden !important;
+     overscroll-behavior-x: contain;
+     scrollbar-width: thin;
+
+     padding: 6px 4px 10px !important;
+     margin: 0 !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 每一張圖片的外框 */
+    #ragicForm .image-preview-item,
+    #ragicForm .ragic-view-value .image-preview-item {
+     position: relative !important;
+     flex: 0 0 210px !important;
+     width: 210px !important;
+     min-width: 210px !important;
+     max-width: 210px !important;
+     height: 135px !important;
+     min-height: 135px !important;
+     max-height: 135px !important;
+     margin: 0 !important;
+     overflow: visible !important;
+   }
+
+    /* 圖片本體 */
+    #ragicForm .image-preview-item img,
+    #ragicForm .ragic-view-value .image-preview-item img,
+    #ragicForm .ragic-view-value > img {
+     display: block !important;
+     flex: 0 0 auto !important;
+
+     width: 210px !important;
+     min-width: 210px !important;
+     max-width: 210px !important;
+
+     height: 130px !important;
+     min-height: 130px !important;
+     max-height: 130px !important;
+
+     object-fit: contain !important;
+     object-position: center !important;
+
+     background: #f3f4f6 !important;
+     border: 1px solid #dbe2ea !important;
+     border-radius: 10px !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 檢視模式若圖片沒有 image-preview-item 外框 */
+    #ragicForm .ragic-view-value:has(> img) {
+     gap: 12px !important;
+    }
+
+    #ragicForm .ragic-view-value:has(> img) > img {
+     flex: 0 0 210px !important;
+    }
+
+    /* 橫向捲軸 */
+    #ragicForm .image-preview-list::-webkit-scrollbar,
+    #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar {
+     height: 9px;
+    }
+
+    #ragicForm .image-preview-list::-webkit-scrollbar-thumb,
+    #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar-thumb {
+     background: #b8c2cf;
+     border-radius: 999px;
+    }
+
+    #ragicForm .image-preview-list::-webkit-scrollbar-track,
+    #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar-track {
+     background: #eef2f6;
+     border-radius: 999px;
+    }
   </style>
 </head>
 <body data-reminder-module="log">
