@@ -170,13 +170,17 @@ const applyFormLayout = (element, field = {}) => {
   const layoutHeight = normalizeFormFieldSize(layoutItem.height ?? field.formHeight, MIN_FORM_FIELD_HEIGHT);
   if (layoutItem.width || (field.formWidth && field.type !== 'subtable')) element.style.width = `${layoutWidth}px`;
   if (layoutItem.height || field.formHeight) {
-    if (field.type === 'subtable') {
-      element.style.minHeight = `${layoutHeight}px`;
-    } else {
-      element.style.height = `${layoutHeight}px`;
-      element.style.minHeight = `${layoutHeight}px`;
-    }
+  if (field.type === 'subtable') {
+    element.style.minHeight = `${layoutHeight}px`;
+  } else if (field.type === 'image') {
+    const imageHeight = Math.max(layoutHeight, 168);
+    element.style.height = `${imageHeight}px`;
+    element.style.minHeight = `${imageHeight}px`;
+  } else {
+    element.style.height = `${layoutHeight}px`;
+    element.style.minHeight = `${layoutHeight}px`;
   }
+}
   return element;
 };
 const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
