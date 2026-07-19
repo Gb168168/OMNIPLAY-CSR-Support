@@ -335,6 +335,57 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    /* ===== 修正日誌 NEW 圖片預覽高度 ===== */
+    #ragicForm .ragic-field-image.has-form-layout {
+     height: auto !important;
+     min-height: 220px !important;
+     max-height: none !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout > .image-upload-area {
+     height: auto !important;
+     min-height: 200px !important;
+     max-height: none !important;
+     overflow: visible !important;
+     align-items: flex-start !important;
+    }
+
+    #ragicForm [data-subfield-container="conversation_images"] {
+     height: auto !important;
+     min-height: 200px !important;
+     max-height: none !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .image-upload-area .image-preview-list {
+     display: flex !important;
+     flex-wrap: wrap !important;
+     align-items: flex-start !important;
+     gap: 10px !important;
+     height: auto !important;
+     max-height: none !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .image-upload-area .image-preview-item {
+     flex: 0 0 160px !important;
+     width: 160px !important;
+     height: 120px !important;
+     max-width: 160px !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .image-upload-area .image-preview-item img {
+     display: block !important;
+     width: 160px !important;
+     height: 110px !important;
+     max-width: 160px !important;
+     max-height: 110px !important;
+      object-fit: contain !important;
+     object-position: center !important;
+     background: #f3f4f6 !important;
+    } 
   </style>
 </head>
 <body data-reminder-module="log">
