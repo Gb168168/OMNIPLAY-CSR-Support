@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>日誌 NEW -6｜OMNIPLAY 客服系統</title>
+  <title>日誌 NEW -7｜OMNIPLAY 客服系統</title>
   <link rel="stylesheet" href="../assets/styles.css?v=20260718-26" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
@@ -463,25 +463,131 @@
      max-height: 135px !important;
      margin: 0 !important;
      overflow: visible !important;
-   }
+    }
 
-    /* 圖片本體 */
-    #ragicForm .image-preview-item img,
-    #ragicForm .ragic-view-value .image-preview-item img,
-    #ragicForm .ragic-view-value > img {
+     /* 圖片本體 */
+     #ragicForm .image-preview-item img,
+     #ragicForm .ragic-view-value .image-preview-item img,
+     #ragicForm .ragic-view-value > img {
+      display: block !important;
+      flex: 0 0 auto !important;
+
+      width: 210px !important;
+      min-width: 210px !important;
+      max-width: 210px !important;
+
+      height: 130px !important;
+      min-height: 130px !important;
+      max-height: 130px !important;
+
+      object-fit: contain !important;
+      object-position: center !important;
+
+      background: #f3f4f6 !important;
+      border: 1px solid #dbe2ea !important;
+      border-radius: 10px !important;
+      box-sizing: border-box !important;
+     }
+
+     /* 檢視模式若圖片沒有 image-preview-item 外框 */
+     #ragicForm .ragic-view-value:has(> img) {
+      gap: 12px !important;
+     }
+
+     #ragicForm .ragic-view-value:has(> img) > img {
+      flex: 0 0 210px !important;
+     }
+
+     /* 橫向捲軸 */
+     #ragicForm .image-preview-list::-webkit-scrollbar,
+     #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar {
+      height: 9px;
+     }
+
+     #ragicForm .image-preview-list::-webkit-scrollbar-thumb,
+     #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar-thumb {
+      background: #b8c2cf;
+      border-radius: 999px;
+     }
+ 
+     #ragicForm .image-preview-list::-webkit-scrollbar-track,
+     #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar-track {
+      background: #eef2f6;
+      border-radius: 999px;
+     }
+
+    /* ===== 日誌 NEW -7：檢視模式圖片橫向滑動最終修正 ===== */
+
+    /* 檢視模式的圖片欄位 */
+    #ragicForm .ragic-field-image.has-form-layout {
+     height: 230px !important;
+     min-height: 230px !important;
+     max-height: 230px !important;
+     overflow: hidden !important;
+    }
+
+    /* 檢視模式圖片內容區 */
+    #ragicForm .ragic-field-image .ragic-view-value {
+     display: flex !important;
+     flex-direction: row !important;
+     flex-wrap: nowrap !important;
+     align-items: flex-start !important;
+     gap: 12px !important;
+
+     width: 100% !important;
+     min-width: 0 !important;
+     max-width: 100% !important;
+
+     height: 190px !important;
+     min-height: 190px !important;
+     max-height: 190px !important;
+
+     overflow-x: scroll !important;
+     overflow-y: hidden !important;
+
+     padding: 6px 4px 14px !important;
+     box-sizing: border-box !important;
+     scrollbar-width: auto !important;
+    }
+
+    /* 檢視模式圖片可能包在 a、div 或 span 裡 */
+    #ragicForm .ragic-field-image .ragic-view-value > a,
+    #ragicForm .ragic-field-image .ragic-view-value > div,
+    #ragicForm .ragic-field-image .ragic-view-value > span,
+    #ragicForm .ragic-field-image .ragic-view-value .image-preview-item {
      display: block !important;
-     flex: 0 0 auto !important;
+     flex: 0 0 260px !important;
 
-     width: 210px !important;
-     min-width: 210px !important;
-     max-width: 210px !important;
+     width: 260px !important;
+     min-width: 260px !important;
+     max-width: 260px !important;
 
-     height: 130px !important;
-     min-height: 130px !important;
-     max-height: 130px !important;
+     height: 170px !important;
+     min-height: 170px !important;
+     max-height: 170px !important;
+
+     margin: 0 !important;
+     overflow: hidden !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 檢視模式圖片本體 */
+    #ragicForm .ragic-field-image .ragic-view-value img {
+     display: block !important;
+
+     width: 260px !important;
+     min-width: 260px !important;
+     max-width: 260px !important;
+
+     height: 170px !important;
+     min-height: 170px !important;
+     max-height: 170px !important;
 
      object-fit: contain !important;
      object-position: center !important;
+
+     margin: 0 !important;
+     padding: 0 !important;
 
      background: #f3f4f6 !important;
      border: 1px solid #dbe2ea !important;
@@ -489,31 +595,25 @@
      box-sizing: border-box !important;
     }
 
-    /* 檢視模式若圖片沒有 image-preview-item 外框 */
-    #ragicForm .ragic-view-value:has(> img) {
-     gap: 12px !important;
-    }
-
-    #ragicForm .ragic-view-value:has(> img) > img {
-     flex: 0 0 210px !important;
+    /* 防止圖片或圖片連結被 flex 壓縮 */
+    #ragicForm .ragic-field-image .ragic-view-value img,
+    #ragicForm .ragic-field-image .ragic-view-value a {
+     flex-shrink: 0 !important;
     }
 
     /* 橫向捲軸 */
-    #ragicForm .image-preview-list::-webkit-scrollbar,
-    #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar {
-     height: 9px;
+    #ragicForm .ragic-field-image .ragic-view-value::-webkit-scrollbar {
+     height: 10px !important;
     }
 
-    #ragicForm .image-preview-list::-webkit-scrollbar-thumb,
-    #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar-thumb {
-     background: #b8c2cf;
-     border-radius: 999px;
+    #ragicForm .ragic-field-image .ragic-view-value::-webkit-scrollbar-thumb {
+     background: #aeb8c5 !important;
+     border-radius: 999px !important;
     }
 
-    #ragicForm .image-preview-list::-webkit-scrollbar-track,
-    #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar-track {
-     background: #eef2f6;
-     border-radius: 999px;
+    #ragicForm .ragic-field-image .ragic-view-value::-webkit-scrollbar-track {
+     background: #edf1f5 !important;
+     border-radius: 999px !important;
     }
   </style>
 </head>
