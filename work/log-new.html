@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>日誌 NEW -5｜OMNIPLAY 客服系統</title>
+  <title>日誌 NEW -6｜OMNIPLAY 客服系統</title>
   <link rel="stylesheet" href="../assets/styles.css?v=20260718-26" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
@@ -360,12 +360,22 @@
 
     #ragicForm .image-upload-area .image-preview-list {
      display: flex !important;
-     flex-wrap: wrap !important;
+     flex-flow: row nowrap !important;
      align-items: flex-start !important;
-     gap: 10px !important;
+     gap: 12px !important;
+
+     width: 100% !important;
+     min-width: 0 !important;
+     max-width: 100% !important;
+
      height: auto !important;
      max-height: none !important;
-     overflow: visible !important;
+
+     overflow-x: auto !important;
+     overflow-y: hidden !important;
+
+     padding-bottom: 12px !important;
+     box-sizing: border-box !important;
     }
 
     #ragicForm .image-upload-area .image-preview-item {
