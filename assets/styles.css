@@ -3778,27 +3778,32 @@ body {
   max-height: 88px !important;
   object-fit: cover;
 }
-/* ===== 側欄收合避免遮住內容 ===== */
+/* ===== 側欄收合按鈕避免遮住標題與上一筆 ===== */
 
-.sidebar.is-collapsed ~ .main,
-.sidebar.collapsed ~ .main {
-  padding-left: 56px;
+/* 收合按鈕出現時，表單工具列左側留空 */
+body:has(.sidebar-toggle-btn.is-visible) .ragic-form-toolbar {
+  padding-left: 64px !important;
+  box-sizing: border-box !important;
 }
 
-.sidebar-toggle-btn {
+/* 收合按鈕出現時，一般頁面標題也留空 */
+body:has(.sidebar-toggle-btn.is-visible) .topbar {
+  padding-left: 64px !important;
+  box-sizing: border-box !important;
+}
+
+/* 固定收合按鈕的位置與大小 */
+.sidebar-toggle-btn.is-visible {
+  position: fixed !important;
   top: 14px !important;
   left: 14px !important;
-  width: 36px !important;
-  height: 36px !important;
-  z-index: 1200 !important;
+  width: 38px !important;
+  height: 38px !important;
+  z-index: 9999 !important;
 }
 
-.sidebar.is-collapsed ~ .main .ragic-form-toolbar,
-.sidebar.collapsed ~ .main .ragic-form-toolbar {
-  padding-left: 48px !important;
-}
-
-.sidebar.is-collapsed ~ .main .topbar,
-.sidebar.collapsed ~ .main .topbar {
-  padding-left: 48px !important;
+/* 日誌檢視／編輯頁的上一筆按鈕再往右一點 */
+body:has(.sidebar-toggle-btn.is-visible)
+.ragic-form-toolbar > :first-child {
+  margin-left: 6px !important;
 }
