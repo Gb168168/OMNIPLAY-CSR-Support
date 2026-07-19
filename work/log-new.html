@@ -199,6 +199,40 @@
       font-weight: 800;
       pointer-events: none;
     }
+    /* 日誌 NEW 設計器：預覽欄位只依格線跨欄/跨列，避免儲存的像素尺寸互相覆蓋。 */
+    #ragicDesignerModal #layoutDesignerPanel .layout-grid-section {
+      overflow: auto !important;
+      align-items: flex-start;
+    }
+    #ragicDesignerModal #layoutDesignerPanel .layout-grid {
+      flex: 0 0 auto;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-width: none !important;
+      max-height: none !important;
+      padding: 0 !important;
+      border: 0 !important;
+      overflow: visible !important;
+      box-sizing: content-box !important;
+      outline: 1px solid #d8e0ef;
+    }
+    #ragicDesignerModal #layoutDesignerPanel .layout-field {
+      width: auto !important;
+      height: auto !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-width: none !important;
+      max-height: none !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+    }
+    #ragicDesignerModal #layoutDesignerPanel .layout-field b,
+    #ragicDesignerModal #layoutDesignerPanel .layout-field small {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body data-reminder-module="log">
@@ -1148,6 +1182,33 @@
         }
       }, 200);
     });
+
+    // 設計器原本以容器寬度推算拖曳座標，但格線實際固定為 131×48，會造成落點偏移。
+    // 將畫布的實際尺寸鎖定為格線總尺寸，讓共用拖曳公式取得正確的每格寬高。
+    let fixingLogNewDesignerGrid = false;
+    const fixLogNewDesignerGrid = () => {
+      if (fixingLogNewDesignerGrid) return;
+      const grid = document.querySelector('#ragicDesignerModal:not([hidden]) #layoutDesignerPanel .layout-grid');
+      if (!grid) return;
+      const columns = Math.max(1, Number(grid.dataset.columns) || 1);
+      const rows = Math.max(1, Number(grid.dataset.rows) || 1);
+      const gap = 4;
+      const width = (columns * 131) + ((columns - 1) * gap);
+      const height = (rows * 48) + ((rows - 1) * gap);
+      const signature = `${columns}x${rows}`;
+      if (grid.dataset.logNewGridFixed === signature) return;
+      fixingLogNewDesignerGrid = true;
+      grid.style.setProperty('grid-template-columns', `repeat(${columns}, 131px)`, 'important');
+      grid.style.setProperty('grid-template-rows', `repeat(${rows}, 48px)`, 'important');
+      grid.style.setProperty('width', `${width}px`, 'important');
+      grid.style.setProperty('height', `${height}px`, 'important');
+      grid.dataset.logNewGridFixed = signature;
+      fixingLogNewDesignerGrid = false;
+    };
+    const designerGridObserver = new MutationObserver(() => requestAnimationFrame(fixLogNewDesignerGrid));
+    const designerPanel = document.querySelector('#layoutDesignerPanel');
+    if (designerPanel) designerGridObserver.observe(designerPanel, { childList: true, subtree: true });
+    document.querySelector('#designTableButton')?.addEventListener('click', () => requestAnimationFrame(fixLogNewDesignerGrid));
 
     new MutationObserver(enhanceLogNewAiUi).observe(document.querySelector('#ragicFormView'), { childList: true, subtree: true });
     enhanceLogNewAiUi();
