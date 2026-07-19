@@ -166,9 +166,9 @@
     }
     /* 日誌 NEW 處理紀錄：五欄、上下堆疊的固定位置。 */
     #ragicForm [data-subtable="items"] .subtable-row-fields {
-      grid-template-columns: minmax(360px, 1.4fr) minmax(280px, 1fr) minmax(360px, 1.3fr) minmax(360px, 1.3fr) minmax(240px, .9fr);
+      grid-template-columns: minmax(360px, 1.4fr) minmax(280px, 1fr) minmax(360px, 1.3fr) minmax(360px, 1.3fr) minmax(420px, 1.2fr);
       grid-template-rows: minmax(120px, auto) minmax(120px, auto);
-      min-width: 1660px;
+      min-width: 1812px;
       align-items: stretch;
     }
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation"]) { grid-column: 1; grid-row: 1 / span 2; }
@@ -461,9 +461,9 @@
           { key: 'technical_processing', label: '技術群處理', type: 'textarea', rows: 4, width: 300 },
           { key: 'ai_analysis', label: 'AI分析', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' },
           { key: 'summary', label: '總結', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' },
-          { key: 'image_source', label: '圖片來源', type: 'select', width: 220, defaultValue: '自動判斷', options: ['自動判斷', '客戶', '我方團隊'] },
+          { key: 'image_source', label: '圖片來源', type: 'select', width: 420, defaultValue: '自動判斷', options: ['自動判斷', '客戶', '我方團隊'] },
           { key: 'business_processing', label: '商務群處理', type: 'textarea', rows: 4, width: 300 },
-          { key: 'conversation_images', label: '圖片', type: 'image', width: 300 }
+          { key: 'conversation_images', label: '圖片', type: 'image', width: 420 }
         ]}
       ],
       formLayout: {
