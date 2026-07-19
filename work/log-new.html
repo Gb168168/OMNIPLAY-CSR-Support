@@ -1039,6 +1039,19 @@
 
         const originalText = button.textContent;
         button.disabled = true;
+        const totalUnits = rows.reduce((total, row) => total + getLogNewRowImages(row).length + 1, 0);
+        let completedUnits = 0;
+        let progress = 0;
+        let analysisSucceeded = false;
+        const showProgress = (value) => {
+          progress = Math.max(progress, Math.min(100, Math.round(value)));
+          button.textContent = `✨ AI 分析中 ${progress}%`;
+        };
+        showProgress(0);
+        const progressTimer = setInterval(() => {
+          if (progress >= 92) return;
+          showProgress(progress + Math.max(1, Math.ceil((92 - progress) * 0.06)));
+        }, 700);
         try {
           const briefs = [];
           for (let index = 0; index < rows.length; index += 1) {
@@ -1047,11 +1060,9 @@
             let conversation = `${conversationText}\n\n[系統圖片對照規則：圖片依上傳順序編號。對話中的（圖1）或(圖1)對應第一張圖片，（圖2）或(圖2)對應第二張，依此類推。必須以圖片標記所在的發言段落判斷提供者；有明確圖號時優先採用此對照，沒有圖號才依圖片來源選項與上下文判斷。]`;
             const images = getLogNewRowImages(row);
             const imageSource = row.querySelector('[data-subfield="image_source"]')?.value || '自動判斷';
-            button.textContent = `✨ AI 分析中 ${index + 1}/${rows.length}`;
             const imageFindings = [];
             if (images.length) {
               for (let imageIndex = 0; imageIndex < images.length; imageIndex += 1) {
-                button.textContent = `✨ 辨識圖${imageIndex + 1} ${index + 1}/${rows.length}`;
                 const imageResponse = await puter.ai.chat(
                   `請用繁體中文客觀辨識這張客服案件截圖。這是圖${imageIndex + 1}，圖片來源設定為「${imageSource}」。請列出畫面中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額、狀態與處理結果；看不清楚或不存在的資訊請寫未辨識，不可猜測。`,
                   logNewImageMedia(images[imageIndex], imageIndex),
@@ -1061,9 +1072,10 @@
                   owner: inferLogNewImageOwner(conversationText, imageIndex + 1, imageSource),
                   text: `圖${imageIndex + 1}：${logNewAiResponseText(imageResponse)}`
                 });
+                completedUnits += 1;
+                showProgress((completedUnits / totalUnits) * 92);
               }
               conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.map((item) => `${item.text}\n來源判斷：${item.owner}`).join('\n\n')}`;
-              button.textContent = `✨ 整合分析 ${index + 1}/${rows.length}`;
             }
             const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。若標記為「客戶」或「我方團隊」，必須依該標記判斷；若為「自動判斷」，請依對話前後文、圖片內容與團隊名錄推斷，無法確定時明確寫「圖片來源待確認」，不可猜測。客戶圖片視為問題或異常證據；我方圖片視為查詢結果、後台紀錄或處理證明。請辨識圖片中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額及處理結果，並與對話互相核對。\n\n分析規則：\n1. 只能依據對話與圖片內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【客戶圖片】、【內部處理】（標示姓名／部門）、【我方圖片】、【問題判斷】、【目前進度】、【後續待辦】獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話或圖片未提供」。\n3. summary 是給下一班交接使用的短版總結，最多三句，必須包含問題、圖片重點、目前由誰或哪個部門處理、下一步。\n4. customerBrief 只寫客戶提出的問題、需求與客戶圖片重點，一至兩句。\n5. supportBrief 整合 OMNIPLAY 內部已回覆、已處理、我方圖片結果及待處理內容，一至兩句。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
             const finalPrompt = `${prompt}\n\n最新團隊職稱修正（本段優先於前述名錄）：技術包含 Rondo、Rondo lin OP-RD、Leo Chang、Chuan-Chia Lai、🧑‍💻賢 _RD、Nick OP RD、Yeh Ryan；KKaren 的職稱為營銷。舊名錄若出現「昌賢」是圖片辨識錯誤，正確人員為「🧑‍💻賢 _RD」。\n\n最終輸出請忽略前述 JSON格式，嚴格使用以下分隔標記；標記不得省略，內容可以正常換行，不要加 Markdown 程式碼框：\n<<<ANALYSIS>>>\n完整 AI分析\n<<<SUMMARY>>>\n交接總結\n<<<CUSTOMER_BRIEF>>>\n客戶問題短述\n<<<SUPPORT_BRIEF>>>\n我方處理短述\n<<<END>>>`;
@@ -1078,19 +1090,29 @@
             result.analysis = mergeLogNewImageFindings(result.analysis, imageFindings);
             window.applyLogNewAiResult(row, result);
             briefs.push({ customerBrief: result.customerBrief || '', supportBrief: result.supportBrief || '' });
+            completedUnits += 1;
+            showProgress((completedUnits / totalUnits) * 98);
           }
           const issue = document.querySelector('#ragicForm [name="issue"]');
           if (issue) {
             issue.value = `客戶：${briefs.map((item) => item.customerBrief).filter(Boolean).join('；')}\n客服：${briefs.map((item) => item.supportBrief).filter(Boolean).join('；')}`;
             issue.dispatchEvent(new Event('input', { bubbles: true }));
           }
+          analysisSucceeded = true;
+          showProgress(100);
           alert('AI 分析完成，已填入「AI分析」、「總結」及「問題描述」，請確認內容後再儲存。');
         } catch (error) {
           console.error('日誌 NEW AI 分析失敗：', error);
           alert(`AI 分析失敗：${error?.message || '請稍後再試'}。若首次使用，請先完成 Puter 登入授權。`);
         } finally {
+          clearInterval(progressTimer);
           button.disabled = false;
-          button.textContent = originalText;
+          if (analysisSucceeded) {
+            button.textContent = '✅ AI 分析完成 100%';
+            setTimeout(() => { if (!button.disabled) button.textContent = originalText; }, 1800);
+          } else {
+            button.textContent = originalText;
+          }
         }
       });
       head.appendChild(button);
