@@ -199,6 +199,79 @@
       font-weight: 800;
       pointer-events: none;
     }
+    /* 圖片／檔案預覽固定留在自己的欄框內，禁止內容向上下欄位溢出。 */
+    #ragicForm .ragic-field-image.has-form-layout,
+    #ragicForm .ragic-field-file.has-form-layout {
+      min-width: 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+    #ragicForm .ragic-field-image.has-form-layout > .image-upload-area,
+    #ragicForm .ragic-field-file.has-form-layout > .image-upload-area {
+      height: calc(100% - 18px) !important;
+      min-height: 0 !important;
+      padding: 5px 8px !important;
+      justify-content: flex-start !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+    #ragicForm .image-upload-area .image-preview-list {
+      display: flex !important;
+      flex-flow: row nowrap !important;
+      gap: 8px !important;
+      width: 100%;
+      min-width: 0;
+      margin: 4px 0 0 !important;
+      padding: 2px 4px 3px 2px;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      scrollbar-width: thin;
+      box-sizing: border-box;
+    }
+    #ragicForm .image-upload-area:has(.image-preview-list) > div:first-child {
+      display: none;
+    }
+    #ragicForm .image-upload-area .image-preview-item {
+      flex: 0 0 92px;
+      width: 92px;
+      height: 58px;
+      max-width: 92px !important;
+      margin: 0 !important;
+      overflow: visible;
+    }
+    #ragicForm .image-upload-area .image-preview-item img {
+      display: block;
+      width: 92px !important;
+      height: 54px !important;
+      max-width: 92px !important;
+      max-height: 54px !important;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    #ragicForm .image-upload-area .image-preview-item > span:not(.image-count-badge) {
+      display: none !important;
+    }
+    #ragicForm .image-upload-area .image-remove-btn {
+      top: -3px;
+      right: -3px;
+      width: 19px;
+      height: 19px;
+      z-index: 3;
+    }
+    #ragicForm [data-subfield-container="conversation_images"] {
+      min-height: 0 !important;
+      max-height: 112px;
+      padding: 5px 7px !important;
+      overflow: hidden !important;
+      box-sizing: border-box;
+    }
+    #ragicForm .ragic-field-file.has-form-layout .ragic-file-preview {
+      max-width: 100%;
+      max-height: 54px;
+      margin-top: 4px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
     /* 日誌 NEW 設計器：預覽欄位只依格線跨欄/跨列，避免儲存的像素尺寸互相覆蓋。 */
     #ragicDesignerModal #layoutDesignerPanel .layout-grid-section {
       overflow: auto !important;
