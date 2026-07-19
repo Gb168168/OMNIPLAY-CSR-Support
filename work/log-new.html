@@ -164,6 +164,20 @@
       overflow-y: auto;
       resize: vertical;
     }
+    /* 日誌 NEW 處理紀錄：五欄、上下堆疊的固定位置。 */
+    #ragicForm [data-subtable="items"] .subtable-row-fields {
+      grid-template-columns: minmax(360px, 1.4fr) minmax(280px, 1fr) minmax(360px, 1.3fr) minmax(360px, 1.3fr) minmax(240px, .9fr);
+      grid-template-rows: minmax(120px, auto) minmax(120px, auto);
+      min-width: 1660px;
+      align-items: stretch;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation"]) { grid-column: 1; grid-row: 1 / span 2; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="technical_processing"]) { grid-column: 2; grid-row: 1; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="business_processing"]) { grid-column: 2; grid-row: 2; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="ai_analysis"]) { grid-column: 3; grid-row: 1 / span 2; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="summary"]) { grid-column: 4; grid-row: 1 / span 2; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="image_source"]) { grid-column: 5; grid-row: 1; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]) { grid-column: 5; grid-row: 2; }
     #ragicForm [data-subfield-container="conversation_images"] .image-preview-list {
       counter-reset: log-new-image;
     }
@@ -335,12 +349,14 @@
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 },
         { key: 'processing_department', label: '處理部門', type: 'select', options: ['技術', '商務'], formRow: 5, formCol: 4 },
         { key: 'reminder_link', label: '提醒連結', type: 'link', formRow: 2, formCol: 7 },
-        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 3, formRow: 7, formCol: 1, formColSpan: 7, fields: [
+        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 5, formRow: 7, formCol: 1, formColSpan: 7, fields: [
           { key: 'conversation', label: '對話', type: 'textarea', rows: 8, width: 420, placeholder: '請貼上客戶與客服的完整對話' },
-          { key: 'conversation_images', label: '對話圖片', type: 'image', width: 300 },
-          { key: 'image_source', label: '圖片來源', type: 'select', width: 220, defaultValue: '自動判斷', options: ['自動判斷', '客戶', '我方團隊'] },
+          { key: 'technical_processing', label: '技術群處理', type: 'textarea', rows: 4, width: 300 },
           { key: 'ai_analysis', label: 'AI分析', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' },
-          { key: 'summary', label: '總結', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' }
+          { key: 'summary', label: '總結', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' },
+          { key: 'image_source', label: '圖片來源', type: 'select', width: 220, defaultValue: '自動判斷', options: ['自動判斷', '客戶', '我方團隊'] },
+          { key: 'business_processing', label: '商務群處理', type: 'textarea', rows: 4, width: 300 },
+          { key: 'conversation_images', label: '圖片', type: 'image', width: 300 }
         ]}
       ],
       formLayout: {
