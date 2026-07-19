@@ -689,8 +689,13 @@
 
     const syncLogNewContactFromConversation = async (value = '') => {
       const entries = logNewConversationEntries(value);
-      if (entries.length < 2 || isLogNewInternalSpeaker(entries[0].speaker)) return;
-      const responder = entries.slice(1).find((entry) => isLogNewInternalSpeaker(entry.speaker));
+      if (entries.length < 2) return;
+      // 客戶名稱可能剛好與團隊別名相似，因此接洽者規則直接以首段之後
+      // 第一位 J_商務 或 igaming-op 回覆者判斷，不讓模糊名錄比對提前中止。
+      const responder = entries.slice(1).find((entry) => {
+        const identity = normalizeStaffIdentity(entry.speaker);
+        return identity === 'j 商務' || identity === 'j' || identity.includes('igaming op');
+      });
       if (!responder) return;
       const speaker = normalizeStaffIdentity(responder.speaker);
       const contact = document.querySelector('#ragicForm [name="contact"]');
@@ -818,10 +823,26 @@
           textarea.value = formatted;
           textarea.dispatchEvent(new Event('input', { bubbles: true }));
         };
+        let contactTimer;
+        textarea.addEventListener('input', () => {
+          clearTimeout(contactTimer);
+          contactTimer = setTimeout(() => {
+            syncLogNewContactFromConversation(textarea.value).catch((error) => console.warn('自動判斷接洽者失敗：', error));
+          }, 120);
+        });
         textarea.addEventListener('paste', () => setTimeout(format, 0));
         textarea.addEventListener('blur', format);
+        if (textarea.value) syncLogNewContactFromConversation(textarea.value).catch((error) => console.warn('自動判斷接洽者失敗：', error));
       });
     };
+
+    document.querySelector('#ragicForm')?.addEventListener('submit', () => {
+      const conversations = [...document.querySelectorAll('#ragicForm [data-subfield="conversation"]')]
+        .map((textarea) => textarea.value || '')
+        .filter(Boolean)
+        .join('\n');
+      syncLogNewContactFromConversation(conversations).catch((error) => console.warn('儲存前同步接洽者失敗：', error));
+    }, true);
 
     const compressLogNewConversationImage = (file) => new Promise((resolve, reject) => {
       if (!file?.type?.startsWith('image/')) return reject(new Error('只能上傳圖片檔案'));
