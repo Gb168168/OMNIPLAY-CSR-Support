@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>日誌 NEW -8｜OMNIPLAY 客服系統</title>
+  <title>日誌 NEW -9｜OMNIPLAY 客服系統</title>
   <link rel="stylesheet" href="../assets/styles.css?v=20260718-26" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
@@ -678,6 +678,43 @@
      border: 1px solid #dbe2ea !important;
      border-radius: 10px !important;
      box-sizing: border-box !important;
+    }
+
+    /* ===== 日誌 NEW -9：檢視模式圖片高度強制完整展開 ===== */
+
+    #ragicForm .ragic-field-image.has-form-layout {
+     height: 340px !important;
+     min-height: 340px !important;
+     max-height: none !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout .ragic-view-value {
+     height: 300px !important;
+     min-height: 300px !important;
+     max-height: 300px !important;
+     overflow-x: auto !important;
+     overflow-y: hidden !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout .ragic-view-value > * {
+     flex: 0 0 360px !important;
+     width: 360px !important;
+     min-width: 360px !important;
+     max-width: 360px !important;
+     height: 270px !important;
+     min-height: 270px !important;
+     max-height: 270px !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout .ragic-view-value img {
+     width: 360px !important;
+     min-width: 360px !important;
+     max-width: 360px !important;
+     height: 270px !important;
+     min-height: 270px !important;
+     max-height: 270px !important;
+     object-fit: contain !important;
     }
   </style>
 </head>
