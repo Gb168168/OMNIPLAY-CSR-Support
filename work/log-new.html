@@ -659,7 +659,57 @@
       return { ...last, speaker: last.match[7].trim(), segment: last.text.slice(last.index) };
     };
 
-    const normalizeStaffIdentity = (value = '') => String(value).toLowerCase().replace(/[👩👨💻🏃➡️📋_\-\s／/]+/g, ' ').trim();
+    const normalizeStaffIdentity = (value = '') => String(value).toLowerCase()
+      .replace(/[\p{Extended_Pictographic}\u200d\ufe0f]/gu, '')
+      .replace(/[_\-\s／/]+/g, ' ')
+      .trim();
+
+    const logNewTeamAliases = [
+      'igaming op', '中魁', 'jerry hu', 'andy chou', 'jim li', 'lucas', 'lucas n', 'j 商務', 'anton',
+      'hazel', 'pc am', 'cia op am', 'weiliya lin', 'weiliya op am', 'apple am', 'diane', 'crystal', 'kkaren',
+      'rondo', 'rondo lin op rd', 'leo chang', 'chuan chia lai', '賢 rd', 'nick op rd', 'yeh ryan',
+      'nina', '張家豪', 'yuting wang', 'wj', 'chang how', 'weili huang', 'ellie', 'mike yu', '修全 林',
+      '多 it sre', 'tony yang', 'andrew', 'pien', 'suigetsu'
+    ];
+
+    const isLogNewInternalSpeaker = (speakerValue = '') => {
+      const speaker = normalizeStaffIdentity(speakerValue);
+      return logNewTeamAliases.some((alias) => speaker === alias || (alias.length >= 3 && speaker.includes(alias)));
+    };
+
+    const logNewConversationEntries = (value = '') => {
+      const text = String(value);
+      const pattern = /\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]\s*([^\n:：]{1,120})[:：]/g;
+      const entries = [];
+      let match;
+      while ((match = pattern.exec(text))) entries.push({ match: [...match], speaker: match[7].trim(), index: match.index, end: pattern.lastIndex });
+      entries.forEach((entry, index) => { entry.segment = text.slice(entry.end, entries[index + 1]?.index ?? text.length); });
+      return entries;
+    };
+
+    const syncLogNewContactFromConversation = async (value = '') => {
+      const entries = logNewConversationEntries(value);
+      if (entries.length < 2 || isLogNewInternalSpeaker(entries[0].speaker)) return;
+      const responder = entries.slice(1).find((entry) => isLogNewInternalSpeaker(entry.speaker));
+      if (!responder) return;
+      const speaker = normalizeStaffIdentity(responder.speaker);
+      const contact = document.querySelector('#ragicForm [name="contact"]');
+      if (speaker === 'j 商務' || speaker === 'j') {
+        setLogNewSelectValue(contact, '業務／AM');
+        return;
+      }
+      if (!speaker.includes('igaming op')) return;
+      const codes = [...responder.segment.matchAll(/(?:^|[\s。.!！])[-－]\s*([a-z0-9]{1,10})(?=\s|$|[。.!！])/gi)].map((match) => match[1]);
+      if (!codes.length) return;
+      const staff = await loadLogNewStaff();
+      for (const code of [...codes].reverse()) {
+        const person = staff.find((item) => String(item.code || '').trim().toLowerCase() === code.toLowerCase());
+        if (person?.name) {
+          setLogNewSelectValue(contact, person.name);
+          return;
+        }
+      }
+    };
 
     const resolveLogNewCompleter = async (entry) => {
       const staff = await loadLogNewStaff();
@@ -680,7 +730,7 @@
       if (person?.name) return { name: person.name, reason: '' };
       const teamAliases = [
         '中魁', 'jerry hu', 'andy chou', 'jim li', 'lucas', 'anton', 'hazel', 'pc am', 'cia', 'weiliya',
-        'apple', 'diane', 'kkaren', 'crystal', 'rondo', 'leo chang', 'yeh ryan', 'chuan chia lai', '昌賢',
+        'apple', 'diane', 'kkaren', 'crystal', 'rondo', 'leo chang', 'yeh ryan', 'chuan chia lai', '賢 rd',
         'nick', 'nina', '張家豪', 'yuting wang', 'wj', 'chang how', 'weili huang', 'ellie', 'mike yu',
         '修全', 'tony yang', 'andrew', 'pien', 'suigetsu'
       ];
@@ -763,6 +813,7 @@
         const format = () => {
           const formatted = normalizeLogNewConversation(textarea.value);
           syncLogNewDateFromConversation(formatted);
+          syncLogNewContactFromConversation(formatted).catch((error) => console.warn('自動判斷接洽者失敗：', error));
           if (formatted === textarea.value) return;
           textarea.value = formatted;
           textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -925,7 +976,7 @@
       const internalNames = [
         'igaming op', '中魁', 'jerry hu', 'andy chou', 'jim li', 'lucas', 'anton', 'hazel',
         'pc am', 'cia', 'weiliya', 'apple', 'diane', 'kkaren', 'crystal', 'rondo', 'leo chang',
-        'yeh ryan', 'chuan chia lai', '昌賢', 'nick', 'nina', '張家豪', 'yuting wang', 'chang how',
+        'yeh ryan', 'chuan chia lai', '賢 rd', 'nick', 'nina', '張家豪', 'yuting wang', 'chang how',
         'weili huang', 'ellie', 'mike yu', '修全', 'tony yang', 'andrew', 'pien', 'suigetsu'
       ];
       return internalNames.some((name) => normalizedSpeaker.includes(name)) ? '我方團隊' : (speaker ? '客戶' : '來源待確認');
@@ -994,7 +1045,7 @@
               button.textContent = `✨ 整合分析 ${index + 1}/${rows.length}`;
             }
             const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。若標記為「客戶」或「我方團隊」，必須依該標記判斷；若為「自動判斷」，請依對話前後文、圖片內容與團隊名錄推斷，無法確定時明確寫「圖片來源待確認」，不可猜測。客戶圖片視為問題或異常證據；我方圖片視為查詢結果、後台紀錄或處理證明。請辨識圖片中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額及處理結果，並與對話互相核對。\n\n分析規則：\n1. 只能依據對話與圖片內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【客戶圖片】、【內部處理】（標示姓名／部門）、【我方圖片】、【問題判斷】、【目前進度】、【後續待辦】獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話或圖片未提供」。\n3. summary 是給下一班交接使用的短版總結，最多三句，必須包含問題、圖片重點、目前由誰或哪個部門處理、下一步。\n4. customerBrief 只寫客戶提出的問題、需求與客戶圖片重點，一至兩句。\n5. supportBrief 整合 OMNIPLAY 內部已回覆、已處理、我方圖片結果及待處理內容，一至兩句。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
-            const finalPrompt = `${prompt}\n\n最終輸出請忽略前述 JSON格式，嚴格使用以下分隔標記；標記不得省略，內容可以正常換行，不要加 Markdown 程式碼框：\n<<<ANALYSIS>>>\n完整 AI分析\n<<<SUMMARY>>>\n交接總結\n<<<CUSTOMER_BRIEF>>>\n客戶問題短述\n<<<SUPPORT_BRIEF>>>\n我方處理短述\n<<<END>>>`;
+            const finalPrompt = `${prompt}\n\n最新團隊職稱修正（本段優先於前述名錄）：技術包含 Rondo、Rondo lin OP-RD、Leo Chang、Chuan-Chia Lai、🧑‍💻賢 _RD、Nick OP RD、Yeh Ryan；KKaren 的職稱為營銷。舊名錄若出現「昌賢」是圖片辨識錯誤，正確人員為「🧑‍💻賢 _RD」。\n\n最終輸出請忽略前述 JSON格式，嚴格使用以下分隔標記；標記不得省略，內容可以正常換行，不要加 Markdown 程式碼框：\n<<<ANALYSIS>>>\n完整 AI分析\n<<<SUMMARY>>>\n交接總結\n<<<CUSTOMER_BRIEF>>>\n客戶問題短述\n<<<SUPPORT_BRIEF>>>\n我方處理短述\n<<<END>>>`;
             const options = {
               model: 'gpt-5.4-nano',
               temperature: 0.1,
