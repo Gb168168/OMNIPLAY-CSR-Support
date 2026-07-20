@@ -3807,3 +3807,35 @@ body:has(.sidebar-toggle-btn.is-visible)
 .ragic-form-toolbar > :first-child {
   margin-left: 6px !important;
 }
+
+/* 設計表格：操作按鈕與縮放把手限制在欄位框內 */
+#ragicDesignerModal .layout-field {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 右側縮放把手放進框內 */
+#ragicDesignerModal .layout-field .resize-handle-right {
+  right: 2px !important;
+  top: 20% !important;
+}
+
+/* 底部縮放把手放進框內 */
+#ragicDesignerModal .layout-field .resize-handle-bottom {
+  bottom: 2px !important;
+  left: 20% !important;
+}
+
+/* 刪除按鈕放進右上角 */
+#ragicDesignerModal .layout-field .remove-btn {
+  top: 4px !important;
+  right: 4px !important;
+}
+
+/* 設定按鈕也限制在框內 */
+#ragicDesignerModal .layout-field .settings-btn {
+  top: 4px !important;
+  right: 28px !important;
+}
