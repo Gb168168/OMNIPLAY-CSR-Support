@@ -2784,7 +2784,20 @@ const initRagicPage = async (config) => {
     RAGIC_STATE.schema = normalizeSchema(loadedSchema);
   }
 
-  renderHeader();
+    renderHeader();
   applyRagicPermissionUi();
   applyFilters();
 });
+
+collection
+  .orderBy('createdAt', 'desc')
+  .onSnapshot((snapshot) => {
+    RAGIC_STATE.records = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    applyRagicPermissionUi();
+    applyFilters();
+  });
+};
