@@ -2012,14 +2012,6 @@ const updateDesignerPreview = () => {
     previewTable?.querySelectorAll(`tbody td:nth-child(${index + 1})`).forEach((cell) => applyColumnWidth(cell, width));
   });
 };
-const SUBFIELD_TYPES = [
-  { value: 'text', label: '文字' },
-  { value: 'textarea', label: '多行文字' },
-  { value: 'date', label: '日期' },
-  { value: 'image', label: '圖片' },
-  { value: 'file', label: '檔案' },
-  { value: 'link', label: '連結' }
-];
 
 
 const subfieldWidthSummary = (container) => {
