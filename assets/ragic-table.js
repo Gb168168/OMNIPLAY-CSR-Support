@@ -217,8 +217,16 @@ const normalizeDesignerFormLayout = (formLayout = {}, fields = []) => {
       width: field.formWidth || null,
       height: field.formHeight || null
     }]));
-  const fieldKeys = new Set((fields || []).map((field) => field.key).filter(Boolean));
-  const nextFields = {};
+  const fieldKeys = new Set(
+  (fields || []).map((field) => field.key).filter(Boolean)
+);
+
+const fieldsByKey = new Map(
+  (fields || []).map((field) => [field.key, field])
+);
+
+const nextFields = {};
+  
   Object.entries(sourceFields).forEach(([key, layout]) => {
     if (fieldKeys.size && !fieldKeys.has(key)) return;
     const fixed = null;
