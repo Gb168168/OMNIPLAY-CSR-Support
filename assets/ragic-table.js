@@ -2453,7 +2453,54 @@ const attachLayoutDesignerEvents = (panel) => {
   });
 };
 
-const openDesigner = async () => { const modal = document.querySelector('#ragicDesignerModal'); const body = modal.querySelector('.designer-body'); body.innerHTML = ''; getFields().forEach((field) => body.appendChild(fieldDesigner(field))); modal.hidden = false; renderLayoutDesigner(); updateDesignerPreview(); };
+const openDesigner = async () => {
+  const modal = document.querySelector('#ragicDesignerModal');
+  const body = modal?.querySelector('.designer-body');
+  const layoutPanel = modal?.querySelector('#layoutDesignerPanel');
+
+  if (!modal || !body) {
+    console.error('找不到設計表格視窗');
+    alert('無法開啟設計表格，請重新整理頁面');
+    return;
+  }
+
+  // 必須先顯示視窗，避免後續程式錯誤導致完全沒反應
+  modal.hidden = false;
+  modal.style.display = 'flex';
+
+  try {
+    body.innerHTML = '';
+
+    const fields = getFields();
+
+    fields.forEach((field) => {
+      try {
+        body.appendChild(fieldDesigner(field));
+      } catch (fieldError) {
+        console.error('建立設計欄位失敗：', field, fieldError);
+      }
+    });
+
+    body.hidden = true;
+
+    if (layoutPanel) {
+      layoutPanel.hidden = false;
+    }
+
+    renderLayoutDesigner();
+    updateDesignerPreview();
+  } catch (error) {
+    console.error('開啟設計表格失敗：', error);
+
+    body.hidden = false;
+    body.innerHTML = `
+      <div style="padding:20px;">
+        <h3>設計表格載入失敗</h3>
+        <p>${escapeHtml(error?.message || '未知錯誤')}</p>
+      </div>
+    `;
+  }
+};
 const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
 
 
