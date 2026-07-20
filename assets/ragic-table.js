@@ -233,14 +233,67 @@ const nextFields = {};
     const row = normalizeFormLayoutNumber(fixed?.row ?? layout?.row, { min: 1, max: rows });
     const col = normalizeFormLayoutNumber(fixed?.col ?? layout?.col, { min: 1, max: columns });
     if (!row || !col) return;
-    nextFields[key] = {
-      row,
-      col,
-      colSpan: normalizeFormLayoutNumber(fixed?.colSpan ?? layout?.colSpan, { min: 1, max: columns - col + 1, fallback: 1 }),
-      rowSpan: normalizeFormLayoutNumber(fixed?.rowSpan ?? layout?.rowSpan, { min: 1, max: rows - row + 1, fallback: 1 }),
-      width: fixed ? null : normalizeFormLayoutNumber(layout?.width ?? layout?.formWidth, { min: 40, max: 2000, fallback: null }),
-      height: fixed ? (fixed.textarea ? LOG_FORM_LAYOUT.textareaHeight : LOG_FORM_LAYOUT.fieldHeight) : normalizeFormLayoutNumber(layout?.height ?? layout?.formHeight, { min: 32, max: 2000, fallback: null })
-    };
+    const currentField = fieldsByKey.get(key);
+const isSubtable = currentField?.type === 'subtable';
+
+nextFields[key] = {
+  row,
+
+  // 子表格固定從第一欄開始
+  col: isSubtable ? 1 : col,
+
+  // 子表格固定橫跨全部欄位
+  colSpan: isSubtable
+    ? columns
+    : normalizeFormLayoutNumber(
+        fixed?.colSpan ?? layout?.colSpan,
+        {
+          min: 1,
+          max: columns - col + 1,
+          fallback: 1
+        }
+      ),
+
+  rowSpan: normalizeFormLayoutNumber(
+    fixed?.rowSpan ?? layout?.rowSpan,
+    {
+      min: 1,
+      max: rows - row + 1,
+      fallback: 1
+    }
+  ),
+
+  // 子表格不能再套用固定 px 寬度
+  width: isSubtable
+    ? null
+    : (
+        fixed
+          ? null
+          : normalizeFormLayoutNumber(
+              layout?.width ?? layout?.formWidth,
+              {
+                min: 40,
+                max: 2000,
+                fallback: null
+              }
+            )
+      ),
+
+  height: fixed
+    ? (
+        fixed.textarea
+          ? LOG_FORM_LAYOUT.textareaHeight
+          : LOG_FORM_LAYOUT.fieldHeight
+      )
+    : normalizeFormLayoutNumber(
+        layout?.height ?? layout?.formHeight,
+        {
+          min: 32,
+          max: 2000,
+          fallback: null
+        }
+      )
+};
   });
   return { columns, rows, fields: nextFields, version: String(source.version || '') };
 };
