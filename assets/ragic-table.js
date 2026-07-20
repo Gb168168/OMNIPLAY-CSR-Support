@@ -299,8 +299,26 @@ nextFields[key] = {
 };
 const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   if (!grid) return grid;
-  const { columns } = normalizeFormLayoutConfig(RAGIC_STATE.schema?.formLayout || config?.formLayout);
-  grid.style.setProperty('--form-columns', columns || 5);
+
+  const layout = normalizeDesignerFormLayout(
+    RAGIC_STATE.schema?.formLayout || config?.formLayout,
+    getFields()
+  );
+
+  const columns = layout.columns || 5;
+  const rows = layout.rows || 4;
+
+  grid.style.setProperty('--form-columns', columns);
+
+  // 實際表單必須與設計器使用相同的 Grid
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+  grid.style.gridTemplateRows = `repeat(${rows}, 48px)`;
+  grid.style.gridAutoRows = '48px';
+  grid.style.columnGap = '12px';
+  grid.style.rowGap = '10px';
+  grid.style.alignItems = 'stretch';
+
   return grid;
 };
 const applyFormLayout = (element, field = {}) => {
