@@ -2544,7 +2544,109 @@ const initRagicPage = async (config) => {
     if (event.target.matches('[data-setting-type]')) panel.querySelector('.setting-options').hidden = !['select','multiselect'].includes(event.target.value);
     if (event.target.closest('[data-add-setting-subfield]')) { const list = panel.querySelector('[data-setting-subfields]'); list?.appendChild(fieldDesigner({ key: generateFieldKey(), label: '新子欄位', type: 'text' }, true)); syncSubtableWidthFromEvent(list); return; }
     if (event.target.closest('[data-remove-settings-field]')) { const key = panel.dataset.fieldKey; if (!confirm('確定刪除此欄位？')) return; removeDesignerFieldByKey(key); updateLayoutDesignerState((layout) => { delete layout.fields[key]; }); panel.hidden = true; return; }
-    if (event.target.closest('[data-confirm-settings]')) { const key = panel.dataset.fieldKey; updateDesignerFieldByKey(key, (row) => { row.querySelector('[data-role="label"]').value = panel.querySelector('[data-setting-label]').value; row.querySelector('[data-role="type"]').value = panel.querySelector('[data-setting-type]').value; row.querySelector('[data-role="options"]').value = String(panel.querySelector('[data-option-list]')?.value || '').split(/\n+/).map((option) => option.trim()).filter(Boolean).join('\n'); row.querySelector('[data-role="required"]').checked = panel.querySelector('[data-setting-required]')?.checked || panel.querySelector('[data-setting-required]')?.value === '1' || false; row.querySelector('[data-role="width"]').value = panel.querySelector('[data-layout-width]')?.value || ''; row.querySelector('[data-role="default"]').value = panel.querySelector('[data-setting-default]')?.value || ''; row.querySelector('[data-role="help"]').value = panel.querySelector('[data-setting-help]')?.value || ''; row.querySelector('[data-role="readonly"]').value = panel.querySelector('[data-setting-readonly]')?.checked || panel.querySelector('[data-setting-readonly]')?.value === '1' ? '1' : ''; row.querySelector('[data-role="hidden"]').value = panel.querySelector('[data-setting-hidden]')?.checked || panel.querySelector('[data-setting-hidden]')?.value === '1' ? '1' : ''; row.dataset.linkedHandover = panel.querySelector('[data-setting-linked-handover]')?.checked ? '1' : ''; const settingSubfields = panel.querySelector('[data-setting-subfields]'); if (settingSubfields) { const targetSubfields = row.querySelector('.designer-subfield-list'); targetSubfields.innerHTML = ''; readDesigner(settingSubfields).forEach((child) => targetSubfields.appendChild(fieldDesigner(child, true))); const columnsPerRow = panel.querySelector('[data-setting-columns-per-row]')?.value || ''; const targetColumns = row.querySelector('[data-role="columns-per-row"]'); if (targetColumns) targetColumns.value = columnsPerRow; } }); updateLayoutDesignerState((layout) => { const key = panel.dataset.fieldKey; const candidate = clampLayoutItem({ row: panel.querySelector('[data-layout-row]')?.value, col: panel.querySelector('[data-layout-col]')?.value, rowSpan: panel.querySelector('[data-layout-rowspan]')?.value, colSpan: panel.querySelector('[data-layout-colspan]')?.value, width: panel.querySelector('[data-layout-width]')?.value, height: panel.querySelector('[data-layout-height]')?.value }, layout); if (isLayoutAreaFree(layout, key, candidate)) layout.fields[key] = candidate; }); panel.hidden = true; }
+    if (event.target.closest('[data-confirm-settings]')) {
+  const key = panel.dataset.fieldKey;
+
+  updateDesignerFieldByKey(key, (row) => {
+    row.querySelector('[data-role="label"]').value =
+      panel.querySelector('[data-setting-label]').value;
+
+    row.querySelector('[data-role="type"]').value =
+      panel.querySelector('[data-setting-type]').value;
+
+    row.querySelector('[data-role="options"]').value =
+      String(panel.querySelector('[data-option-list]')?.value || '')
+        .split(/\n+/)
+        .map((option) => option.trim())
+        .filter(Boolean)
+        .join('\n');
+
+    row.querySelector('[data-role="required"]').checked =
+      panel.querySelector('[data-setting-required]')?.checked ||
+      panel.querySelector('[data-setting-required]')?.value === '1' ||
+      false;
+
+    row.querySelector('[data-role="width"]').value =
+      panel.querySelector('[data-layout-width]')?.value || '';
+
+    row.querySelector('[data-role="default"]').value =
+      panel.querySelector('[data-setting-default]')?.value || '';
+
+    row.querySelector('[data-role="help"]').value =
+      panel.querySelector('[data-setting-help]')?.value || '';
+
+    row.querySelector('[data-role="readonly"]').value =
+      panel.querySelector('[data-setting-readonly]')?.checked ||
+      panel.querySelector('[data-setting-readonly]')?.value === '1'
+        ? '1'
+        : '';
+
+    row.querySelector('[data-role="hidden"]').value =
+      panel.querySelector('[data-setting-hidden]')?.checked ||
+      panel.querySelector('[data-setting-hidden]')?.value === '1'
+        ? '1'
+        : '';
+
+    row.dataset.linkedHandover =
+      panel.querySelector('[data-setting-linked-handover]')?.checked
+        ? '1'
+        : '';
+
+    const settingSubfields =
+      panel.querySelector('[data-setting-subfields]');
+
+    if (settingSubfields) {
+      const targetSubfields =
+        row.querySelector('.designer-subfield-list');
+
+      targetSubfields.innerHTML = '';
+
+      readDesigner(settingSubfields).forEach((child) => {
+        targetSubfields.appendChild(fieldDesigner(child, true));
+      });
+
+      const columnsPerRow =
+        panel.querySelector('[data-setting-columns-per-row]')?.value || '';
+
+      const targetColumns =
+        row.querySelector('[data-role="columns-per-row"]');
+
+      if (targetColumns) targetColumns.value = columnsPerRow;
+    }
+  });
+
+  updateLayoutDesignerState((layout) => {
+    const candidate = clampLayoutItem(
+      {
+        row: panel.querySelector('[data-layout-row]')?.value,
+        col: panel.querySelector('[data-layout-col]')?.value,
+        rowSpan: panel.querySelector('[data-layout-rowspan]')?.value,
+        colSpan: panel.querySelector('[data-layout-colspan]')?.value,
+        width: panel.querySelector('[data-layout-width]')?.value,
+        height: panel.querySelector('[data-layout-height]')?.value
+      },
+      layout
+    );
+
+    if (isLayoutAreaFree(layout, key, candidate)) {
+      layout.fields[key] = candidate;
+    }
+  });
+
+  try {
+    const saved = await saveDesignerSchema();
+
+    if (saved) {
+      panel.hidden = true;
+      alert('欄位屬性與表單排版已儲存');
+    }
+  } catch (error) {
+    console.error('儲存欄位屬性失敗：', error);
+    alert(`儲存失敗：${error?.message || '未知錯誤'}`);
+  }
+
+  return;
+}
   });
   document.querySelector('#ragicDesignerModal')?.addEventListener('input', (event) => {
     if (event.target?.matches('[data-role="width"], [data-layout-width]')) syncSubtableWidthFromEvent(event.target);
