@@ -657,24 +657,102 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
 };
 
 const createControl = (field, value = '', subfield = false) => {
-  if (field.type === 'multiselect') return createMultiSelectControl(field, value, subfield);
-  if (field.type === 'checkbox' || field.type === 'boolean') { const input = document.createElement('input'); input.type = 'checkbox'; input.name = subfield ? '' : field.key; if (subfield) input.dataset.subfield = field.key; input.checked = value === true || value === 'true' || value === '1' || ((value === '' || value == null) && field.defaultValue === true); return input; }
+  if (field.type === 'reminderEnabled') {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = subfield ? '' : field.key;
+
+    if (subfield) input.dataset.subfield = field.key;
+
+    input.checked =
+      value === true ||
+      value === 'true' ||
+      value === '1';
+
+    return input;
+  }
+
+  if (field.type === 'reminderTime') {
+    const input = document.createElement('input');
+    input.type = 'datetime-local';
+    input.name = subfield ? '' : field.key;
+
+    if (subfield) input.dataset.subfield = field.key;
+
+    input.required = Boolean(field.required);
+    input.value = normalizeDateValue(value);
+
+    return input;
+  }
+
+  if (field.type === 'reportLink') {
+    const input = document.createElement('input');
+    input.type = 'url';
+    input.name = subfield ? '' : field.key;
+
+    if (subfield) input.dataset.subfield = field.key;
+
+    input.required = Boolean(field.required);
+    input.value = value || '';
+
+    return input;
+  }
+
+  if (field.type === 'multiselect') {
+    return createMultiSelectControl(field, value, subfield);
+  }
+
+  if (field.type === 'checkbox' || field.type === 'boolean') {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = subfield ? '' : field.key;
+
+    if (subfield) input.dataset.subfield = field.key;
+
+    input.checked =
+      value === true ||
+      value === 'true' ||
+      value === '1' ||
+      ((value === '' || value == null) &&
+        field.defaultValue === true);
+
+    return input;
+  }
+
   let input;
-  if (field.type === 'textarea') { input = document.createElement('textarea'); input.rows = field.rows || 4; }
-  else if (field.type === 'select') {
+
+  if (field.type === 'textarea') {
+    input = document.createElement('textarea');
+    input.rows = field.rows || 4;
+  } else if (field.type === 'select') {
     input = document.createElement('select');
+
     const emptyOption = document.createElement('option');
     emptyOption.value = '';
     emptyOption.textContent = '請選擇';
     input.appendChild(emptyOption);
+
     const selectOptions = [...optionList(field)];
     const loginName = currentRagicUserName();
-    if (field.defaultCurrentUser && loginName && !selectOptions.includes(loginName)) selectOptions.unshift(loginName);
+
+    if (
+      field.defaultCurrentUser &&
+      loginName &&
+      !selectOptions.includes(loginName)
+    ) {
+      selectOptions.unshift(loginName);
+    }
+
     selectOptions.forEach((option) => {
       const opt = document.createElement('option');
       opt.value = option;
       opt.textContent = option;
-      if (/^-{3,}$/.test(option)) { opt.disabled = true; opt.textContent = '──────────'; }
+
+      if (/^-{3,}$/.test(option)) {
+        opt.disabled = true;
+        opt.textContent = '──────────';
+      }
+
       input.appendChild(opt);
     });
   } else if (readonlyFieldTypes.has(field.type)) {
@@ -683,21 +761,69 @@ const createControl = (field, value = '', subfield = false) => {
     input.readOnly = true;
   } else {
     input = document.createElement('input');
-    input.type = field.type === 'datetime' ? 'datetime-local' : (field.type === 'link' ? 'url' : (field.type === 'image' || field.type === 'file' ? 'file' : (field.type || 'text')));
-    if (field.type === 'image') { input.accept = 'image/*'; input.multiple = true; }
+
+    input.type =
+      field.type === 'datetime'
+        ? 'datetime-local'
+        : field.type === 'link'
+          ? 'url'
+          : field.type === 'image' || field.type === 'file'
+            ? 'file'
+            : field.type || 'text';
+
+    if (field.type === 'image') {
+      input.accept = 'image/*';
+      input.multiple = true;
+    }
   }
+
   input.name = subfield ? '' : field.key;
-  input.required = field.type === 'image' || field.type === 'file' || readonlyFieldTypes.has(field.type) ? false : Boolean(field.required);
+
+  input.required =
+    field.type === 'image' ||
+    field.type === 'file' ||
+    readonlyFieldTypes.has(field.type)
+      ? false
+      : Boolean(field.required);
+
   input.placeholder = field.placeholder || '';
-  if (subfield) input.dataset.subfield = field.key;
-  if (field.type !== 'image' && field.type !== 'file') {
-    const controlValue = field.type === 'date' || field.type === 'datetime' ? normalizeDateValue(value) : value;
-    const loginDefault = field.defaultCurrentUser && !subfield && !RAGIC_STATE.currentId ? currentRagicUserName() : '';
-    input.value = controlValue || loginDefault || field.defaultValue || (field.type === 'datetime' && field.defaultNow && !subfield ? currentDateTimeInputValue() : (field.type === 'updatedDate' && !subfield ? formatLocalDateTime() : (field.type === 'date' && !subfield ? today() : '')));
+
+  if (subfield) {
+    input.dataset.subfield = field.key;
   }
+
+  if (field.type !== 'image' && field.type !== 'file') {
+    const controlValue =
+      field.type === 'date' || field.type === 'datetime'
+        ? normalizeDateValue(value)
+        : value;
+
+    const loginDefault =
+      field.defaultCurrentUser &&
+      !subfield &&
+      !RAGIC_STATE.currentId
+        ? currentRagicUserName()
+        : '';
+
+    input.value =
+      controlValue ||
+      loginDefault ||
+      field.defaultValue ||
+      (
+        field.type === 'datetime' &&
+        field.defaultNow &&
+        !subfield
+          ? currentDateTimeInputValue()
+          : field.type === 'updatedDate' && !subfield
+            ? formatLocalDateTime()
+            : field.type === 'date' && !subfield
+              ? today()
+              : ''
+      );
+  }
+
   return input;
 };
-
 
 const inlineValue = (value, field) => {
   if (field?.type === 'date' || field?.type === 'datetime' || field?.type === 'link') return String(value || '');
