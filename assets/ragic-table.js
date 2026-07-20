@@ -78,6 +78,58 @@ const SUBFIELD_TYPE_GROUPS = [
 
 const SUBFIELD_TYPES =SUBFIELD_TYPE_GROUPS.flatMap((group) => group.types);
 
+const FIELD_TYPE_GROUPS = [
+  {
+    label: '📝 文字',
+    types: [
+      { value: 'text', label: '單行文字' },
+      { value: 'textarea', label: '多行文字' }
+    ]
+  },
+  {
+    label: '🕐 時間',
+    types: [
+      { value: 'date', label: '日期' },
+      { value: 'datetime', label: '日期時間' }
+    ]
+  },
+  {
+    label: '📋 下拉選單',
+    types: [
+      { value: 'select', label: '單選' },
+      { value: 'multiselect', label: '多選' }
+    ]
+  },
+  {
+    label: '🔗 連結與附件',
+    types: [
+      { value: 'link', label: '連結' },
+      { value: 'image', label: '圖片' },
+      { value: 'file', label: '檔案' }
+    ]
+  },
+  {
+    label: '📊 其他',
+    types: [
+      { value: 'serial', label: '編號' },
+      { value: 'subtable', label: '子表格' }
+    ]
+  }
+];
+
+const FIELD_TYPES =
+  FIELD_TYPE_GROUPS.flatMap((group) => group.types);
+
+const LEGACY_FIELD_TYPES = [
+  { value: 'createdDate', label: '建立日期' },
+  { value: 'updatedDate', label: '更新時間' },
+  { value: 'checkbox', label: '核取方塊' },
+  { value: 'boolean', label: '布林值' },
+  { value: 'reminderEnabled', label: '啟用提醒' },
+  { value: 'reminderTime', label: '提醒時間' },
+  { value: 'reportLink', label: '提報連結' }
+];
+
 const COLLECTION_MAP = { workHandover: 'handover', workLogs: 'log', workReports: 'report', workTracking: 'tracking', workAlerts: 'alert', meetingRecords: 'meeting', knowledgeBase: 'knowledge', aiDatabase: 'ai_database' };
 const SCHEMA_MAP = { handover: 'handover_schema', log: 'log_schema', report: 'report_schema', tracking: 'tracking_schema', alert: 'alert_schema', meeting: 'meeting_schema', knowledge: 'knowledge_schema', ai_database: 'ai_database_schema' };
 
