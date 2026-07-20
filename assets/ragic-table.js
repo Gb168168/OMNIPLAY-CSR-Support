@@ -20,22 +20,63 @@ if (!document.querySelector('#ragicColumnMenuRuntimeStyles')) {
   document.head.appendChild(style);
 }
 
-const FIELD_TYPE_GROUPS = [
-  { label: '📝 文字', types: [{ value: 'text', label: '單行' }, { value: 'textarea', label: '多行' }] },
-  { label: '🕐 時間', types: [{ value: 'date', label: '日期' }, { value: 'datetime', label: '日期時間' }, { value: 'createdDate', label: '建立日期' }, { value: 'updatedDate', label: '更新時間' }] },
-  { label: '📋 下拉', types: [{ value: 'select', label: '單選' }, { value: 'multiselect', label: '多選' }] },
-  { label: '🔗 連結', types: [{ value: 'link', label: '連結' }] },
-  { label: '🖼️ 圖片', types: [{ value: 'image', label: '圖片' }] },
-  { label: '📎 檔案', types: [{ value: 'file', label: '檔案' }] },
-  { label: '🔢 編號', types: [{ value: 'serial', label: '編號' }] },
-  { label: '📊 子表格', types: [{ value: 'subtable', label: '子表格' }] }
+const SUBFIELD_TYPE_GROUPS = [
+  {
+    label: '📝 文字',
+    types: [
+      { value: 'text', label: '單行' },
+      { value: 'textarea', label: '多行' }
+    ]
+  },
+  {
+    label: '🕐 時間',
+    types: [
+      { value: 'date', label: '日期' },
+      { value: 'datetime', label: '日期時間' },
+      { value: 'createdDate', label: '建立日期' },
+      { value: 'updatedDate', label: '更新時間' }
+    ]
+  },
+  {
+    label: '📋 下拉',
+    types: [
+      { value: 'select', label: '單選' },
+      { value: 'multiselect', label: '多選' }
+    ]
+  },
+  {
+    label: '🔗 連結',
+    types: [
+      { value: 'link', label: '連結' }
+    ]
+  },
+  {
+    label: '🖼️ 圖片',
+    types: [
+      { value: 'image', label: '圖片' }
+    ]
+  },
+  {
+    label: '📎 檔案',
+    types: [
+      { value: 'file', label: '檔案' }
+    ]
+  },
+  {
+    label: '🔢 編號',
+    types: [
+      { value: 'serial', label: '編號' }
+    ]
+  },
+  {
+    label: '📊 子表格',
+    types: [
+      { value: 'subtable', label: '子表格' }
+    ]
+  }
 ];
-const FIELD_TYPES = FIELD_TYPE_GROUPS.flatMap((group) => group.types);
-const LEGACY_FIELD_TYPES = [
-  { value: 'number', label: '數字（舊）' },
-  { value: 'time', label: '時間（舊）' },
-  { value: 'person', label: '人員選擇（舊）' }
-];
+
+const SUBFIELD_TYPES =SUBFIELD_TYPE_GROUPS.flatMap((group) => group.types);
 
 const COLLECTION_MAP = { workHandover: 'handover', workLogs: 'log', workReports: 'report', workTracking: 'tracking', workAlerts: 'alert', meetingRecords: 'meeting', knowledgeBase: 'knowledge', aiDatabase: 'ai_database' };
 const SCHEMA_MAP = { handover: 'handover_schema', log: 'log_schema', report: 'report_schema', tracking: 'tracking_schema', alert: 'alert_schema', meeting: 'meeting_schema', knowledge: 'knowledge_schema', ai_database: 'ai_database_schema' };
