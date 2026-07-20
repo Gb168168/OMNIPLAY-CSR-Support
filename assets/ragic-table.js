@@ -1939,8 +1939,29 @@ const fieldDesigner = (field = {}, nested = false) => {
   if (field.linkedHandover) row.dataset.linkedHandover = '1';
   
   if (nested) {
-    const subfieldType = SUBFIELD_TYPES.some((type) => type.value === field.type) ? field.type : 'text';
-    const typeOptions = SUBFIELD_TYPES.map((type) => `<option value="${type.value}" ${subfieldType === type.value ? 'selected' : ''}>${type.label}</option>`).join('');
+    const subfieldType =
+  SUBFIELD_TYPES.some((type) => type.value === field.type)
+    ? field.type
+    : 'text';
+
+const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
+  const options = group.types.map((type) => {
+    return `
+      <option
+        value="${escapeHtml(type.value)}"
+        ${subfieldType === type.value ? 'selected' : ''}
+      >
+        ${escapeHtml(type.label)}
+      </option>
+    `;
+  }).join('');
+
+  return `
+    <optgroup label="${escapeHtml(group.label)}">
+      ${options}
+    </optgroup>
+  `;
+}).join('');
     row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="子欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}</select><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div>`;
     row.addEventListener('click', (event) => {
       if (event.target.matches('[data-remove]')) {
