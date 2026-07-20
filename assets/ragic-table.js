@@ -338,7 +338,58 @@ const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) =>
   else delete normalized.columnsPerRow;
   return normalized;
 };
-const normalizeSchema = (schema = {}) => ({ fields: normalizeFields(schema.fields || [], 'field'), formLayout: normalizeDesignerFormLayout(schema.formLayout, schema.fields || []) });
+const ensureReminderFields = (fields = []) => {
+  const nextFields = [...fields];
+
+  const hasReminderEnabled = nextFields.some(
+    (field) =>
+      field.key === 'reminderEnabled' ||
+      field.type === 'reminderEnabled' ||
+      field.label === '啟用提醒'
+  );
+
+  const hasReminderTime = nextFields.some(
+    (field) =>
+      field.key === 'reminderTime' ||
+      field.type === 'reminderTime' ||
+      field.label === '提醒時間'
+  );
+
+  if (!hasReminderEnabled) {
+    nextFields.push({
+      key: 'reminderEnabled',
+      label: '啟用提醒',
+      type: 'reminderEnabled',
+      required: false,
+      defaultValue: false,
+      width: 100
+    });
+  }
+
+  if (!hasReminderTime) {
+    nextFields.push({
+      key: 'reminderTime',
+      label: '提醒時間',
+      type: 'reminderTime',
+      required: false,
+      width: 180
+    });
+  }
+
+  return nextFields;
+};
+
+const normalizeSchema = (schema = {}) => {
+  const fields = ensureReminderFields(schema.fields || []);
+
+  return {
+    fields: normalizeFields(fields, 'field'),
+    formLayout: normalizeDesignerFormLayout(
+      schema.formLayout,
+      fields
+    )
+  };
+};
 const fixDuplicateKeys = (fields = []) => {
   const seen = new Set();
   let changed = false;
