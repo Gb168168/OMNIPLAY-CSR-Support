@@ -2758,15 +2758,33 @@ const initRagicPage = async (config) => {
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
   if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); applyRagicPermissionUi(); return; }
   schemaDoc.onSnapshot(async (doc) => {
-    if (!doc.exists) await schemaDoc.set(makeDefaultSchema(config), { merge: true });
-    const loadedSchema = doc.exists ? applyFormLayoutOverrides(mergeLogConfigFields(doc.data(), config), config) : makeDefaultSchema(config);
-    if (doc.exists && fixDuplicateKeys(loadedSchema.fields || [])) {
-      await schemaDoc.set({ ...loadedSchema, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  if (!doc.exists) {
+    const defaultSchema = makeDefaultSchema(config);
+
+    await schemaDoc.set(defaultSchema, { merge: true });
+
+    RAGIC_STATE.schema = normalizeSchema(defaultSchema);
+  } else {
+    /*
+     * Firebase 已儲存的設計為主要來源。
+     * 不再用 config.fields 或 config.formLayout 覆蓋使用者設定。
+     */
+    const loadedSchema = doc.data();
+
+    if (fixDuplicateKeys(loadedSchema.fields || [])) {
+      await schemaDoc.set(
+        {
+          ...loadedSchema,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        { merge: true }
+      );
     }
-    RAGIC_STATE.schema = applyFormLayoutOverrides(normalizeSchema(loadedSchema), config);
-    renderHeader();
-    applyRagicPermissionUi();
-    applyFilters();
-  });
-  collection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { RAGIC_STATE.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); applyRagicPermissionUi(); applyFilters(); });
-};
+
+    RAGIC_STATE.schema = normalizeSchema(loadedSchema);
+  }
+
+  renderHeader();
+  applyRagicPermissionUi();
+  applyFilters();
+});
