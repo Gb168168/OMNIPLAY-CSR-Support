@@ -2421,17 +2421,67 @@ const initRagicPage = async (config) => {
     const doc = await collection.doc(docId).get();
     await collection.doc(docId).update({ [`pins.${currentUser}`]: !doc.data()?.pins?.[currentUser] });
   };
+  
   const saveDesignerSchema = async ({ close = false } = {}) => {
-    if (!canUse('design')) return false;
-    const designerBody = document.querySelector('.designer-body');
-    if (!designerBody) return false;
-    RAGIC_STATE.schema = { ...normalizeSchema({ fields: readDesigner(designerBody), formLayout: RAGIC_STATE.schema?.formLayout }), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    if (schemaDoc) await schemaDoc.set(RAGIC_STATE.schema, { merge: true });
+  if (!canUse('design')) {
+    alert('您沒有設計權限');
+    return false;
+  }
+
+  const designerBody = document.querySelector(
+    '#ragicDesignerModal .designer-body'
+  );
+
+  if (!designerBody || !schemaDoc) {
+    alert('找不到表格設計資料，請重新整理後再試');
+    return false;
+  }
+
+  try {
+    const fields = readDesigner(designerBody);
+
+    /*
+     * 直接取得目前設計器最新排版，
+     * 不再只使用可能尚未更新的舊 formLayout。
+     */
+    const formLayout = normalizeDesignerFormLayout(
+      RAGIC_STATE.schema?.formLayout || {},
+      fields
+    );
+
+    const nextSchema = normalizeSchema({
+      fields,
+      formLayout
+    });
+
+    RAGIC_STATE.schema = {
+      ...nextSchema,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    await schemaDoc.set(
+      {
+        fields: RAGIC_STATE.schema.fields,
+        formLayout: RAGIC_STATE.schema.formLayout,
+        updatedAt: RAGIC_STATE.schema.updatedAt
+      },
+      { merge: true }
+    );
+
     renderHeader();
     applyFilters();
+
     if (close) closeDesigner();
+
+    alert('表格設計已儲存');
     return true;
-  };
+  } catch (error) {
+    console.error('儲存表格設計失敗：', error);
+    alert(`儲存表格設計失敗：${error?.message || '未知錯誤'}`);
+    return false;
+  }
+};
+  
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = Array.isArray(config.trackingStatuses) && config.trackingStatuses.length ? `目前篩選：${config.trackingStatuses.join('／')}` : `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
   const newRecordButton = document.querySelector('#newRecordButton');
