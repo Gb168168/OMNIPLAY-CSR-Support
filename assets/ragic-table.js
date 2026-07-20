@@ -2323,10 +2323,7 @@ const renderLayoutDesigner = () => {
   for (let row = 1; row <= layout.rows; row += 1) for (let col = 1; col <= layout.columns; col += 1) gridLines.push(`<div class="layout-grid-slot" data-row="${row}" data-col="${col}" style="grid-column:${col};grid-row:${row};"></div>`);
   const placedFields = fields.filter((field) => placed.has(field.key)).map((field) => {
   const item = layout.fields[field.key];
-    if (field.type === 'subtable') {
-      item.col = 1;
-      item.colSpan = layout.columns;
-  }
+    
     const fixedLogField = fixedLogLayout && Boolean(logFieldLayoutFor(field));
     const size =
   `${item.height
