@@ -2501,7 +2501,14 @@ const openDesigner = async () => {
     `;
   }
 };
-const closeDesigner = () => { document.querySelector('#ragicDesignerModal').hidden = true; };
+const closeDesigner = () => {
+  const modal = document.querySelector('#ragicDesignerModal');
+
+  if (!modal) return;
+
+  modal.hidden = true;
+  modal.style.display = '';
+};
 
 
 const waitForPermissions = async () => {
