@@ -2538,7 +2538,7 @@ const initRagicPage = async (config) => {
     const settings = event.target.closest('.settings-btn, .layout-field');
     if (settings && !event.target.closest('.remove-btn, [data-resize]')) openLayoutFieldSettings(settings.closest('[data-field-key]')?.dataset.fieldKey);
   });
-  document.querySelector('#ragicDesignerModal')?.addEventListener('click', (event) => {
+  document.querySelector('#ragicDesignerModal')?.addEventListener('click', async (event) => {
     const panel = event.target.closest('#layoutFieldSettingsPanel');
     if (!panel) return;
     if (event.target.matches('[data-setting-type]')) panel.querySelector('.setting-options').hidden = !['select','multiselect'].includes(event.target.value);
