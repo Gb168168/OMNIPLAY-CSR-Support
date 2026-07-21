@@ -2996,10 +2996,55 @@ const initRagicPage = async (config) => {
       
       const pairButton = event.target.closest('[data-add-layout-pair]');
 
-      if (pairButton) {
-        alert(pairButton.dataset.pairType);
-        return;
-   }
+     if (pairButton) {
+  const body = document.querySelector(
+    '#ragicDesignerModal .designer-body'
+  );
+
+  const pairType = pairButton.dataset.pairType;
+
+  if (!body) return;
+
+  if (pairType === 'reminderPair') {
+    body.appendChild(
+      fieldDesigner({
+        key: 'reminderEnabled',
+        label: '啟用提醒',
+        type: 'reminderEnabled'
+      })
+    );
+
+    body.appendChild(
+      fieldDesigner({
+        key: 'reminderTime',
+        label: '提醒時間',
+        type: 'reminderTime'
+      })
+    );
+  }
+
+  if (pairType === 'reportPair') {
+    body.appendChild(
+      fieldDesigner({
+        key: 'reportEnabled',
+        label: '提報',
+        type: 'reportEnabled'
+      })
+    );
+
+    body.appendChild(
+      fieldDesigner({
+        key: 'reportLink',
+        label: '提報連結',
+        type: 'reportLink'
+      })
+    );
+  }
+
+  updateDesignerPreview();
+  renderLayoutDesigner();
+  return;
+}
     const addButton = event.target.closest('[data-add-layout-field], .btn-add-layout-field');
     if (addButton) { const body = document.querySelector('.designer-body'); const type = addButton.dataset.fieldType || 'text'; const typeLabel = FIELD_TYPES.find((item) => item.value === type)?.label || '新欄位'; body.appendChild(fieldDesigner({ key: generateFieldKey(), label: typeLabel, type })); updateDesignerPreview(); renderLayoutDesigner(); return; }
     if (event.target.closest('.btn-auto-layout')) { if (!confirm('這會清除目前的排版，確定嗎？')) return; updateLayoutDesignerState(autoLayoutFields); return; }
