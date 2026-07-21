@@ -91,7 +91,9 @@ const FIELD_TYPE_GROUPS = [
     label: '🕐 時間',
     types: [
       { value: 'date', label: '日期' },
-      { value: 'datetime', label: '日期時間' }
+      { value: 'datetime', label: '日期時間' },
+      { value: 'createdDate', label: '建立日期時間' },
+      { value: 'updatedDate', label: '更新日期時間' }
     ]
   },
   {
@@ -133,12 +135,11 @@ const FIELD_PAIR_TYPES = [
 ];
 
 const LEGACY_FIELD_TYPES = [
-  { value: 'createdDate', label: '建立日期' },
-  { value: 'updatedDate', label: '更新時間' },
   { value: 'checkbox', label: '核取方塊' },
   { value: 'boolean', label: '布林值' },
   { value: 'reminderEnabled', label: '啟用提醒' },
   { value: 'reminderTime', label: '提醒時間' },
+  { value: 'reportEnabled', label: '提報' },
   { value: 'reportLink', label: '提報連結' }
 ];
 
@@ -433,58 +434,14 @@ const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) =>
   else delete normalized.columnsPerRow;
   return normalized;
 };
-const ensureReminderFields = (fields = []) => {
-  const nextFields = [...fields];
-
-  const hasReminderEnabled = nextFields.some(
-    (field) =>
-      field.key === 'reminderEnabled' ||
-      field.type === 'reminderEnabled' ||
-      field.label === '啟用提醒'
-  );
-
-  const hasReminderTime = nextFields.some(
-    (field) =>
-      field.key === 'reminderTime' ||
-      field.type === 'reminderTime' ||
-      field.label === '提醒時間'
-  );
-
-  if (!hasReminderEnabled) {
-    nextFields.push({
-      key: 'reminderEnabled',
-      label: '啟用提醒',
-      type: 'reminderEnabled',
-      required: false,
-      defaultValue: false,
-      width: 100
-    });
-  }
-
-  if (!hasReminderTime) {
-    nextFields.push({
-      key: 'reminderTime',
-      label: '提醒時間',
-      type: 'reminderTime',
-      required: false,
-      width: 180
-    });
-  }
-
-  return nextFields;
-};
-
 const normalizeSchema = (schema = {}) => {
-  const fields = ensureReminderFields(schema.fields || []);
-
+  const fields = Array.isArray(schema.fields) ? schema.fields : [];
   return {
     fields: normalizeFields(fields, 'field'),
-    formLayout: normalizeDesignerFormLayout(
-      schema.formLayout,
-      fields
-    )
+    formLayout: normalizeDesignerFormLayout(schema.formLayout, fields)
   };
 };
+
 const fixDuplicateKeys = (fields = []) => {
   const seen = new Set();
   let changed = false;
@@ -856,7 +813,7 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
 };
 
 const createControl = (field, value = '', subfield = false) => {
-  if (field.type === 'reminderEnabled') {
+  if (field.type === 'reminderEnabled' || field.type === 'reportEnabled') {
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.name = subfield ? '' : field.key;
@@ -1048,6 +1005,7 @@ const createInlineEditor = (field, value) => {
   return control;
 };
 const getInlineEditorValue = (editor, field) => {
+  if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field.type)) return Boolean(editor.checked);
   if (field.type === 'multiselect') return [...editor.querySelectorAll('select option:checked')].map((option) => option.value);
   return editor.value;
 };
@@ -1397,7 +1355,7 @@ const getFormData = async () => {
       const container = input.closest('.image-upload-area');
       data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (getFileInputValue(input)));
     }
-    else if (field.type === 'checkbox' || field.type === 'boolean') data[field.key] = input.checked;
+    else if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field.type)) data[field.key] = input.checked;
     else data[field.key] = input.value.trim();
   }
   assertImageTotalWithinLimit(allImages);
@@ -1536,7 +1494,7 @@ const renderDisplayValue = (field, value) => {
     return `<div class="ragic-view-images">${images.map((src, index) => `<img class="ragic-view-image" src="${escapeHtml(src)}" alt="${escapeHtml(field.label || '圖片')} ${index + 1}" title="點擊放大檢視">`).join('')}</div>`;
   }
   if (field?.type === 'file') return renderFileCell(value, field.label || '檔案') || '<span class="ragic-view-empty">—</span>';
-  if (field?.type === 'checkbox' || field?.type === 'boolean') return value ? '是' : '否';
+  if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field?.type)) return value ? '是' : '否';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '<span class="ragic-view-empty">—</span>';
   if (field?.type === 'date') return escapeHtml(displayDate(value)) || '<span class="ragic-view-empty">—</span>';
   if (field?.type === 'datetime') return escapeHtml(displayDateTime(value)) || '<span class="ragic-view-empty">—</span>';
@@ -2185,6 +2143,9 @@ const designerPreviewValue = (field = {}, rowIndex = 0) => {
   if (field.type === 'link') return 'https://example.com';
   if (field.type === 'serial') return `#${String(rowIndex + 1).padStart(3, '0')}`;
   if (field.type === 'file') return '附件.pdf';
+  if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field.type)) return '☑';
+  if (field.type === 'reminderTime') return '2026/07/13 09:00';
+  if (field.type === 'reportLink') return 'https://example.com/report';
   return samples[rowIndex] || samples[0];
 };
 const updateDesignerPreview = () => {
@@ -2502,6 +2463,88 @@ const autoLayoutFields = (layout, fields) => {
   });
   if (fields.some((field) => field.type === 'subtable')) { if (col !== 1) row += 1; fields.filter((field) => field.type === 'subtable').forEach((field) => { layout.fields[field.key] = { row, col: 1, colSpan: layout.columns, rowSpan: 1, height: defaultFormFieldHeight(field) }; row += 1; }); }
   layout.rows = Math.min(10, Math.max(layout.rows, row));
+};
+
+
+const designerHasField = (fields = [], { key, type, label } = {}) => fields.some((field) =>
+  (key && field.key === key) ||
+  (type && field.type === type) ||
+  (label && String(field.label || '').trim() === label)
+);
+
+const firstFreeLayoutCell = (layout, fields, preferredCol = 1) => {
+  const occupied = new Set();
+  fields.forEach((field) => {
+    const item = layout.fields?.[field.key];
+    if (!item) return;
+    const rowSpan = Math.max(1, Number(item.rowSpan) || 1);
+    const colSpan = Math.max(1, Number(item.colSpan) || 1);
+    for (let row = item.row; row < item.row + rowSpan; row += 1) {
+      for (let col = item.col; col < item.col + colSpan; col += 1) occupied.add(`${row}:${col}`);
+    }
+  });
+  for (let row = 1; row <= 10; row += 1) {
+    const order = [preferredCol, ...Array.from({ length: layout.columns }, (_, index) => index + 1).filter((col) => col !== preferredCol)];
+    for (const col of order) if (!occupied.has(`${row}:${col}`)) return { row, col };
+  }
+  return { row: Math.min(10, Math.max(1, layout.rows)), col: 1 };
+};
+
+const addDesignerFieldPair = (pairType) => {
+  const body = document.querySelector('#ragicDesignerModal .designer-body');
+  if (!body) return;
+  const existing = readDesigner(body);
+  const definitions = pairType === 'reminderPair'
+    ? [
+        { key: 'reminderEnabled', label: '啟用提醒', type: 'reminderEnabled' },
+        { key: 'reminderTime', label: '提醒時間', type: 'reminderTime' }
+      ]
+    : pairType === 'reportPair'
+      ? [
+          { key: 'reportEnabled', label: '提報', type: 'reportEnabled' },
+          { key: 'reportLink', label: '提報連結', type: 'reportLink' }
+        ]
+      : [];
+  if (!definitions.length) return;
+
+  const added = [];
+  definitions.forEach((definition) => {
+    if (designerHasField(existing, definition)) return;
+    body.appendChild(fieldDesigner(definition));
+    existing.push(definition);
+    added.push(definition);
+  });
+  if (!added.length) {
+    alert('這組欄位已經存在。');
+    return;
+  }
+
+  const fields = readDesigner(body);
+  const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout || {}, fields);
+  let preferredCol = 1;
+  added.forEach((field, index) => {
+    const cell = firstFreeLayoutCell(layout, fields.filter((item) => item.key !== field.key), preferredCol);
+    layout.fields[field.key] = { row: cell.row, col: cell.col, colSpan: 1, rowSpan: 1, height: defaultFormFieldHeight(field) };
+    preferredCol = cell.col;
+    layout.rows = Math.max(layout.rows, cell.row);
+    if (index === 0 && added.length > 1 && cell.row < 10) {
+      const next = added[index + 1];
+      if (next) layout.fields[next.key] = { row: cell.row + 1, col: cell.col, colSpan: 1, rowSpan: 1, height: defaultFormFieldHeight(next) };
+    }
+  });
+  if (added.length > 1) {
+    const first = layout.fields[added[0].key];
+    const second = layout.fields[added[1].key];
+    if (first && second) {
+      second.col = first.col;
+      second.row = Math.min(10, first.row + 1);
+      layout.rows = Math.max(layout.rows, second.row);
+    }
+  }
+
+  RAGIC_STATE.schema = { ...(RAGIC_STATE.schema || {}), fields: normalizeFields(fields), formLayout: normalizeDesignerFormLayout(layout, fields) };
+  updateDesignerPreview();
+  renderLayoutDesigner();
 };
 
 const updateLayoutDesignerState = (patcher) => {
@@ -2995,56 +3038,10 @@ const initRagicPage = async (config) => {
     ?.addEventListener('click', (event) => {
       
       const pairButton = event.target.closest('[data-add-layout-pair]');
-
-     if (pairButton) {
-  const body = document.querySelector(
-    '#ragicDesignerModal .designer-body'
-  );
-
-  const pairType = pairButton.dataset.pairType;
-
-  if (!body) return;
-
-  if (pairType === 'reminderPair') {
-    body.appendChild(
-      fieldDesigner({
-        key: 'reminderEnabled',
-        label: '啟用提醒',
-        type: 'reminderEnabled'
-      })
-    );
-
-    body.appendChild(
-      fieldDesigner({
-        key: 'reminderTime',
-        label: '提醒時間',
-        type: 'reminderTime'
-      })
-    );
-  }
-
-  if (pairType === 'reportPair') {
-    body.appendChild(
-      fieldDesigner({
-        key: 'reportEnabled',
-        label: '提報',
-        type: 'reportEnabled'
-      })
-    );
-
-    body.appendChild(
-      fieldDesigner({
-        key: 'reportLink',
-        label: '提報連結',
-        type: 'reportLink'
-      })
-    );
-  }
-
-  updateDesignerPreview();
-  renderLayoutDesigner();
-  return;
-}
+      if (pairButton) {
+        addDesignerFieldPair(pairButton.dataset.pairType);
+        return;
+      }
     const addButton = event.target.closest('[data-add-layout-field], .btn-add-layout-field');
     if (addButton) { const body = document.querySelector('.designer-body'); const type = addButton.dataset.fieldType || 'text'; const typeLabel = FIELD_TYPES.find((item) => item.value === type)?.label || '新欄位'; body.appendChild(fieldDesigner({ key: generateFieldKey(), label: typeLabel, type })); updateDesignerPreview(); renderLayoutDesigner(); return; }
     if (event.target.closest('.btn-auto-layout')) { if (!confirm('這會清除目前的排版，確定嗎？')) return; updateLayoutDesignerState(autoLayoutFields); return; }
