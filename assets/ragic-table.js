@@ -121,6 +121,17 @@ const FIELD_TYPE_GROUPS = [
 const FIELD_TYPES =
   FIELD_TYPE_GROUPS.flatMap((group) => group.types);
 
+const FIELD_PAIR_TYPES = [
+  {
+    value: 'reminderPair',
+    label: '啟用提醒／提醒時間'
+  },
+  {
+    value: 'reportPair',
+    label: '提報／提報連結'
+  }
+];
+
 const LEGACY_FIELD_TYPES = [
   { value: 'createdDate', label: '建立日期' },
   { value: 'updatedDate', label: '更新時間' },
@@ -2416,7 +2427,30 @@ const renderLayoutDesigner = () => {
     return `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="false" ${fixedLogField ? 'data-layout-locked="true"' : ''} data-field-key="${escapeHtml(field.key)}" style="grid-column:${item.col} / span ${item.colSpan};grid-row:${item.row} / span ${item.rowSpan};${size}"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small>${field.type === 'subtable' ? '<button class="subtable-edit-btn" type="button">編輯子表格</button>' : ''}<button class="settings-btn" type="button" title="設定">⚙️</button>${fixedLogField ? '' : '<button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>'}</div>`;
   }).join('');
   const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button><button class="remove-btn" type="button" aria-label="移除欄位">×</button></div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
-  const fieldTypeButtons = FIELD_TYPES.map((type) => `<button class="layout-type-button" data-add-layout-field data-field-type="${escapeHtml(type.value)}" type="button"><span>${escapeHtml(type.label)}</span></button>`).join('');
+  const normalFieldTypeButtons = FIELD_TYPES.map((type) => `
+  <button
+    class="layout-type-button"
+    data-add-layout-field
+    data-field-type="${escapeHtml(type.value)}"
+    type="button"
+  >
+    <span>${escapeHtml(type.label)}</span>
+  </button>
+`).join('');
+
+const pairFieldTypeButtons = FIELD_PAIR_TYPES.map((type) => `
+  <button
+    class="layout-type-button"
+    data-add-layout-pair
+    data-pair-type="${type.value}"
+    type="button"
+  >
+    <span>${type.label}</span>
+  </button>
+`).join('');
+
+const fieldTypeButtons =
+  normalFieldTypeButtons + pairFieldTypeButtons;
   panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列） 欄框設置131x48</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, 131px);grid-template-rows:repeat(${layout.rows}, 48px);">${gridLines.join('')}${placedFields}</div></div></main><aside class="layout-side-panel"><section class="layout-add-card"><h3>新增欄位</h3><p>選擇欄位類型</p><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings"><div class="layout-settings-empty">請點選欄位以編輯屬性</div></aside></aside></div></div>`;
 };
 const updateDesignerFieldByKey = (fieldKey, patcher) => {
@@ -2957,7 +2991,15 @@ const initRagicPage = async (config) => {
   });
   attachLayoutDesignerEvents(document.querySelector('#layoutDesignerPanel'));
   
-  document.querySelector('#layoutDesignerPanel')?.addEventListener('click', (event) => {
+  document.querySelector('#layoutDesignerPanel')
+    ?.addEventListener('click', (event) => {
+      
+      const pairButton = event.target.closest('[data-add-layout-pair]');
+
+      if (pairButton) {
+        alert(pairButton.dataset.pairType);
+        return;
+   }
     const addButton = event.target.closest('[data-add-layout-field], .btn-add-layout-field');
     if (addButton) { const body = document.querySelector('.designer-body'); const type = addButton.dataset.fieldType || 'text'; const typeLabel = FIELD_TYPES.find((item) => item.value === type)?.label || '新欄位'; body.appendChild(fieldDesigner({ key: generateFieldKey(), label: typeLabel, type })); updateDesignerPreview(); renderLayoutDesigner(); return; }
     if (event.target.closest('.btn-auto-layout')) { if (!confirm('這會清除目前的排版，確定嗎？')) return; updateLayoutDesignerState(autoLayoutFields); return; }
