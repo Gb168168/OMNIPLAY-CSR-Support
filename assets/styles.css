@@ -3862,3 +3862,25 @@ body:has(.sidebar-toggle-btn.is-visible)
   width: 100%;
   max-width: 100%;
 }
+/* 實際表單必須保留設計器的空白列 */
+#ragicForm .ragic-form-grid {
+  display: grid !important;
+  grid-auto-rows: 48px !important;
+  align-items: stretch !important;
+}
+
+/* 有設定排版位置的欄位不得脫離 Grid */
+#ragicForm .ragic-form-grid > .form-field,
+#ragicForm .ragic-form-grid > .ragic-subtable {
+  position: relative;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 子表格不得向上覆蓋前面的欄位 */
+#ragicForm .ragic-subtable {
+  align-self: stretch;
+  margin-top: 0 !important;
+  width: 100%;
+  max-width: 100%;
+}
