@@ -308,19 +308,24 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   const columns = layout.columns || 5;
   const rows = layout.rows || 4;
 
-  grid.style.setProperty('--form-columns', columns);
-
-  // 實際表單必須與設計器使用相同的 Grid
   grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
-  grid.style.gridTemplateRows = `repeat(${rows}, 48px)`;
-  grid.style.gridAutoRows = '48px';
+  grid.style.gridTemplateColumns =
+    `repeat(${columns}, minmax(0, 1fr))`;
+
+  // 欄位內容較高時，該列自動增高，不再壓到下一列
+  grid.style.gridTemplateRows =
+    `repeat(${rows}, minmax(48px, auto))`;
+
+  grid.style.gridAutoRows =
+    'minmax(48px, auto)';
+
   grid.style.columnGap = '12px';
   grid.style.rowGap = '10px';
   grid.style.alignItems = 'stretch';
 
   return grid;
 };
+
 const applyFormLayout = (element, field = {}) => {
   if (!element) return element;
   const activeLayout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout || RAGIC_STATE.config?.formLayout, getFields());
