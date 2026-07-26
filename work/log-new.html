@@ -1984,12 +1984,9 @@
         const pad = value => String(value).padStart(2, '0');
         setValue('#ragicForm [name="date"]', `${created.getFullYear()}-${pad(created.getMonth()+1)}-${pad(created.getDate())}T${pad(created.getHours())}:${pad(created.getMinutes())}`);
       }
-      setValue('#ragicForm [name="issue"]', draft.issue || '');
       setValue('#ragicForm [name="status"]', draft.suggestedStatus || '待辦中');
       setValue('#ragicForm [name="category"]', draft.suggestedCategory || '待定');
       setValue('#ragicForm [data-subfield="conversation"]', draft.conversationText || '');
-      setValue('#ragicForm [data-subfield="ai_analysis"]', draft.analysis || '');
-      setValue('#ragicForm [data-subfield="summary"]', draft.issue || '');
       const images = (draft.attachments || []).filter(item => item.type === 'photo' && item.url).map(item => item.url);
       const imageInput = row.querySelector('[data-subfield="conversation_images"]');
       const imageArea = imageInput?.closest('.image-upload-area');
@@ -2001,7 +1998,14 @@
       if (draft.inboxApiBase) sessionStorage.setItem('omniplayInboxApiBase', draft.inboxApiBase);
       sessionStorage.removeItem('omniplayConversationImport');
       history.replaceState({}, '', location.pathname);
-      alert('Conversation 已匯入草稿。請確認客戶、狀態與分類後按「儲存」。');
+      alert('Conversation 已依日誌 NEW 原格式匯入。接下來將使用原本的「AI 分析／重新整理」產生問題描述、總結與 AI分析。');
+      if (draft.autoAnalyze) {
+        setTimeout(() => {
+          const aiButton = document.querySelector('[data-log-new-ai]');
+          if (aiButton) aiButton.click();
+          else alert('找不到日誌 NEW 原本的 AI 分析按鈕，請手動按「AI 分析／重新整理」。');
+        }, 250);
+      }
     };
 
     document.querySelector('#ragicForm')?.addEventListener('submit', () => {
