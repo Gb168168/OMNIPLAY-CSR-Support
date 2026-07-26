@@ -1,0 +1,1 @@
+{"name":"omniplay-conversation-worker","private":true,"type":"module","scripts":{"deploy":"wrangler deploy","dev":"wrangler dev","db:init":"wrangler d1 execute omniplay-conversations --remote --file=./schema.sql"},"devDependencies":{"wrangler":"^4.0.0"}}
