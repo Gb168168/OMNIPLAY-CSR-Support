@@ -2043,18 +2043,26 @@
         imageInput.dataset.imageValue = JSON.stringify(images);
         showImagePreview(images, imageArea, '圖片');
       }
+      const importedAnalysis = draft.analysis || {};
+      const analysisControl = row.querySelector('[data-subfield="ai_analysis"]');
+      const summaryControl = row.querySelector('[data-subfield="summary"]');
+      const issueControl = document.querySelector('#ragicForm [name="issue"]');
+      if (analysisControl) analysisControl.value = normalizeLogNewAiAnalysis(importedAnalysis.analysis || importedAnalysis.fullText || '');
+      if (summaryControl) summaryControl.value = importedAnalysis.summary || importedAnalysis.reason || '';
+      if (issueControl) {
+        issueControl.value = importedAnalysis.customerBrief || importedAnalysis.supportBrief
+          ? `客戶：${importedAnalysis.customerBrief || importedAnalysis.issue || ''}\n客服：${importedAnalysis.supportBrief || ''}`
+          : (importedAnalysis.issue || '');
+      }
+      [analysisControl, summaryControl, issueControl].filter(Boolean).forEach(control => {
+        control.dispatchEvent(new Event('input', { bubbles: true }));
+        control.dispatchEvent(new Event('change', { bubbles: true }));
+      });
       window.__conversationImportId = draft.conversationId;
       if (draft.inboxApiBase) sessionStorage.setItem('omniplayInboxApiBase', draft.inboxApiBase);
       sessionStorage.removeItem('omniplayConversationImport');
       history.replaceState({}, '', location.pathname);
-      alert('Conversation 已依日誌 NEW 原格式匯入。接下來將使用原本的「AI 分析／重新整理」產生問題描述、總結與 AI分析。');
-      if (draft.autoAnalyze) {
-        setTimeout(() => {
-          const aiButton = document.querySelector('[data-log-new-ai]');
-          if (aiButton) aiButton.click();
-          else alert('找不到日誌 NEW 原本的 AI 分析按鈕，請手動按「AI 分析／重新整理」。');
-        }, 250);
-      }
+      alert('Conversation 與收件匣 AI 分析結果已完整匯入，請確認後儲存。');
     };
 
     document.querySelector('#ragicForm')?.addEventListener('submit', () => {
