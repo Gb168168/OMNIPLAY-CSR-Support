@@ -333,11 +333,12 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   grid.style.gridTemplateColumns =
     `repeat(${columns}, minmax(0, 1fr))`;
 
-  // 表單與設計器使用相同的固定列高；內容不得把格線撐開。
+  // 欄位內容較高時，該列自動增高，不再壓到下一列
   grid.style.gridTemplateRows =
-    `repeat(${rows}, 48px)`;
+    `repeat(${rows}, minmax(48px, auto))`;
 
-  grid.style.gridAutoRows = '48px';
+  grid.style.gridAutoRows =
+    'minmax(48px, auto)';
 
   grid.style.columnGap = '12px';
   grid.style.rowGap = '10px';
@@ -366,14 +367,19 @@ const applyFormLayout = (element, field = {}) => {
   element.style.setProperty('--form-rowspan', rowSpan || 1);
   const layoutWidth = normalizeFormFieldSize(layoutItem.width ?? field.formWidth, MIN_FORM_FIELD_WIDTH);
   const layoutHeight = normalizeFormFieldSize(layoutItem.height ?? field.formHeight, MIN_FORM_FIELD_HEIGHT);
-  // 實際欄框大小只由設計器的格線位置與跨欄／跨列決定，
-  // 不再套用舊版像素寬高，避免圖片、檔案把下一列推遠。
-  element.style.setProperty('width', 'auto', 'important');
-  element.style.setProperty('height', 'auto', 'important');
-  element.style.setProperty('min-height', '0', 'important');
-  element.style.setProperty('max-height', 'none', 'important');
-  element.style.setProperty('align-self', 'stretch', 'important');
-  element.style.setProperty('overflow', 'hidden', 'important');
+  if (layoutItem.width || (field.formWidth && field.type !== 'subtable')) element.style.width = `${layoutWidth}px`;
+  if (layoutItem.height || field.formHeight) {
+  if (field.type === 'subtable') {
+    element.style.minHeight = `${layoutHeight}px`;
+  } else if (field.type === 'image') {
+    const imageHeight = Math.max(layoutHeight, 168);
+    element.style.height = `${imageHeight}px`;
+    element.style.minHeight = `${imageHeight}px`;
+  } else {
+    element.style.height = `${layoutHeight}px`;
+    element.style.minHeight = `${layoutHeight}px`;
+  }
+}
   return element;
 };
 const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
