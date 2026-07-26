@@ -16,10 +16,12 @@ async function finish(env,message){
   await env.DB.prepare("INSERT INTO counters(name,value) VALUES('conversations',1) ON CONFLICT(name) DO UPDATE SET value=value+1").run();
   const counter=await env.DB.prepare("SELECT value FROM counters WHERE name='conversations'").first();
   const displayId=`CONV-${String(counter.value).padStart(6,"0")}`,id=crypto.randomUUID(),creator=senderOf(message),now=new Date().toISOString();
-  const statements=[env.DB.prepare("INSERT INTO conversations(id,display_id,source,source_label,created_at,creator_id,creator_name,creator_username,message_count,analyzed,imported,archived,raw_immutable) VALUES(?,?,?,?,?,?,?,?,?,0,0,0,1)").bind(id,displayId,"telegram","Telegram",now,creator.creatorId,creator.creatorName,creator.creatorUsername,rows.length)];
-  for(const row of rows)statements.push(env.DB.prepare("INSERT INTO messages(conversation_id,sequence,payload) VALUES(?,?,?)").bind(id,row.sequence,row.payload));
-  statements.push(env.DB.prepare("DELETE FROM draft_messages WHERE user_id=?").bind(userId),env.DB.prepare("DELETE FROM drafts WHERE user_id=?").bind(userId));
-  await env.DB.batch(statements);
+  await env.DB.prepare("INSERT INTO conversations(id,display_id,source,source_label,created_at,creator_id,creator_name,creator_username,message_count,analyzed,imported,archived,raw_immutable) VALUES(?,?,?,?,?,?,?,?,?,0,0,0,1)").bind(id,displayId,"telegram","Telegram",now,creator.creatorId,creator.creatorName,creator.creatorUsername,rows.length).run();
+  for(let offset=0;offset<rows.length;offset+=90){
+    const statements=rows.slice(offset,offset+90).map(row=>env.DB.prepare("INSERT INTO messages(conversation_id,sequence,payload) VALUES(?,?,?)").bind(id,row.sequence,row.payload));
+    await env.DB.batch(statements);
+  }
+  await env.DB.batch([env.DB.prepare("DELETE FROM draft_messages WHERE user_id=?").bind(userId),env.DB.prepare("DELETE FROM drafts WHERE user_id=?").bind(userId)]);
   await telegram(env.TELEGRAM_BOT_TOKEN,"sendMessage",{chat_id:message.chat.id,text:`${displayId} 已建立，共 ${rows.length} 則訊息。暫存已清空。`});
 }
 async function handleTelegram(env,update){
