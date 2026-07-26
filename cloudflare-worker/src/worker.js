@@ -12,7 +12,7 @@ async function finish(env,message){
   const userId=String(message.from.id);
   const draft=await env.DB.prepare("SELECT * FROM drafts WHERE user_id=?").bind(userId).first();
   const rows=(await env.DB.prepare("SELECT sequence,payload FROM draft_messages WHERE user_id=? ORDER BY sequence").bind(userId).all()).results||[];
-  if(!draft||!rows.length){await telegram(env.TELEGRAM_BOT_TOKEN,"sendMessage",{chat_id:message.chat.id,text:"目前沒有暫存訊息。請先轉傳訊息，再輸入「執行」。"});return}
+  if(!draft||!rows.length){return {chat_id:message.chat.id,text:"目前沒有暫存訊息。請先轉傳訊息，再輸入「執行」。"}}
   await env.DB.prepare("INSERT INTO counters(name,value) VALUES('conversations',1) ON CONFLICT(name) DO UPDATE SET value=value+1").run();
   const counter=await env.DB.prepare("SELECT value FROM counters WHERE name='conversations'").first();
   const displayId=`CONV-${String(counter.value).padStart(6,"0")}`,id=crypto.randomUUID(),creator=senderOf(message),now=new Date().toISOString();
@@ -22,7 +22,7 @@ async function finish(env,message){
     await env.DB.batch(statements);
   }
   await env.DB.batch([env.DB.prepare("DELETE FROM draft_messages WHERE user_id=?").bind(userId),env.DB.prepare("DELETE FROM drafts WHERE user_id=?").bind(userId)]);
-  await telegram(env.TELEGRAM_BOT_TOKEN,"sendMessage",{chat_id:message.chat.id,text:`${displayId} 已建立，共 ${rows.length} 則訊息。暫存已清空。`});
+  return {chat_id:message.chat.id,text:`${displayId} 已建立，共 ${rows.length} 則訊息。暫存已清空。`};
 }
 async function handleTelegram(env,update){
   const m=update?.message;if(!m?.from?.id)return;
@@ -38,7 +38,7 @@ async function handleTelegram(env,update){
     env.DB.prepare("INSERT INTO drafts(user_id,chat_id,creator_name,creator_username,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET chat_id=excluded.chat_id,creator_name=excluded.creator_name,creator_username=excluded.creator_username,updated_at=excluded.updated_at").bind(userId,String(m.chat.id),creator.creatorName,creator.creatorUsername,new Date().toISOString()),
     env.DB.prepare("INSERT OR REPLACE INTO draft_messages(user_id,sequence,payload) VALUES(?,?,?)").bind(userId,sequence,JSON.stringify(payload))
   ]);
-  await telegram(env.TELEGRAM_BOT_TOKEN,"sendMessage",{chat_id:m.chat.id,text:"已暫存。完成轉傳後請輸入「執行」。"});
+  return {chat_id:m.chat.id,text:"已暫存。完成轉傳後請輸入「執行」。"};
 }
 async function mediaResponse(req,env,url,fileId){
   const exp=url.searchParams.get("exp")||"",sig=url.searchParams.get("sig")||"";
@@ -75,7 +75,7 @@ export default{async fetch(req,env,ctx){
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders(origin)});
   if(url.pathname==="/telegram"&&req.method==="POST"){
     if(req.headers.get("x-telegram-bot-api-secret-token")!==env.TELEGRAM_WEBHOOK_SECRET)return new Response("Forbidden",{status:403});
-    const update=await req.json();await handleTelegram(env,update);return new Response("OK");
+    const update=await req.json(),reply=await handleTelegram(env,update);return reply?json({method:"sendMessage",...reply}):new Response("OK");
   }
   if(url.pathname.startsWith("/media/")&&req.method==="GET")return mediaResponse(req,env,url,decodeURIComponent(url.pathname.slice(7)));
   if(url.pathname.startsWith("/api/"))return api(req,env,url,origin);
