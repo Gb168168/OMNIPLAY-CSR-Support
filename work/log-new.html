@@ -746,6 +746,111 @@
       box-sizing: border-box !important;
     }
 
+    /* ===== 日誌 NEW：處理紀錄卡片版面 ===== */
+    #ragicForm [data-subtable="items"] {
+      counter-reset: log-new-record;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row {
+      counter-increment: log-new-record;
+      padding: 14px !important;
+      border: 1px solid #dbe4f0 !important;
+      border-radius: 16px !important;
+      background: #f8fafc !important;
+      box-shadow: 0 3px 12px rgba(15, 23, 42, .05);
+    }
+    #ragicForm [data-subtable="items"] .subtable-row::before {
+      content: "處理紀錄 " counter(log-new-record);
+      display: block;
+      margin: 0 0 10px;
+      color: #1e40af;
+      font-size: 14px;
+      font-weight: 900;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-fields {
+      display: grid !important;
+      grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+      grid-template-rows: auto auto auto !important;
+      gap: 12px !important;
+      align-items: stretch !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field {
+      min-width: 0 !important;
+      padding: 10px !important;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="summary"]) {
+      grid-column: 1 / -1 !important;
+      grid-row: 1 !important;
+      border-color: #bfdbfe;
+      background: #eff6ff;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation"]) {
+      grid-column: 1 / 7 !important;
+      grid-row: 2 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="ai_analysis"]) {
+      grid-column: 7 / 13 !important;
+      grid-row: 2 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="technical_processing"]) {
+      grid-column: 1 / 5 !important;
+      grid-row: 3 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="business_processing"]) {
+      grid-column: 5 / 9 !important;
+      grid-row: 3 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="image_source"]) {
+      grid-column: 9 / 11 !important;
+      grid-row: 3 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]) {
+      grid-column: 11 / 13 !important;
+      grid-row: 3 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="summary"]) textarea {
+      height: 92px !important;
+      min-height: 92px !important;
+      max-height: 92px !important;
+      overflow-y: auto !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation"]) textarea,
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="ai_analysis"]) textarea {
+      height: 220px !important;
+      min-height: 220px !important;
+      max-height: 220px !important;
+      overflow-y: auto !important;
+      line-height: 1.55;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="technical_processing"]) textarea,
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="business_processing"]) textarea {
+      height: 118px !important;
+      min-height: 118px !important;
+      max-height: 118px !important;
+      overflow-y: auto !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]),
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"],
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-upload-area {
+      height: 150px !important;
+      min-height: 150px !important;
+      max-height: 150px !important;
+      overflow: hidden !important;
+    }
+    @media (max-width: 980px) {
+      #ragicForm [data-subtable="items"] .subtable-row-fields {
+        grid-template-columns: 1fr !important;
+      }
+      #ragicForm [data-subtable="items"] .subtable-row-field {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+      }
+    }
+
   </style>
 </head>
 <body data-reminder-module="log">
@@ -1698,7 +1803,7 @@
               }
               conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.map((item) => `${item.text}\n來源判斷：${item.owner}`).join('\n\n')}`;
             }
-            const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。若標記為「客戶」或「我方團隊」，必須依該標記判斷；若為「自動判斷」，請依對話前後文、圖片內容與團隊名錄推斷，無法確定時明確寫「圖片來源待確認」，不可猜測。客戶圖片視為問題或異常證據；我方圖片視為查詢結果、後台紀錄或處理證明。請辨識圖片中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額及處理結果，並與對話互相核對。\n\n分析規則：\n1. 只能依據對話與圖片內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【客戶圖片】、【內部處理】（標示姓名／部門）、【我方圖片】、【問題判斷】、【目前進度】、【後續待辦】獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話或圖片未提供」。\n3. summary 是給下一班交接使用的短版總結，最多三句，必須包含問題、圖片重點、目前由誰或哪個部門處理、下一步。\n4. customerBrief 只寫客戶提出的問題、需求與客戶圖片重點，一至兩句。\n5. supportBrief 整合 OMNIPLAY 內部已回覆、已處理、我方圖片結果及待處理內容，一至兩句。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
+            const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。若標記為「客戶」或「我方團隊」，必須依該標記判斷；若為「自動判斷」，請依對話前後文、圖片內容與團隊名錄推斷，無法確定時明確寫「圖片來源待確認」，不可猜測。客戶圖片視為問題或異常證據；我方圖片視為查詢結果、後台紀錄或處理證明。請辨識圖片中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額及處理結果，並與對話互相核對。\n\n分析規則：\n1. 只能依據對話與圖片內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【客戶圖片】、【內部處理】（標示姓名／部門）、【我方圖片】、【問題判斷】、【目前進度】、【後續待辦】獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話或圖片未提供」。\n3. summary 是畫面最上方的快速交接摘要，最多 80 個中文字，只保留「問題、目前進度、下一步」，不得重複對話、不得列出所有細節。\n4. customerBrief 只寫一個最核心的客戶問題，最多 35 個中文字，不得使用條列。\n5. supportBrief 只寫目前處理結果與下一步，最多 45 個中文字，不得使用條列。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
             const finalPrompt = `${prompt}\n\n最新團隊職稱修正（本段優先於前述名錄）：技術包含 Rondo、Rondo lin OP-RD、Leo Chang、Chuan-Chia Lai、🧑‍💻賢 _RD、Nick OP RD、Yeh Ryan；KKaren 的職稱為營銷。舊名錄若出現「昌賢」是圖片辨識錯誤，正確人員為「🧑‍💻賢 _RD」。\n\n最終輸出請忽略前述 JSON格式，嚴格使用以下分隔標記；標記不得省略，內容可以正常換行，不要加 Markdown 程式碼框：\n<<<ANALYSIS>>>\n完整 AI分析\n<<<SUMMARY>>>\n交接總結\n<<<CUSTOMER_BRIEF>>>\n客戶問題短述\n<<<SUPPORT_BRIEF>>>\n我方處理短述\n<<<END>>>`;
             const options = {
               model: 'gpt-5.4-nano',
@@ -1716,7 +1821,16 @@
           }
           const issue = document.querySelector('#ragicForm [name="issue"]');
           if (issue) {
-            issue.value = `客戶：${briefs.map((item) => item.customerBrief).filter(Boolean).join('；')}\n客服：${briefs.map((item) => item.supportBrief).filter(Boolean).join('；')}`;
+            const compactBrief = (values, maximum) => {
+              const text = values
+                .filter(Boolean)
+                .join('；')
+                .replace(/\s+/g, ' ')
+                .replace(/[。；，、]{2,}/g, '；')
+                .trim();
+              return text.length > maximum ? `${text.slice(0, maximum).replace(/[，、；：\s]+$/, '')}…` : text;
+            };
+            issue.value = `客戶：${compactBrief(briefs.map((item) => item.customerBrief), 45)}\n客服：${compactBrief(briefs.map((item) => item.supportBrief), 55)}`;
             issue.dispatchEvent(new Event('input', { bubbles: true }));
           }
           analysisSucceeded = true;
