@@ -806,7 +806,11 @@
     }
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]) {
       grid-column: 9 / 11 !important;
-      grid-row: 2 / 4 !important;
+      grid-row: 2 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_files"]) {
+      grid-column: 9 / 11 !important;
+      grid-row: 3 !important;
     }
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="summary"]) textarea {
       height: 92px !important;
@@ -836,6 +840,16 @@
       min-height: 150px !important;
       max-height: 150px !important;
       overflow: hidden !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_files"]) {
+      min-height: 118px !important;
+      max-height: 150px !important;
+      overflow-y: auto !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_files"] {
+      min-height: 88px !important;
+      max-height: 118px !important;
+      overflow-y: auto !important;
     }
     @media (max-width: 980px) {
       #ragicForm [data-subtable="items"] .subtable-row-fields {
@@ -988,7 +1002,6 @@
         { key: 'completed_at', label: '完成時間', type: 'datetime', formRow: 2, formCol: 4 },
         { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 1 },
         { key: 'images', label: '圖片', type: 'image', formRow: 3, formCol: 2 },
-        { key: 'files', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
         { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 4 },
         { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 2 },
         { key: 'note', label: '備註', type: 'textarea', rows: 6, placeholder: '未完成時，請填入詢問部門的日期時間', formRow: 4, formCol: 3, formColSpan: 2 },
@@ -1004,7 +1017,8 @@
           { key: 'summary', label: '總結', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' },
           { key: 'image_source', label: '圖片來源', type: 'select', width: 420, defaultValue: '自動判斷', options: ['自動判斷', '客戶', '我方團隊'] },
           { key: 'business_processing', label: '商務群處理', type: 'textarea', rows: 4, width: 300 },
-          { key: 'conversation_images', label: '圖片', type: 'image', width: 420 }
+          { key: 'conversation_images', label: '圖片', type: 'image', width: 420 },
+          { key: 'conversation_files', label: '檔案', type: 'file', width: 420 }
         ]}
       ],
       formLayout: {
@@ -1905,6 +1919,50 @@
     const designerPanel = document.querySelector('#layoutDesignerPanel');
     if (designerPanel) designerGridObserver.observe(designerPanel, { childList: true, subtree: true });
     document.querySelector('#designTableButton')?.addEventListener('click', () => requestAnimationFrame(fixLogNewDesignerGrid));
+
+    const migrateLogNewFilesIntoProcessingRecords = async () => {
+      try {
+        await window.permissionReady;
+        const db = window.omniplayDb;
+        if (!db) return;
+        const ref = db.collection('log_new_schema').doc('active');
+        const snapshot = await ref.get();
+        if (!snapshot.exists) return;
+        const schema = snapshot.data() || {};
+        const fields = Array.isArray(schema.fields) ? schema.fields : [];
+        const itemsField = fields.find((field) => field.key === 'items' || field.type === 'subtable');
+        const alreadyMoved = Array.isArray(itemsField?.fields) &&
+          itemsField.fields.some((field) => field.key === 'conversation_files');
+        const hasMainFile = fields.some((field) => field.key === 'files');
+        if (alreadyMoved && !hasMainFile) return;
+
+        const nextFields = fields
+          .filter((field) => field.key !== 'files')
+          .map((field) => {
+            if (field !== itemsField) return field;
+            const subfields = Array.isArray(field.fields) ? [...field.fields] : [];
+            if (!subfields.some((child) => child.key === 'conversation_files')) {
+              subfields.push({
+                key: 'conversation_files',
+                label: '檔案',
+                type: 'file',
+                width: 420
+              });
+            }
+            return { ...field, fields: subfields };
+          });
+        await ref.set({
+          fields: nextFields,
+          fileFieldMovedToProcessingRecords: true,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        window.location.reload();
+      } catch (error) {
+        console.error('移動日誌 NEW 檔案欄失敗：', error);
+      }
+    };
+
+    migrateLogNewFilesIntoProcessingRecords();
 
     new MutationObserver(enhanceLogNewAiUi).observe(document.querySelector('#ragicFormView'), { childList: true, subtree: true });
     enhanceLogNewAiUi();
