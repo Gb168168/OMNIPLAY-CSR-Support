@@ -34,7 +34,7 @@ async function handleTelegram(env,update){
   if(m.photo?.length){mediaType="photo";fileId=m.photo[m.photo.length-1].file_id;fileName=`photo_${sequence}.jpg`;mimeType="image/jpeg"}
   else if(m.video){mediaType="video";fileId=m.video.file_id;fileName=m.video.file_name||`video_${sequence}.mp4`;mimeType=m.video.mime_type||"video/mp4"}
   else if(m.document){mediaType="document";fileId=m.document.file_id;fileName=m.document.file_name||`file_${sequence}`;mimeType=m.document.mime_type||"application/octet-stream"}
-  const payload={sequence,text:m.text||m.caption||"",sentAt:new Date((m.date||Math.floor(Date.now()/1000))*1000).toISOString(),senderId:String(m.from.id),senderName:creator.creatorName,senderUsername:creator.creatorUsername,...origin,mediaType,fileId,fileName,mimeType,telegramMessageId:m.message_id};
+  const payload={sequence,text:m.text||m.caption||"",sentAt:new Date((m.forward_origin?.date||m.date||Math.floor(Date.now()/1000))*1000).toISOString(),senderId:String(m.from.id),senderName:creator.creatorName,senderUsername:creator.creatorUsername,...origin,mediaType,fileId,fileName,mimeType,telegramMessageId:m.message_id};
   await env.DB.batch([
     env.DB.prepare("INSERT INTO drafts(user_id,chat_id,creator_name,creator_username,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET chat_id=excluded.chat_id,creator_name=excluded.creator_name,creator_username=excluded.creator_username,updated_at=excluded.updated_at").bind(userId,String(m.chat.id),creator.creatorName,creator.creatorUsername,new Date().toISOString()),
     env.DB.prepare("INSERT OR REPLACE INTO draft_messages(user_id,sequence,payload) VALUES(?,?,?)").bind(userId,sequence,JSON.stringify(payload))
