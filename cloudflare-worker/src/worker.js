@@ -1,5 +1,5 @@
 const JSON_HEADERS={"content-type":"application/json;charset=UTF-8"};
-const corsHeaders=origin=>({"access-control-allow-origin":origin==="https://gb168168.github.io"?origin:"https://gb168168.github.io","access-control-allow-headers":"authorization,content-type","access-control-allow-methods":"GET,PATCH,OPTIONS","vary":"Origin"});
+const corsHeaders=origin=>({"access-control-allow-origin":origin==="https://gb168168.github.io"?origin:"https://gb168168.github.io","access-control-allow-headers":"authorization,content-type,x-admin-key","access-control-allow-methods":"GET,PATCH,DELETE,OPTIONS","vary":"Origin"});
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
 const telegram=(token,method,body={})=>fetch(`https://api.telegram.org/bot${token}/${method}`,{method:"POST",headers:JSON_HEADERS,body:JSON.stringify(body)}).then(r=>r.json());
 const senderOf=m=>({creatorId:String(m.from?.id||""),creatorName:[m.from?.first_name,m.from?.last_name].filter(Boolean).join(" "),creatorUsername:m.from?.username||""});
@@ -8,6 +8,7 @@ const b64=a=>btoa(String.fromCharCode(...new Uint8Array(a))).replace(/\+/g,"-").
 async function sign(value,secret){const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64(await crypto.subtle.sign("HMAC",k,new TextEncoder().encode(value)))}
 async function validSignature(value,signature,secret){return (await sign(value,secret))===signature}
 const authOk=(req,env)=>req.headers.get("authorization")===`Bearer ${env.INBOX_API_TOKEN}`;
+const adminOk=(req,env)=>Boolean(env.INBOX_ADMIN_TOKEN)&&req.headers.get("x-admin-key")===env.INBOX_ADMIN_TOKEN;
 async function finish(env,message){
   const userId=String(message.from.id);
   const draft=await env.DB.prepare("SELECT * FROM drafts WHERE user_id=?").bind(userId).first();
@@ -58,6 +59,16 @@ async function api(req,env,url,origin){
     const rows=(await env.DB.prepare("SELECT sequence,payload FROM messages WHERE conversation_id=? ORDER BY sequence").bind(parts[2]).all()).results||[],exp=Math.floor(Date.now()/1000)+1800,out=[];
     for(const row of rows){const m=JSON.parse(row.payload);if(m.fileId){const sig=await sign(`${m.fileId}|${exp}`,env.TELEGRAM_WEBHOOK_SECRET);m.mediaUrl=`${url.origin}/media/${encodeURIComponent(m.fileId)}?exp=${exp}&sig=${encodeURIComponent(sig)}&name=${encodeURIComponent(m.fileName||"file")}`}out.push(m)}
     return json(out,200,cors);
+  }
+  if(req.method==="DELETE"&&parts[0]==="api"&&parts[1]==="conversations"&&parts.length===3){
+    if(!adminOk(req,env))return json({error:"Admin only"},403,cors);
+    const exists=await env.DB.prepare("SELECT display_id FROM conversations WHERE id=?").bind(parts[2]).first();
+    if(!exists)return json({error:"Conversation not found"},404,cors);
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM messages WHERE conversation_id=?").bind(parts[2]),
+      env.DB.prepare("DELETE FROM conversations WHERE id=?").bind(parts[2])
+    ]);
+    return json({ok:true,deletedId:parts[2],displayId:exists.display_id},200,cors);
   }
   if(req.method==="PATCH"&&parts[0]==="api"&&parts[1]==="conversations"&&parts.length===3){
     const body=await req.json(),sets=[],values=[];
