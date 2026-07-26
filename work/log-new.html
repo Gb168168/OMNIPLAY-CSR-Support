@@ -1490,51 +1490,101 @@
     };
 
     const parseLogNewAiResponse = (rawValue) => {
-      const raw = String(rawValue || '').replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-      const taggedKeys = [
+      const raw = String(rawValue || '')
+        .replace(/^\s*```(?:json|text|markdown)?\s*/i, '')
+        .replace(/\s*```\s*$/i, '')
+        .trim();
+      if (!raw) throw new Error('AI 未回傳內容，請稍後再試');
+
+      const keys = [
         ['analysis', 'ANALYSIS'],
         ['summary', 'SUMMARY'],
         ['customerBrief', 'CUSTOMER_BRIEF'],
         ['supportBrief', 'SUPPORT_BRIEF']
       ];
-      const taggedResult = {};
-      taggedKeys.forEach(([key, tag], index) => {
-        const nextTag = taggedKeys[index + 1]?.[1] || 'END';
-        const match = raw.match(new RegExp(`<<<${tag}>>>\\s*([\\s\\S]*?)(?=<<<${nextTag}>>>|$)`, 'i'));
-        if (match) taggedResult[key] = match[1].trim();
-      });
-      if (taggedKeys.every(([key]) => typeof taggedResult[key] === 'string')) return taggedResult;
-      const objectText = raw.match(/\{[\s\S]*\}/)?.[0] || raw;
-      try {
-        const parsed = JSON.parse(objectText);
-        if (parsed && typeof parsed === 'object') return parsed;
-      } catch (_) {
-        // AI 有時會在 JSON 字串內直接輸出換行；以下改用欄位邊界容錯擷取。
-      }
-      const keys = ['analysis', 'summary', 'customerBrief', 'supportBrief'];
       const result = {};
-      keys.forEach((key, index) => {
-        const nextKeys = keys.slice(index + 1).join('|');
-        const ending = nextKeys ? `(?=\\s*,?\\s*"(?:${nextKeys})"\\s*:|\\s*})` : '(?=\\s*})';
-        const match = objectText.match(new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"\\s*${ending}`));
-        if (!match) return;
-        result[key] = match[1]
-          .replace(/\\n/g, '\n')
-          .replace(/\\r/g, '')
-          .replace(/\\"/g, '"')
-          .replace(/\\\\/g, '\\')
-          .trim();
+      const allTags = keys.map(([, tag]) => tag).concat('END').join('|');
+
+      keys.forEach(([key, tag]) => {
+        const match = raw.match(new RegExp(`<<<\\s*${tag}\\s*>>>\\s*([\\s\\S]*?)(?=<<<\\s*(?:${allTags})\\s*>>>|$)`, 'i'));
+        if (match?.[1]?.trim()) result[key] = match[1].trim();
       });
-      if (keys.every((key) => typeof result[key] === 'string')) return result;
-      throw new Error('AI 回傳格式不正確');
+
+      const objectText = raw.match(/\{[\s\S]*\}/)?.[0] || '';
+      if (objectText) {
+        try {
+          const parsed = JSON.parse(objectText);
+          if (parsed && typeof parsed === 'object') {
+            result.analysis ||= String(parsed.analysis ?? parsed.ANALYSIS ?? parsed['AI分析'] ?? '').trim();
+            result.summary ||= String(parsed.summary ?? parsed.SUMMARY ?? parsed['總結'] ?? '').trim();
+            result.customerBrief ||= String(parsed.customerBrief ?? parsed.CUSTOMER_BRIEF ?? parsed['客戶問題短述'] ?? '').trim();
+            result.supportBrief ||= String(parsed.supportBrief ?? parsed.SUPPORT_BRIEF ?? parsed['我方處理短述'] ?? '').trim();
+          }
+        } catch (_) {
+          // 容許 JSON 字串中含未跳脫換行。
+        }
+
+        keys.forEach(([key], index) => {
+          if (result[key]) return;
+          const remainingKeys = keys.slice(index + 1).map(([nextKey]) => nextKey).join('|');
+          const ending = remainingKeys
+            ? `(?=\\s*,?\\s*"(?:${remainingKeys})"\\s*:|\\s*})`
+            : '(?=\\s*})';
+          const match = objectText.match(new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"\\s*${ending}`));
+          if (!match) return;
+          result[key] = match[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\')
+            .trim();
+        });
+      }
+
+      const extractSection = (title) => {
+        const match = raw.match(new RegExp(`(?:【|#{1,4}\\s*)${title}(?:】)?\\s*[:：]?\\s*([\\s\\S]*?)(?=\\n\\s*(?:【|#{1,4}\\s*)|$)`, 'i'));
+        return match?.[1]?.trim() || '';
+      };
+      const customerIssue = extractSection('客戶問題');
+      const customerImage = extractSection('客戶圖片');
+      const internalHandling = extractSection('內部處理');
+      const ownImage = extractSection('我方圖片');
+      const progress = extractSection('目前進度');
+      const todos = extractSection('後續待辦');
+
+      result.analysis ||= /【(?:客戶問題|內部處理|問題判斷|目前進度|後續待辦)】/.test(raw) ? raw : '';
+      result.customerBrief ||= [customerIssue, customerImage].filter(Boolean).join('；');
+      result.supportBrief ||= [internalHandling, ownImage, progress, todos].filter(Boolean).join('；');
+      result.summary ||= [customerIssue, progress, todos].filter(Boolean).join('；');
+
+      if (!result.analysis) result.analysis = raw;
+      result.summary ||= '請依完整 AI 分析確認案件進度。';
+      result.customerBrief ||= customerIssue || '請參考完整 AI 分析。';
+      result.supportBrief ||= internalHandling || progress || '請參考完整 AI 分析。';
+      return result;
     };
 
     const logNewAiResponseText = (response) => {
       if (typeof response === 'string') return response;
-      const content = response?.message?.content ?? response?.text ?? '';
+      const content =
+        response?.message?.content ??
+        response?.choices?.[0]?.message?.content ??
+        response?.content ??
+        response?.result?.message?.content ??
+        response?.result?.text ??
+        response?.text ??
+        '';
       if (typeof content === 'string') return content;
-      if (Array.isArray(content)) return content.map((item) => item?.text || '').filter(Boolean).join('\n');
-      return String(content || response || '');
+      if (Array.isArray(content)) {
+        return content
+          .map((item) => typeof item === 'string' ? item : (item?.text ?? item?.content ?? ''))
+          .filter(Boolean)
+          .join('\n');
+      }
+      if (content && typeof content === 'object') {
+        try { return JSON.stringify(content); } catch (_) { return String(content); }
+      }
+      return '';
     };
 
     const logNewImageMedia = (source, index) => {
