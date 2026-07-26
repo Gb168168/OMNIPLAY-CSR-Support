@@ -333,12 +333,11 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   grid.style.gridTemplateColumns =
     `repeat(${columns}, minmax(0, 1fr))`;
 
-  // 欄位內容較高時，該列自動增高，不再壓到下一列
+  // 表單與設計器使用相同的固定列高；內容不得把格線撐開。
   grid.style.gridTemplateRows =
-    `repeat(${rows}, minmax(48px, auto))`;
+    `repeat(${rows}, 48px)`;
 
-  grid.style.gridAutoRows =
-    'minmax(48px, auto)';
+  grid.style.gridAutoRows = '48px';
 
   grid.style.columnGap = '12px';
   grid.style.rowGap = '10px';
@@ -367,19 +366,14 @@ const applyFormLayout = (element, field = {}) => {
   element.style.setProperty('--form-rowspan', rowSpan || 1);
   const layoutWidth = normalizeFormFieldSize(layoutItem.width ?? field.formWidth, MIN_FORM_FIELD_WIDTH);
   const layoutHeight = normalizeFormFieldSize(layoutItem.height ?? field.formHeight, MIN_FORM_FIELD_HEIGHT);
-  if (layoutItem.width || (field.formWidth && field.type !== 'subtable')) element.style.width = `${layoutWidth}px`;
-  if (layoutItem.height || field.formHeight) {
-  if (field.type === 'subtable') {
-    element.style.minHeight = `${layoutHeight}px`;
-  } else if (field.type === 'image') {
-    const imageHeight = Math.max(layoutHeight, 168);
-    element.style.height = `${imageHeight}px`;
-    element.style.minHeight = `${imageHeight}px`;
-  } else {
-    element.style.height = `${layoutHeight}px`;
-    element.style.minHeight = `${layoutHeight}px`;
-  }
-}
+  // 實際欄框大小只由設計器的格線位置與跨欄／跨列決定，
+  // 不再套用舊版像素寬高，避免圖片、檔案把下一列推遠。
+  element.style.removeProperty('width');
+  element.style.removeProperty('height');
+  element.style.removeProperty('min-height');
+  element.style.removeProperty('max-height');
+  element.style.alignSelf = 'stretch';
+  element.style.overflow = 'hidden';
   return element;
 };
 const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
