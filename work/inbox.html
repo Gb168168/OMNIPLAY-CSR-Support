@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>收件匣｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260727-inbox1" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260727-inbox2" />
   <style>
     .inbox-shell{display:grid;gap:16px}.inbox-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 18px;border-bottom:1px solid var(--border)}
     .inbox-toolbar select,.inbox-toolbar input{width:auto;min-width:150px}.inbox-table td{vertical-align:middle}.inbox-actions{display:flex;gap:6px;flex-wrap:wrap}
@@ -24,13 +24,13 @@
   <section class="app-shell">
     <aside id="sidebar"></aside><div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
     <main class="main">
-      <header class="topbar"><div><h1>📥 收件匣</h1><p>集中管理 Telegram 與未來其他來源的 Conversation。</p></div><div class="user-pill">● 已連線 Firebase</div></header>
+      <header class="topbar"><div><h1>📥 收件匣</h1><p>集中管理 Telegram 與未來其他來源的 Conversation。</p></div><div class="user-pill">● Conversation 雲端收件匣</div></header>
       <section class="ragic-card inbox-shell">
         <div class="inbox-toolbar">
           <select id="sourceFilter"><option value="">全部來源</option><option value="telegram">Telegram</option></select>
           <select id="statusFilter"><option value="">全部狀態</option><option value="pending">未分析</option><option value="analyzed">已分析</option><option value="imported">已匯入</option><option value="archived">已封存</option></select>
           <input id="inboxSearch" type="search" placeholder="搜尋建立人或 Conversation ID" />
-          <button class="secondary" id="refreshInbox" type="button">重新整理</button>
+          <button class="secondary" id="refreshInbox" type="button">重新整理</button><button class="secondary" id="configureInbox" type="button">連線設定</button>
         </div>
         <div class="ragic-table-wrap"><table class="ragic-table inbox-table"><thead><tr><th>來源</th><th>Conversation ID</th><th>建立時間</th><th>建立人</th><th>訊息數</th><th>狀態</th><th>動作</th></tr></thead><tbody id="inboxBody"></tbody></table></div>
       </section>
@@ -40,6 +40,5 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
-  <script src="../assets/firebase-init.js"></script><script src="../assets/app.js?v=20260727-inbox1"></script><script src="https://js.puter.com/v2/"></script><script src="../assets/inbox.js?v=20260727-inbox1"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/app.js?v=20260727-inbox2"></script><script src="https://js.puter.com/v2/"></script><script src="../assets/inbox.js?v=20260727-inbox2"></script>
 </body></html>
