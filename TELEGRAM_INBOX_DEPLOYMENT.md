@@ -21,16 +21,18 @@ npm run db:init
 ```
 --update-config 會把 D1 的 database_id 自動寫入 wrangler.jsonc。
 
-## 4. 設定三個 Secret
+## 4. 設定四個 Secret
 依序執行：
 ```powershell
 npx wrangler secret put TELEGRAM_BOT_TOKEN
 npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
 npx wrangler secret put INBOX_API_TOKEN
+npx wrangler secret put INBOX_ADMIN_TOKEN
 ```
 - TELEGRAM_BOT_TOKEN：貼 BotFather Token。
 - TELEGRAM_WEBHOOK_SECRET：自行設定一組長隨機字串。
 - INBOX_API_TOKEN：另一組不同的長隨機字串，之後首次開啟收件匣時使用。
+- INBOX_ADMIN_TOKEN：只有管理員保存的獨立長隨機字串，用於永久刪除 Conversation。請勿提供給一般人員。
 - 真正的值只貼在 PowerShell 提示中，不要貼到 GitHub 或聊天。
 
 ## 5. 部署
@@ -68,6 +70,7 @@ Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot<BOT_TOKEN>/set
 ## 安全
 - Bot Token 與兩個 Secret 只存在 Cloudflare Secret。
 - Conversation 原始訊息不可由收件匣修改。
+- 一般人員可使用收件匣；只有 OMNIPLAY 管理員搭配 INBOX_ADMIN_TOKEN 才可永久刪除。
 - 封存不會刪除原始內容。
 - 媒體預覽網址只有短時間有效。
 - functions/ 僅保留舊 Firebase 版本參考，不需部署。
