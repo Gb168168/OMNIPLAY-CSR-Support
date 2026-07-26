@@ -75,7 +75,7 @@ export default{async fetch(req,env,ctx){
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders(origin)});
   if(url.pathname==="/telegram"&&req.method==="POST"){
     if(req.headers.get("x-telegram-bot-api-secret-token")!==env.TELEGRAM_WEBHOOK_SECRET)return new Response("Forbidden",{status:403});
-    const update=await req.json();ctx.waitUntil(handleTelegram(env,update).catch(console.error));return new Response("OK");
+    const update=await req.json();await handleTelegram(env,update);return new Response("OK");
   }
   if(url.pathname.startsWith("/media/")&&req.method==="GET")return mediaResponse(req,env,url,decodeURIComponent(url.pathname.slice(7)));
   if(url.pathname.startsWith("/api/"))return api(req,env,url,origin);
