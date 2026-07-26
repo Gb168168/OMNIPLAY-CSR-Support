@@ -263,7 +263,7 @@ const applyPermissionUi = () => {
   const restrict = !isOmniplayAdmin() && permissions.pages;
   document.querySelectorAll('.menu a[href]').forEach((link) => {
     const page = PAGE_KEYS[link.getAttribute('href').split('/').pop()];
-    if (page && page !== 'inbox' && restrict && !permissions.pages?.[page]?.view) link.remove();
+    if (page && restrict && !getPagePermission(page).view) link.remove();
   });
   document.querySelectorAll('.sidebar-group').forEach((group) => {
     if (!group.querySelector('.sidebar-sub-item')) group.remove();
