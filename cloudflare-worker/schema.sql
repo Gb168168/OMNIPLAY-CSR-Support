@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS drafts(user_id TEXT PRIMARY KEY,chat_id TEXT NOT NULL,creator_name TEXT,creator_username TEXT,updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS draft_messages(user_id TEXT NOT NULL,sequence INTEGER NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(user_id,sequence));
+CREATE TABLE IF NOT EXISTS counters(name TEXT PRIMARY KEY,value INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS conversations(id TEXT PRIMARY KEY,display_id TEXT UNIQUE NOT NULL,source TEXT NOT NULL,source_label TEXT NOT NULL,created_at TEXT NOT NULL,creator_id TEXT,creator_name TEXT,creator_username TEXT,message_count INTEGER NOT NULL DEFAULT 0,analyzed INTEGER NOT NULL DEFAULT 0,imported INTEGER NOT NULL DEFAULT 0,archived INTEGER NOT NULL DEFAULT 0,raw_immutable INTEGER NOT NULL DEFAULT 1,analysis_json TEXT,import_drafted INTEGER NOT NULL DEFAULT 0,imported_log_id TEXT,updated_at TEXT);
+CREATE TABLE IF NOT EXISTS messages(conversation_id TEXT NOT NULL,sequence INTEGER NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(conversation_id,sequence));
