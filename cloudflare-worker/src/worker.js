@@ -1,5 +1,5 @@
 const JSON_HEADERS={"content-type":"application/json;charset=UTF-8"};
-const corsHeaders=origin=>({"access-control-allow-origin":origin==="https://gb168168.github.io"?origin:"https://gb168168.github.io","access-control-allow-headers":"authorization,content-type,x-admin-key","access-control-allow-methods":"GET,PATCH,DELETE,OPTIONS","vary":"Origin"});
+const corsHeaders=origin=>({"access-control-allow-origin":origin==="https://gb168168.github.io"?origin:"https://gb168168.github.io","access-control-allow-headers":"authorization,content-type,x-admin-key","access-control-allow-methods":"GET,POST,PATCH,DELETE,OPTIONS","vary":"Origin"});
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
 const telegram=(token,method,body={})=>fetch(`https://api.telegram.org/bot${token}/${method}`,{method:"POST",headers:JSON_HEADERS,body:JSON.stringify(body)}).then(r=>r.json());
 const senderOf=m=>({creatorId:String(m.from?.id||""),creatorName:[m.from?.first_name,m.from?.last_name].filter(Boolean).join(" "),creatorUsername:m.from?.username||""});
@@ -41,6 +41,52 @@ async function handleTelegram(env,update){
   ]);
   return {chat_id:m.chat.id,text:"已暫存。完成轉傳後請輸入「執行」。"};
 }
+
+const teamsIngestOk=(req,env)=>Boolean(env.TEAMS_INGEST_TOKEN)&&req.headers.get("authorization")===`Bearer ${env.TEAMS_INGEST_TOKEN}`;
+async function draftStats(env,userKey){
+  const rows=(await env.DB.prepare("SELECT payload FROM draft_messages WHERE user_id=?").bind(userKey).all()).results||[];
+  let attachmentCount=0;
+  for(const row of rows){try{const m=JSON.parse(row.payload);attachmentCount+=(m.attachments||[]).length;if(m.mediaType)attachmentCount++}catch{}}
+  return {rows,messageCount:rows.length,attachmentCount};
+}
+async function createConversationFromDraft(env,body){
+  const {rows,messageCount}=await draftStats(env,body.userKey);
+  if(!messageCount)return {empty:true,messageCount:0,attachmentCount:0};
+  await env.DB.prepare("INSERT INTO counters(name,value) VALUES('conversations',1) ON CONFLICT(name) DO UPDATE SET value=value+1").run();
+  const counter=await env.DB.prepare("SELECT value FROM counters WHERE name='conversations'").first();
+  const displayId=`CONV-${String(counter.value).padStart(6,"0")}`,id=crypto.randomUUID(),now=new Date().toISOString();
+  await env.DB.prepare("INSERT INTO conversations(id,display_id,source,source_label,created_at,creator_id,creator_name,creator_username,message_count,analyzed,imported,archived,raw_immutable) VALUES(?,?,?,?,?,?,?,?,?,0,0,0,1)")
+    .bind(id,displayId,body.source,body.sourceLabel,now,body.creatorId||"",body.creatorName||"",body.creatorUsername||"",messageCount).run();
+  const ordered=(await env.DB.prepare("SELECT sequence,payload FROM draft_messages WHERE user_id=? ORDER BY sequence").bind(body.userKey).all()).results||[];
+  for(let offset=0;offset<ordered.length;offset+=90){
+    await env.DB.batch(ordered.slice(offset,offset+90).map(row=>env.DB.prepare("INSERT INTO messages(conversation_id,sequence,payload) VALUES(?,?,?)").bind(id,row.sequence,row.payload)));
+  }
+  await env.DB.batch([env.DB.prepare("DELETE FROM draft_messages WHERE user_id=?").bind(body.userKey),env.DB.prepare("DELETE FROM drafts WHERE user_id=?").bind(body.userKey)]);
+  return {empty:false,id,displayId,messageCount};
+}
+async function internalApi(req,env,url){
+  if(!teamsIngestOk(req,env))return json({error:"Unauthorized"},401);
+  const body=await req.json();
+  if(body.source!=="teams"||!body.userKey?.startsWith("teams:"))return json({error:"Invalid Teams source"},400);
+  if(url.pathname==="/internal/conversations/ingest"){
+    const payload=body.payload||{},sequence=Number(payload.sequence||Date.now()),now=new Date().toISOString();
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO drafts(user_id,chat_id,creator_name,creator_username,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET chat_id=excluded.chat_id,creator_name=excluded.creator_name,creator_username=excluded.creator_username,updated_at=excluded.updated_at").bind(body.userKey,String(body.chatId||""),body.creatorName||"",body.creatorUsername||"",now),
+      env.DB.prepare("INSERT OR REPLACE INTO draft_messages(user_id,sequence,payload) VALUES(?,?,?)").bind(body.userKey,sequence,JSON.stringify({...payload,sequence}))
+    ]);
+    return json(await draftStats(env,body.userKey));
+  }
+  if(url.pathname==="/internal/conversations/command"){
+    const stats=await draftStats(env,body.userKey);
+    if(body.command==="status")return json(stats);
+    if(body.command==="cancel"){
+      await env.DB.batch([env.DB.prepare("DELETE FROM draft_messages WHERE user_id=?").bind(body.userKey),env.DB.prepare("DELETE FROM drafts WHERE user_id=?").bind(body.userKey)]);
+      return json(stats);
+    }
+    if(body.command==="execute")return json(await createConversationFromDraft(env,body));
+  }
+  return json({error:"Not found"},404);
+}
 async function mediaResponse(req,env,url,fileId){
   const exp=url.searchParams.get("exp")||"",sig=url.searchParams.get("sig")||"";
   if(!exp||Date.now()>Number(exp)*1000||!await validSignature(`${fileId}|${exp}`,sig,env.TELEGRAM_WEBHOOK_SECRET))return new Response("Forbidden",{status:403});
@@ -57,7 +103,7 @@ async function api(req,env,url,origin){
   }
   if(req.method==="GET"&&parts[0]==="api"&&parts[1]==="conversations"&&parts[3]==="messages"){
     const rows=(await env.DB.prepare("SELECT sequence,payload FROM messages WHERE conversation_id=? ORDER BY sequence").bind(parts[2]).all()).results||[],exp=Math.floor(Date.now()/1000)+1800,out=[];
-    for(const row of rows){const m=JSON.parse(row.payload);if(m.fileId){const sig=await sign(`${m.fileId}|${exp}`,env.TELEGRAM_WEBHOOK_SECRET);m.mediaUrl=`${url.origin}/media/${encodeURIComponent(m.fileId)}?exp=${exp}&sig=${encodeURIComponent(sig)}&name=${encodeURIComponent(m.fileName||"file")}`}out.push(m)}
+    for(const row of rows){const m=JSON.parse(row.payload);if(m.fileId&&!m.mediaUrl&&!m.attachments?.length){const sig=await sign(`${m.fileId}|${exp}`,env.TELEGRAM_WEBHOOK_SECRET);m.mediaUrl=`${url.origin}/media/${encodeURIComponent(m.fileId)}?exp=${exp}&sig=${encodeURIComponent(sig)}&name=${encodeURIComponent(m.fileName||"file")}`}out.push(m)}
     return json(out,200,cors);
   }
   if(req.method==="DELETE"&&parts[0]==="api"&&parts[1]==="conversations"&&parts.length===3){
@@ -84,6 +130,7 @@ async function api(req,env,url,origin){
 export default{async fetch(req,env,ctx){
   const url=new URL(req.url),origin=req.headers.get("origin")||"";
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders(origin)});
+  if(url.pathname.startsWith("/internal/conversations/")&&req.method==="POST")return internalApi(req,env,url);
   if(url.pathname==="/telegram"&&req.method==="POST"){
     if(req.headers.get("x-telegram-bot-api-secret-token")!==env.TELEGRAM_WEBHOOK_SECRET)return new Response("Forbidden",{status:403});
     const update=await req.json(),reply=await handleTelegram(env,update);return reply?json({method:"sendMessage",...reply}):new Response("OK");
