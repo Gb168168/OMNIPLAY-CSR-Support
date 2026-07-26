@@ -836,13 +836,47 @@
       max-height: 118px !important;
       overflow-y: auto !important;
     }
-    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]),
+    /* 處理紀錄圖片：外框、上傳區與預覽分開留高，避免圖片被固定 150px 裁切。 */
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]) {
+      height: auto !important;
+      min-height: 280px !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
     #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"],
     #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-upload-area {
-      height: 150px !important;
-      min-height: 150px !important;
-      max-height: 150px !important;
-      overflow: hidden !important;
+      height: auto !important;
+      min-height: 240px !important;
+      max-height: none !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-preview-list {
+      height: auto !important;
+      min-height: 180px !important;
+      max-height: none !important;
+      align-items: flex-start !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-preview-item {
+      flex: 0 0 220px !important;
+      width: 220px !important;
+      min-width: 220px !important;
+      height: 165px !important;
+      min-height: 165px !important;
+      max-height: 165px !important;
+      overflow: visible !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-preview-item img {
+      width: 220px !important;
+      min-width: 220px !important;
+      max-width: 220px !important;
+      height: 160px !important;
+      min-height: 160px !important;
+      max-height: 160px !important;
+      object-fit: contain !important;
+      object-position: center !important;
     }
     #ragicForm [data-subtable="items"] .subtable-row-field-file,
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_files"]) {
