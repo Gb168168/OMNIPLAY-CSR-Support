@@ -808,9 +808,12 @@
       grid-column: 9 / 11 !important;
       grid-row: 2 !important;
     }
+    #ragicForm [data-subtable="items"] .subtable-row-field-file,
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_files"]) {
       grid-column: 9 / 11 !important;
       grid-row: 3 !important;
+      display: block !important;
+      visibility: visible !important;
     }
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="summary"]) textarea {
       height: 92px !important;
@@ -841,6 +844,7 @@
       max-height: 150px !important;
       overflow: hidden !important;
     }
+    #ragicForm [data-subtable="items"] .subtable-row-field-file,
     #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_files"]) {
       min-height: 118px !important;
       max-height: 150px !important;
@@ -850,6 +854,9 @@
       min-height: 88px !important;
       max-height: 118px !important;
       overflow-y: auto !important;
+    }
+    #ragicForm > .ragic-form-grid > .ragic-field-file {
+      display: none !important;
     }
     @media (max-width: 980px) {
       #ragicForm [data-subtable="items"] .subtable-row-fields {
@@ -1746,7 +1753,39 @@
       return output;
     };
 
+    const ensureLogNewProcessingFileField = () => {
+      const schemaFields = RAGIC_STATE?.schema?.fields;
+      if (!Array.isArray(schemaFields)) return;
+      const itemsField = schemaFields.find((field) => field.key === 'items' || field.type === 'subtable');
+      if (!itemsField) return;
+      if (!Array.isArray(itemsField.fields)) itemsField.fields = [];
+      let fileField = itemsField.fields.find((field) => field.key === 'conversation_files');
+      if (!fileField) {
+        fileField = {
+          key: 'conversation_files',
+          label: '檔案',
+          type: 'file',
+          width: 420
+        };
+        itemsField.fields.push(fileField);
+      }
+
+      document.querySelectorAll('#ragicForm [data-subtable="items"] .subtable-row').forEach((row) => {
+        const grid = row.querySelector('.subtable-row-fields');
+        if (!grid || grid.querySelector('.subtable-row-field-file')) return;
+        const fieldWrap = document.createElement('label');
+        fieldWrap.className = 'subtable-row-field subtable-row-field-file';
+        fieldWrap.innerHTML = '<span>檔案</span>';
+        const control = createControl(fileField, '', true);
+        const area = createFileUploadArea(fileField, control, '', { subfield: true });
+        fieldWrap.appendChild(area);
+        grid.appendChild(fieldWrap);
+        attachImageUploadArea(area);
+      });
+    };
+
     const enhanceLogNewAiUi = () => {
+      ensureLogNewProcessingFileField();
       bindConversationAutoFormat();
       bindLogNewConversationImages();
       bindLogNewCompletionAutoFill();
