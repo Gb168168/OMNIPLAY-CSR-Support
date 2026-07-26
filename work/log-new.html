@@ -716,6 +716,34 @@
      max-height: 270px !important;
      object-fit: contain !important;
     }
+    /* ===== 日誌 NEW：檔案欄固定高度 ===== */
+    #ragicForm .ragic-field-file.has-form-layout {
+      height: 175px !important;
+      min-height: 175px !important;
+      max-height: 175px !important;
+      align-self: start !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    #ragicForm .ragic-field-file.has-form-layout > .image-upload-area {
+      height: 150px !important;
+      min-height: 150px !important;
+      max-height: 150px !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    #ragicForm .ragic-field-file.has-form-layout .ragic-file-preview,
+    #ragicForm .ragic-field-file.has-form-layout .ragic-view-value {
+      max-height: 105px !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      box-sizing: border-box !important;
+    }
+
   </style>
 </head>
 <body data-reminder-module="log">
