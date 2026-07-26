@@ -368,12 +368,12 @@ const applyFormLayout = (element, field = {}) => {
   const layoutHeight = normalizeFormFieldSize(layoutItem.height ?? field.formHeight, MIN_FORM_FIELD_HEIGHT);
   // 實際欄框大小只由設計器的格線位置與跨欄／跨列決定，
   // 不再套用舊版像素寬高，避免圖片、檔案把下一列推遠。
-  element.style.removeProperty('width');
-  element.style.removeProperty('height');
-  element.style.removeProperty('min-height');
-  element.style.removeProperty('max-height');
-  element.style.alignSelf = 'stretch';
-  element.style.overflow = 'hidden';
+  element.style.setProperty('width', 'auto', 'important');
+  element.style.setProperty('height', 'auto', 'important');
+  element.style.setProperty('min-height', '0', 'important');
+  element.style.setProperty('max-height', 'none', 'important');
+  element.style.setProperty('align-self', 'stretch', 'important');
+  element.style.setProperty('overflow', 'hidden', 'important');
   return element;
 };
 const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
