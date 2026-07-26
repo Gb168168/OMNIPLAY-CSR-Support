@@ -327,22 +327,42 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   );
 
   const columns = layout.columns || 5;
-  const rows = layout.rows || 4;
+  const configuredRows = layout.rows || 4;
+  const rowGap = 10;
+  const fields = getFields().filter((field) => field.type !== 'subtable');
+  const placedFields = fields
+    .map((field) => ({ field, item: layout.fields?.[field.key] }))
+    .filter(({ item }) => item?.row);
+  const usedRows = placedFields.reduce((maximum, { item }) => {
+    const span = Math.max(1, Number(item.rowSpan) || 1);
+    return Math.max(maximum, Number(item.row) + span - 1);
+  }, 0);
+  const rows = Math.max(1, Math.min(configuredRows, usedRows || configuredRows));
+  const rowHeights = Array(rows).fill(48);
+
+  placedFields.forEach(({ field, item }) => {
+    const start = Math.max(0, Number(item.row) - 1);
+    const span = Math.max(1, Math.min(Number(item.rowSpan) || 1, rows - start));
+    if (start >= rows || span < 1) return;
+    const desiredHeight =
+      field.type === 'textarea' ? 178 :
+      ['image', 'file'].includes(field.type) ? 175 :
+      60;
+    const trackHeight = Math.max(48, Math.ceil((desiredHeight - (rowGap * (span - 1))) / span));
+    for (let offset = 0; offset < span; offset += 1) {
+      rowHeights[start + offset] = Math.max(rowHeights[start + offset], trackHeight);
+    }
+  });
 
   grid.style.display = 'grid';
   grid.style.gridTemplateColumns =
     `repeat(${columns}, minmax(0, 1fr))`;
-
-  // 欄位內容較高時，該列自動增高，不再壓到下一列
-  grid.style.gridTemplateRows =
-    `repeat(${rows}, minmax(48px, auto))`;
-
-  grid.style.gridAutoRows =
-    'minmax(48px, auto)';
-
+  grid.style.gridTemplateRows = rowHeights.map((height) => `${height}px`).join(' ');
+  grid.style.gridAutoRows = '48px';
   grid.style.columnGap = '12px';
-  grid.style.rowGap = '10px';
+  grid.style.rowGap = `${rowGap}px`;
   grid.style.alignItems = 'stretch';
+  grid.style.alignContent = 'start';
 
   return grid;
 };
