@@ -12,6 +12,7 @@ const submitButton = document.querySelector('#saveStaffButton');
 const passwordInput = document.querySelector('#staffPassword');
 const passwordToggle = document.querySelector('#staffPasswordToggle');
 const staffShiftInput = document.querySelector('#staffShift');
+const staffLeaveVisibleInput = document.querySelector('#staffLeaveVisible');
 
 let editingStaffId = null;
 let visiblePasswordRows = new Set();
@@ -83,6 +84,7 @@ const renderStaff = (staffList) => {
           </div>
         </td>
         <td>${escapeHtml(staff.shift || '早班')}</td>
+        <td><span class="status-badge ${staff.leaveVisible === false ? 'is-disabled' : 'is-enabled'}">${staff.leaveVisible === false ? '不顯示' : '顯示'}</span></td>
         <td><span class="status-badge ${staff.status === '停用' ? 'is-disabled' : 'is-enabled'}">${escapeHtml(staff.status || '啟用')}</span></td>
         <td>
           <div class="table-actions">
@@ -118,6 +120,7 @@ const openEditModal = (staffId) => {
   document.querySelector('#staffAccount').value = staff.account || '';
   document.querySelector('#staffPassword').value = staff.password || '';
   if (staffShiftInput) staffShiftInput.value = staff.shift || '早班';
+  if (staffLeaveVisibleInput) staffLeaveVisibleInput.checked = staff.leaveVisible !== false;
   toggleModal(true);
 };
 
@@ -149,6 +152,7 @@ staffForm?.addEventListener('submit', async (event) => {
     account: document.querySelector('#staffAccount').value.trim(),
     password: document.querySelector('#staffPassword').value.trim(),
     shift: staffShiftInput?.value || '早班',
+    leaveVisible: staffLeaveVisibleInput?.checked !== false,
     sortOrder: getDefaultSortOrder(document.querySelector('#staffName').value.trim()),
     status: '啟用',
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -261,7 +265,7 @@ const cancelPermissionButton = document.querySelector('#cancelPermissionButton')
 const savePermissionButton = document.querySelector('#savePermissionButton');
 const pageDefinitions = [
   ['home', '首頁'], ['staff', '人員管理'], ['leave', '休假表'], ['schedule', '排程表'], ['kpi', 'KPI'],
-  ['log', '日誌'], ['handover', '交接'], ['report', '提報'], ['tracking', '對接追蹤'], ['alert', 'PROD告警紀錄'],
+  ['log', '日誌'], ['inbox', '收件匣'], ['handover', '交接'], ['report', '提報'], ['tracking', '對接追蹤'], ['alert', 'PROD告警紀錄'],
   ['meeting', '會議紀錄'], ['knowledge', '知識庫'], ['ai_database', 'AI 資料庫']
 ];
 let permissionCache = {};
