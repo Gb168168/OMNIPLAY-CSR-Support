@@ -69,7 +69,7 @@ async function internalApi(req,env,url){
   const body=await req.json();
   if(body.source!=="teams"||!body.userKey?.startsWith("teams:"))return json({error:"Invalid Teams source"},400);
   if(url.pathname==="/internal/conversations/ingest"){
-    const payload=body.payload||{},sequence=Number(payload.sequence||Date.now()),now=new Date().toISOString();
+    const payload=body.payload||{},last=await env.DB.prepare("SELECT MAX(sequence) AS value FROM draft_messages WHERE user_id=?").bind(body.userKey).first(),sequence=Math.max(Number(payload.sequence||Date.now()),Number(last?.value||0)+1),now=new Date().toISOString();
     await env.DB.batch([
       env.DB.prepare("INSERT INTO drafts(user_id,chat_id,creator_name,creator_username,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET chat_id=excluded.chat_id,creator_name=excluded.creator_name,creator_username=excluded.creator_username,updated_at=excluded.updated_at").bind(body.userKey,String(body.chatId||""),body.creatorName||"",body.creatorUsername||"",now),
       env.DB.prepare("INSERT OR REPLACE INTO draft_messages(user_id,sequence,payload) VALUES(?,?,?)").bind(body.userKey,sequence,JSON.stringify({...payload,sequence}))
