@@ -1473,26 +1473,37 @@
       select.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
+    const fillLogNewCompletionFields = async ({ notify = true } = {}) => {
+      const entry = lastLogNewConversationEntry();
+      if (!entry) {
+        if (notify) alert('找不到對話日期時間，請確認最後一段以 [年/月/日 上午/下午 時:分] 開頭。');
+        return false;
+      }
+      const completedAt = document.querySelector('#ragicForm [name="completed_at"]');
+      if (completedAt) {
+        completedAt.value = logNewDateTimeFromMatch(entry.match);
+        completedAt.dispatchEvent(new Event('input', { bubbles: true }));
+        completedAt.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      try {
+        const resolved = await resolveLogNewCompleter(entry);
+        if (resolved.name) {
+          setLogNewSelectValue(document.querySelector('#ragicForm [name="completed_by"]'), resolved.name);
+          return true;
+        }
+        if (notify) alert(`完成時間已自動填入，但完成者無法判斷：${resolved.reason}`);
+      } catch (error) {
+        if (notify) alert(`完成時間已自動填入，但讀取人員管理失敗：${error?.message || '請確認權限'}`);
+      }
+      return false;
+    };
+
     const bindLogNewCompletionAutoFill = () => {
       const status = document.querySelector('#ragicForm [name="status"]');
       if (!status || status.dataset.logNewCompletionBound) return;
       status.dataset.logNewCompletionBound = 'true';
       status.addEventListener('change', async () => {
-        if (status.value !== '已完成') return;
-        const entry = lastLogNewConversationEntry();
-        if (!entry) return alert('找不到對話日期時間，請確認最後一段以 [年/月/日 上午/下午 時:分] 開頭。');
-        const completedAt = document.querySelector('#ragicForm [name="completed_at"]');
-        if (completedAt) {
-          completedAt.value = logNewDateTimeFromMatch(entry.match);
-          completedAt.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        try {
-          const resolved = await resolveLogNewCompleter(entry);
-          if (resolved.name) setLogNewSelectValue(document.querySelector('#ragicForm [name="completed_by"]'), resolved.name);
-          else alert(`完成時間已自動填入，但完成者無法判斷：${resolved.reason}`);
-        } catch (error) {
-          alert(`完成時間已自動填入，但讀取人員管理失敗：${error?.message || '請確認權限'}`);
-        }
+        if (status.value === '已完成') await fillLogNewCompletionFields();
       });
     };
 
@@ -2018,9 +2029,13 @@
         const pad = value => String(value).padStart(2, '0');
         setValue('#ragicForm [name="date"]', `${created.getFullYear()}-${pad(created.getMonth()+1)}-${pad(created.getDate())}T${pad(created.getHours())}:${pad(created.getMinutes())}`);
       }
-      setValue('#ragicForm [name="status"]', draft.suggestedStatus || '待辦中');
-      setValue('#ragicForm [name="category"]', draft.suggestedCategory || '待定');
+      // AI 的狀態只能作為建議；匯入本身不可直接把日誌標成已完成。
+      // 先放入對話，之後若使用者選擇已完成，才能從最後一段正確帶入完成者與完成時間。
       setValue('#ragicForm [data-subfield="conversation"]', draft.conversationText || '');
+      const importedStatus = draft.suggestedStatus === '已完成' ? '待辦中' : (draft.suggestedStatus || '待辦中');
+      setValue('#ragicForm [name="status"]', importedStatus);
+      setValue('#ragicForm [name="category"]', draft.suggestedCategory || '待定');
+      if (importedStatus === '已完成') await fillLogNewCompletionFields({ notify: false });
       const images = (draft.attachments || []).filter(item => item.type === 'photo' && item.url).map(item => item.url);
       const imageInput = row.querySelector('[data-subfield="conversation_images"]');
       const imageArea = imageInput?.closest('.image-upload-area');
