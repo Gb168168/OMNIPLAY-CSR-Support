@@ -1998,6 +1998,7 @@
         showImagePreview(images, imageArea, '圖片');
       }
       window.__conversationImportId = draft.conversationId;
+      if (draft.inboxApiBase) sessionStorage.setItem('omniplayInboxApiBase', draft.inboxApiBase);
       sessionStorage.removeItem('omniplayConversationImport');
       history.replaceState({}, '', location.pathname);
       alert('Conversation 已匯入草稿。請確認客戶、狀態與分類後按「儲存」。');
@@ -2005,17 +2006,30 @@
 
     document.querySelector('#ragicForm')?.addEventListener('submit', () => {
       const conversationId = window.__conversationImportId;
-      if (!conversationId || !window.omniplayDb) return;
+      if (!conversationId) return;
       setTimeout(async () => {
         try {
           const logId = window.getCurrentRagicRecordId?.() || '';
           if (!logId) return;
-          await window.omniplayDb.collection('conversations').doc(conversationId).update({
-            imported: true,
-            importedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            importedLogId: logId
-          });
+          const apiBase = sessionStorage.getItem('omniplayInboxApiBase') || '';
+          const apiKey = sessionStorage.getItem('omniplayInboxAccessKey') || '';
+          if (apiBase && apiKey) {
+            const response = await fetch(apiBase.replace(/\/$/, '') + '/api/conversations/' + encodeURIComponent(conversationId), {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json', authorization: 'Bearer ' + apiKey },
+              body: JSON.stringify({ imported: true, importedLogId: logId })
+            });
+            if (!response.ok) throw new Error('Conversation API ' + response.status);
+          } else if (window.omniplayDb) {
+            await window.omniplayDb.collection('conversations').doc(conversationId).update({
+              imported: true,
+              importedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              importedLogId: logId
+            });
+          }
           window.__conversationImportId = '';
+          sessionStorage.removeItem('omniplayInboxApiBase');
+          sessionStorage.removeItem('omniplayInboxAccessKey');
         } catch (error) { console.error('Conversation 匯入狀態更新失敗', error); }
       }, 1800);
     });
