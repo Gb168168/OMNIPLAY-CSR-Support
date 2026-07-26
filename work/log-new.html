@@ -1957,67 +1957,7 @@
     if (designerPanel) designerGridObserver.observe(designerPanel, { childList: true, subtree: true });
     document.querySelector('#designTableButton')?.addEventListener('click', () => requestAnimationFrame(fixLogNewDesignerGrid));
 
-    const migrateLogNewFilesIntoProcessingRecords = async () => {
-      try {
-        await window.permissionReady;
-        const db = window.omniplayDb;
-        if (!db) return;
-        const ref = db.collection('log_new_schema').doc('active');
-        const snapshot = await ref.get();
-        if (!snapshot.exists) return;
-        const schema = snapshot.data() || {};
-        const fields = Array.isArray(schema.fields) ? schema.fields : [];
-        const itemsIndex = fields.findIndex((field) => field.key === 'items' || field.type === 'subtable');
-        if (itemsIndex < 0) return;
-
-        const currentItems = fields[itemsIndex];
-        const currentSubfields = Array.isArray(currentItems.fields) ? currentItems.fields : [];
-        const cleanSubfields = currentSubfields.filter((field) =>
-          field.type !== 'file' &&
-          field.key !== 'conversation_files' &&
-          field.label !== '檔案'
-        );
-        cleanSubfields.push({
-          key: 'conversation_files',
-          label: '檔案',
-          type: 'file',
-          width: 420
-        });
-
-        // 主表單只保留標準 files 欄，並放在主圖片後方。
-        const withoutRootFiles = fields.filter((field, index) =>
-          index === itemsIndex || !(field.type === 'file' || field.key === 'files')
-        );
-        const mainFileField = {
-          key: 'files',
-          label: '檔案',
-          type: 'file',
-          formRow: 3,
-          formCol: 3
-        };
-        const imageIndex = withoutRootFiles.findIndex((field) => field.key === 'images');
-        const insertAt = imageIndex >= 0 ? imageIndex + 1 : Math.max(0, withoutRootFiles.length - 1);
-        withoutRootFiles.splice(insertAt, 0, mainFileField);
-
-        const nextFields = withoutRootFiles.map((field) =>
-          field === currentItems ? { ...field, fields: cleanSubfields } : field
-        );
-        if (JSON.stringify(nextFields) === JSON.stringify(fields)) return;
-
-        await ref.set({
-          fields: nextFields,
-          mainAndProcessingFileFieldsReady: true,
-          fileFieldDeduplicated: true,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        window.location.reload();
-      } catch (error) {
-        console.error('整理日誌 NEW 圖片與檔案欄失敗：', error);
-      }
-    };
-
-    migrateLogNewFilesIntoProcessingRecords();
-
+    // 欄位結構只在執行期補齊，不再因結構差異自動重新載入頁面。
     new MutationObserver(enhanceLogNewAiUi).observe(document.querySelector('#ragicFormView'), { childList: true, subtree: true });
     enhanceLogNewAiUi();
     migrateSavedLogNewConversations();
