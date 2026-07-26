@@ -1,66 +1,73 @@
-# Telegram Bot 與 Conversation 收件匣部署
+# Telegram Bot 與 Conversation 收件匣：免費 Cloudflare 部署
 
-## 已新增
-- `work/inbox.html`：📥 收件匣
-- `assets/inbox.js`：收件匣資料、預覽、AI、匯入與封存
-- `functions/index.js`：Telegram webhook
-- `functions/package.json`：Firebase Functions Node 20
-- `CONVERSATION_RULES_SNIPPET.md`：需合併至現有 Rules 的安全片段
-- `work/log-new.html`：Conversation 草稿匯入與儲存後回寫
+此版本不使用 Firebase Functions、不需要 Blaze，也不需要綁信用卡。Telegram Bot 執行於 Cloudflare Workers；Conversation 儲存於 D1 免費額度。圖片、影片與文件保存 Telegram file_id，預覽時由 Worker 產生短效安全連結。
 
-## Firebase 準備
-1. 安裝 Node.js 20。
-2. 安裝 CLI：`npm install -g firebase-tools`
-3. 登入：`firebase login`
-4. 根目錄執行：`firebase use --add omniplay-csr-support`
-5. Firebase Console → Authentication → Sign-in method → 啟用 Anonymous。
-6. 依 `CONVERSATION_RULES_SNIPPET.md` 將規則片段合併到現有 Firestore 與 Storage Rules，請勿覆蓋其他集合規則。
+## 1. 建立 Cloudflare 免費帳號
+前往 https://dash.cloudflare.com/sign-up 建立帳號。不要購買網域或付費方案。
 
-## Secret
-```bash
-firebase functions:secrets:set TELEGRAM_BOT_TOKEN
-firebase functions:secrets:set TELEGRAM_WEBHOOK_SECRET
+## 2. 在專案開啟 PowerShell
+進入專案根目錄後：
+```powershell
+cd cloudflare-worker
+npm install
+npx wrangler login
 ```
+瀏覽器開啟後登入 Cloudflare 並允許 Wrangler。
 
-`TELEGRAM_WEBHOOK_SECRET` 請使用隨機長字串，不要與 Bot Token 相同。
-
-## 部署 Functions
-```bash
-firebase deploy --only functions
+## 3. 建立免費 D1
+```powershell
+npx wrangler d1 create omniplay-conversations --binding DB --update-config
+npm run db:init
 ```
+--update-config 會把 D1 的 database_id 自動寫入 wrangler.jsonc。
 
-## 設定 Telegram Webhook
-```bash
-curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://asia-east1-omniplay-csr-support.cloudfunctions.net/telegramWebhook","secret_token":"<TELEGRAM_WEBHOOK_SECRET>","allowed_updates":["message"]}'
+## 4. 設定三個 Secret
+依序執行：
+```powershell
+npx wrangler secret put TELEGRAM_BOT_TOKEN
+npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
+npx wrangler secret put INBOX_API_TOKEN
 ```
+- TELEGRAM_BOT_TOKEN：貼 BotFather Token。
+- TELEGRAM_WEBHOOK_SECRET：自行設定一組長隨機字串。
+- INBOX_API_TOKEN：另一組不同的長隨機字串，之後首次開啟收件匣時使用。
+- 真正的值只貼在 PowerShell 提示中，不要貼到 GitHub 或聊天。
 
-檢查：
-```bash
-curl "https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo"
+## 5. 部署
+```powershell
+npm run deploy
 ```
+記下輸出的 Worker 網址，例如：https://omniplay-conversation-inbox.<帳號>.workers.dev
+
+## 6. 設定 Telegram Webhook
+在 PowerShell 執行（替換三個尖括號內容）：
+```powershell
+$body = @{
+  url = "https://<WORKER網址>/telegram"
+  secret_token = "<TELEGRAM_WEBHOOK_SECRET>"
+  allowed_updates = @("message")
+} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" -ContentType "application/json" -Body $body
+```
+成功時會顯示 ok : True。
+
+## 7. 連接 OMNIPLAY 收件匣
+1. 開啟 OMNIPLAY → 📥 收件匣。
+2. 首次會要求 Worker 網址，貼第 5 步網址。
+3. 貼第 4 步設定的 INBOX_API_TOKEN。
+4. 設定只保存在目前瀏覽器，不會寫入 GitHub。
 
 ## 使用
-1. 客服連續轉傳文字、圖片、影片、文件。
+1. 客服連續轉傳文字、圖片、影片或文件給 Bot。
 2. Bot 每則回覆「已暫存」。
-3. 完成後輸入「執行」、「完成」或 `/done`。
-4. Bot 建立 `CONV-000001` 格式的 Conversation 並清空該客服暫存。
-5. OMNIPLAY → 📥 收件匣 → 預覽。
-6. 按「AI分析」才會分析；Bot 本身不分析。
-7. 按「匯入」進入日誌 NEW 草稿。
-8. 客服確認並儲存後，Conversation 才標記為已匯入。
+3. 完成後輸入「執行」、「完成」或 /done。
+4. Bot 建立 CONV-000001 並清空暫存。
+5. 到收件匣預覽；按「AI分析」才會交給 Puter AI。
+6. 按「匯入」帶入日誌 NEW，客服確認後儲存。
 
-## 資料模型
-- `telegram_drafts/{telegramUserId}`：尚未執行的暫存批次
-- `telegram_drafts/{telegramUserId}/messages/{sequence}`：暫存訊息
-- `conversations/{conversationId}`：Conversation 狀態與 AI 結果
-- `conversations/{conversationId}/messages/{sequence}`：永久原始訊息
-- `telegram-conversations/...`：私人 Storage 媒體
-- `system_counters/conversations`：Conversation 顯示編號
-
-## 注意
-- Conversation 原始訊息前端唯讀。
-- 收件匣「封存」不會刪除原始資料。
-- Bot Token 只存在 Firebase Secret。
-- GitHub Pages 不保存 Bot Token。
+## 安全
+- Bot Token 與兩個 Secret 只存在 Cloudflare Secret。
+- Conversation 原始訊息不可由收件匣修改。
+- 封存不會刪除原始內容。
+- 媒體預覽網址只有短時間有效。
+- functions/ 僅保留舊 Firebase 版本參考，不需部署。
