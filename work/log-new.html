@@ -1930,35 +1930,44 @@
         if (!snapshot.exists) return;
         const schema = snapshot.data() || {};
         const fields = Array.isArray(schema.fields) ? schema.fields : [];
-        const itemsField = fields.find((field) => field.key === 'items' || field.type === 'subtable');
-        const alreadyMoved = Array.isArray(itemsField?.fields) &&
-          itemsField.fields.some((field) => field.key === 'conversation_files');
-        const hasMainFile = fields.some((field) => field.key === 'files');
-        if (alreadyMoved && !hasMainFile) return;
+        const itemsIndex = fields.findIndex((field) => field.key === 'items' || field.type === 'subtable');
+        if (itemsIndex < 0) return;
 
-        const nextFields = fields
-          .filter((field) => field.key !== 'files')
-          .map((field) => {
-            if (field !== itemsField) return field;
-            const subfields = Array.isArray(field.fields) ? [...field.fields] : [];
-            if (!subfields.some((child) => child.key === 'conversation_files')) {
-              subfields.push({
-                key: 'conversation_files',
-                label: '檔案',
-                type: 'file',
-                width: 420
-              });
-            }
-            return { ...field, fields: subfields };
-          });
+        // 主表單所有舊「檔案」欄一律移除，不只處理舊 key=files。
+        const withoutMainFiles = fields.filter((field, index) => {
+          if (index === itemsIndex) return true;
+          return !(field.type === 'file' && (field.key === 'files' || field.label === '檔案'));
+        });
+        const currentItems = fields[itemsIndex];
+        const currentSubfields = Array.isArray(currentItems.fields) ? currentItems.fields : [];
+
+        // 子表格內不論舊 key 為何，所有檔案欄先去除，再建立唯一標準欄位。
+        const cleanSubfields = currentSubfields.filter((field) =>
+          field.type !== 'file' &&
+          field.key !== 'conversation_files' &&
+          !(field.label === '檔案')
+        );
+        cleanSubfields.push({
+          key: 'conversation_files',
+          label: '檔案',
+          type: 'file',
+          width: 420
+        });
+
+        const nextFields = withoutMainFiles.map((field) =>
+          field === currentItems ? { ...field, fields: cleanSubfields } : field
+        );
+        if (JSON.stringify(nextFields) === JSON.stringify(fields)) return;
+
         await ref.set({
           fields: nextFields,
           fileFieldMovedToProcessingRecords: true,
+          fileFieldDeduplicated: true,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         window.location.reload();
       } catch (error) {
-        console.error('移動日誌 NEW 檔案欄失敗：', error);
+        console.error('整理日誌 NEW 檔案欄失敗：', error);
       }
     };
 
