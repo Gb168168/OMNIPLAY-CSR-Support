@@ -88,7 +88,7 @@ const fixedStaffOrder = ['中魁', '佳臻', '晴心', '澄希', '茗雅'];
 const fixedStaffOrderMap = fixedStaffOrder.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
 const activeStaff = (staff) => (staff.status || '啟用') === '啟用';
 const isSystemAdminStaff = (staff) => ['id', 'code', 'name'].some((field) => String(staff[field] || '').trim().toUpperCase() === 'OMNIPLAY');
-const visibleLeaveStaff = (staff) => activeStaff(staff) && !isSystemAdminStaff(staff);
+const visibleLeaveStaff = (staff) => activeStaff(staff) && !isSystemAdminStaff(staff) && staff.leaveVisible !== false;
 const getStaffSortOrder = (staff) => Number(staff.sortOrder ?? fixedStaffOrderMap[staff.name] ?? 999);
 const normalizeShift = (value) => value === '晚班' ? '晚' : value === '早班' ? '早' : value;
 const shiftDocId = (staffId, date = currentMonth) => `${staffId}_${monthKey(date)}`;
