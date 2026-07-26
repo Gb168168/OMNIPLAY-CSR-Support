@@ -42,6 +42,7 @@
                 <th scope="col">帳號</th>
                 <th scope="col">密碼</th>
                 <th scope="col">班別</th>
+                <th scope="col">休假表顯示</th>
                 <th scope="col">狀態</th>
                 <th scope="col">操作</th>
               </tr>
@@ -85,6 +86,10 @@
                 <option value="晚班">晚班</option>
               </select>
             </label>
+            <label class="permission-check">
+              <input id="staffLeaveVisible" name="leaveVisible" type="checkbox" checked />
+              <span>顯示於休假表</span>
+            </label>
             <p class="form-message" id="staffFormMessage" hidden></p>
             <div class="form-actions">
               <button class="ghost-button" id="cancelStaffButton" type="button">取消</button>
@@ -114,7 +119,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
-  <script src="../assets/app.js?v=20260719-6"></script>
-  <script src="../assets/staff.js"></script>
+  <script src="../assets/app.js?v=20260727-1"></script>
+  <script src="../assets/staff.js?v=20260727-1"></script>
 </body>
 </html>
