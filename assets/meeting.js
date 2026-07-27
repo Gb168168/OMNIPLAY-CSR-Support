@@ -539,7 +539,7 @@ const uploadMeetingImageOriginal = async (file) => {
   }
   if (!meetingStorage) throw new Error('高畫質圖片儲存服務尚未初始化');
   const recordKey = meetingState.currentId || document.querySelector('#meetingSerial')?.value?.trim() || `new-${Date.now()}`;
-  const path = `meeting-images/${safeStorageName(recordKey)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeStorageName(file.name)}`;
+  const path = `meeting-files/images/${safeStorageName(recordKey)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeStorageName(file.name)}`;
   const snapshot = await meetingStorage.ref(path).put(file, {
     contentType: file.type,
     customMetadata: {

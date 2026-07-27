@@ -1252,7 +1252,7 @@ const uploadImageOriginal = async (file) => {
   const storage = window.omniplayStorage;
   if (!storage) throw new Error('高畫質圖片儲存服務尚未載入，請重新整理後再試');
   const collection = RAGIC_STATE.config?.dataCollection || RAGIC_STATE.config?.collection || 'general';
-  const path = `record-images/${safeImageStorageName(collection)}/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeImageStorageName(file.name)}`;
+  const path = `meeting-files/images/${safeImageStorageName(collection)}/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeImageStorageName(file.name)}`;
   const snapshot = await storage.ref(path).put(file, {
     contentType: file.type,
     customMetadata: {
