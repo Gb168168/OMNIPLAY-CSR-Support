@@ -20,9 +20,8 @@ const FALLBACK_MEETING_TABS = ['技術會議', '客服會議'];
 let DEFAULT_MEETING_TABS = [...FALLBACK_MEETING_TABS];
 const MEETING_LOCATIONS = ['2F', '3F'];
 const detailFields = ['proposer', 'content', 'solution', 'note', 'image'];
-const MAX_IMAGE_WIDTH = 800;
-const JPEG_QUALITY = 0.6;
-const MAX_IMAGE_BYTES = 900 * 1024;
+const MAX_IMAGE_DIMENSION = 8192;
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 const MAX_MEETING_FILE_BYTES = 3 * 1024 * 1024 * 1024;
 const MEETING_UPLOAD_STALL_MS = 30 * 1000;
 
@@ -530,31 +529,26 @@ const loadImage = (src) => new Promise((resolve, reject) => {
   image.src = src;
 });
 
-const canvasToJpegDataUrl = (canvas) => new Promise((resolve, reject) => {
-  canvas.toBlob((blob) => {
-    if (!blob) { reject(new Error('圖片壓縮失敗')); return; }
-    const reader = new FileReader();
-    reader.onload = () => resolve({ dataUrl: reader.result, size: blob.size });
-    reader.onerror = () => reject(reader.error || new Error('圖片壓縮失敗'));
-    reader.readAsDataURL(blob);
-  }, 'image/jpeg', JPEG_QUALITY);
-});
-
-const compressImageToBase64 = async (file) => {
+const uploadMeetingImageOriginal = async (file) => {
   if (!file) return '';
   if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
+  if (file.size > MAX_IMAGE_BYTES) throw new Error('單張圖片不可超過 50MB');
   const loadedImage = await loadImage(await readFileAsDataUrl(file));
-  const scale = loadedImage.width > MAX_IMAGE_WIDTH ? MAX_IMAGE_WIDTH / loadedImage.width : 1;
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(loadedImage.width * scale);
-  canvas.height = Math.round(loadedImage.height * scale);
-  const context = canvas.getContext('2d');
-  context.fillStyle = '#fff';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
-  const { dataUrl, size } = await canvasToJpegDataUrl(canvas);
-  if (size > MAX_IMAGE_BYTES) throw new Error('圖片壓縮後仍超過 900KB，請選擇較小的圖片');
-  return dataUrl;
+  if (loadedImage.naturalWidth > MAX_IMAGE_DIMENSION || loadedImage.naturalHeight > MAX_IMAGE_DIMENSION) {
+    throw new Error('圖片長邊不可超過 8192px（8K）');
+  }
+  if (!meetingStorage) throw new Error('高畫質圖片儲存服務尚未初始化');
+  const recordKey = meetingState.currentId || document.querySelector('#meetingSerial')?.value?.trim() || `new-${Date.now()}`;
+  const path = `meeting-images/${safeStorageName(recordKey)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeStorageName(file.name)}`;
+  const snapshot = await meetingStorage.ref(path).put(file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name || 'image',
+      originalWidth: String(loadedImage.naturalWidth),
+      originalHeight: String(loadedImage.naturalHeight)
+    }
+  });
+  return snapshot.ref.getDownloadURL();
 };
 
 const showImagePreview = (base64, container) => {
@@ -571,8 +565,8 @@ const showImagePreview = (base64, container) => {
 };
 
 const processImageFile = async (file, container) => {
-  const base64 = await compressImageToBase64(file);
-  showImagePreview(base64, container);
+  const url = await uploadMeetingImageOriginal(file);
+  showImagePreview(url, container);
 };
 
 const handleImagePaste = async (event, imageArea) => {
@@ -630,6 +624,7 @@ const readForm = async () => {
 
 const openImagePreview = (src) => {
   document.querySelector('#meetingPreviewImage').src = src;
+  document.querySelector('#meetingOpenOriginal').href = src;
   document.querySelector('#meetingImageModal').hidden = false;
 };
 
@@ -906,6 +901,7 @@ document.querySelector('#deleteMeetingButton')?.addEventListener('click', async 
 });
 document.querySelector('#closeMeetingImageModal')?.addEventListener('click', closeImagePreview);
 document.querySelector('#meetingImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'meetingImageModal') closeImagePreview(); });
+document.querySelector('#meetingImageFullscreen')?.addEventListener('click', () => document.querySelector('#meetingImageModal .ragic-image-modal-card')?.requestFullscreen?.());
 document.querySelector('#closeMeetingFilePreviewModal')?.addEventListener('click', closeMeetingFilePreview);
 document.querySelector('#meetingFilePreviewModal')?.addEventListener('click', (event) => { if (event.target.id === 'meetingFilePreviewModal') closeMeetingFilePreview(); });
 

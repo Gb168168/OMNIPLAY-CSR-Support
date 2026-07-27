@@ -510,11 +510,10 @@ const optionList = (field) => Array.isArray(field.options) ? field.options : Str
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
 const fieldSelector = (fieldKey) => `[data-field="${window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\"')}"]`;
 
-const MAX_IMAGE_WIDTH = 800;
-const JPEG_QUALITY = 0.6;
-const MAX_IMAGE_BYTES = 900 * 1024;
+const MAX_IMAGE_DIMENSION = 8192;
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 const MAX_IMAGE_TOTAL_BYTES = 800 * 1024;
-const IMAGE_TOTAL_LIMIT_MESSAGE = '圖片總大小超過限制，請減少圖片數量或降低解析度';
+const IMAGE_TOTAL_LIMIT_MESSAGE = '舊版內嵌圖片總大小超過限制，請刪除部分舊圖片後再上傳';
 if (!window._multiSelectClickBound) {
   document.addEventListener('click', () => document.querySelectorAll('.multi-select-dropdown.show').forEach((dropdown) => dropdown.classList.remove('show')));
   window._multiSelectClickBound = true;
@@ -1149,7 +1148,9 @@ const estimateBase64Bytes = (value = '') => {
   return Math.ceil(base64.length * 3 / 4);
 };
 
-const imageTotalBytes = (images = []) => normalizeImageArray(images).reduce((total, image) => total + estimateBase64Bytes(image), 0);
+const imageTotalBytes = (images = []) => normalizeImageArray(images)
+  .filter((image) => String(image).startsWith('data:'))
+  .reduce((total, image) => total + estimateBase64Bytes(image), 0);
 
 const assertImageTotalWithinLimit = (images = []) => {
   if (imageTotalBytes(images) > MAX_IMAGE_TOTAL_BYTES) throw new Error(IMAGE_TOTAL_LIMIT_MESSAGE);
@@ -1238,32 +1239,31 @@ const loadImage = (src) => new Promise((resolve, reject) => {
   image.src = src;
 });
 
-const canvasToJpegDataUrl = (canvas) => new Promise((resolve, reject) => {
-  canvas.toBlob((blob) => {
-    if (!blob) { reject(new Error('圖片壓縮失敗')); return; }
-    const reader = new FileReader();
-    reader.onload = () => resolve({ dataUrl: reader.result, size: blob.size });
-    reader.onerror = () => reject(reader.error || new Error('圖片壓縮失敗'));
-    reader.readAsDataURL(blob);
-  }, 'image/jpeg', JPEG_QUALITY);
-});
-
-const compressImageToBase64 = async (file) => {
+const safeImageStorageName = (name) => String(name || 'image').replace(/[\\/#?%*:|"<>]/g, '_');
+const uploadImageOriginal = async (file) => {
   if (!file) return '';
   if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
-  const loadedImage = await loadImage(await readFileAsDataUrl(file));
-  const scale = loadedImage.width > MAX_IMAGE_WIDTH ? MAX_IMAGE_WIDTH / loadedImage.width : 1;
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(loadedImage.width * scale);
-  canvas.height = Math.round(loadedImage.height * scale);
-  const context = canvas.getContext('2d');
-  context.fillStyle = '#fff';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
-  const { dataUrl, size } = await canvasToJpegDataUrl(canvas);
-  if (size > MAX_IMAGE_BYTES) throw new Error('圖片太大，請選擇較小的圖片');
-  return dataUrl;
+  if (file.size > MAX_IMAGE_BYTES) throw new Error('單張圖片不可超過 50MB');
+  const source = await readFileAsDataUrl(file);
+  const loadedImage = await loadImage(source);
+  if (loadedImage.naturalWidth > MAX_IMAGE_DIMENSION || loadedImage.naturalHeight > MAX_IMAGE_DIMENSION) {
+    throw new Error('圖片長邊不可超過 8192px（8K）');
+  }
+  const storage = window.omniplayStorage;
+  if (!storage) throw new Error('高畫質圖片儲存服務尚未載入，請重新整理後再試');
+  const collection = RAGIC_STATE.config?.dataCollection || RAGIC_STATE.config?.collection || 'general';
+  const path = `record-images/${safeImageStorageName(collection)}/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeImageStorageName(file.name)}`;
+  const snapshot = await storage.ref(path).put(file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name || 'image',
+      originalWidth: String(loadedImage.naturalWidth),
+      originalHeight: String(loadedImage.naturalHeight)
+    }
+  });
+  return snapshot.ref.getDownloadURL();
 };
+window.uploadRagicImageFile = uploadImageOriginal;
 
 const showImagePreview = (base64List, container, label = container?.dataset.fileLabel || '圖片') => {
   if (!container) return;
@@ -1313,7 +1313,7 @@ const processImageFiles = async (files, container) => {
   const input = container?.querySelector('input[type="file"]');
   const currentImages = getImageInputValues(input);
   const newImages = [];
-  for (const file of [...(files || [])]) newImages.push(await compressImageToBase64(file));
+  for (const file of [...(files || [])]) newImages.push(await uploadImageOriginal(file));
   const nextImages = [...currentImages, ...newImages];
   assertImageTotalWithinLimit([...getCurrentFormImages(input), ...nextImages]);
   showImagePreview(nextImages, container);
@@ -1787,7 +1787,27 @@ const renderCell = (record, field) => {
   if (field?.type === 'textarea' && text.length > 50) return `${escapeHtml(text.slice(0, 50))}...`;
   return escapeHtml(text);
 };
-const IMAGE_PREVIEW_STATE = { sources: [], index: 0, label: '圖片' };
+const IMAGE_PREVIEW_STATE = { sources: [], index: 0, label: '圖片', zoom: 1, x: 0, y: 0, dragging: false };
+const applyImagePreviewTransform = () => {
+  const image = document.querySelector('#ragicImageModal .ragic-image-stage img');
+  if (!image) return;
+  image.style.transform = `translate(${IMAGE_PREVIEW_STATE.x}px, ${IMAGE_PREVIEW_STATE.y}px) scale(${IMAGE_PREVIEW_STATE.zoom})`;
+  image.classList.toggle('is-zoomed', IMAGE_PREVIEW_STATE.zoom > 1);
+  const zoomLabel = document.querySelector('#ragicImageZoom');
+  if (zoomLabel) zoomLabel.textContent = `${Math.round(IMAGE_PREVIEW_STATE.zoom * 100)}%`;
+};
+const resetImagePreviewTransform = () => {
+  Object.assign(IMAGE_PREVIEW_STATE, { zoom: 1, x: 0, y: 0, dragging: false });
+  applyImagePreviewTransform();
+};
+const zoomImagePreview = (factor) => {
+  IMAGE_PREVIEW_STATE.zoom = Math.min(8, Math.max(0.25, IMAGE_PREVIEW_STATE.zoom * factor));
+  if (IMAGE_PREVIEW_STATE.zoom <= 1) {
+    IMAGE_PREVIEW_STATE.x = 0;
+    IMAGE_PREVIEW_STATE.y = 0;
+  }
+  applyImagePreviewTransform();
+};
 const renderImagePreview = () => {
   const modal = document.querySelector('#ragicImageModal');
   if (!modal || !IMAGE_PREVIEW_STATE.sources.length) return;
@@ -1796,6 +1816,9 @@ const renderImagePreview = () => {
   IMAGE_PREVIEW_STATE.index = index;
   modal.querySelector('h2').textContent = IMAGE_PREVIEW_STATE.label;
   modal.querySelector('img').src = IMAGE_PREVIEW_STATE.sources[index];
+  const originalLink = modal.querySelector('#ragicImageOriginal');
+  if (originalLink) originalLink.href = IMAGE_PREVIEW_STATE.sources[index];
+  resetImagePreviewTransform();
   const counter = modal.querySelector('#ragicImageCounter');
   if (counter) counter.textContent = `${index + 1} / ${total}`;
   modal.querySelectorAll('[data-image-step]').forEach((button) => { button.disabled = total < 2; });
@@ -1821,6 +1844,7 @@ const closeImagePreview = () => {
   modal.querySelector('img').removeAttribute('src');
   IMAGE_PREVIEW_STATE.sources = [];
   IMAGE_PREVIEW_STATE.index = 0;
+  resetImagePreviewTransform();
 };
 const ragicPageSizeKey = () => `ragicPageSize:${RAGIC_STATE.config?.collection || 'default'}`;
 const getTotalPages = () => Math.max(1, Math.ceil(RAGIC_STATE.filtered.length / RAGIC_STATE.pageSize));
@@ -2964,12 +2988,38 @@ const initRagicPage = async (config) => {
   document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><div class="designer-header-actions"><button class="primary" id="saveSchemaButton" type="button">儲存</button><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div></div><div class="designer-body" hidden></div><div id="layoutDesignerPanel"></div></div></div>');
   }
   if (!document.querySelector('#ragicImageModal')) {
-    document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><div class="ragic-image-counter" id="ragicImageCounter">1 / 1</div><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><div class="ragic-image-stage"><button class="ragic-image-nav ragic-image-prev" data-image-step="-1" type="button" aria-label="上一張">‹</button><img alt="放大圖片預覽"><button class="ragic-image-nav ragic-image-next" data-image-step="1" type="button" aria-label="下一張">›</button></div></div></div>');
+    document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><div class="ragic-image-counter" id="ragicImageCounter">1 / 1</div><div class="ragic-image-tools"><button class="ghost" data-image-zoom="out" type="button" aria-label="縮小">−</button><span id="ragicImageZoom">100%</span><button class="ghost" data-image-zoom="in" type="button" aria-label="放大">＋</button><button class="ghost" data-image-reset type="button">原始比例</button><a class="ghost" id="ragicImageOriginal" target="_blank" rel="noopener">開啟原圖</a><button class="ghost" data-image-fullscreen type="button">全螢幕</button></div><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><div class="ragic-image-stage"><button class="ragic-image-nav ragic-image-prev" data-image-step="-1" type="button" aria-label="上一張">‹</button><img alt="高畫質圖片預覽" draggable="false"><button class="ragic-image-nav ragic-image-next" data-image-step="1" type="button" aria-label="下一張">›</button></div></div></div>');
   }
   document.querySelector('#designTableButton')?.addEventListener('click', openDesigner);
   document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);
   document.querySelector('#closeImageModalButton')?.addEventListener('click', closeImagePreview);
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { const button = event.target.closest('[data-image-step]'); if (button) stepImagePreview(Number(button.dataset.imageStep)); });
+  document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-image-zoom="in"]')) zoomImagePreview(1.25);
+    if (event.target.closest('[data-image-zoom="out"]')) zoomImagePreview(0.8);
+    if (event.target.closest('[data-image-reset]')) resetImagePreviewTransform();
+    if (event.target.closest('[data-image-fullscreen]')) document.querySelector('#ragicImageModal .ragic-image-modal-card')?.requestFullscreen?.();
+  });
+  const imageStage = document.querySelector('#ragicImageModal .ragic-image-stage');
+  imageStage?.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    zoomImagePreview(event.deltaY < 0 ? 1.15 : 1 / 1.15);
+  }, { passive: false });
+  imageStage?.addEventListener('pointerdown', (event) => {
+    if (!event.target.matches('img') || IMAGE_PREVIEW_STATE.zoom <= 1) return;
+    IMAGE_PREVIEW_STATE.dragging = true;
+    IMAGE_PREVIEW_STATE.startX = event.clientX - IMAGE_PREVIEW_STATE.x;
+    IMAGE_PREVIEW_STATE.startY = event.clientY - IMAGE_PREVIEW_STATE.y;
+    event.target.setPointerCapture?.(event.pointerId);
+  });
+  imageStage?.addEventListener('pointermove', (event) => {
+    if (!IMAGE_PREVIEW_STATE.dragging) return;
+    IMAGE_PREVIEW_STATE.x = event.clientX - IMAGE_PREVIEW_STATE.startX;
+    IMAGE_PREVIEW_STATE.y = event.clientY - IMAGE_PREVIEW_STATE.startY;
+    applyImagePreviewTransform();
+  });
+  imageStage?.addEventListener('pointerup', () => { IMAGE_PREVIEW_STATE.dragging = false; });
+  imageStage?.addEventListener('dblclick', () => IMAGE_PREVIEW_STATE.zoom > 1 ? resetImagePreviewTransform() : zoomImagePreview(2));
   document.querySelector('#ragicImageModal')?.addEventListener('click', (event) => { if (event.target.id === 'ragicImageModal') closeImagePreview(); });
   document.addEventListener('keydown', (event) => { if (document.querySelector('#ragicImageModal:not([hidden])')) { if (event.key === 'ArrowLeft') stepImagePreview(-1); if (event.key === 'ArrowRight') stepImagePreview(1); if (event.key === 'Escape') closeImagePreview(); } });
   document.querySelector('.designer-body')?.addEventListener('input', (event) => {

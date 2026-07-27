@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌 NEW｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260718-26" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260728-hires1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -963,11 +963,12 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js?v=20260719-6"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260719-6"></script>
+  <script src="../assets/ragic-table.js?v=20260728-hires1"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="https://js.puter.com/v2/"></script>
   <script>
@@ -1573,35 +1574,6 @@
       syncLogNewContactFromConversation(conversations).catch((error) => console.warn('儲存前同步接洽者失敗：', error));
     }, true);
 
-    const compressLogNewConversationImage = (file) => new Promise((resolve, reject) => {
-      if (!file?.type?.startsWith('image/')) return reject(new Error('只能上傳圖片檔案'));
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error('圖片讀取失敗'));
-      reader.onload = () => {
-        const image = new Image();
-        image.onerror = () => reject(new Error('圖片格式無法辨識'));
-        image.onload = () => {
-          const scale = Math.min(1, 640 / image.width);
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(image.width * scale));
-          canvas.height = Math.max(1, Math.round(image.height * scale));
-          const context = canvas.getContext('2d');
-          context.fillStyle = '#fff';
-          context.fillRect(0, 0, canvas.width, canvas.height);
-          context.drawImage(image, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob((blob) => {
-            if (!blob) return reject(new Error('圖片壓縮失敗'));
-            const output = new FileReader();
-            output.onerror = () => reject(new Error('圖片轉換失敗'));
-            output.onload = () => resolve(output.result);
-            output.readAsDataURL(blob);
-          }, 'image/jpeg', 0.42);
-        };
-        image.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
     const bindLogNewConversationImages = () => {
       document.querySelectorAll('#ragicForm [data-subfield-container="conversation_images"]').forEach((area) => {
         if (area.dataset.logNewImageBound) return;
@@ -1613,10 +1585,8 @@
             let current = [];
             try { current = JSON.parse(input.dataset.imageValue || '[]'); } catch (_) { current = []; }
             const added = [];
-            for (const file of files) added.push(await compressLogNewConversationImage(file));
+            for (const file of files) added.push(await window.uploadRagicImageFile(file));
             const images = [...(Array.isArray(current) ? current : []), ...added];
-            const totalBytes = images.reduce((total, item) => total + Math.ceil((String(item).split(',').pop()?.length || 0) * 3 / 4), 0);
-            if (totalBytes > 800 * 1024) throw new Error('對話圖片合計仍超過 800KB，請分成另一筆處理紀錄再上傳');
             showImagePreview(images, area, '對話圖片');
           } catch (error) {
             alert(`對話圖片上傳失敗：${error?.message || '請改用 JPG 或 PNG 圖片'}`);
