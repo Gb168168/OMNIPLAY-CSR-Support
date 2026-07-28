@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌 NEW｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260729-layout1" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260729-layout2" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -897,6 +897,39 @@
         grid-column: 1 !important;
         grid-row: auto !important;
       }
+    }
+    /* 檢視模式：處理紀錄是橫向表格，必須能捲到右側的圖片／檔案欄。 */
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] > .ragic-view-subtable-wrap {
+      max-height: none !important;
+      overflow-x: auto !important;
+      overflow-y: visible !important;
+      scrollbar-gutter: stable;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] {
+      width: 280px !important;
+      min-width: 280px !important;
+      max-width: 280px !important;
+      height: auto !important;
+      min-height: 190px !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] .ragic-view-value {
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] .ragic-view-image {
+      width: 250px !important;
+      height: auto !important;
+      max-width: 250px !important;
+      max-height: 220px !important;
+      object-fit: contain !important;
     }
 
   </style>
