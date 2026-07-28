@@ -1278,6 +1278,30 @@ const loadImage = (src) => new Promise((resolve, reject) => {
 });
 
 const safeImageStorageName = (name) => String(name || 'image').replace(/[\\/#?%*:|"<>]/g, '_');
+const compressImageForFirestore = async (file) => {
+  const loadedImage = await loadImage(await readFileAsDataUrl(file));
+  const scale = loadedImage.naturalWidth > 1200 ? 1200 / loadedImage.naturalWidth : 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(loadedImage.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(loadedImage.naturalHeight * scale));
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('圖片轉換失敗')), 'image/jpeg', 0.72));
+  if (blob.size > 760 * 1024) {
+    const fallbackScale = Math.min(1, 800 / loadedImage.naturalWidth);
+    canvas.width = Math.max(1, Math.round(loadedImage.naturalWidth * fallbackScale));
+    canvas.height = Math.max(1, Math.round(loadedImage.naturalHeight * fallbackScale));
+    const fallbackContext = canvas.getContext('2d');
+    fallbackContext.fillStyle = '#fff';
+    fallbackContext.fillRect(0, 0, canvas.width, canvas.height);
+    fallbackContext.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+    const fallbackBlob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('圖片轉換失敗')), 'image/jpeg', 0.58));
+    return readFileAsDataUrl(new File([fallbackBlob], file.name || 'image.jpg', { type: 'image/jpeg' }));
+  }
+  return readFileAsDataUrl(new File([blob], file.name || 'image.jpg', { type: 'image/jpeg' }));
+};
 const uploadImageOriginal = async (file) => {
   if (!file) return '';
   if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
@@ -1288,18 +1312,23 @@ const uploadImageOriginal = async (file) => {
     throw new Error('圖片長邊不可超過 8192px（8K）');
   }
   const storage = window.omniplayStorage;
-  if (!storage) throw new Error('高畫質圖片儲存服務尚未載入，請重新整理後再試');
+  if (!storage) return compressImageForFirestore(file);
   const collection = RAGIC_STATE.config?.dataCollection || RAGIC_STATE.config?.collection || 'general';
   const path = `meeting-files/images/${safeImageStorageName(collection)}/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeImageStorageName(file.name)}`;
-  const snapshot = await storage.ref(path).put(file, {
-    contentType: file.type,
-    customMetadata: {
-      originalName: file.name || 'image',
-      originalWidth: String(loadedImage.naturalWidth),
-      originalHeight: String(loadedImage.naturalHeight)
-    }
-  });
-  return snapshot.ref.getDownloadURL();
+  try {
+    const snapshot = await storage.ref(path).put(file, {
+      contentType: file.type,
+      customMetadata: {
+        originalName: file.name || 'image',
+        originalWidth: String(loadedImage.naturalWidth),
+        originalHeight: String(loadedImage.naturalHeight)
+      }
+    });
+    return snapshot.ref.getDownloadURL();
+  } catch (error) {
+    console.warn('高畫質 Storage 上傳失敗，改用相容圖片：', error);
+    return compressImageForFirestore(file);
+  }
 };
 window.uploadRagicImageFile = uploadImageOriginal;
 

@@ -537,18 +537,53 @@ const uploadMeetingImageOriginal = async (file) => {
   if (loadedImage.naturalWidth > MAX_IMAGE_DIMENSION || loadedImage.naturalHeight > MAX_IMAGE_DIMENSION) {
     throw new Error('圖片長邊不可超過 8192px（8K）');
   }
-  if (!meetingStorage) throw new Error('高畫質圖片儲存服務尚未初始化');
+  if (!meetingStorage) {
+    const scale = loadedImage.naturalWidth > 800 ? 800 / loadedImage.naturalWidth : 1;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(loadedImage.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(loadedImage.naturalHeight * scale));
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve, reject) => canvas.toBlob((blob) => {
+      if (!blob) return reject(new Error('圖片轉換失敗'));
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('圖片轉換失敗'));
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', 0.6));
+  }
   const recordKey = meetingState.currentId || document.querySelector('#meetingSerial')?.value?.trim() || `new-${Date.now()}`;
   const path = `meeting-files/images/${safeStorageName(recordKey)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeStorageName(file.name)}`;
-  const snapshot = await meetingStorage.ref(path).put(file, {
-    contentType: file.type,
-    customMetadata: {
-      originalName: file.name || 'image',
-      originalWidth: String(loadedImage.naturalWidth),
-      originalHeight: String(loadedImage.naturalHeight)
-    }
-  });
-  return snapshot.ref.getDownloadURL();
+  try {
+    const snapshot = await meetingStorage.ref(path).put(file, {
+      contentType: file.type,
+      customMetadata: {
+        originalName: file.name || 'image',
+        originalWidth: String(loadedImage.naturalWidth),
+        originalHeight: String(loadedImage.naturalHeight)
+      }
+    });
+    return snapshot.ref.getDownloadURL();
+  } catch (error) {
+    console.warn('會議高畫質圖片上傳失敗，改用相容圖片：', error);
+    const scale = loadedImage.naturalWidth > 800 ? 800 / loadedImage.naturalWidth : 1;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(loadedImage.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(loadedImage.naturalHeight * scale));
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve, reject) => canvas.toBlob((blob) => {
+      if (!blob) return reject(new Error('圖片轉換失敗'));
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('圖片轉換失敗'));
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', 0.6));
+  }
 };
 
 const showImagePreview = (base64, container) => {
