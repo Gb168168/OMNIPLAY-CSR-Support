@@ -1563,6 +1563,15 @@ const attachImageUploadArea = (imageArea) => {
   if (!imageArea || imageArea.dataset.uploadBound === 'true') return;
   imageArea.dataset.uploadBound = 'true';
   const input = imageArea.querySelector('input[type="file"]');
+  imageArea.addEventListener('click', (event) => {
+    if (!input || event.target === input || event.target.closest('.image-preview-item, .image-remove-btn, a, button')) return;
+    input.click();
+  });
+  imageArea.addEventListener('keydown', (event) => {
+    if (!input || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    input.click();
+  });
   input?.addEventListener('change', async () => {
     if (!input.files?.[0]) return;
     try { imageArea.dataset.fileType === 'file' ? await processGenericFile(input.files[0], imageArea) : await processImageFiles(input.files, imageArea); }
