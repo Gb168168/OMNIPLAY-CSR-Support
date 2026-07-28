@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌 NEW｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260729-layout2" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260729-layout3" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -898,7 +898,7 @@
         grid-row: auto !important;
       }
     }
-    /* 檢視模式：處理紀錄是橫向表格，必須能捲到右側的圖片／檔案欄。 */
+    /* 檢視模式：改用卡片網格，讓右側圖片／檔案不再被超寬表格推到畫面外。 */
     .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
       height: auto !important;
       min-height: 0 !important;
@@ -907,16 +907,101 @@
     }
     .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] > .ragic-view-subtable-wrap {
       max-height: none !important;
-      overflow-x: auto !important;
+      overflow-x: visible !important;
       overflow-y: visible !important;
-      scrollbar-gutter: stable;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] .ragic-view-subtable {
+      display: block !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      table-layout: auto !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] colgroup,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] thead {
+      display: none !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] tbody {
+      display: grid !important;
+      gap: 16px;
+      width: 100%;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] tbody > tr {
+      display: grid !important;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      grid-template-rows: auto minmax(230px, auto) minmax(130px, auto);
+      gap: 12px;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #dbe5f1;
+      border-radius: 14px;
+      background: #f8fafc;
+      box-sizing: border-box;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield {
+      display: block !important;
+      width: auto !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      height: auto !important;
+      padding: 10px !important;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield::before {
+      display: block;
+      margin-bottom: 7px;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="summary"] {
+      grid-column: 1 / 9;
+      grid-row: 1;
+      border-color: #bfdbfe !important;
+      background: #eff6ff !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="summary"]::before { content: "總結"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation"] {
+      grid-column: 1 / 5;
+      grid-row: 2;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation"]::before { content: "對話"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="ai_analysis"] {
+      grid-column: 5 / 9;
+      grid-row: 2;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="ai_analysis"]::before { content: "AI分析"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="technical_processing"] {
+      grid-column: 1 / 5;
+      grid-row: 3;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="technical_processing"]::before { content: "技術群處理"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="business_processing"] {
+      grid-column: 5 / 9;
+      grid-row: 3;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="business_processing"]::before { content: "商務群處理"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="image_source"] {
+      grid-column: 9 / 11;
+      grid-row: 1;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="image_source"]::before { content: "圖片來源"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_files"] {
+      grid-column: 9 / 11;
+      grid-row: 3;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_files"]::before { content: "檔案"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"]::before {
+      content: "圖片";
     }
     .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] {
-      width: 280px !important;
-      min-width: 280px !important;
-      max-width: 280px !important;
+      grid-column: 9 / 11;
+      grid-row: 2;
       height: auto !important;
-      min-height: 190px !important;
+      min-height: 230px !important;
       overflow: visible !important;
     }
     .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] .ragic-view-value {
@@ -925,11 +1010,21 @@
       overflow: visible !important;
     }
     .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] .ragic-view-image {
-      width: 250px !important;
+      width: 100% !important;
       height: auto !important;
-      max-width: 250px !important;
+      max-width: 100% !important;
       max-height: 220px !important;
       object-fit: contain !important;
+    }
+    @media (max-width: 980px) {
+      .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] tbody > tr {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: none !important;
+      }
+      .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+      }
     }
 
   </style>
@@ -1001,7 +1096,7 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js?v=20260719-6"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260729-no8k1"></script>
+  <script src="../assets/ragic-table.js?v=20260729-viewcards1"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="https://js.puter.com/v2/"></script>
   <script>
