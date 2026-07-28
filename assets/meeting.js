@@ -564,9 +564,38 @@ const showImagePreview = (base64, container) => {
   (container.querySelector('.meeting-image-preview-list') || container).appendChild(preview);
 };
 
+let meetingImageUploadCount = 0;
+const setMeetingImageUploadBusy = (delta) => {
+  meetingImageUploadCount = Math.max(0, meetingImageUploadCount + delta);
+  const saveButton = document.querySelector('#saveMeetingButton');
+  if (!saveButton) return;
+  if (meetingImageUploadCount > 0) {
+    if (!saveButton.dataset.imageUploadOriginalText) saveButton.dataset.imageUploadOriginalText = saveButton.textContent || '儲存';
+    saveButton.disabled = true;
+    saveButton.textContent = '圖片上傳中…';
+  } else if (saveButton.dataset.imageUploadOriginalText) {
+    saveButton.disabled = false;
+    saveButton.textContent = saveButton.dataset.imageUploadOriginalText;
+    delete saveButton.dataset.imageUploadOriginalText;
+  }
+};
+
 const processImageFile = async (file, container) => {
-  const url = await uploadMeetingImageOriginal(file);
-  showImagePreview(url, container);
+  const objectUrl = URL.createObjectURL(file);
+  const preview = document.createElement('span');
+  preview.className = 'ragic-file-preview meeting-image-preview image-upload-preview is-uploading';
+  preview.innerHTML = `<img src="${escapeHtml(objectUrl)}" alt="圖片上傳預覽"><span>高畫質原圖上傳中…</span>`;
+  (container.querySelector('.meeting-image-preview-list') || container).appendChild(preview);
+  setMeetingImageUploadBusy(1);
+  try {
+    const url = await uploadMeetingImageOriginal(file);
+    preview.remove();
+    showImagePreview(url, container);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+    preview.remove();
+    setMeetingImageUploadBusy(-1);
+  }
 };
 
 const handleImagePaste = async (event, imageArea) => {

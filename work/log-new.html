@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌 NEW｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260728-hires2" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260729-hires3" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -968,7 +968,7 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/app.js?v=20260719-6"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260728-hires2"></script>
+  <script src="../assets/ragic-table.js?v=20260729-hires3"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="https://js.puter.com/v2/"></script>
   <script>
@@ -1585,7 +1585,14 @@
             let current = [];
             try { current = JSON.parse(input.dataset.imageValue || '[]'); } catch (_) { current = []; }
             const added = [];
-            for (const file of files) added.push(await window.uploadRagicImageFile(file));
+            for (const file of files) {
+              const clearPending = window.showRagicPendingImage?.(file, area, '對話圖片') || (() => {});
+              try {
+                added.push(await window.uploadRagicImageFile(file));
+              } finally {
+                clearPending();
+              }
+            }
             const images = [...(Array.isArray(current) ? current : []), ...added];
             showImagePreview(images, area, '對話圖片');
           } catch (error) {

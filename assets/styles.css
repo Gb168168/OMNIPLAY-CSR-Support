@@ -1700,6 +1700,10 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-image-tools { display: flex; align-items: center; gap: 6px; }
 .ragic-image-tools .ghost, .ragic-image-tools a.ghost { min-width: 38px; padding: 7px 10px; text-decoration: none; white-space: nowrap; }
 .ragic-image-tools #ragicImageZoom { min-width: 52px; text-align: center; font-weight: 800; color: var(--text-secondary); }
+.image-upload-preview.is-uploading { position: relative; opacity: .78; }
+.image-upload-preview.is-uploading::after { content: ""; position: absolute; inset: 4px; border: 2px solid rgba(59,130,246,.45); border-top-color: #2563eb; border-radius: 10px; animation: image-upload-pulse 1s ease-in-out infinite alternate; pointer-events: none; }
+.image-upload-preview.is-uploading > span { color: #2563eb !important; font-weight: 800; }
+@keyframes image-upload-pulse { from { opacity: .35; } to { opacity: 1; } }
 .ragic-image-counter { margin-left: auto; margin-right: 12px; color: var(--text-secondary); font-weight: 800; }
 .ragic-image-nav { position: absolute; top: 50%; z-index: 2; width: 46px; height: 58px; display: grid; place-items: center; transform: translateY(-50%); border: 1px solid var(--border); border-radius: 14px; background: rgba(15,23,42,.72); color: #fff; font-size: 40px; line-height: 1; }
 .ragic-image-nav:hover { transform: translateY(-50%) scale(1.04); }

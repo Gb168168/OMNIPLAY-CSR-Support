@@ -1143,6 +1143,44 @@ const normalizeImageArray = (images) => {
   return [];
 };
 
+let RAGIC_IMAGE_UPLOAD_COUNT = 0;
+const setRagicImageUploadBusy = (delta) => {
+  RAGIC_IMAGE_UPLOAD_COUNT = Math.max(0, RAGIC_IMAGE_UPLOAD_COUNT + delta);
+  document.querySelectorAll('button[form="ragicForm"][type="submit"], #ragicForm button[type="submit"]').forEach((button) => {
+    if (RAGIC_IMAGE_UPLOAD_COUNT > 0) {
+      if (!button.dataset.imageUploadOriginalText) button.dataset.imageUploadOriginalText = button.textContent || '儲存';
+      button.disabled = true;
+      button.textContent = '圖片上傳中…';
+    } else if (button.dataset.imageUploadOriginalText) {
+      button.disabled = false;
+      button.textContent = button.dataset.imageUploadOriginalText;
+      delete button.dataset.imageUploadOriginalText;
+    }
+  });
+};
+const showPendingImagePreview = (file, container, label = '圖片') => {
+  if (!file || !container) return () => {};
+  let list = container.querySelector('.image-preview-list');
+  if (!list) {
+    list = document.createElement('div');
+    list.className = 'image-preview-list';
+    container.appendChild(list);
+  }
+  const objectUrl = URL.createObjectURL(file);
+  const preview = document.createElement('div');
+  preview.className = 'image-preview-item image-upload-preview is-uploading';
+  preview.innerHTML = `<img src="${escapeHtml(objectUrl)}" alt="${escapeHtml(label)}上傳預覽"><span>高畫質原圖上傳中…</span>`;
+  list.appendChild(preview);
+  setRagicImageUploadBusy(1);
+  return () => {
+    URL.revokeObjectURL(objectUrl);
+    preview.remove();
+    if (!list.children.length) list.remove();
+    setRagicImageUploadBusy(-1);
+  };
+};
+window.showRagicPendingImage = showPendingImagePreview;
+
 const estimateBase64Bytes = (value = '') => {
   const base64 = String(value).split(',').pop() || '';
   return Math.ceil(base64.length * 3 / 4);
@@ -1313,7 +1351,14 @@ const processImageFiles = async (files, container) => {
   const input = container?.querySelector('input[type="file"]');
   const currentImages = getImageInputValues(input);
   const newImages = [];
-  for (const file of [...(files || [])]) newImages.push(await uploadImageOriginal(file));
+  for (const file of [...(files || [])]) {
+    const clearPending = showPendingImagePreview(file, container);
+    try {
+      newImages.push(await uploadImageOriginal(file));
+    } finally {
+      clearPending();
+    }
+  }
   const nextImages = [...currentImages, ...newImages];
   assertImageTotalWithinLimit([...getCurrentFormImages(input), ...nextImages]);
   showImagePreview(nextImages, container);
