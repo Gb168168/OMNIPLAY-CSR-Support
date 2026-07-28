@@ -1150,7 +1150,7 @@ const setRagicImageUploadBusy = (delta) => {
     if (RAGIC_IMAGE_UPLOAD_COUNT > 0) {
       if (!button.dataset.imageUploadOriginalText) button.dataset.imageUploadOriginalText = button.textContent || '儲存';
       button.disabled = true;
-      button.textContent = '圖片上傳中…';
+      button.textContent = '圖片處理中…';
     } else if (button.dataset.imageUploadOriginalText) {
       button.disabled = false;
       button.textContent = button.dataset.imageUploadOriginalText;
@@ -1169,7 +1169,7 @@ const showPendingImagePreview = (file, container, label = '圖片') => {
   const objectUrl = URL.createObjectURL(file);
   const preview = document.createElement('div');
   preview.className = 'image-preview-item image-upload-preview is-uploading';
-  preview.innerHTML = `<img src="${escapeHtml(objectUrl)}" alt="${escapeHtml(label)}上傳預覽"><span>高畫質原圖上傳中…</span>`;
+  preview.innerHTML = `<img src="${escapeHtml(objectUrl)}" alt="${escapeHtml(label)}上傳預覽"><span>圖片處理中…</span>`;
   list.appendChild(preview);
   setRagicImageUploadBusy(1);
   return () => {
@@ -1277,7 +1277,6 @@ const loadImage = (src) => new Promise((resolve, reject) => {
   image.src = src;
 });
 
-const safeImageStorageName = (name) => String(name || 'image').replace(/[\\/#?%*:|"<>]/g, '_');
 const compressImageForFirestore = async (file) => {
   const loadedImage = await loadImage(await readFileAsDataUrl(file));
   const scale = loadedImage.naturalWidth > 1200 ? 1200 / loadedImage.naturalWidth : 1;
@@ -1306,29 +1305,7 @@ const uploadImageOriginal = async (file) => {
   if (!file) return '';
   if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
   if (file.size > MAX_IMAGE_BYTES) throw new Error('單張圖片不可超過 50MB');
-  const source = await readFileAsDataUrl(file);
-  const loadedImage = await loadImage(source);
-  if (loadedImage.naturalWidth > MAX_IMAGE_DIMENSION || loadedImage.naturalHeight > MAX_IMAGE_DIMENSION) {
-    throw new Error('圖片長邊不可超過 8192px（8K）');
-  }
-  const storage = window.omniplayStorage;
-  if (!storage) return compressImageForFirestore(file);
-  const collection = RAGIC_STATE.config?.dataCollection || RAGIC_STATE.config?.collection || 'general';
-  const path = `meeting-files/images/${safeImageStorageName(collection)}/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeImageStorageName(file.name)}`;
-  try {
-    const snapshot = await storage.ref(path).put(file, {
-      contentType: file.type,
-      customMetadata: {
-        originalName: file.name || 'image',
-        originalWidth: String(loadedImage.naturalWidth),
-        originalHeight: String(loadedImage.naturalHeight)
-      }
-    });
-    return snapshot.ref.getDownloadURL();
-  } catch (error) {
-    console.warn('高畫質 Storage 上傳失敗，改用相容圖片：', error);
-    return compressImageForFirestore(file);
-  }
+  return compressImageForFirestore(file);
 };
 window.uploadRagicImageFile = uploadImageOriginal;
 
@@ -3071,7 +3048,7 @@ const initRagicPage = async (config) => {
   document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><div class="designer-header-actions"><button class="primary" id="saveSchemaButton" type="button">儲存</button><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div></div><div class="designer-body" hidden></div><div id="layoutDesignerPanel"></div></div></div>');
   }
   if (!document.querySelector('#ragicImageModal')) {
-    document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><div class="ragic-image-counter" id="ragicImageCounter">1 / 1</div><div class="ragic-image-tools"><button class="ghost" data-image-zoom="out" type="button" aria-label="縮小">−</button><span id="ragicImageZoom">100%</span><button class="ghost" data-image-zoom="in" type="button" aria-label="放大">＋</button><button class="ghost" data-image-reset type="button">原始比例</button><a class="ghost" id="ragicImageOriginal" target="_blank" rel="noopener">開啟原圖</a><button class="ghost" data-image-fullscreen type="button">全螢幕</button></div><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><div class="ragic-image-stage"><button class="ragic-image-nav ragic-image-prev" data-image-step="-1" type="button" aria-label="上一張">‹</button><img alt="高畫質圖片預覽" draggable="false"><button class="ragic-image-nav ragic-image-next" data-image-step="1" type="button" aria-label="下一張">›</button></div></div></div>');
+    document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><div class="ragic-image-counter" id="ragicImageCounter">1 / 1</div><div class="ragic-image-tools"><button class="ghost" data-image-zoom="out" type="button" aria-label="縮小">−</button><span id="ragicImageZoom">100%</span><button class="ghost" data-image-zoom="in" type="button" aria-label="放大">＋</button><button class="ghost" data-image-reset type="button">原始比例</button><a class="ghost" id="ragicImageOriginal" target="_blank" rel="noopener">開啟圖片</a><button class="ghost" data-image-fullscreen type="button">全螢幕</button></div><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><div class="ragic-image-stage"><button class="ragic-image-nav ragic-image-prev" data-image-step="-1" type="button" aria-label="上一張">‹</button><img alt="圖片預覽" draggable="false"><button class="ragic-image-nav ragic-image-next" data-image-step="1" type="button" aria-label="下一張">›</button></div></div></div>');
   }
   document.querySelector('#designTableButton')?.addEventListener('click', openDesigner);
   document.querySelector('#closeDesignerButton')?.addEventListener('click', closeDesigner);

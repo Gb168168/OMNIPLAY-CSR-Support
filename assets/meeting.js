@@ -534,56 +534,21 @@ const uploadMeetingImageOriginal = async (file) => {
   if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
   if (file.size > MAX_IMAGE_BYTES) throw new Error('單張圖片不可超過 50MB');
   const loadedImage = await loadImage(await readFileAsDataUrl(file));
-  if (loadedImage.naturalWidth > MAX_IMAGE_DIMENSION || loadedImage.naturalHeight > MAX_IMAGE_DIMENSION) {
-    throw new Error('圖片長邊不可超過 8192px（8K）');
-  }
-  if (!meetingStorage) {
-    const scale = loadedImage.naturalWidth > 800 ? 800 / loadedImage.naturalWidth : 1;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(loadedImage.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(loadedImage.naturalHeight * scale));
-    const context = canvas.getContext('2d');
-    context.fillStyle = '#fff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
-    return new Promise((resolve, reject) => canvas.toBlob((blob) => {
-      if (!blob) return reject(new Error('圖片轉換失敗'));
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error('圖片轉換失敗'));
-      reader.readAsDataURL(blob);
-    }, 'image/jpeg', 0.6));
-  }
-  const recordKey = meetingState.currentId || document.querySelector('#meetingSerial')?.value?.trim() || `new-${Date.now()}`;
-  const path = `meeting-files/images/${safeStorageName(recordKey)}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeStorageName(file.name)}`;
-  try {
-    const snapshot = await meetingStorage.ref(path).put(file, {
-      contentType: file.type,
-      customMetadata: {
-        originalName: file.name || 'image',
-        originalWidth: String(loadedImage.naturalWidth),
-        originalHeight: String(loadedImage.naturalHeight)
-      }
-    });
-    return snapshot.ref.getDownloadURL();
-  } catch (error) {
-    console.warn('會議高畫質圖片上傳失敗，改用相容圖片：', error);
-    const scale = loadedImage.naturalWidth > 800 ? 800 / loadedImage.naturalWidth : 1;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(loadedImage.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(loadedImage.naturalHeight * scale));
-    const context = canvas.getContext('2d');
-    context.fillStyle = '#fff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
-    return new Promise((resolve, reject) => canvas.toBlob((blob) => {
-      if (!blob) return reject(new Error('圖片轉換失敗'));
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error('圖片轉換失敗'));
-      reader.readAsDataURL(blob);
-    }, 'image/jpeg', 0.6));
-  }
+  const scale = loadedImage.naturalWidth > 800 ? 800 / loadedImage.naturalWidth : 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(loadedImage.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(loadedImage.naturalHeight * scale));
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => {
+    if (!blob) return reject(new Error('圖片轉換失敗'));
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('圖片轉換失敗'));
+    reader.readAsDataURL(blob);
+  }, 'image/jpeg', 0.6));
 };
 
 const showImagePreview = (base64, container) => {
@@ -607,7 +572,7 @@ const setMeetingImageUploadBusy = (delta) => {
   if (meetingImageUploadCount > 0) {
     if (!saveButton.dataset.imageUploadOriginalText) saveButton.dataset.imageUploadOriginalText = saveButton.textContent || '儲存';
     saveButton.disabled = true;
-    saveButton.textContent = '圖片上傳中…';
+    saveButton.textContent = '圖片處理中…';
   } else if (saveButton.dataset.imageUploadOriginalText) {
     saveButton.disabled = false;
     saveButton.textContent = saveButton.dataset.imageUploadOriginalText;
@@ -619,7 +584,7 @@ const processImageFile = async (file, container) => {
   const objectUrl = URL.createObjectURL(file);
   const preview = document.createElement('span');
   preview.className = 'ragic-file-preview meeting-image-preview image-upload-preview is-uploading';
-  preview.innerHTML = `<img src="${escapeHtml(objectUrl)}" alt="圖片上傳預覽"><span>高畫質原圖上傳中…</span>`;
+  preview.innerHTML = `<img src="${escapeHtml(objectUrl)}" alt="圖片上傳預覽"><span>圖片處理中…</span>`;
   (container.querySelector('.meeting-image-preview-list') || container).appendChild(preview);
   setMeetingImageUploadBusy(1);
   try {
