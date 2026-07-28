@@ -3899,3 +3899,26 @@ body:has(.sidebar-toggle-btn.is-visible)
   max-width: 100%;
   box-sizing: border-box;
 }
+
+/* 日誌 NEW 檢視模式不能沿用設計器的 48px 固定列高，否則標籤與內容會被切半。 */
+.log-new-page #ragicForm .ragic-view-grid {
+  grid-template-rows: none !important;
+  grid-auto-rows: minmax(64px, auto) !important;
+}
+.log-new-page #ragicForm .ragic-view-grid > .ragic-view-field {
+  height: auto !important;
+  min-height: 64px !important;
+}
+.log-new-page #ragicForm .ragic-view-grid > .ragic-view-field-image,
+.log-new-page #ragicForm .ragic-view-grid > .ragic-view-field-file {
+  min-height: 220px !important;
+}
+.log-new-page #ragicForm .ragic-view-grid .ragic-view-label {
+  margin-bottom: 4px;
+}
+.log-new-page #ragicForm .ragic-view-grid .ragic-view-value,
+.log-new-page #ragicForm .ragic-view-grid .field-value {
+  height: auto !important;
+  min-height: 24px;
+  overflow: visible;
+}
