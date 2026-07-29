@@ -1494,16 +1494,14 @@
     };
 
     const lastLogNewConversationEntry = () => {
-      const pattern = /\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]\s*([^\n:：]{1,120})[:：]/g;
       let last = null;
       document.querySelectorAll('#ragicForm [data-subfield="conversation"]').forEach((textarea) => {
         const text = textarea.value || '';
-        let match;
-        while ((match = pattern.exec(text))) last = { match: [...match], text, index: match.index, end: pattern.lastIndex };
-        pattern.lastIndex = 0;
+        logNewConversationEntries(text).forEach((entry) => {
+          if (isLogNewInternalSpeaker(entry.speaker)) last = { ...entry, text };
+        });
       });
-      if (!last) return null;
-      return { ...last, speaker: last.match[7].trim(), segment: last.text.slice(last.index) };
+      return last;
     };
 
     const normalizeStaffIdentity = (value = '') => String(value).toLowerCase()
@@ -1511,13 +1509,28 @@
       .replace(/[_\-\s／/]+/g, ' ')
       .trim();
 
-    const logNewTeamAliases = [
-      'igaming op', '中魁', 'jerry hu', 'andy chou', 'jim li', 'lucas', 'lucas n', 'j 商務', 'anton',
-      'hazel', 'pc am', 'cia op am', 'weiliya lin', 'weiliya op am', 'apple am', 'diane', 'crystal', 'kkaren',
-      'rondo', 'rondo lin op rd', 'leo chang', 'chuan chia lai', '賢 rd', 'nick op rd', 'yeh ryan',
-      'nina', '張家豪', 'yuting wang', 'wj', 'chang how', 'weili huang', 'ellie', 'mike yu', '修全 林',
-      '多 it sre', 'tony yang', 'andrew', 'pien', 'suigetsu'
+    // OMNIPLAY 團隊名單是 AI、人員判斷、接洽者與完成者共用的唯一來源。
+    const LOG_NEW_TEAM_DIRECTORY = [
+      { department: '客服', names: ['igaming-op', '中魁（客服組長）'] },
+      { department: '商務', names: ['Jerry Hu', 'Andy Chou', 'Jim Li', 'Lucas', 'Lucas N', 'J_商務', 'Anton'] },
+      { department: 'PM', names: ['Hazel'] },
+      { department: 'AM', names: ['PC_AM', 'Cia_OP-AM', 'Weiliya Lin', 'Weiliya_OP-AM', 'Apple_AM'] },
+      { department: '行銷', names: ['Diane'] },
+      { department: '營銷', names: ['KKaren'] },
+      { department: 'PAGCOR驗證', names: ['crystal'] },
+      { department: '技術／RD', names: ['Rondo', 'Rondo lin OP-RD', 'Leo Chang', 'Chuan-Chia Lai', '🧑‍💻賢 _RD', 'Nick OP RD', 'Yeh Ryan'] },
+      { department: 'IT', names: ['Nina', '張家豪', 'YuTing Wang', 'WJ', 'Chang How', 'WeiLi Huang', 'Ellie', 'Mike Yu', '修全 林', '多_IT-SRE', 'Tony Yang', 'Andrew', 'Pien', 'Suigetsu'] }
     ];
+    const logNewTeamDirectoryText = LOG_NEW_TEAM_DIRECTORY
+      .map((group) => `${group.department}：${group.names.join('；')}`)
+      .join('\n');
+    const logNewTeamAliases = LOG_NEW_TEAM_DIRECTORY
+      .flatMap((group) => group.names)
+      .map(normalizeStaffIdentity)
+      .flatMap((name) => {
+        const withoutTitle = name.replace(/\s*[（(].*?[）)]\s*/g, '').trim();
+        return withoutTitle && withoutTitle !== name ? [name, withoutTitle] : [name];
+      });
 
     const isLogNewInternalSpeaker = (speakerValue = '') => {
       const speaker = normalizeStaffIdentity(speakerValue);
@@ -1537,11 +1550,10 @@
     const syncLogNewContactFromConversation = async (value = '') => {
       const entries = logNewConversationEntries(value);
       if (entries.length < 2) return;
-      // 客戶名稱可能剛好與團隊別名相似，因此接洽者規則直接以首段之後
-      // 第一位 J_商務 或 igaming-op 回覆者判斷，不讓模糊名錄比對提前中止。
-      const responder = entries.slice(1).find((entry) => {
+      // 接洽者是對話中第一位 OMNIPLAY 回覆者；第一段本身也可能是我方轉貼內容。
+      const responder = entries.find((entry) => {
         const identity = normalizeStaffIdentity(entry.speaker);
-        return identity === 'j 商務' || identity === 'j' || identity.includes('igaming op');
+        return identity === 'j 商務' || identity === 'j' || identity.includes('igaming op') || isLogNewInternalSpeaker(entry.speaker);
       });
       if (!responder) return;
       const speaker = normalizeStaffIdentity(responder.speaker);
@@ -1550,17 +1562,20 @@
         setLogNewSelectValue(contact, '商務／AM');
         return;
       }
-      if (!speaker.includes('igaming op')) return;
-      const codes = [...responder.segment.matchAll(/(?:^|[\s。.!！])[-－]\s*([a-z0-9]{1,10})(?=\s|$|[。.!！])/gi)].map((match) => match[1]);
-      if (!codes.length) return;
       const staff = await loadLogNewStaff();
-      for (const code of [...codes].reverse()) {
-        const person = staff.find((item) => String(item.code || '').trim().toLowerCase() === code.toLowerCase());
-        if (person?.name) {
-          setLogNewSelectValue(contact, person.name);
-          return;
+      if (speaker.includes('igaming op')) {
+        const codes = [...responder.segment.matchAll(/(?:^|[\s。.!！])[-－]\s*([a-z0-9]{1,10})(?=\s|$|[。.!！])/gi)].map((match) => match[1]);
+        for (const code of [...codes].reverse()) {
+          const person = staff.find((item) => String(item.code || '').trim().toLowerCase() === code.toLowerCase());
+          if (person?.name) {
+            setLogNewSelectValue(contact, person.name);
+            return;
+          }
         }
+        return;
       }
+      const resolved = await resolveLogNewCompleter(responder);
+      if (resolved.name) setLogNewSelectValue(contact, resolved.name);
     };
 
     const resolveLogNewCompleter = async (entry) => {
@@ -1580,13 +1595,7 @@
         return identities.some((identity) => speaker === identity || speaker.includes(identity) || identity.includes(speaker));
       });
       if (person?.name) return { name: person.name, reason: '' };
-      const teamAliases = [
-        '中魁', 'jerry hu', 'andy chou', 'jim li', 'lucas', 'anton', 'hazel', 'pc am', 'cia', 'weiliya',
-        'apple', 'diane', 'kkaren', 'crystal', 'rondo', 'leo chang', 'yeh ryan', 'chuan chia lai', '賢 rd',
-        'nick', 'nina', '張家豪', 'yuting wang', 'wj', 'chang how', 'weili huang', 'ellie', 'mike yu',
-        '修全', 'tony yang', 'andrew', 'pien', 'suigetsu'
-      ];
-      const alias = teamAliases.find((name) => speaker.includes(name));
+      const alias = logNewTeamAliases.find((name) => speaker.includes(name));
       return alias ? { name: entry.speaker.replace(/[_-](?:商務|am|pm|rd|it|sre|dba).*$/i, '').trim(), reason: '' } : { name: '', reason: `無法將最後發言者「${entry.speaker}」對應到人員管理` };
     };
 
@@ -2000,8 +2009,8 @@
               }
               conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.map((item) => `${item.text}\n來源判斷：${item.owner}`).join('\n\n')}`;
             }
-            const prompt = `你是 OMNIPLAY 客服案件分析助手。請依照下方內部團隊名錄辨識發言者；名錄內的人是 OMNIPLAY 內部人員，未列入者才優先判斷為客戶或外部窗口，但仍須依對話語意確認。名稱可能帶有 emoji、底線、部門後綴或大小寫差異，請以可辨識的姓名比對。\n\nOMNIPLAY 內部團隊名錄：\n客服：igaming-op；中魁（客服組長）\n商務：Jerry Hu；Andy Chou；Jim Li；Lucas；Lucas N；J；Anton\nPM：Hazel\nAM：PC；Cia；Weiliya Lin；Weiliya；Apple\n行銷：Diane；KKaren\nPAGCOR驗證：crystal\n技術：Rondo；Rondo lin OP-RD；Leo Chang；Yeh Ryan\nRD：Chuan-Chia Lai；昌賢；Nick\nIT：Nina；張家豪；YuTing Wang；WJ；Chang How；WeiLi Huang；Ellie；Mike Yu；修全 林；多；Tony Yang；Andrew；Pien；Suigetsu\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。若標記為「客戶」或「我方團隊」，必須依該標記判斷；若為「自動判斷」，請依對話前後文、圖片內容與團隊名錄推斷，無法確定時明確寫「圖片來源待確認」，不可猜測。客戶圖片視為問題或異常證據；我方圖片視為查詢結果、後台紀錄或處理證明。請辨識圖片中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額及處理結果，並與對話互相核對。\n\n分析規則：\n1. 只能依據對話與圖片內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【客戶圖片】、【內部處理】（標示姓名／部門）、【我方圖片】、【問題判斷】、【目前進度】、【後續待辦】獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話或圖片未提供」。\n3. summary 是畫面最上方的快速交接摘要，最多 80 個中文字，只保留「問題、目前進度、下一步」，不得重複對話、不得列出所有細節。\n4. customerBrief 只寫一個最核心的客戶問題，最多 35 個中文字，不得使用條列。\n5. supportBrief 只寫目前處理結果與下一步，最多 45 個中文字，不得使用條列。\n6. customerBrief 與 supportBrief 必須是語意完整的短句，不可輸出省略號、截斷句、emoji、特殊圖形或「�」字元。\n6. 使用繁體中文。\n\n請輸出純 JSON，不要 Markdown、不要程式碼框，格式必須完全是：{"analysis":"...","summary":"...","customerBrief":"...","supportBrief":"..."}\n\n對話內容：\n${conversation}`;
-            const finalPrompt = `${prompt}\n\n最新團隊職稱修正（本段優先於前述名錄）：技術包含 Rondo、Rondo lin OP-RD、Leo Chang、Chuan-Chia Lai、🧑‍💻賢 _RD、Nick OP RD、Yeh Ryan；KKaren 的職稱為營銷。舊名錄若出現「昌賢」是圖片辨識錯誤，正確人員為「🧑‍💻賢 _RD」。\n\n最終輸出請忽略前述 JSON格式，嚴格使用以下分隔標記；標記不得省略，內容可以正常換行，不要加 Markdown 程式碼框：\n<<<ANALYSIS>>>\n完整 AI分析\n<<<SUMMARY>>>\n交接總結\n<<<CUSTOMER_BRIEF>>>\n客戶問題短述\n<<<SUPPORT_BRIEF>>>\n我方處理短述\n<<<END>>>`;
+            const prompt = `你是 OMNIPLAY 客服案件分析助手。必須依照下方唯一且完整的 OMNIPLAY 內部團隊名單辨識發言者。\n\nOMNIPLAY 內部團隊名單：\n${logNewTeamDirectoryText}\n\n人員判斷規則（必須遵守）：\n1. 名單內的人才是 OMNIPLAY 內部人員；不在名單內的發言者一律視為客戶或外部窗口，不得寫成「可能是內部」、「未在名錄中需確認」或把外部人員列入【內部處理】。\n2. 比對姓名時忽略大小寫、emoji、空格、底線、連字號，以及商務、AM、PM、RD、IT、SRE、DBA、OP 等部門後綴。\n3. igaming-op 是 OMNIPLAY 客服帳號；其訊息結尾「-代碼」是客服人員代碼，不是客戶姓名。\n4. 即使沒有 Excel、圖片或附件，也必須只依文字對話的發言者與內容完成內外部判斷。\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。若標記為「客戶」或「我方團隊」，必須依該標記判斷；若為「自動判斷」，請依對話前後文、圖片內容與團隊名單推斷，無法確定圖片來源時才寫「圖片來源待確認」。客戶圖片視為問題或異常證據；我方圖片視為查詢結果、後台紀錄或處理證明。請辨識圖片中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額及處理結果，並與對話互相核對。\n\n分析規則：\n1. 只能依據對話與圖片內容，不可自行捏造未出現的原因、結果或承諾。\n2. analysis 必須依序整理成【客戶問題】、【客戶圖片】、【內部處理】（只列 OMNIPLAY 名單內的人並標示姓名／部門）、【我方圖片】、【問題判斷】、【目前進度】、【後續待辦】獨立段落；每個標題單獨一行、內容從下一行開始、段落之間空一行。沒有資訊請寫「對話或圖片未提供」。\n3. summary 是畫面最上方的快速交接摘要，最多 80 個中文字，只保留「問題、目前進度、下一步」，不得重複對話、不得列出所有細節。\n4. customerBrief 只寫一個最核心的客戶問題，最多 35 個中文字，不得使用條列。\n5. supportBrief 只寫目前處理結果與下一步，最多 45 個中文字，不得使用條列。\n6. customerBrief 與 supportBrief 必須是語意完整的短句，不可輸出省略號、截斷句、emoji、特殊圖形或「�」字元。\n7. 使用繁體中文。\n\n對話內容：\n${conversation}`;
+            const finalPrompt = `${prompt}\n\n嚴格使用以下分隔標記；標記不得省略，內容可以正常換行，不要加 Markdown 程式碼框：\n<<<ANALYSIS>>>\n完整 AI分析\n<<<SUMMARY>>>\n交接總結\n<<<CUSTOMER_BRIEF>>>\n客戶問題短述\n<<<SUPPORT_BRIEF>>>\n我方處理短述\n<<<END>>>`;
             const options = {
               model: 'gpt-5.4-nano',
               temperature: 0.1,
