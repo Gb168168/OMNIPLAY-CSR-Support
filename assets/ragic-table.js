@@ -11,8 +11,12 @@ const LOG_FIELD_LAYOUT_BY_LABEL = {
 const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').includes('日誌');
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
-const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
+const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', editDirty: false, sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
 window.getCurrentRagicRecordId = () => RAGIC_STATE.currentId || '';
+
+const hasUnsavedRagicChanges = () => RAGIC_STATE.formMode === 'edit' && RAGIC_STATE.editDirty;
+const confirmDiscardRagicChanges = () => !hasUnsavedRagicChanges() || window.confirm('目前有尚未儲存的內容，確定要放棄並離開嗎？');
+const clearRagicDirtyState = () => { RAGIC_STATE.editDirty = false; };
 if (!document.querySelector('#ragicColumnMenuRuntimeStyles')) {
   const style = document.createElement('style');
   style.id = 'ragicColumnMenuRuntimeStyles';
@@ -1782,6 +1786,15 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
   const bottomActions = formView.querySelector('.ragic-actions');
   if (bottomActions) bottomActions.hidden = true;
   const form = formView.querySelector('form');
+  clearRagicDirtyState();
+  if (!form.dataset.dirtyTrackingBound) {
+    form.dataset.dirtyTrackingBound = 'true';
+    const markDirty = () => {
+      if (RAGIC_STATE.formMode === 'edit') RAGIC_STATE.editDirty = true;
+    };
+    form.addEventListener('input', markDirty);
+    form.addEventListener('change', markDirty);
+  }
   form.innerHTML = '';
   if (mode === 'view' && record.id) {
     renderViewForm(form, record);
@@ -3288,6 +3301,26 @@ const addDesignerPairFields = (pairType) => {
     await saveDesignerSchema({ close: true });
   });
   setupRagicFormActions();
+  document.addEventListener('click', (event) => {
+    if (!hasUnsavedRagicChanges()) return;
+    const link = event.target.closest('a[href]');
+    const leavesCurrentEdit = Boolean(
+      (link && link.target !== '_blank') ||
+      event.target.closest('#backToListButton, #ragicCancelEdit, #ragicCloseForm, #newRecordButton, #ragicPrevRecord, #ragicNextRecord, #logoutButton')
+    );
+    if (!leavesCurrentEdit) return;
+    if (!confirmDiscardRagicChanges()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    clearRagicDirtyState();
+  }, true);
+  window.addEventListener('beforeunload', (event) => {
+    if (!hasUnsavedRagicChanges()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
   applyRagicPermissionUi(); setRagicViewMode('list'); window.addEventListener('resize', setRagicFormOverlayOffset); document.querySelector('#newRecordButton').addEventListener('click', () => { if (canUse('edit')) renderForm({}, { mode: 'edit' }); }); document.querySelector('#backToListButton').addEventListener('click', () => { setRagicViewMode('list'); RAGIC_STATE.formMode = 'view'; });
   document.querySelector('#ragicFormView')?.addEventListener('click', (event) => {
     const editButton = event.target.closest('#ragicEditRecord');
@@ -3336,6 +3369,7 @@ const addDesignerPairFields = (pairType) => {
         savedId = docRef.id;
         await docRef.set({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
       }
+      clearRagicDirtyState();
       // 新增完成後立刻同步目前資料 ID 與刪除按鈕，不必等待快照或重新整理。
       RAGIC_STATE.currentId = savedId;
       applyRagicPermissionUi();
