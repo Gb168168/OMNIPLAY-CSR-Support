@@ -2039,9 +2039,12 @@
 最終簡化規則（優先於前面所有輸出規則）：
 1. analysis 最多兩句，只按時間順序寫對話明確發生的核心事件，不要標題、分段、人物關係分析、問題判斷或後續建議。
 2. summary 只能一句，寫目前明確進度，例如「等待客戶確認」。
-3. customerBrief 寫客戶實際回覆或處理狀態。若客戶將事項轉請自己的同仁確認，應寫「客戶已請客戶人員協助確認」。
-4. supportBrief 只寫 OMNIPLAY 內部人員實際提出的核心事項，不要重複客服、商務、技術等部門標籤，例如「請確認 4 筆注單狀態 9015」。
-5. 問題描述必須依對話中誰先提出核心事項動態排序：OMNIPLAY 內部先提出就先顯示該發言者的實際部門，客戶先提出就先顯示「客戶」。只保留 supportBrief 與 customerBrief 的已知事實，不得加入分析或建議。
+3. 先判斷對話共有幾個不同問題；同一問題的追問、補充與回覆不得重複計算。不同異常或不同需求才建立下一個編號。
+4. customerBrief 與 supportBrief 必須使用「1. 簡述 2. 簡述」格式，雙方針對同一問題必須使用相同編號。每項最多 20 個中文字，只保留核心問題、動作或處理結果。
+5. customerBrief 只寫客戶在各問題中的實際提出、回覆或處理狀態；客戶沒有對應內容時，該編號不要虛構內容。若客戶轉請自己的同仁確認，可簡寫為「已請人員確認」。
+6. supportBrief 只寫 OMNIPLAY 內部人員在各問題中的實際提出、回覆或處理結果；不要在內容中重複客服、商務、技術等部門名稱。沒有對應內容時，該編號不要虛構內容。
+7. 問題描述會由系統依角色合併成各一行，格式例如「客服：1. 確認4筆9015 2. 重新整理再登入」及「客戶：1. 已請人員確認 2. 玩家無法進入遊戲」。只能寫已知事實，不得加入分析或建議。
+8. 第一個問題由 OMNIPLAY 內部先提出，就先顯示該發言者的實際部門；由客戶先提出，就先顯示「客戶」。OMNIPLAY 內部部門由系統判斷，不得全部固定為客服。
 
 嚴格使用以下分隔標記；標記不得省略，不要加 Markdown 程式碼框：
 <<<ANALYSIS>>>
@@ -2049,9 +2052,9 @@
 <<<SUMMARY>>>
 一句目前進度
 <<<CUSTOMER_BRIEF>>>
-客戶實際回覆或處理狀態
+1. 客戶在問題1的簡述 2. 客戶在問題2的簡述
 <<<SUPPORT_BRIEF>>>
-OMNIPLAY 內部人員實際核心動作
+1. OMNIPLAY在問題1的簡述 2. OMNIPLAY在問題2的簡述
 <<<END>>>`;
             const options = {
               model: 'gpt-5.4-nano',
@@ -2074,39 +2077,57 @@ OMNIPLAY 內部人員實際核心動作
           }
           const issue = document.querySelector('#ragicForm [name="issue"]');
           if (issue) {
-            const compactBrief = (values, maximum) => {
-              const text = values
-                .filter(Boolean)
-                .join('；')
+            const parseNumberedBriefItems = (value = '') => {
+              const text = String(value)
                 .replace(/\uFFFD/g, '')
                 .replace(/[◆◇�]+/g, '')
-                .replace(/\s+/g, ' ')
-                .replace(/[。；，、]{2,}/g, '；')
+                .replace(/\r\n?/g, '\n')
                 .trim();
-              if (text.length <= maximum) return text;
-              const completeSentences = text
-                .split(/(?<=[。！？；])/)
-                .map((part) => part.trim())
-                .filter(Boolean);
-              const selected = [];
-              let length = 0;
-              completeSentences.forEach((sentence) => {
-                if (length + sentence.length > maximum) return;
-                selected.push(sentence);
-                length += sentence.length;
+              if (!text) return [];
+              const matches = [...text.matchAll(/(?:^|\s)(\d{1,2})[.、．]\s*([\s\S]*?)(?=\s+\d{1,2}[.、．]\s*|$)/g)];
+              if (!matches.length) return [text.replace(/^\d{1,2}[.、．]\s*/, '').trim()].filter(Boolean);
+              const items = [];
+              matches.forEach((match) => {
+                const number = Math.max(1, Number(match[1]) || 1);
+                const brief = match[2]
+                  .replace(/\s+/g, ' ')
+                  .replace(/[。；，、\s]+$/, '')
+                  .trim();
+                if (brief) items[number - 1] = brief;
               });
-              if (selected.length) return selected.join('');
-              return text.slice(0, maximum).replace(/[，、；：\s]+$/, '');
+              return items;
             };
-            const customerBrief = compactBrief(briefs.map((item) => item.customerBrief), 45);
-            const supportBrief = compactBrief(briefs.map((item) => item.supportBrief), 55);
-            const firstBrief = briefs.find((item) => item.customerBrief || item.supportBrief);
-            const customerLine = customerBrief ? `客戶：${customerBrief}` : '';
-            const supportLine = supportBrief ? `${firstBrief?.internalDepartment || '客服'}：${supportBrief}` : '';
-            issue.value = (firstBrief?.startsWithInternal
-              ? [supportLine, customerLine]
-              : [customerLine, supportLine]
-            ).filter(Boolean).join('\n');
+            const roleItems = new Map();
+            const roleOrder = [];
+            const addRoleItem = (role, number, text) => {
+              if (!text) return;
+              if (!roleItems.has(role)) roleItems.set(role, []);
+              if (!roleOrder.includes(role)) roleOrder.push(role);
+              roleItems.get(role).push(`${number}. ${text}`);
+            };
+            let issueNumber = 0;
+            briefs.forEach((brief) => {
+              const customerItems = parseNumberedBriefItems(brief.customerBrief);
+              const supportItems = parseNumberedBriefItems(brief.supportBrief);
+              const itemCount = Math.max(customerItems.length, supportItems.length, 1);
+              const internalRole = brief.internalDepartment || '客服';
+              for (let itemIndex = 0; itemIndex < itemCount; itemIndex += 1) {
+                const customerItem = customerItems[itemIndex] || '';
+                const supportItem = supportItems[itemIndex] || '';
+                if (!customerItem && !supportItem) continue;
+                issueNumber += 1;
+                if (brief.startsWithInternal) {
+                  addRoleItem(internalRole, issueNumber, supportItem);
+                  addRoleItem('客戶', issueNumber, customerItem);
+                } else {
+                  addRoleItem('客戶', issueNumber, customerItem);
+                  addRoleItem(internalRole, issueNumber, supportItem);
+                }
+              }
+            });
+            issue.value = roleOrder
+              .map((role) => `${role}：${roleItems.get(role).join(' ')}`)
+              .join('\n');
             issue.dispatchEvent(new Event('input', { bubbles: true }));
           }
           analysisSucceeded = true;
