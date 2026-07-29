@@ -1537,6 +1537,17 @@
       return logNewTeamAliases.some((alias) => speaker === alias || (alias.length >= 3 && speaker.includes(alias)));
     };
 
+    const logNewSpeakerDepartment = (speakerValue = '') => {
+      const speaker = normalizeStaffIdentity(speakerValue);
+      if (speaker === 'j') return '商務';
+      const group = LOG_NEW_TEAM_DIRECTORY.find((item) => item.names.some((name) => {
+        const alias = normalizeStaffIdentity(name).replace(/\s*[（(].*?[）)]\s*/g, '').trim();
+        return speaker === alias || (alias.length >= 3 && speaker.includes(alias));
+      }));
+      if (!group) return '';
+      return group.department === '技術／RD' ? '技術' : group.department;
+    };
+
     const logNewConversationEntries = (value = '') => {
       const text = String(value);
       const pattern = /\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]\s*([^\n:：]{1,120})[:：]/g;
@@ -1989,9 +2000,16 @@
           for (let index = 0; index < rows.length; index += 1) {
             const row = rows[index];
             const conversationText = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '（未提供文字對話）';
-            const visibleSpeakers = [...new Set(logNewConversationEntries(conversationText).map((entry) => entry.speaker).filter(Boolean))];
+            const conversationEntries = logNewConversationEntries(conversationText);
+            const visibleSpeakers = [...new Set(conversationEntries.map((entry) => entry.speaker).filter(Boolean))];
+            const startsWithInternal = conversationEntries.length ? isLogNewInternalSpeaker(conversationEntries[0].speaker) : false;
+            const firstInternalSpeaker = conversationEntries.find((entry) => isLogNewInternalSpeaker(entry.speaker))?.speaker || '';
+            const internalDepartment = logNewSpeakerDepartment(firstInternalSpeaker) || '客服';
             const classifiedSpeakers = visibleSpeakers
-              .map((speaker) => `${speaker}＝${isLogNewInternalSpeaker(speaker) ? 'OMNIPLAY 內部' : '客戶／外部窗口'}`)
+              .map((speaker) => {
+                const department = logNewSpeakerDepartment(speaker);
+                return `${speaker}＝${department ? `OMNIPLAY 內部／${department}` : '客戶／外部窗口'}`;
+              })
               .join('；');
             let conversation = `${conversationText}\n\n[系統圖片對照規則：圖片依上傳順序編號。對話中的（圖1）或(圖1)對應第一張圖片，（圖2）或(圖2)對應第二張，依此類推。必須以圖片標記所在的發言段落判斷提供者；有明確圖號時優先採用此對照，沒有圖號才依圖片來源選項與上下文判斷。]`;
             const images = getLogNewRowImages(row);
@@ -2014,7 +2032,27 @@
               conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.map((item) => `${item.text}\n來源判斷：${item.owner}`).join('\n\n')}`;
             }
             const prompt = `你是 OMNIPLAY 客服案件分析助手。必須依照下方唯一且完整的 OMNIPLAY 內部團隊名單辨識發言者。\n\nOMNIPLAY 內部團隊名單（只能用於判斷內外部，不能把未出現在對話中的名單人員寫入分析）：\n${logNewTeamDirectoryText}\n\n本段對話實際出現的發言者：${visibleSpeakers.join('、') || '無法辨識'}\n\n人員判斷規則（必須遵守）：\n1. 名單內的人才是 OMNIPLAY 內部人員；不在名單內的發言者一律視為客戶或外部窗口，不得寫成「可能是內部」、「未在名錄中需確認」或把外部人員列入【內部處理】。\n2. 比對姓名時忽略大小寫、emoji、空格、底線、連字號，以及商務、AM、PM、RD、IT、SRE、DBA、OP 等部門後綴。\n3. igaming-op 是 OMNIPLAY 客服帳號；其訊息結尾「-代碼」是客服人員代碼。分析內只能照原文寫 igaming-op 或該代碼，不得把代碼展開成對話中沒出現的姓名。\n4. 即使沒有 Excel、圖片或附件，也必須只依文字對話的發言者與內容完成內外部判斷。\n5. 團隊名單只供身分比對。分析中可出現的姓名僅限「本段對話實際出現的發言者」，不得加入名單中其他未發言的人。\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。只有實際有圖片時才能寫圖片內容；沒有圖片時，省略所有圖片段落，不得寫圖片推論。\n\n事實判斷規則（必須遵守）：\n1. 嚴格按照對話時間順序判斷「誰先提出／告知、誰轉請同仁查看、誰回覆」。不可預設一定是客戶先提出問題。\n2. 如果是 OMNIPLAY 先告知客戶異常或狀態，必須明確寫成「OMNIPLAY／igaming-op 主動告知客戶」，不可改寫成客戶反映。\n3. 只能寫對話或圖片明確出現的人、事件、數字、狀態、處理與回覆。不可自行補充原因、缺少資料、風險、確認結果、處理方案或下一步。\n4. 對話沒有要求補注單號、玩家 ID、遊戲、金額或其他資料時，禁止建議補資料。\n5. 客戶僅將訊息轉請自己的同仁查看時，只能寫「客戶方轉請同仁查看」及實際回覆，不得描述成 OMNIPLAY 內部處理。\n\n輸出規則：\n1. analysis 只保留有明確對話事實的段落，可使用【事件經過】、【客戶方回覆】、【目前進度】；沒有內容的【客戶問題】、【客戶圖片】、【內部處理】、【我方圖片】、【問題判斷】、【後續待辦】必須省略，不得用推測補滿。\n2. summary 最多 80 個中文字，只摘要已發生的事與目前明確回覆；對話未交代下一步時，不得自行新增下一步。\n3. customerBrief 最多 35 個中文字；若客戶沒有提出問題，應寫客戶實際動作或回覆，不得虛構客戶問題。\n4. supportBrief 最多 45 個中文字，只寫 OMNIPLAY 在對話中實際做過的事。\n5. 所有內容使用繁體中文，語意完整，不得輸出省略號、截斷句、emoji、特殊圖形或「�」字元。\n\n對話內容：\n${conversation}`;
-            const finalPrompt = `${prompt}\n\n系統已完成發言者分類：${classifiedSpeakers || '無法辨識'}。必須直接採用此分類，不得自行改判。\n\n嚴格使用以下分隔標記；標記不得省略，內容可以正常換行，不要加 Markdown 程式碼框：\n<<<ANALYSIS>>>\n完整 AI分析\n<<<SUMMARY>>>\n交接總結\n<<<CUSTOMER_BRIEF>>>\n客戶問題短述\n<<<SUPPORT_BRIEF>>>\n我方處理短述\n<<<END>>>`;
+            const finalPrompt = `${prompt}
+
+系統已完成發言者分類：${classifiedSpeakers || '無法辨識'}。必須直接採用此分類，不得自行改判。
+
+最終簡化規則（優先於前面所有輸出規則）：
+1. analysis 最多兩句，只按時間順序寫對話明確發生的核心事件，不要標題、分段、人物關係分析、問題判斷或後續建議。
+2. summary 只能一句，寫目前明確進度，例如「等待客戶確認」。
+3. customerBrief 寫客戶實際回覆或處理狀態。若客戶將事項轉請自己的同仁確認，應寫「客戶已請客戶人員協助確認」。
+4. supportBrief 只寫 OMNIPLAY 內部人員實際提出的核心事項，不要重複客服、商務、技術等部門標籤，例如「請確認 4 筆注單狀態 9015」。
+5. 問題描述必須依對話中誰先提出核心事項動態排序：OMNIPLAY 內部先提出就先顯示該發言者的實際部門，客戶先提出就先顯示「客戶」。只保留 supportBrief 與 customerBrief 的已知事實，不得加入分析或建議。
+
+嚴格使用以下分隔標記；標記不得省略，不要加 Markdown 程式碼框：
+<<<ANALYSIS>>>
+一至兩句事實摘要
+<<<SUMMARY>>>
+一句目前進度
+<<<CUSTOMER_BRIEF>>>
+客戶實際回覆或處理狀態
+<<<SUPPORT_BRIEF>>>
+OMNIPLAY 內部人員實際核心動作
+<<<END>>>`;
             const options = {
               model: 'gpt-5.4-nano',
               temperature: 0.1,
@@ -2025,7 +2063,12 @@
             const result = parseLogNewAiResponse(raw);
             result.analysis = mergeLogNewImageFindings(result.analysis, imageFindings);
             window.applyLogNewAiResult(row, result);
-            briefs.push({ customerBrief: result.customerBrief || '', supportBrief: result.supportBrief || '' });
+            briefs.push({
+              customerBrief: result.customerBrief || '',
+              supportBrief: result.supportBrief || '',
+              startsWithInternal,
+              internalDepartment
+            });
             completedUnits += 1;
             showProgress((completedUnits / totalUnits) * 98);
           }
@@ -2055,7 +2098,15 @@
               if (selected.length) return selected.join('');
               return text.slice(0, maximum).replace(/[，、；：\s]+$/, '');
             };
-            issue.value = `客戶：${compactBrief(briefs.map((item) => item.customerBrief), 45)}\n客服：${compactBrief(briefs.map((item) => item.supportBrief), 55)}`;
+            const customerBrief = compactBrief(briefs.map((item) => item.customerBrief), 45);
+            const supportBrief = compactBrief(briefs.map((item) => item.supportBrief), 55);
+            const firstBrief = briefs.find((item) => item.customerBrief || item.supportBrief);
+            const customerLine = customerBrief ? `客戶：${customerBrief}` : '';
+            const supportLine = supportBrief ? `${firstBrief?.internalDepartment || '客服'}：${supportBrief}` : '';
+            issue.value = (firstBrief?.startsWithInternal
+              ? [supportLine, customerLine]
+              : [customerLine, supportLine]
+            ).filter(Boolean).join('\n');
             issue.dispatchEvent(new Event('input', { bubbles: true }));
           }
           analysisSucceeded = true;
