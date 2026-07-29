@@ -2392,11 +2392,6 @@ textarea,
 .multi-select-dropdown label:hover { background: var(--surface-muted); }
 .multi-select-dropdown input { width: auto; min-height: auto; }
 .icon-actions-head, .icon-actions { text-align: center; white-space: nowrap; }
-  height: 100%;
-  border: 0;
-  border-radius: 0;
-  background: var(--input-bg);
-}
 .meeting-attendee-dropdown {
   position: relative;
   min-width: 0;
@@ -3921,4 +3916,353 @@ body:has(.sidebar-toggle-btn.is-visible)
   height: auto !important;
   min-height: 24px;
   overflow: visible;
+}
+
+/* ===== 2026-07 手機版統一排版 =====
+   以 320 / 360 / 375 / 390 / 412 / 430px 為主要寬度，平板沿用至 768px。 */
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  .app-layout,
+  .app-shell,
+  .main,
+  .main-content {
+    width: 100%;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-width: 0 !important;
+  }
+
+  .main,
+  .main-content {
+    padding: 8px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .sidebar {
+    width: min(86vw, 300px) !important;
+    max-width: 300px;
+    height: 100dvh !important;
+    left: -100vw;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sidebar.is-open { left: 0; }
+  .sidebar-header { padding-top: max(14px, env(safe-area-inset-top)); }
+  .sidebar-sub-item,
+  .home-link {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .sidebar-toggle-btn.is-visible {
+    top: max(10px, env(safe-area-inset-top)) !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+  }
+
+  .topbar {
+    min-height: 62px;
+    margin-bottom: 8px !important;
+    padding: 10px 10px 10px 58px !important;
+    gap: 8px !important;
+    border-radius: 14px !important;
+  }
+  .topbar h1 {
+    margin: 0 !important;
+    font-size: clamp(17px, 5vw, 21px) !important;
+    line-height: 1.3;
+  }
+  .topbar p { display: none; }
+  .topbar-actions {
+    width: 100%;
+    margin: 0 !important;
+    align-items: stretch !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+  }
+  .topbar-actions > * {
+    max-width: 100%;
+    min-height: 42px;
+  }
+  .user-pill {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ragic-card,
+  .staff-panel,
+  .leave-panel,
+  .schedule-panel,
+  .placeholder-card {
+    width: 100%;
+    min-width: 0;
+    border-radius: 14px !important;
+  }
+  .panel-heading,
+  .ragic-toolbar,
+  .ragic-form-toolbar,
+  .ragic-subtable-head {
+    padding: 10px !important;
+    gap: 8px !important;
+  }
+  .panel-heading,
+  .ragic-toolbar,
+  .ragic-subtable-head {
+    align-items: stretch !important;
+    flex-wrap: wrap !important;
+  }
+  .ragic-toolbar > div,
+  .panel-actions,
+  .leave-toolbar,
+  .schedule-toolbar {
+    max-width: 100%;
+    flex-wrap: wrap !important;
+  }
+  .ragic-toolbar button,
+  .panel-actions button,
+  .leave-toolbar button,
+  .schedule-toolbar button {
+    min-height: 42px;
+  }
+
+  .ragic-table-wrapper,
+  .ragic-table-wrap,
+  .table-wrap,
+  .leave-table-wrap,
+  .meeting-detail-wrap {
+    width: 100%;
+    padding: 0 6px 8px !important;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+  .ragic-table th,
+  .ragic-table td {
+    min-width: min(var(--col-width, 110px), 160px);
+    max-width: 220px;
+    padding: 9px 8px !important;
+    font-size: 13px;
+  }
+  .ragic-table .col-textarea { min-width: 220px; }
+  .ragic-table th:first-child,
+  .ragic-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+  }
+  .ragic-table thead th:first-child { z-index: 13; }
+  .ragic-table tbody tr:nth-child(odd) td:first-child { background: var(--table-row); }
+  .ragic-table tbody tr:nth-child(even) td:first-child { background: var(--surface-muted); }
+
+  .ragic-pagination {
+    width: 100%;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 8px 6px !important;
+  }
+  .ragic-pagination .page-nav {
+    max-width: 100%;
+    flex-wrap: wrap !important;
+  }
+
+  .form-container,
+  .ragic-form-wrapper,
+  .ragic-form-container {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 6px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+  }
+
+  body:has(.sidebar-toggle-btn.is-visible) .ragic-form-toolbar {
+    min-height: 58px;
+    padding: 8px 8px 8px 56px !important;
+  }
+  .ragic-form-toolbar {
+    position: sticky !important;
+    top: 0;
+    z-index: 25;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center !important;
+    background: var(--surface) !important;
+  }
+  .form-toolbar-left,
+  .form-toolbar-right {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 5px !important;
+  }
+  .form-toolbar-center,
+  .ragic-form-title {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px !important;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ragic-form-toolbar button {
+    min-height: 40px;
+    padding: 7px 9px !important;
+    font-size: 13px;
+  }
+
+  #ragicForm .ragic-form-grid,
+  #ragicForm .ragic-view-grid,
+  .ragic-form-grid,
+  .form-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+  #ragicForm .ragic-form-grid > .form-field,
+  #ragicForm .ragic-form-grid > .ragic-view-field,
+  #ragicForm .ragic-form-grid > .ragic-subtable,
+  #ragicForm .ragic-view-grid > .ragic-view-field,
+  #ragicForm .ragic-view-grid > .ragic-subtable {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .form-field[data-type] input,
+  .form-field[data-type] select,
+  .form-field[data-type] textarea {
+    max-width: none !important;
+    min-height: 44px;
+    font-size: 16px !important;
+  }
+  .form-field[data-type="textarea"] textarea,
+  .subtable-row-field textarea {
+    min-height: 112px !important;
+    max-height: 240px !important;
+  }
+
+  #ragicForm .ragic-subtable,
+  .ragic-subtable {
+    width: 100% !important;
+    margin: 0 0 8px !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+  }
+  #ragicForm .subtable-row-fields,
+  .subtable-row-fields,
+  .is-log-module .log-subtable-six-column,
+  .log-new-page #ragicForm [data-subtable="items"] .subtable-row-fields {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: none !important;
+    gap: 10px !important;
+  }
+  #ragicForm .subtable-row-field,
+  .log-new-page #ragicForm [data-subtable="items"] .subtable-row-field {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .subtable-row-delete {
+    top: 8px;
+    left: auto;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    opacity: 1;
+    transform: none;
+  }
+
+  .ragic-actions,
+  .ragic-form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 24;
+    width: 100%;
+    padding: 8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left)) !important;
+    gap: 6px !important;
+    justify-content: flex-end;
+    flex-wrap: wrap !important;
+    background: var(--surface);
+    box-shadow: 0 -8px 20px rgba(15, 23, 42, .1);
+  }
+  .ragic-actions button,
+  .ragic-form-actions button {
+    min-height: 42px;
+    padding: 8px 11px !important;
+  }
+
+  .ragic-modal {
+    padding: 0 !important;
+    align-items: stretch;
+  }
+  .ragic-modal-card,
+  .modal-card,
+  .wide-modal,
+  .schedule-modal-card {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+  .ragic-image-stage {
+    min-height: 0;
+    padding: 6px 42px;
+  }
+  .ragic-image-nav {
+    width: 36px;
+    height: 48px;
+  }
+
+  .login-view {
+    min-height: 100dvh;
+    padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  }
+  .login-card {
+    width: min(100%, 430px);
+    gap: 14px;
+    padding: clamp(18px, 6vw, 26px);
+    border-radius: 20px;
+  }
+  .login-brand h1 { font-size: clamp(21px, 6vw, 26px); }
+  .login-card input,
+  .login-card button { min-height: 48px; font-size: 16px; }
+
+  .dashboard-stats { grid-template-columns: minmax(0, 1fr) !important; }
+  .dashboard-todo-list li a,
+  .dashboard-schedule-list li a { grid-template-columns: 1fr !important; }
+  .calendar-grid { max-width: 100%; overflow-x: auto; }
+}
+
+@media (max-width: 374px) {
+  .main,
+  .main-content { padding: 4px !important; }
+  .topbar { padding-right: 6px !important; }
+  .ragic-form-toolbar button {
+    padding-inline: 6px !important;
+    font-size: 12px;
+  }
+  .ragic-pagination .page-size { display: none; }
+  .login-card { padding: 16px; }
 }
