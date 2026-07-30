@@ -4594,3 +4594,20 @@ body:has(.sidebar-toggle-btn.is-visible)
 .tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable {
   padding-top: 8px !important;
 }
+
+
+/* Tracking view: make reminder enabled the same card size as reminder time. */
+.tracking-page #ragicForm .ragic-view-field-reminderEnabled.ragic-view-field-pair-toggle {
+  display: flex !important;
+  align-items: center !important;
+  height: 69px !important;
+  min-height: 69px !important;
+  padding: 12px !important;
+  gap: 10px !important;
+  box-sizing: border-box !important;
+}
+
+.tracking-page #ragicForm .ragic-view-field-reminderEnabled .ragic-view-label {
+  white-space: normal !important;
+  line-height: 1.35;
+}
