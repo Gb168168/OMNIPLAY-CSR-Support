@@ -218,7 +218,8 @@ const renderTodoList = () => {
   const items = [
     ...shiftRecordItems(dashboardState.handovers, { type: '交接', icon: '📋', href: 'work/handover.html', fallback: '交接事項' }),
     ...shiftRecordItems(dashboardState.logs, { type: '日誌', icon: '📝', href: 'work/log.html', fallback: '日誌' }),
-    ...shiftRecordItems(dashboardState.tracking, { type: '提報', icon: '📌', href: 'work/tracking.html', fallback: '提報追蹤' }),
+    ...shiftRecordItems(dashboardState.reports, { type: '提報', icon: '📌', href: 'work/report.html', fallback: '提報追蹤' }),
+    ...shiftRecordItems(dashboardState.tracking, { type: '對接追蹤', icon: '🔎', href: 'work/tracking.html', fallback: '對接追蹤' }),
     ...shiftRecordItems(dashboardState.meetings, { type: '會議', icon: '💬', href: 'meeting/meeting.html', fallback: '會議紀錄' }),
     ...scheduleItems()
   ].sort((a, b) => a.sortAt - b.sortAt || String(a.type).localeCompare(String(b.type), 'zh-Hant') || String(a.title).localeCompare(String(b.title), 'zh-Hant'));
