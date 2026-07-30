@@ -3888,43 +3888,6 @@ body:has(.sidebar-toggle-btn.is-visible)
   touch-action: none !important;
 }
 
-#ragicDesignerModal .layout-row-size-controls {
-  position: absolute;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  z-index: 32;
-  padding: 3px 6px;
-  border: 1px solid #c4b5fd;
-  border-radius: 999px;
-  background: rgba(255,255,255,.96);
-  color: #6d28d9;
-  font-size: 11px;
-  line-height: 1;
-}
-
-#ragicDesignerModal .layout-row-size-controls button {
-  position: static;
-  width: 24px;
-  height: 24px;
-  min-height: 24px;
-  padding: 0;
-  border: 1px solid #8b5cf6;
-  border-radius: 50%;
-  background: #fff;
-  color: #6d28d9;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 20px;
-}
-
-#ragicDesignerModal .layout-row-size-controls button:hover {
-  background: #ede9fe;
-}
-
 /* 刪除按鈕放進右上角 */
 #ragicDesignerModal .layout-field .remove-btn {
   top: 4px !important;
