@@ -2201,6 +2201,45 @@ const renderPagination = () => {
   if (prev) prev.disabled = RAGIC_STATE.page <= 1;
   if (next) next.disabled = RAGIC_STATE.page >= totalPages;
 };
+const autoFitTrackingListColumns = () => {
+  if (!isTrackingModule()) return;
+  const table = document.querySelector('#ragicHeaderRow')?.closest('table');
+  const headerRow = table?.querySelector('#ragicHeaderRow');
+  if (!table || !headerRow) return;
+
+  const context = document.createElement('canvas').getContext('2d');
+  if (!context) return;
+  const reference = table.querySelector('tbody td, thead th');
+  const computed = reference ? getComputedStyle(reference) : null;
+  context.font = computed?.font || `${computed?.fontSize || '14px'} ${computed?.fontFamily || 'sans-serif'}`;
+
+  const measureText = (value) => String(value || '')
+    .split(/\r?\n/)
+    .reduce((max, line) => Math.max(max, context.measureText(line.trim()).width), 0);
+
+  let totalWidth = 76;
+  listFields().forEach((field) => {
+    const escapedKey = CSS.escape(field.key);
+    const header = headerRow.querySelector(`th[data-field-key="${escapedKey}"]`);
+    if (!header) return;
+    const labelWidth = measureText(header.querySelector('.col-label')?.textContent || field.label || field.key) + 54;
+    const contentWidth = [...table.querySelectorAll(`tbody td[data-field-key="${escapedKey}"]`)]
+      .reduce((max, cell) => Math.max(max, measureText(cell.innerText || cell.textContent)), 0) + 28;
+    const label = String(field.label || '').trim();
+    const maximum = field.type === 'textarea' || label === '紀錄'
+      ? 420
+      : label === '群組名稱'
+        ? 360
+        : ['date', 'datetime', 'createdDate', 'updatedDate'].includes(field.type)
+          ? 190
+          : 280;
+    const width = Math.max(76, Math.min(maximum, Math.ceil(Math.max(labelWidth, contentWidth))));
+    setColumnWidth(table, header, width);
+    totalWidth += width;
+  });
+  table.style.setProperty('min-width', `${totalWidth}px`);
+};
+
 const renderTable = () => {
   const tbody = document.querySelector('#ragicTableBody');
   tbody.innerHTML = '';
@@ -2243,6 +2282,7 @@ const renderTable = () => {
     tbody.appendChild(tr);
   });
   renderPagination();
+  autoFitTrackingListColumns();
 };
 const sortValue = (record, fieldKey) => {
   const field = fieldByKey(fieldKey);
