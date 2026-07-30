@@ -2861,17 +2861,24 @@ const attachLayoutDesignerEvents = (panel) => {
     const type = handle.dataset.resize;
     const metrics = getLayoutCellMetrics(grid);
     let latestCandidate = { ...start };
+    let latestRows = startLayout.rows;
     const candidateAt = (clientX, clientY) => {
       const dCol = Math.round((clientX - startX) / Math.max(1, metrics.cellW + metrics.gapX));
       const dRow = Math.round((clientY - startY) / Math.max(1, metrics.cellH + metrics.gapY));
       const next = { ...start };
+      let candidateRows = startLayout.rows;
       if (type === 'col' || type === 'both') {
         next.colSpan = Math.min(startLayout.columns - next.col + 1, Math.max(1, start.colSpan + dCol));
       }
       if (type === 'row' || type === 'both') {
-        next.rowSpan = Math.min(startLayout.rows - next.row + 1, Math.max(1, start.rowSpan + dRow));
+        const desiredRowSpan = Math.max(1, start.rowSpan + dRow);
+        candidateRows = Math.min(10, Math.max(startLayout.rows, start.row + desiredRowSpan - 1));
+        next.rowSpan = Math.min(candidateRows - next.row + 1, desiredRowSpan);
       }
-      return clampLayoutItem(next, startLayout);
+      return {
+        candidate: clampLayoutItem(next, { ...startLayout, rows: candidateRows }),
+        rows: candidateRows
+      };
     };
     const showResizePreview = (candidate) => {
       grid.querySelector('.layout-drop-preview')?.remove();
@@ -2890,16 +2897,22 @@ const attachLayoutDesignerEvents = (panel) => {
     const move = (moveEvent) => {
       if (moveEvent.pointerId !== pointerId) return;
       moveEvent.preventDefault();
-      latestCandidate = candidateAt(moveEvent.clientX, moveEvent.clientY);
+      const result = candidateAt(moveEvent.clientX, moveEvent.clientY);
+      latestCandidate = result.candidate;
+      latestRows = result.rows;
       handle.classList.add('resizing');
       showResizePreview(latestCandidate);
     };
     const up = (upEvent) => {
       if (upEvent.pointerId !== pointerId) return;
-      latestCandidate = candidateAt(upEvent.clientX, upEvent.clientY);
+      const result = candidateAt(upEvent.clientX, upEvent.clientY);
+      latestCandidate = result.candidate;
+      latestRows = result.rows;
       cleanup();
-      if (isLayoutAreaFree(startLayout, fieldKey, latestCandidate)) {
+      const expandedLayout = { ...startLayout, rows: latestRows };
+      if (isLayoutAreaFree(expandedLayout, fieldKey, latestCandidate)) {
         updateLayoutDesignerState((layout) => {
+          layout.rows = Math.max(layout.rows, latestRows);
           layout.fields[fieldKey] = clampLayoutItem(latestCandidate, layout);
         });
       }
