@@ -4566,3 +4566,21 @@ body:has(.sidebar-toggle-btn.is-visible)
   vertical-align: top;
   overflow-wrap: anywhere;
 }
+
+
+/* Tracking group view: size APP by its text and give the remaining width to group name. */
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable .ragic-view-subtable {
+  table-layout: auto !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable th:first-child,
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable td:first-child {
+  width: 1% !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable th:nth-child(2),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable td:nth-child(2) {
+  width: auto !important;
+}
