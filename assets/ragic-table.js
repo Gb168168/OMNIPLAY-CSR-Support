@@ -287,7 +287,7 @@ nextFields[key] = {
       ),
 
   rowSpan: normalizeFormLayoutNumber(
-    isTrackingTextarea
+    isTrackingTextarea || isTrackingSubtable
       ? 1
       : fixed?.rowSpan ?? layout?.rowSpan,
     {
@@ -2677,7 +2677,7 @@ const autoLayoutFields = (layout, fields) => {
     col += 1;
     if (col > layout.columns) { col = 1; row += 1; }
   });
-  if (fields.some((field) => field.type === 'subtable')) { if (col !== 1) row += 1; fields.filter((field) => field.type === 'subtable').forEach((field) => { layout.fields[field.key] = { row, col: 1, colSpan: layout.columns, rowSpan: 1, height: defaultFormFieldHeight(field) }; row += 1; }); }
+  if (fields.some((field) => field.type === 'subtable')) { if (col !== 1) row += 1; fields.filter((field) => field.type === 'subtable').forEach((field) => { layout.fields[field.key] = { row, col: 1, colSpan: layout.columns, rowSpan: 1, height: isTrackingModule() ? null : defaultFormFieldHeight(field) }; row += 1; }); }
   layout.rows = Math.min(10, Math.max(layout.rows, row));
 };
 
