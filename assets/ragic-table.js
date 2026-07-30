@@ -2939,13 +2939,41 @@ const attachLayoutDesignerEvents = (panel) => {
       latestCandidate = result.candidate;
       latestRows = result.rows;
       cleanup();
-      const expandedLayout = { ...startLayout, rows: latestRows };
-      if (isLayoutAreaFree(expandedLayout, fieldKey, latestCandidate)) {
-        updateLayoutDesignerState((layout) => {
-          layout.rows = Math.max(layout.rows, latestRows);
-          layout.fields[fieldKey] = clampLayoutItem(latestCandidate, layout);
-        });
-      }
+      updateLayoutDesignerState((layout) => {
+        layout.rows = Math.max(layout.rows, latestRows);
+        const current = layout.fields[fieldKey];
+        const candidate = clampLayoutItem(latestCandidate, layout);
+        if (!current) return;
+
+        if (!isLayoutAreaFree(layout, fieldKey, candidate) && candidate.rowSpan > current.rowSpan) {
+          const currentBottom = current.row + current.rowSpan;
+          const conflicts = Object.entries(layout.fields || {})
+            .filter(([key, item]) => key !== fieldKey && layoutCellsOverlap(candidate, item));
+          const canPushDown =
+            conflicts.length > 0 &&
+            conflicts.every(([, item]) => item.row >= currentBottom);
+
+          if (canPushDown) {
+            const firstBlockedRow = Math.min(...conflicts.map(([, item]) => item.row));
+            const shiftRows = candidate.row + candidate.rowSpan - firstBlockedRow;
+            const fieldsToPush = Object.entries(layout.fields || {})
+              .filter(([key, item]) => key !== fieldKey && item.row >= firstBlockedRow);
+            const pushedBottom = fieldsToPush.reduce(
+              (maximum, [, item]) => Math.max(maximum, item.row + shiftRows + item.rowSpan - 1),
+              layout.rows
+            );
+
+            if (pushedBottom <= 10) {
+              fieldsToPush.forEach(([, item]) => { item.row += shiftRows; });
+              layout.rows = Math.max(layout.rows, pushedBottom);
+            }
+          }
+        }
+
+        if (isLayoutAreaFree(layout, fieldKey, candidate)) {
+          layout.fields[fieldKey] = candidate;
+        }
+      });
     };
     const cancel = () => cleanup();
     document.addEventListener('pointermove', move, { passive: false });
