@@ -9,6 +9,7 @@ const LOG_FIELD_LAYOUT_BY_LABEL = {
 };
 
 const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').includes('日誌');
+const isTrackingModule = (config = RAGIC_STATE?.config) => ['tracking', 'workTracking'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '') === '對接追蹤';
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', editDirty: false, sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
@@ -335,7 +336,15 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   const rowGap = 10;
   const fields = getFields().filter((field) => field.type !== 'subtable');
   const placedFields = fields
-    .map((field) => ({ field, item: layout.fields?.[field.key] }))
+    .map((field) => {
+      const item = layout.fields?.[field.key];
+      return {
+        field,
+        item: isTrackingModule() && field.type === 'textarea' && item
+          ? { ...item, rowSpan: 1, height: null }
+          : item
+      };
+    })
     .filter(({ item }) => item?.row);
   const usedRows = placedFields.reduce((maximum, { item }) => {
     const span = Math.max(1, Number(item.rowSpan) || 1);
@@ -349,7 +358,7 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
     const span = Math.max(1, Math.min(Number(item.rowSpan) || 1, rows - start));
     if (start >= rows || span < 1) return;
     const desiredHeight =
-      field.type === 'textarea' ? 178 :
+      field.type === 'textarea' ? (isTrackingModule() ? 48 : 178) :
       ['image', 'file'].includes(field.type) ? 175 :
       60;
     const trackHeight = Math.max(48, Math.ceil((desiredHeight - (rowGap * (span - 1))) / span));
@@ -361,7 +370,9 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   grid.style.display = 'grid';
   grid.style.gridTemplateColumns =
     `repeat(${columns}, minmax(0, 1fr))`;
-  grid.style.gridTemplateRows = rowHeights.map((height) => `${height}px`).join(' ');
+  grid.style.gridTemplateRows = rowHeights
+    .map((height) => isTrackingModule() ? `minmax(${height}px, auto)` : `${height}px`)
+    .join(' ');
   grid.style.gridAutoRows = '48px';
   grid.style.columnGap = '12px';
   grid.style.rowGap = `${rowGap}px`;
@@ -380,7 +391,8 @@ const applyFormLayout = (element, field = {}) => {
   const col = normalizeFormLayoutNumber(layoutItem.col ?? field.formCol, { max: columns });
   const hasExplicitSubtableSpan = layoutItem.colSpan !== undefined || field.formColSpan !== undefined;
   const colSpan = normalizeFormLayoutNumber(layoutItem.colSpan ?? field.formColSpan, { max: columns, fallback: field.type === 'subtable' && !hasExplicitSubtableSpan ? columns : 1 });
-  const rowSpan = normalizeFormLayoutNumber(layoutItem.rowSpan ?? field.formRowSpan, { max: activeLayout.rows || 10, fallback: 1 });
+  const configuredRowSpan = normalizeFormLayoutNumber(layoutItem.rowSpan ?? field.formRowSpan, { max: activeLayout.rows || 10, fallback: 1 });
+  const rowSpan = isTrackingModule() && field.type === 'textarea' ? 1 : configuredRowSpan;
   element.classList.add('form-field');
   element.dataset.type = field.type || 'text';
   if (row || col) element.classList.add('has-form-layout');
@@ -921,7 +933,7 @@ const createControl = (field, value = '', subfield = false) => {
 
   if (field.type === 'textarea') {
     input = document.createElement('textarea');
-    input.rows = field.rows || 4;
+    input.rows = isTrackingModule() ? 1 : (field.rows || 4);
   } else if (field.type === 'select') {
     input = document.createElement('select');
 
@@ -1029,7 +1041,9 @@ const inlineValue = (value, field) => {
   return String(value ?? '');
 };
 const autoGrowTextarea = (textarea) => {
-  textarea.style.height = '';
+  if (!textarea) return;
+  textarea.style.height = 'auto';
+  textarea.style.height = `${Math.max(42, textarea.scrollHeight)}px`;
 };
 const createInlineEditor = (field, value) => {
   const currentValue = inlineValue(value, field);
@@ -1821,6 +1835,12 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
       (fixedLogLayout ? form : grid).appendChild(section);
     });
     form.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
+    if (isTrackingModule()) {
+      form.querySelectorAll('.form-field[data-type="textarea"] textarea').forEach((textarea) => {
+        autoGrowTextarea(textarea);
+        textarea.addEventListener('input', () => autoGrowTextarea(textarea));
+      });
+    }
     setFormEditable(form);
     if (!RAGIC_STATE.currentId) {
       form.querySelector('[name="date"]')?.addEventListener('change', () => applySignedInRosterShift({ force: true }));

@@ -1470,6 +1470,13 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   overflow-y: auto;
 }
 
+.tracking-page .form-field[data-type="textarea"] textarea {
+  min-height: 42px;
+  max-height: none;
+  overflow-y: hidden;
+  resize: none;
+}
+
 .form-field[data-type="image"],
 .form-field[data-type="file"] {
   width: 100%;
@@ -4152,10 +4159,14 @@ body:has(.sidebar-toggle-btn.is-visible)
     min-height: 44px;
     font-size: 16px !important;
   }
-  .form-field[data-type="textarea"] textarea,
   .subtable-row-field textarea {
     min-height: 112px !important;
     max-height: 240px !important;
+  }
+
+  .tracking-page .form-field[data-type="textarea"] textarea {
+    min-height: 44px !important;
+    max-height: none !important;
   }
 
   #ragicForm .ragic-subtable,
