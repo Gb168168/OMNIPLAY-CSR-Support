@@ -4711,3 +4711,47 @@ body:has(.sidebar-toggle-btn.is-visible)
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+
+/* Designer field settings: open above the canvas instead of below it. */
+#ragicDesignerModal .layout-settings-popover[hidden] {
+  display: none !important;
+}
+#ragicDesignerModal .layout-settings-popover {
+  position: absolute !important;
+  z-index: 45;
+  top: 66px;
+  right: 24px;
+  width: min(760px, calc(100% - 48px)) !important;
+  max-width: none !important;
+  max-height: min(720px, calc(100% - 90px)) !important;
+  overflow: auto !important;
+  padding: 18px !important;
+  border: 1px solid #dbe5f2 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, .26) !important;
+}
+#ragicDesignerModal .layout-settings-head {
+  position: sticky;
+  top: -18px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -18px -18px 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+#ragicDesignerModal .layout-settings-head h3 {
+  margin: 0 !important;
+}
+@media (max-width: 900px) {
+  #ragicDesignerModal .layout-settings-popover {
+    top: 76px;
+    right: 12px;
+    width: calc(100% - 24px) !important;
+  }
+}
