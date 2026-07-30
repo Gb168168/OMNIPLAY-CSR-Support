@@ -264,6 +264,9 @@ const isSubtable = currentField?.type === 'subtable';
 const isTrackingTextarea =
   isTrackingModule() &&
   currentField?.type === 'textarea';
+const isTrackingSubtable =
+  isTrackingModule() &&
+  isSubtable;
 
 nextFields[key] = {
   row,
@@ -310,7 +313,7 @@ nextFields[key] = {
             )
       ),
 
-  height: isTrackingTextarea
+  height: isTrackingTextarea || isTrackingSubtable
     ? null
     : fixed
     ? (
@@ -2592,8 +2595,11 @@ const renderLayoutDesigner = () => {
   const item = layout.fields[field.key];
     
     const fixedLogField = fixedLogLayout && Boolean(logFieldLayoutFor(field));
+    const useDesignerPixelHeight =
+      item.height &&
+      !(isTrackingModule() && field.type === 'subtable');
     const size =
-  `${item.height
+  `${useDesignerPixelHeight
     ? `height:${item.height}px;min-height:${item.height}px;`
     : ''}`;
     return `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="false" ${fixedLogField ? 'data-layout-locked="true"' : ''} data-field-key="${escapeHtml(field.key)}" style="grid-column:${item.col} / span ${item.colSpan};grid-row:${item.row} / span ${item.rowSpan};${size}"><span class="layout-drag-grip" title="拖曳欄位" aria-label="拖曳欄位">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small>${field.type === 'subtable' ? '<button class="subtable-edit-btn" type="button">編輯子表格</button>' : ''}<button class="settings-btn" type="button" title="設定">⚙️</button>${fixedLogField ? '' : '<button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>'}</div>`;
