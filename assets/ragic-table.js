@@ -630,6 +630,10 @@ if (!window._ragicSelectBackspaceBound) {
 }
 const SERIAL_PREFIX_MAP = { handover: 'HO-', log: 'LOG-', meeting: 'MTG-', report: 'RPT-', tracking: 'TRK-', alert: 'ALT-', knowledge: 'KB-', ai_database: 'AI-' };
 const readonlyFieldTypes = new Set(['createdDate', 'updatedDate', 'serial']);
+const manualSystemDateField = (field = {}) =>
+  isTrackingModule() &&
+  RAGIC_STATE.config?.manualSystemDates === true &&
+  ['createdDate', 'updatedDate'].includes(field.type);
 const inlineReadonlyFieldTypes = new Set([...readonlyFieldTypes, 'image', 'file', 'subtable']);
 const DEFAULT_FIELD_WIDTHS = { text: 180, textarea: 300, date: 100, datetime: 150, select: 100, multiselect: 120, image: 80, file: 160, serial: 90, createdDate: 150, updatedDate: 150, link: 180 };
 const MIN_FORM_FIELD_WIDTH = 56;
@@ -1041,6 +1045,9 @@ const createControl = (field, value = '', subfield = false) => {
 
       input.appendChild(opt);
     });
+  } else if (manualSystemDateField(field) && !subfield) {
+    input = document.createElement('input');
+    input.type = 'datetime-local';
   } else if (readonlyFieldTypes.has(field.type)) {
     input = document.createElement('input');
     input.type = 'text';
@@ -1080,7 +1087,7 @@ const createControl = (field, value = '', subfield = false) => {
 
   if (field.type !== 'image' && field.type !== 'file') {
     const controlValue =
-      field.type === 'date' || field.type === 'datetime'
+      field.type === 'date' || field.type === 'datetime' || manualSystemDateField(field)
         ? normalizeDateValue(value)
         : value;
 
@@ -1100,9 +1107,11 @@ const createControl = (field, value = '', subfield = false) => {
         field.defaultNow &&
         !subfield
           ? currentDateTimeInputValue()
-          : field.type === 'updatedDate' && !subfield
-            ? formatLocalDateTime()
-            : field.type === 'date' && !subfield
+          : manualSystemDateField(field) && !subfield
+            ? currentDateTimeInputValue()
+            : field.type === 'updatedDate' && !subfield
+              ? formatLocalDateTime()
+              : field.type === 'date' && !subfield
               ? today()
               : ''
       );
@@ -1695,7 +1704,7 @@ const renderDisplayValue = (field, value) => {
   if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field?.type)) return value === true || value === 'true' || value === '1' ? '是' : '否';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '<span class="ragic-view-empty">—</span>';
   if (field?.type === 'date') return escapeHtml(displayDate(value)) || '<span class="ragic-view-empty">—</span>';
-  if (field?.type === 'datetime') return escapeHtml(displayDateTime(value)) || '<span class="ragic-view-empty">—</span>';
+  if (['datetime', 'createdDate', 'updatedDate'].includes(field?.type)) return escapeHtml(displayDateTime(value)) || '<span class="ragic-view-empty">—</span>';
   const text = String(valueToText(value));
   return text ? escapeHtml(text).replace(/\n/g, '<br>') : '<span class="ragic-view-empty">—</span>';
 };
@@ -1973,7 +1982,7 @@ const renderCell = (record, field) => {
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
-  if (field?.type === 'datetime') return escapeHtml(displayDateTime(value));
+  if (['datetime', 'createdDate', 'updatedDate'].includes(field?.type)) return escapeHtml(displayDateTime(value));
   if (field?.type === 'subtable') {
     const rows = Array.isArray(value) ? value : [];
     const subfields = Array.isArray(field.fields) ? field.fields : [];
@@ -3150,6 +3159,10 @@ const getNextSerial = async (collection, fieldKey) => {
 
 const applySystemFieldValues = async (data, existingData = {}, collection = null) => {
   for (const field of getFields()) {
+    if (manualSystemDateField(field)) {
+      data[field.key] = data[field.key] || existingData[field.key] || currentDateTimeInputValue();
+      continue;
+    }
     if (field.type === 'createdDate') data[field.key] = existingData[field.key] || formatLocalDateTime();
     if (field.type === 'updatedDate') data[field.key] = formatLocalDateTime();
     if (field.type === 'serial') data[field.key] = existingData[field.key] || await getNextSerial(collection, field.key);
