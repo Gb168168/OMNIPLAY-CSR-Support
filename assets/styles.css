@@ -4584,3 +4584,13 @@ body:has(.sidebar-toggle-btn.is-visible)
 .tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable td:nth-child(2) {
   width: auto !important;
 }
+
+
+/* Tracking view: the inner APP/group header is sufficient; hide the duplicate card heading. */
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable > .ragic-subtable-head {
+  display: none !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable {
+  padding-top: 8px !important;
+}
