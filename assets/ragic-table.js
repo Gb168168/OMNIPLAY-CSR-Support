@@ -2559,33 +2559,46 @@ const updateDesignerPreview = () => {
 };
 
 
+const SUBTABLE_FIXED_TOTAL_WIDTH = 1000;
 const subfieldWidthSummary = (container) => {
   const rows = [...(container?.querySelectorAll(':scope > .designer-field') || [])];
   const widths = rows.map((row) => normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value));
   const total = widths.reduce((sum, width) => sum + (width || 0), 0);
-  return { total, count: rows.length, complete: rows.length > 0 && widths.every(Boolean) };
+  return {
+    total,
+    count: rows.length,
+    complete: rows.length > 0 && widths.every(Boolean),
+    difference: SUBTABLE_FIXED_TOTAL_WIDTH - total
+  };
 };
 const refreshSubfieldWidthSummary = (scope = document) => {
   scope.querySelectorAll('.designer-subfields, .setting-subtable-fields').forEach((section) => {
     const list = section.querySelector('.designer-subfield-list');
     const badge = section.querySelector('[data-subfield-total-width]');
     if (!list || !badge) return;
-    const { total, count, complete } = subfieldWidthSummary(list);
-    badge.textContent = complete ? `欄框總寬度：${total}px` : `欄框總寬度：${count ? `${total}px（尚有自動欄寬）` : '0px'}`;
-    badge.classList.toggle('is-complete', complete);
+    const { total, count, complete, difference } = subfieldWidthSummary(list);
+    let status = '';
+    if (!count) status = '尚未新增子欄位';
+    else if (!complete) status = `目前已設定 ${total}px（尚有自動欄寬）`;
+    else if (difference === 0) status = '設定完成';
+    else if (difference > 0) status = `目前 ${total}px，尚差 ${difference}px`;
+    else status = `目前 ${total}px，超過 ${Math.abs(difference)}px`;
+    badge.textContent = `欄框總寬度：${SUBTABLE_FIXED_TOTAL_WIDTH}px｜${status}`;
+    badge.title = '子表格總寬度固定為 1000px，不受設計表格欄數影響';
+    badge.classList.toggle('is-complete', complete && difference === 0);
+    badge.classList.toggle('is-invalid', Boolean(count) && (!complete || difference !== 0));
   });
 };
 const syncSubtableParentWidth = (subfieldList) => {
   const section = subfieldList?.closest('.designer-subfields, .setting-subtable-fields');
-  const { total, complete } = subfieldWidthSummary(subfieldList);
-  if (!complete || !total) return;
-  if (section?.classList.contains('designer-subfields')) {
+  if (!section) return;
+  if (section.classList.contains('designer-subfields')) {
     const parentRow = section.closest('.designer-field');
     const widthInput = parentRow?.querySelector(':scope > .designer-width [data-role="width"]');
-    if (widthInput) widthInput.value = total;
-  } else if (section?.classList.contains('setting-subtable-fields')) {
+    if (widthInput) widthInput.value = SUBTABLE_FIXED_TOTAL_WIDTH;
+  } else if (section.classList.contains('setting-subtable-fields')) {
     const layoutWidth = section.closest('#layoutFieldSettingsPanel')?.querySelector('[data-layout-width]');
-    if (layoutWidth) layoutWidth.value = total;
+    if (layoutWidth) layoutWidth.value = SUBTABLE_FIXED_TOTAL_WIDTH;
   }
 };
 const syncSubtableWidthFromEvent = (target) => {
