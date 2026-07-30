@@ -3468,20 +3468,6 @@ const addDesignerPairFields = (pairType) => {
     }
 
     RAGIC_STATE.schema = normalizeSchema(loadedSchema);
-
-    if (
-      isTrackingModule() &&
-      JSON.stringify(loadedSchema.formLayout || {}) !==
-        JSON.stringify(RAGIC_STATE.schema.formLayout || {})
-    ) {
-      await schemaDoc.set(
-        {
-          formLayout: RAGIC_STATE.schema.formLayout,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        },
-        { merge: true }
-      );
-    }
   }
 
     renderHeader();
