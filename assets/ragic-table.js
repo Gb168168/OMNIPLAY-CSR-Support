@@ -582,22 +582,43 @@ const fixDuplicateKeys = (fields = []) => {
   return changed;
 };
 const getFields = () => RAGIC_STATE.schema?.fields || [];
+const virtualListSubfield = (parent, subfield) => ({
+  ...subfield,
+  key: `${parent.key}::${subfield.key}`,
+  label: subfield.label,
+  listParentKey: parent.key,
+  listSubfieldKey: subfield.key
+});
 const listFields = () => {
   const allFields = getFields();
   const defaultFields = allFields.filter((field) => field.type !== 'subtable');
   const configuredColumns = RAGIC_STATE.config?.listColumns;
   if (!Array.isArray(configuredColumns) || !configuredColumns.length) return defaultFields;
   return configuredColumns
-    .map((column) => allFields.find((field) => {
+    .map((column) => {
       const target = String(column || '').trim();
-      return field.key === column ||
-        String(field.label || '').trim() === target ||
-        (target === '群組名稱' && field.type === 'subtable' && (field.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱'));
-    }))
+      const directField = allFields.find((field) => field.key === column || String(field.label || '').trim() === target);
+      if (directField && directField.type !== 'subtable') return directField;
+      const parent = allFields.find((field) =>
+        field.type === 'subtable' &&
+        (field.fields || []).some((subfield) => String(subfield.label || '').trim() === target)
+      );
+      const subfield = parent?.fields?.find((item) => String(item.label || '').trim() === target);
+      return parent && subfield ? virtualListSubfield(parent, subfield) : directField;
+    })
     .filter(Boolean);
 };
 const listColumns = () => listFields().map((field) => field.key);
-const fieldByKey = (key) => getFields().find((field) => field.key === key);
+const fieldByKey = (key) => getFields().find((field) => field.key === key) || listFields().find((field) => field.key === key);
+const recordListFieldValue = (record = {}, field = {}) => {
+  if (!field.listParentKey || !field.listSubfieldKey) return record[field.key];
+  const rows = Array.isArray(record[field.listParentKey]) ? record[field.listParentKey] : [];
+  return rows
+    .map((row) => row?.[field.listSubfieldKey])
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+    .map((value) => String(valueToText(value)))
+    .join('\n');
+};
 const optionList = (field) => Array.isArray(field.options) ? field.options : String(field.options || '').split('\n').map((item) => item.trim()).filter(Boolean);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
 const fieldSelector = (fieldKey) => `[data-field="${window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\"')}"]`;
@@ -855,7 +876,7 @@ const ragicColumnClass = (field = {}) => {
   return 'col-content';
 };
 const cellTooltipText = (record, field) => {
-  const value = record?.[field.key];
+  const value = recordListFieldValue(record, field);
   if (field?.type === 'date') return displayDate(value);
   if (field?.type === 'datetime') return displayDateTime(value);
   return String(valueToText(value));
@@ -1190,7 +1211,7 @@ const startInlineEdit = (td) => {
   if (!canUse('edit') || !RAGIC_STATE.collection || td?.classList.contains('editing')) return;
   const record = RAGIC_STATE.records.find((item) => item.id === td.dataset.docId);
   const field = fieldByKey(td.dataset.fieldKey);
-  if (!record || !field || inlineReadonlyFieldTypes.has(field.type)) return;
+  if (!record || !field || field.listParentKey || inlineReadonlyFieldTypes.has(field.type)) return;
   document.querySelectorAll('#ragicTableBody td.editing').forEach((cell) => { if (cell !== td) finishInlineEdit(cell); });
   const originalValue = inlineValue(record[field.key], field);
   const editor = createInlineEditor(field, originalValue);
@@ -1231,6 +1252,25 @@ const createField = (field, value = '') => {
   const control = createControl(field, value);
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
   return wrap;
+};
+
+const mergeTrackingWalletIntoGroupEditor = (form) => {
+  if (!isTrackingModule() || !form) return;
+  const groupSection = [...form.querySelectorAll('.ragic-subtable')].find((section) => {
+    const parent = getFields().find((field) => field.key === section.dataset.subtable);
+    return parent?.type === 'subtable' && (
+      String(parent.label || '').includes('群組名稱') ||
+      (parent.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱')
+    );
+  });
+  const walletField = [...form.querySelectorAll('.ragic-field')].find(
+    (field) => String(field.querySelector(':scope > span')?.textContent || '').trim() === '錢包類型'
+  );
+  const rowFields = groupSection?.querySelector('.subtable-row-fields');
+  if (!groupSection || !walletField || !rowFields) return;
+  groupSection.classList.add('has-inline-wallet-field');
+  walletField.classList.add('tracking-inline-wallet-field');
+  rowFields.appendChild(walletField);
 };
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
@@ -1941,6 +1981,7 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
       });
       (fixedLogLayout ? form : grid).appendChild(section);
     });
+    mergeTrackingWalletIntoGroupEditor(form);
     form.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
     if (isTrackingModule()) {
       form.querySelectorAll('.form-field[data-type="textarea"] textarea').forEach((textarea) => {
@@ -1976,8 +2017,10 @@ const renderFileCell = (value, label = '圖片') => {
 };
 
 const renderCell = (record, field) => {
-  const key = field.key;
-  const value = record[key];
+  const value = recordListFieldValue(record, field);
+  if (field?.listParentKey) {
+    return `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(String(value ?? ''))}</span>`;
+  }
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
@@ -2143,8 +2186,8 @@ const renderTable = () => {
   renderPagination();
 };
 const sortValue = (record, fieldKey) => {
-  const field = getFields().find((item) => item.key === fieldKey);
-  const raw = record[fieldKey];
+  const field = fieldByKey(fieldKey);
+  const raw = recordListFieldValue(record, field || { key: fieldKey });
   if (['date', 'datetime', 'createdDate', 'updatedDate'].includes(field?.type)) {
     const text = valueToText(raw).toString().trim();
     const parsed = raw?.toDate ? raw.toDate().getTime() : Date.parse(text.replace(/\//g, '-'));
@@ -2193,14 +2236,18 @@ const normalizeFilterValue = (value) => Array.isArray(value) ? value.map((item) 
 const isSelectFilterField = (field = {}) => ['select', 'multiselect'].includes(field.type);
 
 const filterMatchesRecord = (record, fieldKey, filterValue) => {
+  const field = fieldByKey(fieldKey) || { key: fieldKey };
+  const rawValue = recordListFieldValue(record, field);
   if (Array.isArray(filterValue)) {
     if (!filterValue.length) return true;
-    const recordValues = Array.isArray(record[fieldKey]) ? record[fieldKey].map((item) => String(item || '').trim()) : [String(record[fieldKey] || '').trim()];
+    const recordValues = Array.isArray(rawValue)
+      ? rawValue.map((item) => String(item || '').trim())
+      : String(rawValue || '').split('\n').map((item) => item.trim()).filter(Boolean);
     return filterValue.some((option) => recordValues.includes(option));
   }
   const keyword = String(filterValue || '').trim().toLowerCase();
   if (!keyword) return true;
-  return valueToText(record[fieldKey]).toString().toLowerCase().includes(keyword);
+  return valueToText(rawValue).toString().toLowerCase().includes(keyword);
 };
 
 const applyFilters = () => {
