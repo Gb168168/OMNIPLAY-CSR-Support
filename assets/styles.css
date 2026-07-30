@@ -4872,3 +4872,30 @@ body:has(.sidebar-toggle-btn.is-visible)
     justify-content: flex-start;
   }
 }
+
+
+/* Tracking record list: keep yy/mm/dd fixed and hang wrapped content after it. */
+.tracking-page .tracking-record-list {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.tracking-page .tracking-record-line {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  column-gap: 5px;
+  min-width: 0;
+}
+.tracking-page .tracking-record-line.no-date {
+  grid-template-columns: minmax(0, 1fr);
+}
+.tracking-page .tracking-record-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.tracking-page .tracking-record-content {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
