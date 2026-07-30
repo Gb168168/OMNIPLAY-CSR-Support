@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌 NEW｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260731-designer-add4" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260731-topnav1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1027,6 +1027,64 @@
       }
     }
 
+
+    /* 日誌 NEW 編輯模式：完整展開處理紀錄卡片，不再塞進 380px 內部捲動框。 */
+    .log-new-page #ragicForm:has(> .ragic-form-grid) [data-subtable="items"] {
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm:has(> .ragic-form-grid) [data-subtable="items"] > .ragic-table-wrap {
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm:has(> .ragic-form-grid) [data-subtable="items"] .ragic-subtable {
+      width: 100% !important;
+      table-layout: fixed !important;
+    }
+
+    /* 日誌 NEW 檢視模式：多行文字超出固定高度時，在各欄位內上下捲動。 */
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="summary"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="conversation"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="ai_analysis"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="technical_processing"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="business_processing"] .ragic-view-value {
+      display: block !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="summary"] .ragic-view-value {
+      height: 92px !important;
+      max-height: 92px !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="conversation"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="ai_analysis"] .ragic-view-value {
+      height: 220px !important;
+      max-height: 220px !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="technical_processing"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="business_processing"] .ragic-view-value {
+      height: 118px !important;
+      max-height: 118px !important;
+    }
+
   </style>
 </head>
 <body class="log-new-page" data-reminder-module="log">
@@ -1094,7 +1152,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="../assets/firebase-init.js"></script>
-  <script src="../assets/app.js?v=20260719-6"></script>
+  <script src="../assets/app.js?v=20260731-topnav1"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
   <script src="../assets/ragic-table.js?v=20260731-designer-add4"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
