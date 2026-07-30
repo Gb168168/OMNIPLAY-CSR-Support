@@ -2471,7 +2471,12 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
     </optgroup>
   `;
 }).join('');
-    row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="子欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}</select><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div>`;
+    row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="子欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}</select><textarea class="designer-subfield-options" data-role="options" rows="3" placeholder="選項，每行一個" ${['select', 'multiselect'].includes(subfieldType) ? '' : 'hidden'}>${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div>`;
+    const syncSubfieldOptions = () => {
+      const supportsOptions = ['select', 'multiselect'].includes(row.querySelector('[data-role="type"]').value);
+      row.querySelector('[data-role="options"]').hidden = !supportsOptions;
+    };
+    row.querySelector('[data-role="type"]').addEventListener('change', syncSubfieldOptions);
     row.addEventListener('click', (event) => {
       if (event.target.matches('[data-remove]')) {
         event.stopPropagation();
