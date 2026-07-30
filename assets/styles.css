@@ -4395,3 +4395,137 @@ body:has(.sidebar-toggle-btn.is-visible)
   height: 10px !important;
   background: linear-gradient(135deg, transparent 52%, #2563eb 53%) !important;
 }
+
+
+/* Tracking form compact layout */
+.tracking-page #ragicForm .ragic-form-grid {
+  align-items: start !important;
+  align-content: start !important;
+  gap: 12px !important;
+}
+
+.tracking-page #ragicForm .ragic-form-grid > .form-field:not(.ragic-subtable):not(.ragic-field-image) {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.tracking-page #ragicForm .ragic-form-grid > .ragic-field-image {
+  align-self: start !important;
+  height: 184px !important;
+  min-height: 184px !important;
+}
+
+.tracking-page #ragicForm .ragic-field input,
+.tracking-page #ragicForm .ragic-field select,
+.tracking-page #ragicForm .ragic-field textarea {
+  min-height: 42px;
+}
+
+.tracking-page #ragicForm .ragic-field-textarea textarea {
+  height: 42px;
+  min-height: 42px !important;
+}
+
+.tracking-page #ragicForm .is-tracking-placeholder-field {
+  display: none !important;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 12px !important;
+  overflow: visible !important;
+  border: 1px solid #dbe5f2 !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, #fff 0%, #f8fbff 100%) !important;
+  box-shadow: 0 3px 12px rgba(37, 99, 235, .06);
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .ragic-subtable-head {
+  min-height: 0 !important;
+  margin: 0 0 10px !important;
+  padding: 0 0 9px !important;
+  border-bottom: 1px solid #e5edf7;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .ragic-subtable-title {
+  margin: 0;
+  font-size: 15px !important;
+  line-height: 34px;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .ragic-subtable-head button {
+  min-height: 34px !important;
+  padding: 5px 10px !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .ragic-table-wrap {
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable table,
+.tracking-page #ragicForm .is-tracking-group-subtable tbody,
+.tracking-page #ragicForm .is-tracking-group-subtable tr {
+  display: block;
+  width: 100%;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable td {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0 26px 0 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .subtable-row + .subtable-row {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed #dbe5f2;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-fields {
+  display: grid !important;
+  grid-template-columns: 68px minmax(0, 1fr) !important;
+  gap: 8px !important;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-field {
+  grid-column: auto !important;
+  grid-row: auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-field span {
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable select,
+.tracking-page #ragicForm .is-tracking-group-subtable input {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 6px 8px !important;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-delete {
+  top: 22px !important;
+  right: 0 !important;
+  left: auto !important;
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 12px !important;
+  opacity: .65;
+}
