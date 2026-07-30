@@ -2811,7 +2811,6 @@ const attachLayoutDesignerEvents = (panel) => {
     const fieldKey = source.dataset.fieldKey;
     if (!fieldKey) return;
     const pointerId = event.pointerId;
-    handle.setPointerCapture?.(pointerId);
     const startX = event.clientX;
     const startY = event.clientY;
     const beginDragDistance = 4;
@@ -2882,6 +2881,7 @@ const attachLayoutDesignerEvents = (panel) => {
     const start = { ...startLayout.fields[fieldKey] };
     if (!fieldKey || !grid || !start.row) return;
     const pointerId = event.pointerId;
+    handle.setPointerCapture?.(pointerId);
     const startX = event.clientX;
     const startY = event.clientY;
     const type = handle.dataset.resize;
