@@ -4356,3 +4356,42 @@ body:has(.sidebar-toggle-btn.is-visible)
   .ragic-pagination .page-size { display: none; }
   .login-card { padding: 16px; }
 }
+
+
+/* Tracking designer: keep every grid column visible and slim the blue resize affordances. */
+#ragicDesignerModal .layout-workbench {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(420px, auto) auto !important;
+  overflow: auto !important;
+}
+
+#ragicDesignerModal .layout-canvas {
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+#ragicDesignerModal .layout-side-panel {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  max-height: 320px;
+  overflow: auto !important;
+  border-left: 0 !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+#ragicDesignerModal .layout-field .resize-handle-bottom::after {
+  bottom: 2px !important;
+  height: 2px !important;
+}
+
+#ragicDesignerModal .layout-field .resize-handle-right::after {
+  right: 2px !important;
+  width: 2px !important;
+}
+
+#ragicDesignerModal .layout-field .resize-handle-corner {
+  width: 10px !important;
+  height: 10px !important;
+  background: linear-gradient(135deg, transparent 52%, #2563eb 53%) !important;
+}
