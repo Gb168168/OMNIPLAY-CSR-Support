@@ -3865,6 +3865,29 @@ body:has(.sidebar-toggle-btn.is-visible)
   left: 20% !important;
 }
 
+#ragicDesignerModal .layout-field [data-resize] {
+  z-index: 30 !important;
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+#ragicDesignerModal .layout-field .resize-handle-bottom {
+  height: 14px !important;
+  bottom: 0 !important;
+}
+
+#ragicDesignerModal .layout-field .resize-handle-right {
+  width: 14px !important;
+  right: 0 !important;
+}
+
+#ragicDesignerModal .layout-field .resize-handle-corner {
+  width: 18px !important;
+  height: 18px !important;
+  z-index: 31 !important;
+  touch-action: none !important;
+}
+
 /* 刪除按鈕放進右上角 */
 #ragicDesignerModal .layout-field .remove-btn {
   top: 4px !important;
