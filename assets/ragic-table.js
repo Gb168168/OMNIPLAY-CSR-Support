@@ -1271,6 +1271,19 @@ const mergeTrackingWalletIntoGroupEditor = (form) => {
   groupSection.classList.add('has-inline-wallet-field');
   walletField.classList.add('tracking-inline-wallet-field');
   rowFields.appendChild(walletField);
+
+  // The regular form layout may mark a top-level field as full-width. Force the
+  // moved wallet control to participate in the group's three-column row.
+  rowFields.style.setProperty('display', 'grid', 'important');
+  rowFields.style.setProperty('grid-template-columns', '68px minmax(180px, 1fr) minmax(120px, .55fr)', 'important');
+  rowFields.style.setProperty('align-items', 'end', 'important');
+  walletField.style.setProperty('grid-column', '3', 'important');
+  walletField.style.setProperty('grid-row', '1', 'important');
+  walletField.style.setProperty('width', 'auto', 'important');
+  [...rowFields.children].slice(0, 2).forEach((field, index) => {
+    field.style.setProperty('grid-column', String(index + 1), 'important');
+    field.style.setProperty('grid-row', '1', 'important');
+  });
 };
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
