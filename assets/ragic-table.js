@@ -2843,7 +2843,7 @@ const pairFieldTypeButtons = FIELD_PAIR_TYPES.map((type) => `
 
 const fieldTypeButtons =
   normalFieldTypeButtons + pairFieldTypeButtons;
-  panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列） 欄框設置131x48</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, 131px);grid-template-rows:repeat(${layout.rows}, 48px);">${gridLines.join('')}${placedFields}</div></div></main><aside class="layout-side-panel"><section class="layout-add-card"><h3>新增欄位</h3><p>選擇欄位類型</p><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings"><div class="layout-settings-empty">請點選欄位以編輯屬性</div></aside></aside></div></div>`;
+  panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列） 欄框設置131x48</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, 131px);grid-template-rows:repeat(${layout.rows}, 48px);">${gridLines.join('')}${placedFields}</div></div></main><aside class="layout-side-panel"><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings"><div class="layout-settings-empty">請點選欄位以編輯屬性</div></aside></aside></div></div>`;
 };
 const updateDesignerFieldByKey = (fieldKey, patcher) => {
   const escapedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\\"');
@@ -3562,6 +3562,15 @@ const addDesignerPairFields = (pairType) => {
 
   document.querySelector('#layoutDesignerPanel')
     ?.addEventListener('click', (event) => {
+      const addPopover = document.querySelector('#layoutDesignerPanel .layout-add-popover');
+      if (event.target.closest('[data-toggle-layout-add]')) {
+        if (addPopover) addPopover.hidden = !addPopover.hidden;
+        return;
+      }
+      if (event.target.closest('[data-close-layout-add]')) {
+        if (addPopover) addPopover.hidden = true;
+        return;
+      }
       
       const pairButton = event.target.closest('[data-add-layout-pair]');
       if (pairButton) {
