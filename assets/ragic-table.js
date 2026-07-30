@@ -1976,7 +1976,13 @@ const renderCell = (record, field) => {
   if (field?.type === 'datetime') return escapeHtml(displayDateTime(value));
   if (field?.type === 'subtable') {
     const rows = Array.isArray(value) ? value : [];
-    const text = rows.map((row) => Object.values(row || {}).map((item) => String(valueToText(item))).filter(Boolean).join('／')).filter(Boolean).join('\n');
+    const subfields = Array.isArray(field.fields) ? field.fields : [];
+    const text = rows.map((row) => {
+      const orderedValues = subfields.length
+        ? subfields.map((subfield) => row?.[subfield.key])
+        : Object.values(row || {});
+      return orderedValues.map((item) => String(valueToText(item))).filter(Boolean).join(' / ');
+    }).filter(Boolean).join('\n');
     return `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</span>`;
   }
   const text = String(valueToText(value));
