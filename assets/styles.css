@@ -4839,3 +4839,36 @@ body:has(.sidebar-toggle-btn.is-visible)
     grid-row: 4 !important;
   }
 }
+
+
+/* Wider field settings with all primary actions in the sticky header. */
+#ragicDesignerModal .layout-settings-popover {
+  width: min(1100px, calc(100% - 48px)) !important;
+}
+#ragicDesignerModal .layout-settings-head {
+  align-items: center;
+}
+#ragicDesignerModal .layout-settings-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#ragicDesignerModal .layout-settings-head-actions button {
+  min-height: 38px;
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  #ragicDesignerModal .layout-settings-popover {
+    width: calc(100% - 24px) !important;
+  }
+  #ragicDesignerModal .layout-settings-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  #ragicDesignerModal .layout-settings-head-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
