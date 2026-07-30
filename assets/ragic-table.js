@@ -2075,6 +2075,27 @@ const renderFileCell = (value, label = '圖片') => {
   return `<a class="ragic-file-link" href="${escapeHtml(src)}" target="_blank" rel="noopener" download="${escapeHtml(name || 'download')}">📎 ${escapeHtml(name || src)}${escapeHtml(size)}</a>`;
 };
 
+const renderTrackingRecordText = (value) => {
+  const entries = [];
+  String(value || '').split(/\r?\n/).forEach((rawLine) => {
+    const line = rawLine.trimEnd();
+    const match = line.match(/^\s*(\d{2}\/\d{2}\/\d{2})\s*(.*)$/);
+    if (match) {
+      entries.push({ date: match[1], content: match[2] });
+    } else if (entries.length && line.trim()) {
+      entries[entries.length - 1].content += `\n${line.trimStart()}`;
+    } else if (line.trim()) {
+      entries.push({ date: '', content: line.trimStart() });
+    }
+  });
+  if (!entries.length) return '';
+  return `<div class="tracking-record-list">${entries.map((entry) => `
+    <div class="tracking-record-line${entry.date ? '' : ' no-date'}">
+      ${entry.date ? `<span class="tracking-record-date">${escapeHtml(entry.date)}</span>` : ''}
+      <span class="tracking-record-content">${escapeHtml(entry.content)}</span>
+    </div>`).join('')}</div>`;
+};
+
 const renderCell = (record, field) => {
   const value = recordListFieldValue(record, field);
   if (field?.listParentKey) {
@@ -2098,7 +2119,7 @@ const renderCell = (record, field) => {
   }
   const text = String(valueToText(value));
   if (isTrackingModule() && String(field?.label || '').trim() === '紀錄') {
-    return `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</span>`;
+    return renderTrackingRecordText(text);
   }
   if (field?.type === 'textarea' && text.length > 50) return `${escapeHtml(text.slice(0, 50))}...`;
   return escapeHtml(text);
