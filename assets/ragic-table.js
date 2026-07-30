@@ -1889,6 +1889,14 @@ const renderSubtableRow = (field, item = {}) => {
   const fieldsGrid = document.createElement('div');
   fieldsGrid.className = 'subtable-row-fields';
   fieldsGrid.style.setProperty('--subtable-cols', normalizeSubtableColumnsPerRow(field.columnsPerRow));
+  const configuredWidths = (field.fields || []).map(subtableViewColumnWidth);
+  if (configuredWidths.length && configuredWidths.every(Boolean)) {
+    fieldsGrid.style.setProperty(
+      'grid-template-columns',
+      configuredWidths.map((width) => `${width}px`).join(' '),
+      'important'
+    );
+  }
   if (isLogModule() && (field.fields || []).length === 6) fieldsGrid.classList.add('log-subtable-six-column');
 
   (field.fields || []).forEach((sub) => {
@@ -2579,7 +2587,7 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
     </optgroup>
   `;
 }).join('');
-    row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="子欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}</select><textarea class="designer-subfield-options" data-role="options" rows="3" placeholder="選項，每行一個" ${['select', 'multiselect'].includes(subfieldType) ? '' : 'hidden'}>${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div>`;
+    row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="子欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}</select><textarea class="designer-subfield-options" data-role="options" rows="3" placeholder="選項，每行一個" ${['select', 'multiselect'].includes(subfieldType) ? '' : 'hidden'}>${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-width" title="儲存後同步套用到檢視與編輯子表格"><span>欄寬</span><input data-role="width" type="number" min="40" max="1200" step="10" inputmode="numeric" placeholder="例如 200" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div>`;
     const syncSubfieldOptions = () => {
       const supportsOptions = ['select', 'multiselect'].includes(row.querySelector('[data-role="type"]').value);
       row.querySelector('[data-role="options"]').hidden = !supportsOptions;
