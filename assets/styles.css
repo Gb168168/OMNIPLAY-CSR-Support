@@ -4657,3 +4657,57 @@ body:has(.sidebar-toggle-btn.is-visible)
   min-height: 36px !important;
   padding: 6px 8px !important;
 }
+
+
+/* Designer add-field launcher: keep field creation available without scrolling. */
+#ragicDesignerModal .layout-designer {
+  position: relative;
+}
+#ragicDesignerModal .layout-add-popover[hidden] {
+  display: none !important;
+}
+#ragicDesignerModal .layout-add-popover {
+  position: absolute !important;
+  z-index: 40;
+  top: 66px;
+  right: 24px;
+  width: min(860px, calc(100% - 48px)) !important;
+  max-width: none !important;
+  max-height: min(620px, calc(100% - 90px));
+  overflow: auto !important;
+  padding: 18px !important;
+  border: 1px solid #dbe5f2 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, .24) !important;
+}
+#ragicDesignerModal .layout-add-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+#ragicDesignerModal .layout-add-card-head h3,
+#ragicDesignerModal .layout-add-card-head p {
+  margin: 0;
+}
+#ragicDesignerModal .layout-add-card-head p {
+  margin-top: 4px;
+}
+#ragicDesignerModal .layout-add-popover .layout-type-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+#ragicDesignerModal .layout-add-toggle {
+  min-width: 118px;
+}
+@media (max-width: 900px) {
+  #ragicDesignerModal .layout-add-popover {
+    top: 76px;
+    right: 12px;
+    width: calc(100% - 24px) !important;
+  }
+  #ragicDesignerModal .layout-add-popover .layout-type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
