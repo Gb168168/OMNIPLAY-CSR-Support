@@ -5217,3 +5217,74 @@ body:has(.sidebar-toggle-btn.is-visible)
     padding: 12px !important;
   }
 }
+
+
+/* ===== COMPACT TOP AREA: reclaim vertical space for list tables ===== */
+@media (min-width: 761px) {
+  .sidebar.top-navigation {
+    grid-template-rows: 52px auto !important;
+  }
+  .sidebar.top-navigation .sidebar-header {
+    padding: 6px 12px !important;
+  }
+  .sidebar.top-navigation .logo .label {
+    font-size: 16px !important;
+  }
+  .sidebar.top-navigation .logo-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .sidebar.top-navigation .menu {
+    grid-template-rows: 52px auto !important;
+  }
+  .sidebar.top-navigation .home-link,
+  .sidebar.top-navigation .top-nav-category {
+    padding: 0 13px !important;
+    font-size: 14px;
+  }
+  .top-nav-secondary .top-nav-submenu {
+    gap: 4px !important;
+    padding: 4px 12px !important;
+  }
+  .sidebar.top-navigation .sidebar-sub-item {
+    padding: 7px 12px !important;
+    font-size: 13px;
+  }
+  .sidebar.top-navigation .sidebar-sub-item.is-active::after,
+  .sidebar.top-navigation .sidebar-sub-item.active::after {
+    bottom: -4px !important;
+  }
+  .sidebar.top-navigation .sidebar-footer {
+    gap: 10px !important;
+    padding: 5px 10px !important;
+    font-size: 12px;
+  }
+  .sidebar.top-navigation .theme-switch-row {
+    gap: 5px !important;
+  }
+  .sidebar.top-navigation .sidebar-user-row {
+    gap: 6px !important;
+  }
+  .sidebar.top-navigation .logout-button {
+    padding: 5px 6px 5px 10px !important;
+  }
+  .app-shell > .main,
+  .app-shell > .main-content {
+    padding: 12px !important;
+  }
+}
+
+/* Ragic 列表已有自己的標題列；隱藏重複的大型頁面標題卡。 */
+.main:has(> #ragicListView:not([hidden])) > .topbar,
+.main-content:has(> #ragicListView:not([hidden])) > .topbar {
+  display: none !important;
+}
+.main:has(> #ragicListView:not([hidden])) > #ragicListView,
+.main-content:has(> #ragicListView:not([hidden])) > #ragicListView {
+  margin-top: 0 !important;
+}
+.main:has(> #ragicListView:not([hidden])) #ragicListView .ragic-toolbar,
+.main-content:has(> #ragicListView:not([hidden])) #ragicListView .ragic-toolbar {
+  min-height: 64px;
+  padding: 10px 16px !important;
+}
