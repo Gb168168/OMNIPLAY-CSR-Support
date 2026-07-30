@@ -5288,3 +5288,22 @@ body:has(.sidebar-toggle-btn.is-visible)
   min-height: 64px;
   padding: 10px 16px !important;
 }
+
+
+/* 人員管理、排程表與會議紀錄：移除列表上方重複的大型標題卡。 */
+.main:has(> .staff-panel) > .topbar,
+.main-content:has(> .staff-panel) > .topbar,
+.main:has(> .schedule-panel) > .topbar,
+.main-content:has(> .schedule-panel) > .topbar,
+.main:has(> #meetingListView:not([hidden])) > .topbar,
+.main-content:has(> #meetingListView:not([hidden])) > .topbar {
+  display: none !important;
+}
+.main:has(> .staff-panel) > .staff-panel,
+.main-content:has(> .staff-panel) > .staff-panel,
+.main:has(> .schedule-panel) > .schedule-panel,
+.main-content:has(> .schedule-panel) > .schedule-panel,
+.main:has(> #meetingListView:not([hidden])) > #meetingListView,
+.main-content:has(> #meetingListView:not([hidden])) > #meetingListView {
+  margin-top: 0 !important;
+}
