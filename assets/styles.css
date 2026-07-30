@@ -3874,6 +3874,18 @@ body:has(.sidebar-toggle-btn.is-visible)
 #ragicDesignerModal .layout-field .resize-handle-bottom {
   height: 14px !important;
   bottom: 0 !important;
+  background: transparent !important;
+}
+
+#ragicDesignerModal .layout-field .resize-handle-bottom::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  height: 4px;
+  border-radius: 4px;
+  background: #2563eb;
 }
 
 #ragicDesignerModal .layout-field .resize-handle-right {
