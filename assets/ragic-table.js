@@ -2842,8 +2842,9 @@ const attachLayoutDesignerEvents = (panel) => {
     const up = (upEvent) => {
       if (upEvent.pointerId !== pointerId) return;
       panel.releasePointerCapture?.(pointerId);
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
       source.classList.remove('is-dragging');
       if (pointerDragging) {
         upEvent.preventDefault();
@@ -2918,9 +2919,8 @@ const attachLayoutDesignerEvents = (panel) => {
       grid.appendChild(preview);
     };
     const cleanup = () => {
-      document.removeEventListener('pointermove', move);
-      document.removeEventListener('pointerup', up);
-      document.removeEventListener('pointercancel', cancel);
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
       grid.querySelector('.layout-drop-preview')?.remove();
       handle.classList.remove('resizing');
     };
