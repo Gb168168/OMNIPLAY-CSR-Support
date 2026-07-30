@@ -2845,27 +2845,72 @@ const attachLayoutDesignerEvents = (panel) => {
     document.addEventListener('pointerup', up);
     document.addEventListener('pointercancel', cancel);
   });
-  panel.addEventListener('mousedown', (event) => {
+  panel.addEventListener('pointerdown', (event) => {
     const handle = event.target.closest('[data-resize]');
     if (!handle) return;
     event.preventDefault();
-    const fieldKey = handle.closest('[data-field-key]').dataset.fieldKey;
-    const startX = event.pageX, startY = event.pageY, type = handle.dataset.resize;
-    const start = { ...currentDesignerLayout().fields[fieldKey] };
+    event.stopPropagation();
+    const fieldKey = handle.closest('[data-field-key]')?.dataset.fieldKey;
     const grid = panel.querySelector('.layout-grid');
+    const startLayout = currentDesignerLayout();
+    const start = { ...startLayout.fields[fieldKey] };
+    if (!fieldKey || !grid || !start.row) return;
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const type = handle.dataset.resize;
     const metrics = getLayoutCellMetrics(grid);
-    const move = (moveEvent) => {
-      const dCol = Math.round((moveEvent.pageX - startX) / Math.max(1, metrics.cellW + metrics.gapX));
-      const dRow = Math.round((moveEvent.pageY - startY) / Math.max(1, metrics.cellH + metrics.gapY));
-      updateLayoutDesignerState((layout) => {
-        const next = { ...start };
-        if (type === 'col' || type === 'both') next.colSpan = Math.min(layout.columns - next.col + 1, Math.max(1, start.colSpan + dCol));
-        if (type === 'row' || type === 'both') next.rowSpan = Math.min(layout.rows - next.row + 1, Math.max(1, start.rowSpan + dRow));
-        if (isLayoutAreaFree(layout, fieldKey, next)) layout.fields[fieldKey] = next;
-      });
+    let latestCandidate = { ...start };
+    const candidateAt = (clientX, clientY) => {
+      const dCol = Math.round((clientX - startX) / Math.max(1, metrics.cellW + metrics.gapX));
+      const dRow = Math.round((clientY - startY) / Math.max(1, metrics.cellH + metrics.gapY));
+      const next = { ...start };
+      if (type === 'col' || type === 'both') {
+        next.colSpan = Math.min(startLayout.columns - next.col + 1, Math.max(1, start.colSpan + dCol));
+      }
+      if (type === 'row' || type === 'both') {
+        next.rowSpan = Math.min(startLayout.rows - next.row + 1, Math.max(1, start.rowSpan + dRow));
+      }
+      return clampLayoutItem(next, startLayout);
     };
-    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
-    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    const showResizePreview = (candidate) => {
+      grid.querySelector('.layout-drop-preview')?.remove();
+      const preview = document.createElement('div');
+      preview.className = `layout-drop-preview ${isLayoutAreaFree(startLayout, fieldKey, candidate) ? 'is-valid' : 'is-invalid'}`;
+      preview.style.cssText = `grid-column:${candidate.col} / span ${candidate.colSpan};grid-row:${candidate.row} / span ${candidate.rowSpan};`;
+      grid.appendChild(preview);
+    };
+    const cleanup = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
+      grid.querySelector('.layout-drop-preview')?.remove();
+      handle.classList.remove('resizing');
+    };
+    const move = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
+      latestCandidate = candidateAt(moveEvent.clientX, moveEvent.clientY);
+      handle.classList.add('resizing');
+      showResizePreview(latestCandidate);
+    };
+    const up = (upEvent) => {
+      if (upEvent.pointerId !== pointerId) return;
+      latestCandidate = candidateAt(upEvent.clientX, upEvent.clientY);
+      cleanup();
+      if (isLayoutAreaFree(startLayout, fieldKey, latestCandidate)) {
+        updateLayoutDesignerState((layout) => {
+          layout.fields[fieldKey] = clampLayoutItem(latestCandidate, layout);
+        });
+      }
+    };
+    const cancel = (cancelEvent) => {
+      if (cancelEvent.pointerId !== pointerId) return;
+      cleanup();
+    };
+    document.addEventListener('pointermove', move, { passive: false });
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
   });
 };
 
