@@ -2227,7 +2227,7 @@ const autoFitTrackingListColumns = () => {
       .reduce((max, cell) => Math.max(max, measureText(cell.innerText || cell.textContent)), 0) + 28;
     const label = String(field.label || '').trim();
     const maximum = field.type === 'textarea' || label === '紀錄'
-      ? 420
+      ? 500
       : label === '群組名稱'
         ? 360
         : ['date', 'datetime', 'createdDate', 'updatedDate'].includes(field.type)
