@@ -2254,7 +2254,9 @@ const autoFitTrackingListColumns = () => {
         : ['date', 'datetime', 'createdDate', 'updatedDate'].includes(field.type)
           ? 190
           : 280;
-    const width = Math.max(76, Math.min(maximum, Math.ceil(Math.max(labelWidth, contentWidth))));
+    const width = label === '紀錄'
+      ? 500
+      : Math.max(76, Math.min(maximum, Math.ceil(Math.max(labelWidth, contentWidth))));
     setColumnWidth(table, header, width);
     totalWidth += width;
   });
