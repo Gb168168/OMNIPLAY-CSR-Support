@@ -2947,24 +2947,29 @@ const attachLayoutDesignerEvents = (panel) => {
 
         if (!isLayoutAreaFree(layout, fieldKey, candidate) && candidate.rowSpan > current.rowSpan) {
           const currentBottom = current.row + current.rowSpan;
-          const conflicts = Object.entries(layout.fields || {})
-            .filter(([key, item]) => key !== fieldKey && layoutCellsOverlap(candidate, item));
+          const normalizedEntries = Object.entries(layout.fields || {})
+            .filter(([key]) => key !== fieldKey)
+            .map(([key, item]) => [key, item, clampLayoutItem(item, layout)]);
+          const conflicts = normalizedEntries
+            .filter(([, , item]) => layoutCellsOverlap(candidate, item));
           const canPushDown =
             conflicts.length > 0 &&
-            conflicts.every(([, item]) => item.row >= currentBottom);
+            conflicts.every(([, , item]) => item.row >= currentBottom);
 
           if (canPushDown) {
-            const firstBlockedRow = Math.min(...conflicts.map(([, item]) => item.row));
+            const firstBlockedRow = Math.min(...conflicts.map(([, , item]) => item.row));
             const shiftRows = candidate.row + candidate.rowSpan - firstBlockedRow;
-            const fieldsToPush = Object.entries(layout.fields || {})
-              .filter(([key, item]) => key !== fieldKey && item.row >= firstBlockedRow);
+            const fieldsToPush = normalizedEntries
+              .filter(([, , item]) => item.row >= firstBlockedRow);
             const pushedBottom = fieldsToPush.reduce(
-              (maximum, [, item]) => Math.max(maximum, item.row + shiftRows + item.rowSpan - 1),
+              (maximum, [, , item]) => Math.max(maximum, item.row + shiftRows + item.rowSpan - 1),
               layout.rows
             );
 
             if (pushedBottom <= 10) {
-              fieldsToPush.forEach(([, item]) => { item.row += shiftRows; });
+              fieldsToPush.forEach(([, original]) => {
+                original.row = normalizeFormLayoutNumber(original.row, { min: 1, max: 10, fallback: 1 }) + shiftRows;
+              });
               layout.rows = Math.max(layout.rows, pushedBottom);
             }
           }
