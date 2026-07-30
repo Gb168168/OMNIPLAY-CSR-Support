@@ -3497,6 +3497,16 @@ body {
 .layout-field { z-index: 2; align-self: stretch; justify-self: stretch; min-width: 0; min-height: 44px; background: rgba(255,255,255,.95); border: 1px solid #3b82f6; border-radius: 8px; color: #1e40af; box-shadow: 0 8px 22px rgba(37,99,235,.14); cursor: grab; padding: 8px 34px 8px 12px; display: grid; align-content: center; gap: 2px; position: relative; overflow: hidden; }
 .layout-field b, .layout-field-chip b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .layout-field small, .layout-field-chip small { font-size: 11px; color: #64748b; }
+.layout-field .layout-drag-grip {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  color: #64748b;
+  cursor: grab;
+  font-size: 14px;
+  line-height: 1;
+}
+.layout-field.is-dragging .layout-drag-grip { cursor: grabbing; }
 .layout-field-subtable { border-color: #8b5cf6; background: #fbf7ff; color: #6d28d9; }
 .layout-field-chip { display: inline-grid; grid-template-columns: auto auto auto; align-items: center; gap: 6px; background: #fff; border: 1px solid #cbd5e1; border-radius: 999px; padding: 6px 10px; cursor: grab; }
 .layout-field-chip .settings-btn, .layout-field-chip .remove-btn { position: static; border: 0; background: transparent; width: auto; height: auto; color: inherit; }
