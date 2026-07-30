@@ -1,0 +1,49 @@
+name: Fix log new issue description lines
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-log-new-issue-lines.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply issue description list fix
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('work/log-new.html')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''    .log-new-page #ragicListView .ragic-table th[data-field-key="issue"],
+    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"] {'''
+          new = '''    .log-new-page #ragicListView .ragic-table th[data-field-key="issue"],
+    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"],
+    .log-new-page #ragicListView .ragic-table th:nth-child(7),
+    .log-new-page #ragicListView .ragic-table td:nth-child(7) {'''
+
+          old_child = '''    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"] > * {'''
+          new_child = '''    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"] > *,
+    .log-new-page #ragicListView .ragic-table td:nth-child(7) > * {'''
+
+          if old not in text:
+              raise SystemExit('Main issue selector block not found')
+          if old_child not in text:
+              raise SystemExit('Child issue selector block not found')
+
+          text = text.replace(old, new, 1).replace(old_child, new_child, 1)
+          path.write_text(text, encoding='utf-8')
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add work/log-new.html
+          git commit -m "Fix log new issue description line display"
+          git push
