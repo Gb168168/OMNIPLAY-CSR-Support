@@ -7,10 +7,11 @@ const dashboardCollections = {
   report: dashboardDb?.collection('report'),
   log: dashboardDb?.collection('log'),
   schedule: dashboardDb?.collection('schedule'),
-  meeting: dashboardDb?.collection('meeting')
+  meeting: dashboardDb?.collection('meeting'),
+  trackingSchema: dashboardDb?.collection('tracking_schema')?.doc('active')
 };
 
-const dashboardState = { staff: [], leave: {}, handovers: [], tracking: [], reports: [], logs: [], schedules: [], meetings: [], selectedShift: getDefaultShift() };
+const dashboardState = { staff: [], leave: {}, handovers: [], tracking: [], trackingSchema: null, reports: [], logs: [], schedules: [], meetings: [], selectedShift: getDefaultShift() };
 const todoList = document.querySelector('#dashboardTodoList');
 const setText = (selector, value) => { const el = document.querySelector(selector); if (el) el.textContent = String(value); };
 const pad2 = (value) => String(value).padStart(2, '0');
@@ -178,6 +179,30 @@ const updateShiftButtons = () => {
 };
 
 const todoTitle = (record = {}, fallback) => record.subject || record.title || record.item || record.category || record.content || record.note || record.serial || fallback;
+const dashboardValueText = (value) => Array.isArray(value)
+  ? value.map(dashboardValueText).filter(Boolean).join('、')
+  : String(value ?? '').trim();
+const trackingValueByLabel = (record = {}, label = '') => {
+  const fields = dashboardState.trackingSchema?.fields || [];
+  const direct = fields.find((field) => String(field.label || '').trim() === label);
+  if (direct && direct.type !== 'subtable') return dashboardValueText(record[direct.key]);
+  const parent = fields.find((field) =>
+    field.type === 'subtable' &&
+    (field.fields || []).some((subfield) => String(subfield.label || '').trim() === label)
+  );
+  if (!parent) return '';
+  const subfield = (parent.fields || []).find((field) => String(field.label || '').trim() === label);
+  return (Array.isArray(record[parent.key]) ? record[parent.key] : [])
+    .map((row) => dashboardValueText(row?.[subfield?.key]))
+    .filter(Boolean)
+    .join('、');
+};
+const trackingTodoTitle = (record = {}) => [
+  trackingValueByLabel(record, '客戶域名'),
+  trackingValueByLabel(record, 'APP'),
+  trackingValueByLabel(record, '群組名稱'),
+  trackingValueByLabel(record, '錢包類型')
+].map((value) => value || '—').join('｜');
 const recordDateForShift = (record = {}, range) => {
   const updatedAt = valueDate(record.updatedAt) || valueDate(record.updatedDate);
   if (updatedAt && updatedAt >= range.start && updatedAt <= range.end) return updatedAt;
@@ -186,7 +211,7 @@ const recordDateForShift = (record = {}, range) => {
 const formatRecordTime = (at) => at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : '--:--';
 const isFireRecord = (record = {}) => record.fire === true;
 const withRecordLink = (href, id) => id ? `${href}?id=${encodeURIComponent(id)}` : href;
-const shiftRecordItems = (records, { type, icon, href, fallback }) => {
+const shiftRecordItems = (records, { type, icon, href, fallback, titleFormatter }) => {
   const range = getShiftRange(dashboardState.selectedShift);
   return records
     .filter((record) => isFireRecord(record) || isInShiftRange(record, range))
@@ -197,7 +222,7 @@ const shiftRecordItems = (records, { type, icon, href, fallback }) => {
         time: isFireRecord(record) ? '--:--' : formatRecordTime(at),
         type,
         href: withRecordLink(href, record.id),
-        title: todoTitle(record, fallback),
+        title: titleFormatter ? titleFormatter(record) : todoTitle(record, fallback),
         sortAt: isFireRecord(record) ? 0 : (at || new Date(8640000000000000)).getTime()
       };
     });
@@ -219,7 +244,7 @@ const renderTodoList = () => {
     ...shiftRecordItems(dashboardState.handovers, { type: '交接', icon: '📋', href: 'work/handover.html', fallback: '交接事項' }),
     ...shiftRecordItems(dashboardState.logs, { type: '日誌', icon: '📝', href: 'work/log.html', fallback: '日誌' }),
     ...shiftRecordItems(dashboardState.reports, { type: '提報', icon: '📌', href: 'work/report.html', fallback: '提報追蹤' }),
-    ...shiftRecordItems(dashboardState.tracking, { type: '對接追蹤', icon: '🔎', href: 'work/tracking.html', fallback: '對接追蹤' }),
+    ...shiftRecordItems(dashboardState.tracking, { type: '對接追蹤', icon: '🔎', href: 'work/tracking.html', fallback: '對接追蹤', titleFormatter: trackingTodoTitle }),
     ...shiftRecordItems(dashboardState.meetings, { type: '會議', icon: '💬', href: 'meeting/meeting.html', fallback: '會議紀錄' }),
     ...scheduleItems()
   ].sort((a, b) => a.sortAt - b.sortAt || String(a.type).localeCompare(String(b.type), 'zh-Hant') || String(a.title).localeCompare(String(b.title), 'zh-Hant'));
@@ -236,6 +261,7 @@ const subscribeDashboard = () => {
   dashboardCollections.leave?.doc(monthKey()).onSnapshot((doc) => { dashboardState.leave = doc.exists ? { records: {}, ...doc.data() } : { records: {} }; updateDashboard(); });
   dashboardCollections.handover?.onSnapshot((snapshot) => { dashboardState.handovers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.tracking?.onSnapshot((snapshot) => { dashboardState.tracking = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
+  dashboardCollections.trackingSchema?.onSnapshot((doc) => { dashboardState.trackingSchema = doc.exists ? doc.data() : null; updateDashboard(); });
   dashboardCollections.report?.onSnapshot((snapshot) => { dashboardState.reports = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.log?.onSnapshot((snapshot) => { dashboardState.logs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.schedule?.onSnapshot((snapshot) => { dashboardState.schedules = snapshot.docs.map((doc) => ({ id: doc.id, labelColor: '#3b82f6', ...doc.data() })); updateDashboard(); });
