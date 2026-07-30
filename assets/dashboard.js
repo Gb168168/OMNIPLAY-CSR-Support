@@ -279,7 +279,7 @@ const renderTodoList = () => {
     if (!details) return `<strong>${escapeDashboardHtml(item.type)} — ${escapeDashboardHtml(item.title)}</strong>`;
     const rows = details.rows?.length ? details.rows : [{ app: '—', group: '—', wallet: '—' }];
     return `<strong class="tracking-todo-main"><span class="tracking-todo-prefix">${escapeDashboardHtml(item.type)} —</span><span class="tracking-todo-data">${rows.map((row, index) => `
-      <span class="tracking-todo-cell tracking-todo-customer">${index === 0 ? escapeDashboardHtml(details.customer) : ''}</span>
+      <span class="tracking-todo-cell tracking-todo-customer">${escapeDashboardHtml(details.customer)}</span>
       <span class="tracking-todo-cell">${escapeDashboardHtml(row.app)}</span>
       <span class="tracking-todo-cell tracking-todo-group">${escapeDashboardHtml(row.group)}</span>
       <span class="tracking-todo-cell">${escapeDashboardHtml(row.wallet)}</span>`).join('')}</span></strong>`;
