@@ -4529,3 +4529,9 @@ body:has(.sidebar-toggle-btn.is-visible)
   font-size: 12px !important;
   opacity: .65;
 }
+
+
+/* Remove the empty tracking grid row before the main detail subtable. */
+.tracking-page #ragicForm .ragic-form-grid > .ragic-subtable:not(.is-tracking-group-subtable) {
+  --form-row: 3 !important;
+}
