@@ -182,27 +182,50 @@ const todoTitle = (record = {}, fallback) => record.subject || record.title || r
 const dashboardValueText = (value) => Array.isArray(value)
   ? value.map(dashboardValueText).filter(Boolean).join('、')
   : String(value ?? '').trim();
-const trackingValueByLabel = (record = {}, label = '') => {
+const trackingFieldByLabel = (label = '') => {
   const fields = dashboardState.trackingSchema?.fields || [];
   const direct = fields.find((field) => String(field.label || '').trim() === label);
-  if (direct && direct.type !== 'subtable') return dashboardValueText(record[direct.key]);
+  if (direct && direct.type !== 'subtable') return { field: direct, parent: null };
   const parent = fields.find((field) =>
     field.type === 'subtable' &&
     (field.fields || []).some((subfield) => String(subfield.label || '').trim() === label)
   );
-  if (!parent) return '';
-  const subfield = (parent.fields || []).find((field) => String(field.label || '').trim() === label);
-  return (Array.isArray(record[parent.key]) ? record[parent.key] : [])
-    .map((row) => dashboardValueText(row?.[subfield?.key]))
-    .filter(Boolean)
-    .join('、');
+  const field = (parent?.fields || []).find((subfield) => String(subfield.label || '').trim() === label);
+  return field ? { field, parent } : { field: null, parent: null };
 };
-const trackingTodoTitle = (record = {}) => [
-  trackingValueByLabel(record, '客戶域名'),
-  trackingValueByLabel(record, 'APP'),
-  trackingValueByLabel(record, '群組名稱'),
-  trackingValueByLabel(record, '錢包類型')
-].map((value) => value || '—').join('｜');
+const trackingDirectValue = (record = {}, label = '') => {
+  const definition = trackingFieldByLabel(label);
+  return !definition.parent && definition.field ? dashboardValueText(record[definition.field.key]) : '';
+};
+const trackingTodoDetails = (record = {}) => {
+  const customer = trackingDirectValue(record, '客戶域名') || '—';
+  const appDefinition = trackingFieldByLabel('APP');
+  const groupDefinition = trackingFieldByLabel('群組名稱');
+  const walletDefinition = trackingFieldByLabel('錢包類型');
+  const parent = appDefinition.parent || groupDefinition.parent || walletDefinition.parent;
+  const sourceRows = parent && Array.isArray(record[parent.key]) && record[parent.key].length
+    ? record[parent.key]
+    : [{}];
+  const directWallet = !walletDefinition.parent && walletDefinition.field
+    ? dashboardValueText(record[walletDefinition.field.key])
+    : '';
+  const rows = sourceRows.map((row) => ({
+    app: appDefinition.parent ? dashboardValueText(row?.[appDefinition.field?.key]) : trackingDirectValue(record, 'APP'),
+    group: groupDefinition.parent ? dashboardValueText(row?.[groupDefinition.field?.key]) : trackingDirectValue(record, '群組名稱'),
+    wallet: walletDefinition.parent ? dashboardValueText(row?.[walletDefinition.field?.key]) : directWallet
+  })).map((row) => ({
+    app: row.app || '—',
+    group: row.group || '—',
+    wallet: row.wallet || '—'
+  }));
+  return { customer, rows };
+};
+const trackingActivityKind = (record = {}) => {
+  const createdAt = valueDate(record.createdAt) || valueDate(trackingDirectValue(record, '建立日期'));
+  const updatedAt = valueDate(record.updatedAt) || valueDate(trackingDirectValue(record, '更新日期'));
+  if (createdAt && updatedAt && Math.abs(updatedAt.getTime() - createdAt.getTime()) <= 60000) return '建立';
+  return '更新';
+};
 const recordDateForShift = (record = {}, range) => {
   const updatedAt = valueDate(record.updatedAt) || valueDate(record.updatedDate);
   if (updatedAt && updatedAt >= range.start && updatedAt <= range.end) return updatedAt;
@@ -211,7 +234,7 @@ const recordDateForShift = (record = {}, range) => {
 const formatRecordTime = (at) => at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : '--:--';
 const isFireRecord = (record = {}) => record.fire === true;
 const withRecordLink = (href, id) => id ? `${href}?id=${encodeURIComponent(id)}` : href;
-const shiftRecordItems = (records, { type, icon, href, fallback, titleFormatter }) => {
+const shiftRecordItems = (records, { type, icon, href, fallback, detailsFormatter, activityFormatter }) => {
   const range = getShiftRange(dashboardState.selectedShift);
   return records
     .filter((record) => isFireRecord(record) || isInShiftRange(record, range))
@@ -222,7 +245,9 @@ const shiftRecordItems = (records, { type, icon, href, fallback, titleFormatter 
         time: isFireRecord(record) ? '--:--' : formatRecordTime(at),
         type,
         href: withRecordLink(href, record.id),
-        title: titleFormatter ? titleFormatter(record) : todoTitle(record, fallback),
+        title: todoTitle(record, fallback),
+        details: detailsFormatter ? detailsFormatter(record) : null,
+        activityKind: activityFormatter ? activityFormatter(record) : '',
         sortAt: isFireRecord(record) ? 0 : (at || new Date(8640000000000000)).getTime()
       };
     });
@@ -244,13 +269,23 @@ const renderTodoList = () => {
     ...shiftRecordItems(dashboardState.handovers, { type: '交接', icon: '📋', href: 'work/handover.html', fallback: '交接事項' }),
     ...shiftRecordItems(dashboardState.logs, { type: '日誌', icon: '📝', href: 'work/log.html', fallback: '日誌' }),
     ...shiftRecordItems(dashboardState.reports, { type: '提報', icon: '📌', href: 'work/report.html', fallback: '提報追蹤' }),
-    ...shiftRecordItems(dashboardState.tracking, { type: '對接追蹤', icon: '🔎', href: 'work/tracking.html', fallback: '對接追蹤', titleFormatter: trackingTodoTitle }),
+    ...shiftRecordItems(dashboardState.tracking, { type: '對接追蹤', icon: '🔎', href: 'work/tracking.html', fallback: '對接追蹤', detailsFormatter: trackingTodoDetails, activityFormatter: trackingActivityKind }),
     ...shiftRecordItems(dashboardState.meetings, { type: '會議', icon: '💬', href: 'meeting/meeting.html', fallback: '會議紀錄' }),
     ...scheduleItems()
   ].sort((a, b) => a.sortAt - b.sortAt || String(a.type).localeCompare(String(b.type), 'zh-Hant') || String(a.title).localeCompare(String(b.title), 'zh-Hant'));
 
+  const renderTrackingDetails = (item) => {
+    const details = item.details;
+    if (!details) return `<strong>${escapeDashboardHtml(item.type)} — ${escapeDashboardHtml(item.title)}</strong>`;
+    const rows = details.rows?.length ? details.rows : [{ app: '—', group: '—', wallet: '—' }];
+    return `<strong class="tracking-todo-main"><span class="tracking-todo-prefix">${escapeDashboardHtml(item.type)} —</span><span class="tracking-todo-data">${rows.map((row, index) => `
+      <span class="tracking-todo-cell tracking-todo-customer">${index === 0 ? escapeDashboardHtml(details.customer) : ''}</span>
+      <span class="tracking-todo-cell">${escapeDashboardHtml(row.app)}</span>
+      <span class="tracking-todo-cell tracking-todo-group">${escapeDashboardHtml(row.group)}</span>
+      <span class="tracking-todo-cell">${escapeDashboardHtml(row.wallet)}</span>`).join('')}</span></strong>`;
+  };
   todoList.innerHTML = items.length
-    ? items.map((item) => `<li><a href="${item.href}"><span class="todo-type">${item.icon} ${escapeDashboardHtml(item.time)}</span><strong>${escapeDashboardHtml(item.type)} — ${escapeDashboardHtml(item.title)}</strong></a></li>`).join('')
+    ? items.map((item) => `<li><a href="${item.href}"><span class="todo-type">${item.icon} ${escapeDashboardHtml(item.time)}</span>${renderTrackingDetails(item)}${item.activityKind ? `<span class="todo-activity-kind todo-activity-${item.activityKind === '建立' ? 'created' : 'updated'}">${escapeDashboardHtml(item.activityKind)}</span>` : ''}</a></li>`).join('')
     : '<li class="dashboard-empty">目前沒有當前班次紀錄或今日排程。</li>';
 };
 const escapeDashboardHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
