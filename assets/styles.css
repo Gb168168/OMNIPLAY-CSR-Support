@@ -4611,3 +4611,10 @@ body:has(.sidebar-toggle-btn.is-visible)
   white-space: normal !important;
   line-height: 1.35;
 }
+
+
+/* Override the compact grid rule so both reminder cards are exactly equal. */
+.tracking-page #ragicForm .ragic-form-grid > .form-field.ragic-view-field-reminderEnabled.ragic-view-field-pair-toggle {
+  height: 69px !important;
+  min-height: 69px !important;
+}
