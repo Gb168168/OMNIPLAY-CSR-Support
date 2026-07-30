@@ -57,12 +57,13 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260719-6"></script>
-  <script src="../assets/ragic-table.js?v=20260731-tracking-group-order22"></script>
+  <script src="../assets/ragic-table.js?v=20260731-tracking-manual-dates25"></script>
   <script>
     initRagicPage({
       title: '對接追蹤',
       collection: 'tracking',
       enforceConfigFields: true,
+      manualSystemDates: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true },
         { key: 'target', label: '對接對象', type: 'text' },
