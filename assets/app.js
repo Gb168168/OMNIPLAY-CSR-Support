@@ -40,28 +40,32 @@ const sidebarItems = [
   ] }
   ];
 const isActiveSidebarHref = (href) => (href === 'index.html' && isIndexPage) || window.location.pathname.split('/').pop() === href.split('/').pop();
+const currentSidebarGroup = () => sidebarItems.slice(1).find((group) => group.items.some((item) => isActiveSidebarHref(item.href))) || null;
 const renderSidebarLink = (item) => {
   const classes = [item.className || 'sidebar-sub-item'];
   if (isActiveSidebarHref(item.href)) classes.push('is-active');
-  const bullet = item.className === 'home-link' ? '' : '<span class="bullet">•</span>';
-  return `<a class="${classes.join(' ')}" href="${sidebarPath(item.href)}">${bullet}<span class="icon">${item.icon}</span><span class="label">${item.label}</span></a>`;
+  return `<a class="${classes.join(' ')}" href="${sidebarPath(item.href)}"><span class="icon">${item.icon}</span><span class="label">${item.label}</span></a>`;
 };
 const renderSidebar = () => {
   if (!sidebar) return;
-  sidebar.className = 'sidebar';
+  const activeGroup = currentSidebarGroup();
+  sidebar.className = 'sidebar top-navigation';
   sidebar.innerHTML = `
     <div class="sidebar-header">
-      <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR<br />Support</span></div>
-      <button class="toggle-btn mobile-menu-btn" id="sidebarToggle" type="button" aria-label="收合左側功能表">☰</button>
+      <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
+      <button class="toggle-btn mobile-menu-btn" id="sidebarToggle" type="button" aria-label="展開功能表">☰</button>
     </div>
     <nav class="menu" aria-label="主功能表">
-      ${renderSidebarLink(sidebarItems[0])}
-      ${sidebarItems.slice(1).map((group) => `
-        <section class="sidebar-group" aria-labelledby="${group.id}">
+      <div class="top-nav-primary-links">
+        ${renderSidebarLink(sidebarItems[0])}
+        ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span></a>`).join('')}
+      </div>
+      <div class="top-nav-secondary">
+        ${sidebarItems.slice(1).map((group) => `<section class="sidebar-group${group === activeGroup ? ' is-current-group' : ''}" data-group="${group.id}" aria-labelledby="${group.id}">
           <h2 class="sidebar-group-title" id="${group.id}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span></h2>
-          ${group.items.map(renderSidebarLink).join('')}
-        </section>
-      `).join('')}
+          <div class="top-nav-submenu">${group.items.map(renderSidebarLink).join('')}</div>
+        </section>`).join('')}
+      </div>
     </nav>
     <div class="sidebar-footer" id="sidebarUserFooter">
       <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
@@ -124,7 +128,7 @@ const toggleTheme = () => {
 };
 applyTheme(getStoredTheme());
 
-const getStoredSidebarCollapsed = () => localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
+const getStoredSidebarCollapsed = () => false;
 const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
 const closeMobileSidebar = () => {
   sidebar?.classList.remove('is-open');
@@ -266,7 +270,11 @@ const applyPermissionUi = () => {
     if (page && restrict && !getPagePermission(page).view) link.remove();
   });
   document.querySelectorAll('.sidebar-group').forEach((group) => {
-    if (!group.querySelector('.sidebar-sub-item')) group.remove();
+    if (!group.querySelector('.sidebar-sub-item')) {
+      const groupId = group.dataset.group;
+      document.querySelector(`.top-nav-category[data-group="${groupId}"]`)?.remove();
+      group.remove();
+    }
   });
   if (restrict && !getPagePermission().view && !isIndexPage) window.location.href = loginPath;
 };
