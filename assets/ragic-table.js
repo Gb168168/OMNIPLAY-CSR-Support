@@ -588,7 +588,12 @@ const listFields = () => {
   const configuredColumns = RAGIC_STATE.config?.listColumns;
   if (!Array.isArray(configuredColumns) || !configuredColumns.length) return defaultFields;
   return configuredColumns
-    .map((column) => allFields.find((field) => field.key === column || String(field.label || '').trim() === String(column || '').trim()))
+    .map((column) => allFields.find((field) => {
+      const target = String(column || '').trim();
+      return field.key === column ||
+        String(field.label || '').trim() === target ||
+        (target === '群組名稱' && field.type === 'subtable' && (field.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱'));
+    }))
     .filter(Boolean);
 };
 const listColumns = () => listFields().map((field) => field.key);
@@ -1744,7 +1749,14 @@ const renderViewForm = (form, record = {}) => {
   getFields().filter((field) => field.type === 'subtable').forEach((field) => {
     const section = document.createElement('section');
     section.className = 'ragic-subtable ragic-view-subtable-section';
-    if (isTrackingModule() && String(field.label || '').trim() === '群組名稱') section.classList.add('is-tracking-group-subtable');
+    if (
+      isTrackingModule() &&
+      field.type === 'subtable' &&
+      (
+        String(field.label || '').includes('群組名稱') ||
+        (field.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱')
+      )
+    ) section.classList.add('is-tracking-group-subtable');
     if (!fixedLogLayout) applyFormLayout(section, field);
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
@@ -1898,7 +1910,14 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     getFields().filter((field) => field.type === 'subtable').forEach((field) => {
      const section = document.createElement('section');
       section.className = 'ragic-subtable';
-      if (isTrackingModule() && String(field.label || '').trim() === '群組名稱') section.classList.add('is-tracking-group-subtable');
+      if (
+      isTrackingModule() &&
+      field.type === 'subtable' &&
+      (
+        String(field.label || '').includes('群組名稱') ||
+        (field.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱')
+      )
+    ) section.classList.add('is-tracking-group-subtable');
       if (!fixedLogLayout) applyFormLayout(section, field);
       section.dataset.subtable = field.key;
       section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
