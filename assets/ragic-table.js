@@ -2866,9 +2866,11 @@ const attachLayoutDesignerEvents = (panel) => {
     document.addEventListener('pointerup', up);
     document.addEventListener('pointercancel', cancel);
   });
-  panel.addEventListener('mousedown', (event) => {
+  let layoutResizeActive = false;
+  const beginLayoutResize = (event) => {
     const handle = event.target.closest('[data-resize]');
-    if (!handle) return;
+    if (!handle || layoutResizeActive) return;
+    layoutResizeActive = true;
     event.preventDefault();
     event.stopPropagation();
     const fieldKey = handle.closest('[data-field-key]')?.dataset.fieldKey;
@@ -2915,10 +2917,14 @@ const attachLayoutDesignerEvents = (panel) => {
       grid.appendChild(preview);
     };
     const cleanup = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
       grid.querySelector('.layout-drop-preview')?.remove();
       handle.classList.remove('resizing');
+      layoutResizeActive = false;
     };
     const move = (moveEvent) => {
       moveEvent.preventDefault();
@@ -2941,9 +2947,15 @@ const attachLayoutDesignerEvents = (panel) => {
         });
       }
     };
+    const cancel = () => cleanup();
+    document.addEventListener('pointermove', move, { passive: false });
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
     document.addEventListener('mousemove', move, { passive: false });
     document.addEventListener('mouseup', up);
-  });
+  };
+  panel.addEventListener('pointerdown', beginLayoutResize);
+  panel.addEventListener('mousedown', beginLayoutResize);
 };
 
 const openDesigner = async () => {
