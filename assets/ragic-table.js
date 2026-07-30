@@ -267,6 +267,9 @@ const isTrackingTextarea =
 const isTrackingSubtable =
   isTrackingModule() &&
   isSubtable;
+const isTrackingImage =
+  isTrackingModule() &&
+  currentField?.type === 'image';
 
 nextFields[key] = {
   row,
@@ -284,9 +287,7 @@ nextFields[key] = {
   ),
 
   rowSpan: normalizeFormLayoutNumber(
-    isTrackingTextarea
-      ? 1
-      : fixed?.rowSpan ?? layout?.rowSpan,
+    fixed?.rowSpan ?? layout?.rowSpan,
     {
       min: 1,
       max: rows - row + 1,
@@ -310,7 +311,7 @@ nextFields[key] = {
             )
       ),
 
-  height: isTrackingTextarea || isTrackingSubtable
+  height: isTrackingTextarea || isTrackingSubtable || isTrackingImage
     ? null
     : fixed
     ? (
@@ -411,12 +412,7 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   const placedFields = fields
     .map((field) => {
       const item = layout.fields?.[field.key];
-      return {
-        field,
-        item: isTrackingModule() && field.type === 'textarea' && item
-          ? { ...item, rowSpan: 1, height: null }
-          : item
-      };
+      return { field, item };
     })
     .filter(({ item }) => item?.row);
   const usedRows = placedFields.reduce((maximum, { item }) => {
@@ -465,7 +461,7 @@ const applyFormLayout = (element, field = {}) => {
   const hasExplicitSubtableSpan = layoutItem.colSpan !== undefined || field.formColSpan !== undefined;
   const colSpan = normalizeFormLayoutNumber(layoutItem.colSpan ?? field.formColSpan, { max: columns, fallback: field.type === 'subtable' && !hasExplicitSubtableSpan ? columns : 1 });
   const configuredRowSpan = normalizeFormLayoutNumber(layoutItem.rowSpan ?? field.formRowSpan, { max: activeLayout.rows || 10, fallback: 1 });
-  const rowSpan = isTrackingModule() && field.type === 'textarea' ? 1 : configuredRowSpan;
+  const rowSpan = configuredRowSpan;
   element.classList.add('form-field');
   element.dataset.type = field.type || 'text';
   if (row || col) element.classList.add('has-form-layout');
