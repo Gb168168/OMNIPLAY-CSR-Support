@@ -4899,3 +4899,77 @@ body:has(.sidebar-toggle-btn.is-visible)
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+
+/* Homepage tracking items: preserve child-row alignment and show create/update state. */
+.dashboard-todo-list li a {
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+}
+.tracking-todo-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.tracking-todo-prefix {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.tracking-todo-data {
+  display: grid;
+  grid-template-columns: max-content max-content minmax(180px, max-content) max-content;
+  align-items: start;
+  min-width: 0;
+  row-gap: 3px;
+  font-weight: 700;
+}
+.tracking-todo-cell {
+  min-width: 0;
+  padding: 0 8px;
+  border-left: 1px solid #60a5fa;
+  overflow-wrap: anywhere;
+}
+.tracking-todo-customer {
+  padding-left: 0;
+  border-left: 0;
+  white-space: nowrap;
+}
+.tracking-todo-group {
+  max-width: 420px;
+}
+.todo-activity-kind {
+  align-self: center;
+  min-width: 56px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.todo-activity-created {
+  color: #047857;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+}
+.todo-activity-updated {
+  color: #1d4ed8;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+}
+@media (max-width: 980px) {
+  .dashboard-todo-list li a {
+    grid-template-columns: 1fr !important;
+  }
+  .tracking-todo-main {
+    flex-direction: column;
+  }
+  .tracking-todo-data {
+    grid-template-columns: max-content max-content minmax(140px, 1fr) max-content;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .todo-activity-kind {
+    justify-self: start;
+  }
+}
