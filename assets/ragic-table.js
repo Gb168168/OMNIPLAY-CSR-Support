@@ -2574,11 +2574,36 @@ const clampLayoutItem = (item = {}, layout = {}) => {
   };
 };
 const getLayoutCellMetrics = (grid) => {
-  const rect = grid.getBoundingClientRect();
+  const gridRect = grid.getBoundingClientRect();
   const styles = getComputedStyle(grid);
-  const gapX = Number.parseFloat(styles.columnGap) || 0;
-  const gapY = Number.parseFloat(styles.rowGap) || 0;
-  return { rect, gapX, gapY, cellW: (rect.width - gapX * ((Number(grid.dataset.columns) || 1) - 1)) / (Number(grid.dataset.columns) || 1), cellH: (rect.height - gapY * ((Number(grid.dataset.rows) || 1) - 1)) / (Number(grid.dataset.rows) || 1) };
+  const fallbackGapX = Number.parseFloat(styles.columnGap) || 0;
+  const fallbackGapY = Number.parseFloat(styles.rowGap) || 0;
+  const firstSlot = grid.querySelector('.layout-grid-slot[data-row="1"][data-col="1"]');
+  const secondColSlot = grid.querySelector('.layout-grid-slot[data-row="1"][data-col="2"]');
+  const secondRowSlot = grid.querySelector('.layout-grid-slot[data-row="2"][data-col="1"]');
+  const firstRect = firstSlot?.getBoundingClientRect();
+  const secondColRect = secondColSlot?.getBoundingClientRect();
+  const secondRowRect = secondRowSlot?.getBoundingClientRect();
+  if (firstRect?.width && firstRect?.height) {
+    const gapX = secondColRect ? Math.max(0, secondColRect.left - firstRect.right) : fallbackGapX;
+    const gapY = secondRowRect ? Math.max(0, secondRowRect.top - firstRect.bottom) : fallbackGapY;
+    return {
+      rect: { left: firstRect.left, top: firstRect.top, width: grid.scrollWidth, height: grid.scrollHeight },
+      gapX,
+      gapY,
+      cellW: firstRect.width,
+      cellH: firstRect.height
+    };
+  }
+  const columns = Number(grid.dataset.columns) || 1;
+  const rows = Number(grid.dataset.rows) || 1;
+  return {
+    rect: gridRect,
+    gapX: fallbackGapX,
+    gapY: fallbackGapY,
+    cellW: (gridRect.width - fallbackGapX * (columns - 1)) / columns,
+    cellH: (gridRect.height - fallbackGapY * (rows - 1)) / rows
+  };
 };
 const layoutSpanWidth = (grid, colSpan = 1) => {
   if (!grid) return null;
@@ -2865,10 +2890,11 @@ const attachLayoutDesignerEvents = (panel) => {
     let latestRows = startLayout.rows;
     const candidateAt = (clientX, clientY) => {
       const resizeStep = (distance, unit) => {
-        if (Math.abs(distance) < 4) return 0;
-        return distance > 0
-          ? Math.ceil(distance / Math.max(1, unit))
-          : Math.floor(distance / Math.max(1, unit));
+        const deadZone = 4;
+        const absoluteDistance = Math.abs(distance);
+        if (absoluteDistance < deadZone) return 0;
+        const steps = 1 + Math.floor((absoluteDistance - deadZone) / Math.max(1, unit));
+        return distance > 0 ? steps : -steps;
       };
       const dCol = resizeStep(clientX - startX, metrics.cellW + metrics.gapX);
       const dRow = resizeStep(clientY - startY, metrics.cellH + metrics.gapY);
