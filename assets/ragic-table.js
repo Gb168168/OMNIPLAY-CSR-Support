@@ -271,23 +271,20 @@ const isTrackingSubtable =
 nextFields[key] = {
   row,
 
-  // 子表格固定從第一欄開始
-  col: isSubtable ? 1 : col,
+  // 子表格可和一般欄位一樣調整起始欄與跨欄數；未設定時才預設滿版。
+  col,
 
-  // 子表格固定橫跨全部欄位
-  colSpan: isSubtable
-    ? columns
-    : normalizeFormLayoutNumber(
-        fixed?.colSpan ?? layout?.colSpan,
-        {
-          min: 1,
-          max: columns - col + 1,
-          fallback: 1
-        }
-      ),
+  colSpan: normalizeFormLayoutNumber(
+    fixed?.colSpan ?? layout?.colSpan,
+    {
+      min: 1,
+      max: columns - col + 1,
+      fallback: isSubtable ? columns - col + 1 : 1
+    }
+  ),
 
   rowSpan: normalizeFormLayoutNumber(
-    isTrackingTextarea || isTrackingSubtable
+    isTrackingTextarea
       ? 1
       : fixed?.rowSpan ?? layout?.rowSpan,
     {
@@ -331,6 +328,26 @@ nextFields[key] = {
       )
 };
   });
+
+  if (isTrackingModule()) {
+    // 舊版子表格若跨列壓到其他欄位，只清除衝突的跨列；
+    // 使用者之後仍可在空白列中重新調整高度。
+    (fields || [])
+      .filter((field) => field.type === 'subtable')
+      .forEach((field) => {
+        const item = nextFields[field.key];
+        if (!item || item.rowSpan <= 1) return;
+        const overlapsOtherField = Object.entries(nextFields).some(
+          ([key, other]) =>
+            key !== field.key &&
+            item.row < other.row + other.rowSpan &&
+            item.row + item.rowSpan > other.row &&
+            item.col < other.col + other.colSpan &&
+            item.col + item.colSpan > other.col
+        );
+        if (overlapsOtherField) item.rowSpan = 1;
+      });
+  }
 
   if (isTrackingModule()) {
     const subtableField = (fields || []).find((field) => field.type === 'subtable');
