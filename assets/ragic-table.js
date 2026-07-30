@@ -2842,9 +2842,8 @@ const attachLayoutDesignerEvents = (panel) => {
     const up = (upEvent) => {
       if (upEvent.pointerId !== pointerId) return;
       panel.releasePointerCapture?.(pointerId);
-      document.removeEventListener('pointermove', move);
-      document.removeEventListener('pointerup', up);
-      document.removeEventListener('pointercancel', cancel);
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
       source.classList.remove('is-dragging');
       if (pointerDragging) {
         upEvent.preventDefault();
@@ -2870,7 +2869,7 @@ const attachLayoutDesignerEvents = (panel) => {
     document.addEventListener('pointerup', up);
     document.addEventListener('pointercancel', cancel);
   });
-  panel.addEventListener('pointerdown', (event) => {
+  panel.addEventListener('mousedown', (event) => {
     const handle = event.target.closest('[data-resize]');
     if (!handle) return;
     event.preventDefault();
@@ -2880,8 +2879,6 @@ const attachLayoutDesignerEvents = (panel) => {
     const startLayout = currentDesignerLayout();
     const start = { ...startLayout.fields[fieldKey] };
     if (!fieldKey || !grid || !start.row) return;
-    const pointerId = event.pointerId;
-    handle.setPointerCapture?.(pointerId);
     const startX = event.clientX;
     const startY = event.clientY;
     const type = handle.dataset.resize;
@@ -2926,10 +2923,8 @@ const attachLayoutDesignerEvents = (panel) => {
       document.removeEventListener('pointercancel', cancel);
       grid.querySelector('.layout-drop-preview')?.remove();
       handle.classList.remove('resizing');
-      if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId);
     };
     const move = (moveEvent) => {
-      if (moveEvent.pointerId !== pointerId) return;
       moveEvent.preventDefault();
       const result = candidateAt(moveEvent.clientX, moveEvent.clientY);
       latestCandidate = result.candidate;
@@ -2938,7 +2933,6 @@ const attachLayoutDesignerEvents = (panel) => {
       showResizePreview(latestCandidate);
     };
     const up = (upEvent) => {
-      if (upEvent.pointerId !== pointerId) return;
       const result = candidateAt(upEvent.clientX, upEvent.clientY);
       latestCandidate = result.candidate;
       latestRows = result.rows;
@@ -2951,13 +2945,8 @@ const attachLayoutDesignerEvents = (panel) => {
         });
       }
     };
-    const cancel = (cancelEvent) => {
-      if (cancelEvent.pointerId !== pointerId) return;
-      cleanup();
-    };
-    document.addEventListener('pointermove', move, { passive: false });
-    document.addEventListener('pointerup', up);
-    document.addEventListener('pointercancel', cancel);
+    document.addEventListener('mousemove', move, { passive: false });
+    document.addEventListener('mouseup', up);
   });
 };
 
