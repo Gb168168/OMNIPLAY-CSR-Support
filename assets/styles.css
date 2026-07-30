@@ -2945,13 +2945,24 @@ textarea,
 }
 
 .designer-subfield-row {
-  grid-template-columns: auto minmax(160px, 1fr) 150px 140px auto;
+  grid-template-columns: auto minmax(160px, 1fr) 150px minmax(180px, 1fr) 140px auto;
   padding: 8px;
   background: var(--surface);
 }
 
+.designer-subfield-row .designer-subfield-options {
+  grid-column: 4;
+  min-height: 74px;
+  resize: vertical;
+}
+
 .designer-subfield-row .designer-width {
+  grid-column: 5;
   grid-template-columns: auto minmax(56px, 1fr) auto;
+}
+
+.designer-subfield-row .designer-actions {
+  grid-column: 6;
 }
 
 /* Final sidebar overrides for grouped, fully-collapsible navigation */
