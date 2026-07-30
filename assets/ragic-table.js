@@ -1209,6 +1209,9 @@ const createField = (field, value = '') => {
   const wrap = document.createElement('label');
   const isPairToggle = ['reminderEnabled', 'reportEnabled'].includes(field.type);
   wrap.className = `ragic-field ragic-field-${field.type || 'text'}${isPairToggle ? ' ragic-field-pair-toggle' : ''}`;
+  if (isTrackingModule() && field.type === 'text' && String(field.label || '').trim() === '單行文字') {
+    wrap.classList.add('is-tracking-placeholder-field');
+  }
   wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   applyFormLayout(wrap, field);
   const control = createControl(field, value);
@@ -1738,6 +1741,7 @@ const renderViewForm = (form, record = {}) => {
   getFields().filter((field) => field.type === 'subtable').forEach((field) => {
     const section = document.createElement('section');
     section.className = 'ragic-subtable ragic-view-subtable-section';
+    if (isTrackingModule() && String(field.label || '').trim() === '群組名稱') section.classList.add('is-tracking-group-subtable');
     if (!fixedLogLayout) applyFormLayout(section, field);
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
@@ -1891,6 +1895,7 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     getFields().filter((field) => field.type === 'subtable').forEach((field) => {
      const section = document.createElement('section');
       section.className = 'ragic-subtable';
+      if (isTrackingModule() && String(field.label || '').trim() === '群組名稱') section.classList.add('is-tracking-group-subtable');
       if (!fixedLogLayout) applyFormLayout(section, field);
       section.dataset.subtable = field.key;
       section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
