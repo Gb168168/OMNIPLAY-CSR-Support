@@ -1923,6 +1923,50 @@ const renderSubtableRow = (field, item = {}) => {
 };
 
 
+const subtableRowHasUserValue = (row) => {
+  if (!row) return false;
+  if (row.querySelector('.image-upload-preview img, .image-preview img, [data-existing-file]')) return true;
+  return [...row.querySelectorAll('input, select, textarea')].some((control) => {
+    if (control.disabled) return false;
+    if (control.type === 'checkbox' || control.type === 'radio') return control.checked;
+    if (control.type === 'file') return Boolean(control.files?.length);
+    if (control.tagName === 'SELECT' && control.multiple) {
+      return [...control.selectedOptions].some((option) => String(option.value || '').trim());
+    }
+    return String(control.value || control.dataset?.imageValue || '').trim().length > 0;
+  });
+};
+
+const enableAutoAppendSubtableRows = (section, field) => {
+  const body = section?.querySelector('tbody');
+  if (!body || body.dataset.autoAppendRows === 'true') return;
+  body.dataset.autoAppendRows = 'true';
+
+  const appendBlankRow = () => {
+    const row = renderSubtableRow(field);
+    row.classList.add('subtable-auto-blank-row');
+    body.appendChild(row);
+    row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
+  };
+  const ensureTrailingBlankRow = () => {
+    const rows = [...body.querySelectorAll(':scope > .subtable-row')];
+    if (!rows.length || subtableRowHasUserValue(rows[rows.length - 1])) appendBlankRow();
+  };
+
+  ensureTrailingBlankRow();
+  const handleEntry = (event) => {
+    const row = event.target?.closest?.('.subtable-row');
+    if (!row || row !== body.querySelector(':scope > .subtable-row:last-child')) return;
+    row.classList.remove('subtable-auto-blank-row');
+    if (subtableRowHasUserValue(row)) ensureTrailingBlankRow();
+  };
+  body.addEventListener('input', handleEntry);
+  body.addEventListener('change', handleEntry);
+  body.addEventListener('click', (event) => {
+    if (event.target?.closest?.('.subtable-row-delete')) queueMicrotask(ensureTrailingBlankRow);
+  });
+};
+
 const setRagicFormOverlayOffset = () => {
   const main = document.querySelector('.main, .main-content');
   const topbar = main?.querySelector(':scope > .topbar');
@@ -1990,16 +2034,10 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     ) section.classList.add('is-tracking-group-subtable');
       if (!fixedLogLayout) applyFormLayout(section, field);
       section.dataset.subtable = field.key;
-      section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3><button class="secondary" type="button">+ 新增明細</button></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
+      section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
       const body = section.querySelector('tbody');
-      ((record[field.key]?.length ? record[field.key] : [{}])).forEach((item) => body.appendChild(renderSubtableRow(field, item)));
-      section.querySelector('button').addEventListener('click', () => {
-        if (canUse('edit')) {
-          const row = renderSubtableRow(field);
-          body.appendChild(row);
-          row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
-        }
-      });
+      (record[field.key]?.length ? record[field.key] : []).forEach((item) => body.appendChild(renderSubtableRow(field, item)));
+      enableAutoAppendSubtableRows(section, field);
       (fixedLogLayout ? form : grid).appendChild(section);
     });
     mergeTrackingWalletIntoGroupEditor(form);
