@@ -583,11 +583,13 @@ const fixDuplicateKeys = (fields = []) => {
 };
 const getFields = () => RAGIC_STATE.schema?.fields || [];
 const listFields = () => {
-  const fields = getFields().filter((field) => field.type !== 'subtable');
-  const configuredKeys = RAGIC_STATE.config?.listColumns;
-  if (!Array.isArray(configuredKeys) || !configuredKeys.length) return fields;
-  const fieldsByKey = new Map(fields.map((field) => [field.key, field]));
-  return configuredKeys.map((key) => fieldsByKey.get(key)).filter(Boolean);
+  const allFields = getFields();
+  const defaultFields = allFields.filter((field) => field.type !== 'subtable');
+  const configuredColumns = RAGIC_STATE.config?.listColumns;
+  if (!Array.isArray(configuredColumns) || !configuredColumns.length) return defaultFields;
+  return configuredColumns
+    .map((column) => allFields.find((field) => field.key === column || String(field.label || '').trim() === String(column || '').trim()))
+    .filter(Boolean);
 };
 const listColumns = () => listFields().map((field) => field.key);
 const fieldByKey = (key) => getFields().find((field) => field.key === key);
@@ -1945,7 +1947,15 @@ const renderCell = (record, field) => {
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
   if (field?.type === 'datetime') return escapeHtml(displayDateTime(value));
+  if (field?.type === 'subtable') {
+    const rows = Array.isArray(value) ? value : [];
+    const text = rows.map((row) => Object.values(row || {}).map((item) => String(valueToText(item))).filter(Boolean).join('／')).filter(Boolean).join('\n');
+    return `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</span>`;
+  }
   const text = String(valueToText(value));
+  if (isTrackingModule() && String(field?.label || '').trim() === '紀錄') {
+    return `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</span>`;
+  }
   if (field?.type === 'textarea' && text.length > 50) return `${escapeHtml(text.slice(0, 50))}...`;
   return escapeHtml(text);
 };
