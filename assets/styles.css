@@ -4618,3 +4618,41 @@ body:has(.sidebar-toggle-btn.is-visible)
   height: 69px !important;
   min-height: 69px !important;
 }
+
+
+/* Tracking edit: keep APP, group name and wallet type in one horizontal row. */
+.tracking-page #ragicForm .is-tracking-group-subtable.has-inline-wallet-field .subtable-row-fields {
+  grid-template-columns: 68px minmax(180px, 1fr) minmax(120px, .55fr) !important;
+  align-items: end;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .tracking-inline-wallet-field {
+  grid-column: auto !important;
+  grid-row: auto !important;
+  align-self: end !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .tracking-inline-wallet-field > span {
+  display: block;
+  margin: 0 0 4px !important;
+  font-size: 11px !important;
+  color: var(--text-secondary);
+}
+
+.tracking-page #ragicForm .is-tracking-group-subtable .tracking-inline-wallet-field select {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 6px 8px !important;
+}
