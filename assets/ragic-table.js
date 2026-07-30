@@ -1730,6 +1730,9 @@ const renderViewForm = (form, record = {}) => {
     const isPairToggle = ['reminderEnabled', 'reportEnabled'].includes(field.type);
     const isChecked = record[field.key] === true || record[field.key] === 'true' || record[field.key] === '1';
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}${isPairToggle ? ' ragic-view-field-pair-toggle' : ''}${isPairToggle && isChecked ? ' is-checked' : ''}`;
+    if (isTrackingModule() && field.type === 'text' && String(field.label || '').trim() === '單行文字') {
+      item.classList.add('is-tracking-placeholder-field');
+    }
     applyFormLayout(item, field);
     item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${isPairToggle ? '' : renderDisplayValue(field, record[field.key])}</div>`;
     appendFormResizeHandles(item, field);
@@ -1746,7 +1749,7 @@ const renderViewForm = (form, record = {}) => {
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
     appendFormResizeHandles(section, field);
-    form.appendChild(section);
+    (fixedLogLayout ? form : grid).appendChild(section);
   });
   form.querySelectorAll('.ragic-view-subtable-section').forEach((section) => {
     const parentField = getFields().find((field) => field.key === section.dataset.subtable);
