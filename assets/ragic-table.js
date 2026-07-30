@@ -2624,7 +2624,7 @@ const renderLayoutDesigner = () => {
   `${useDesignerPixelHeight
     ? `height:${item.height}px;min-height:${item.height}px;`
     : ''}`;
-    return `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="false" ${fixedLogField ? 'data-layout-locked="true"' : ''} data-field-key="${escapeHtml(field.key)}" style="grid-column:${item.col} / span ${item.colSpan};grid-row:${item.row} / span ${item.rowSpan};${size}"><span class="layout-drag-grip" title="拖曳欄位" aria-label="拖曳欄位">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small>${field.type === 'subtable' ? '<button class="subtable-edit-btn" type="button">編輯子表格</button><div class="layout-row-size-controls" aria-label="子表格高度"><button type="button" data-row-size="-1" aria-label="縮小一列">−</button><span>高度</span><button type="button" data-row-size="1" aria-label="增加一列">＋</button></div>' : ''}<button class="settings-btn" type="button" title="設定">⚙️</button>${fixedLogField ? '' : '<button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>'}</div>`;
+    return `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="false" ${fixedLogField ? 'data-layout-locked="true"' : ''} data-field-key="${escapeHtml(field.key)}" style="grid-column:${item.col} / span ${item.colSpan};grid-row:${item.row} / span ${item.rowSpan};${size}"><span class="layout-drag-grip" title="拖曳欄位" aria-label="拖曳欄位">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small>${field.type === 'subtable' ? '<button class="subtable-edit-btn" type="button">編輯子表格</button>' : ''}<button class="settings-btn" type="button" title="設定">⚙️</button>${fixedLogField ? '' : '<button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>'}</div>`;
   }).join('');
   const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button><button class="remove-btn" type="button" aria-label="移除欄位">×</button></div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
   const normalFieldTypeButtons = FIELD_TYPES.map((type) => `
@@ -2757,26 +2757,6 @@ const attachLayoutDesignerEvents = (panel) => {
   });
   panel.addEventListener('dragend', () => { dragKey = ''; panel.querySelector('.layout-drop-preview')?.remove(); panel.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging')); });
   panel.addEventListener('click', (event) => {
-    const rowSizeButton = event.target.closest('[data-row-size]');
-    if (rowSizeButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      const fieldKey = rowSizeButton.closest('[data-field-key]')?.dataset.fieldKey;
-      const delta = Number(rowSizeButton.dataset.rowSize) || 0;
-      if (!fieldKey || !delta) return;
-      updateLayoutDesignerState((layout) => {
-        const current = layout.fields[fieldKey];
-        if (!current) return;
-        const desiredRowSpan = Math.max(1, current.rowSpan + delta);
-        if (desiredRowSpan === current.rowSpan) return;
-        if (delta > 0) {
-          layout.rows = Math.min(10, Math.max(layout.rows, current.row + desiredRowSpan - 1));
-        }
-        const candidate = clampLayoutItem({ ...current, rowSpan: desiredRowSpan }, layout);
-        if (isLayoutAreaFree(layout, fieldKey, candidate)) layout.fields[fieldKey] = candidate;
-      });
-      return;
-    }
     const remove = event.target.closest('.remove-btn');
     if (remove) {
       const key = remove.closest('[data-field-key]')?.dataset.fieldKey;
@@ -2884,8 +2864,14 @@ const attachLayoutDesignerEvents = (panel) => {
     let latestCandidate = { ...start };
     let latestRows = startLayout.rows;
     const candidateAt = (clientX, clientY) => {
-      const dCol = Math.round((clientX - startX) / Math.max(1, metrics.cellW + metrics.gapX));
-      const dRow = Math.round((clientY - startY) / Math.max(1, metrics.cellH + metrics.gapY));
+      const resizeStep = (distance, unit) => {
+        if (Math.abs(distance) < 4) return 0;
+        return distance > 0
+          ? Math.ceil(distance / Math.max(1, unit))
+          : Math.floor(distance / Math.max(1, unit));
+      };
+      const dCol = resizeStep(clientX - startX, metrics.cellW + metrics.gapX);
+      const dRow = resizeStep(clientY - startY, metrics.cellH + metrics.gapY);
       const next = { ...start };
       let candidateRows = startLayout.rows;
       if (type === 'col' || type === 'both') {
