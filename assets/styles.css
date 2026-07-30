@@ -4493,8 +4493,9 @@ body:has(.sidebar-toggle-btn.is-visible)
 
 .tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-fields {
   display: grid !important;
-  grid-template-columns: 68px minmax(0, 1fr) !important;
+  grid-template-columns: 68px minmax(180px, 1fr) minmax(120px, .55fr) !important;
   gap: 8px !important;
+  align-items: end !important;
 }
 
 .tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-field {
