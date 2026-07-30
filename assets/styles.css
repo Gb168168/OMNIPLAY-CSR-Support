@@ -4535,3 +4535,34 @@ body:has(.sidebar-toggle-btn.is-visible)
 .tracking-page #ragicForm .ragic-form-grid > .ragic-subtable:not(.is-tracking-group-subtable) {
   --form-row: 3 !important;
 }
+
+
+/* Keep tracking view-mode group rows as a compact two-column table. */
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable .ragic-view-subtable {
+  display: table !important;
+  width: 100% !important;
+  table-layout: fixed;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable thead {
+  display: table-header-group !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable tbody {
+  display: table-row-group !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable tr {
+  display: table-row !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable th,
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable td {
+  display: table-cell !important;
+  width: 50% !important;
+  padding: 6px 7px !important;
+  font-size: 12px !important;
+  line-height: 1.35;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
