@@ -328,6 +328,52 @@ nextFields[key] = {
       )
 };
   });
+
+  if (isTrackingModule()) {
+    const subtableField = (fields || []).find((field) => field.type === 'subtable');
+    const imageField = (fields || []).find((field) => field.type === 'image' || field.label === '圖片');
+    const subtableLayout = subtableField ? nextFields[subtableField.key] : null;
+    const imageLayout = imageField ? nextFields[imageField.key] : null;
+    const isLegacyBlockedLayout =
+      subtableLayout &&
+      imageLayout &&
+      subtableLayout.row >= 4 &&
+      imageLayout.row === subtableLayout.row - 1;
+
+    if (isLegacyBlockedLayout) {
+      const occupied = Object.entries(nextFields)
+        .filter(([key]) => key !== imageField.key && key !== subtableField.key)
+        .map(([, item]) => item);
+      let imageTarget = null;
+
+      for (let row = 2; row >= 1 && !imageTarget; row -= 1) {
+        for (let col = 1; col <= columns && !imageTarget; col += 1) {
+          const candidate = { row, col, colSpan: 1, rowSpan: 1 };
+          const overlaps = occupied.some((item) =>
+            candidate.row < item.row + item.rowSpan &&
+            candidate.row + candidate.rowSpan > item.row &&
+            candidate.col < item.col + item.colSpan &&
+            candidate.col + candidate.colSpan > item.col
+          );
+          if (!overlaps) imageTarget = candidate;
+        }
+      }
+
+      if (imageTarget) {
+        nextFields[imageField.key] = {
+          ...imageLayout,
+          ...imageTarget
+        };
+        nextFields[subtableField.key] = {
+          ...subtableLayout,
+          row: 3,
+          col: 1,
+          colSpan: columns
+        };
+      }
+    }
+  }
+
   return { columns, rows, fields: nextFields, version: String(source.version || '') };
 };
 const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
