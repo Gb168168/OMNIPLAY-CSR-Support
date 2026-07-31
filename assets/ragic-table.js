@@ -1,7 +1,7 @@
 
 const LOG_FORM_LAYOUT = { columns: 6, rows: 4, columnGap: 12, rowGap: 10, fieldHeight: 64, textareaHeight: 178 };
 const LOG_SUBTABLE_COLUMN_RATIOS = [2, 1, 2, 1, 2, 1];
-const LOG_LIST_WIDTHS = { issue: 360, note: 260, image: 90, file: 90, serial: 110, date: 150 };
+const LOG_LIST_WIDTHS = { issue: 700, note: 260, image: 90, file: 90, serial: 110, date: 150 };
 const LOG_FIELD_LAYOUT_BY_LABEL = {
   '發生時間': { row: 1, col: 1 }, '接洽人員': { row: 1, col: 2 }, '客戶': { row: 1, col: 3 }, '分類': { row: 1, col: 4 }, '狀態': { row: 1, col: 5 }, '編號': { row: 1, col: 6 },
   '完成時間': { row: 2, col: 1 }, '完成人員': { row: 2, col: 2 }, '更新日期': { row: 2, col: 3 }, '圖片': { row: 2, col: 4 }, '檔案': { row: 2, col: 5 }, '提報連結': { row: 2, col: 6 },
