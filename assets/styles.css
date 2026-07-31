@@ -962,12 +962,16 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .leave-special-menu[hidden] { display: none; }
 
 .schedule-panel {
-  overflow: hidden;
-  border: 1px solid rgba(203, 213, 225, .24);
-  border-radius: 24px;
-  background: linear-gradient(145deg, #020617 0%, var(--sidebar) 58%, #1e293b 100%);
-  box-shadow: var(--shadow);
-  color: white;
+    height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+    border: 1px solid rgba(203, 213, 225, .24);
+    border-radius: 24px;
+    background: linear-gradient(145deg, #020617 0%, var(--sidebar) 58%, #1e293b 100%);
+    box-shadow: var(--shadow);
+    color: white;
 }
 
 .schedule-heading {
@@ -1105,12 +1109,16 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .schedule-status[data-type="error"] { color: #fecaca; }
 
 .calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(110px, 1fr));
-  gap: 1px;
-  padding: 1px;
-  background: rgba(255,255,255,.08);
-  overflow-x: auto;
+    flex: 1;
+
+    display: grid;
+    grid-template-columns: repeat(7, minmax(110px, 1fr));
+    gap: 1px;
+    padding: 1px;
+    background: rgba(255,255,255,.08);
+
+    overflow-x: auto;
+    overflow-y: auto;
 }
 
 .calendar-grid.is-year-view { grid-template-columns: repeat(4, minmax(150px, 1fr)); }
@@ -1133,7 +1141,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 }
 
 .calendar-day {
-  min-height: 120px;
+  min-height: 90px;
   display: grid;
   align-content: start;
   gap: 8px;
