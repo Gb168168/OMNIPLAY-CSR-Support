@@ -665,15 +665,15 @@ const normalizeFormFieldSize = (value, min = 1) => { const parsed = Number(value
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
 const fieldColumnWidth = (field = {}) => {
   if (isLogModule()) {
-    if (field.label === '日期') return 160;
-    if (field.label === '班別') return 80;
-    if (field.label === '客戶') return 350;
+    if (field.label === '日期') return 150;
+    if (field.label === '班別') return 60;
+    if (field.label === '客戶') return 340;
     if (field.label === '分類') return 120;
     if (field.label === '狀態') return 90;
-    if (field.label === '問題描述') return 700;
-    if (field.label === '接洽者') return 120;
-    if (field.label === '完成者') return 120;
-    if (field.label === '完成時間') return 160;
+    if (field.label === '問題描述') return 900;
+    if (field.label === '接洽者') return 100;
+    if (field.label === '完成者') return 100;
+    if (field.label === '完成時間') return 150;
 
     if (field.label === '備註') return LOG_LIST_WIDTHS.note;
     if (field.type === 'image') return LOG_LIST_WIDTHS.image;
