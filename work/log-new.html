@@ -1088,7 +1088,9 @@
 
     /* 日誌 NEW 列表：問題描述完整保留表單換行，依實際行數撐高。 */
     .log-new-page #ragicListView .ragic-table th[data-field-key="issue"],
-    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"] {
+    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"],
+    .log-new-page #ragicListView .ragic-table th:nth-child(7),
+    .log-new-page #ragicListView .ragic-table td:nth-child(7) {
       white-space: pre-wrap !important;
       overflow: visible !important;
       text-overflow: clip !important;
@@ -1099,7 +1101,8 @@
       vertical-align: top;
       line-height: 1.55;
     }
-    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"] > * {
+    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"] > *,
+    .log-new-page #ragicListView .ragic-table td:nth-child(7) > * {
       white-space: pre-wrap !important;
       overflow: visible !important;
       text-overflow: clip !important;
