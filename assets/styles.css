@@ -1408,7 +1408,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
     overflow: visible;
     text-overflow: unset;
     white-space: normal;
-    vertical-align: top;
+    vertical-align: middle;
 }
 .ragic-table td.col-content a,
 .ragic-table td.col-content span {
