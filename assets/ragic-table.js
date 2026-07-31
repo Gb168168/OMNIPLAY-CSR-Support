@@ -665,13 +665,23 @@ const normalizeFormFieldSize = (value, min = 1) => { const parsed = Number(value
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
 const fieldColumnWidth = (field = {}) => {
   if (isLogModule()) {
-    if (field.label === '問題描述') return LOG_LIST_WIDTHS.issue;
+    if (field.label === '日期') return 160;
+    if (field.label === '班別') return 80;
+    if (field.label === '客戶') return 350;
+    if (field.label === '分類') return 120;
+    if (field.label === '狀態') return 90;
+    if (field.label === '問題描述') return 700;
+    if (field.label === '接洽者') return 120;
+    if (field.label === '完成者') return 120;
+    if (field.label === '完成時間') return 160;
+
     if (field.label === '備註') return LOG_LIST_WIDTHS.note;
     if (field.type === 'image') return LOG_LIST_WIDTHS.image;
     if (field.type === 'file') return LOG_LIST_WIDTHS.file;
     if (field.type === 'serial' || field.label === '編號') return LOG_LIST_WIDTHS.serial;
-    if (['date','datetime','updatedDate'].includes(field.type)) return LOG_LIST_WIDTHS.date;
+    if (['date', 'datetime', 'updatedDate'].includes(field.type)) return LOG_LIST_WIDTHS.date;
   }
+
   return normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
 };
 const defaultFormFieldHeight = (field = {}) => field.type === 'subtable' ? DEFAULT_SUBTABLE_FIELD_HEIGHT : DEFAULT_FORM_FIELD_HEIGHT;
@@ -2256,9 +2266,12 @@ const autoFitTrackingListColumns = () => {
         : ['date', 'datetime', 'createdDate', 'updatedDate'].includes(field.type)
           ? 190
           : 280;
-    const width = label === '紀錄'
-      ? 500
-      : Math.max(76, Math.min(maximum, Math.ceil(Math.max(labelWidth, contentWidth))));
+  const fixedWidth = fieldColumnWidth(field);
+
+  const width = fixedWidth ??
+      (label === '紀錄'
+          ? 500
+          : Math.max(76, Math.min(maximum, Math.ceil(Math.max(labelWidth, contentWidth))));
     setColumnWidth(table, header, width);
     totalWidth += width;
   });
