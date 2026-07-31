@@ -666,8 +666,8 @@ const normalizeFieldWidth = (width) => { const value = Number(width); return Num
 const fieldColumnWidth = (field = {}) => {
   if (isLogModule()) {
     if (field.label === '日期') return 90;
-    if (field.label === '班別') return 65;
-    if (field.label === '客戶') return 340;
+    if (field.label === '班別') return 80;
+    if (field.label === '客戶') return 300;
     if (field.label === '分類') return 120;
     if (field.label === '狀態') return 90;
     if (field.label === '問題描述') return 900;
