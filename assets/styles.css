@@ -519,13 +519,17 @@ button:hover { transform: translateY(-1px); }
 .modal-backdrop.is-open { display: grid; }
 
 .modal-card {
-  width: min(520px, 100%);
-  padding: 24px;
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 24px;
-  background: var(--sidebar);
-  box-shadow: var(--shadow);
-  color: white;
+    width: min(520px, 100%);
+    max-height: calc(100vh - 44px);
+    padding: 24px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 24px;
+    background: var(--sidebar);
+    box-shadow: var(--shadow);
+    color: white;
+
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-heading {
@@ -5309,4 +5313,27 @@ body:has(.sidebar-toggle-btn.is-visible)
 .main:has(> #meetingListView:not([hidden])) > #meetingListView,
 .main-content:has(> #meetingListView:not([hidden])) > #meetingListView {
   margin-top: 0 !important;
+}
+
+/* 排程表新增排程 */
+#scheduleModal .schedule-form {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+#scheduleModal .modal-heading {
+    position: sticky;
+    top: 0;
+    background: var(--sidebar);
+    z-index: 10;
+    padding-bottom: 12px;
+}
+
+#scheduleModal .form-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--sidebar);
+    padding-top: 12px;
+    z-index: 10;
 }
