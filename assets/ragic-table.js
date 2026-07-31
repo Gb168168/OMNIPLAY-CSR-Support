@@ -2121,7 +2121,9 @@ const renderCell = (record, field) => {
   if (isTrackingModule() && String(field?.label || '').trim() === '紀錄') {
     return renderTrackingRecordText(text);
   }
-  if (field?.type === 'textarea' && text.length > 50) return `${escapeHtml(text.slice(0, 50))}...`;
+  if (field?.type === 'textarea') {
+  return `<span style="display:block;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;">${escapeHtml(text)}</span>`;
+}
   return escapeHtml(text);
 };
 const IMAGE_PREVIEW_STATE = { sources: [], index: 0, label: '圖片', zoom: 1, x: 0, y: 0, dragging: false };
