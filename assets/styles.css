@@ -1405,14 +1405,17 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-table .col-content { min-width: 180px; }
 .ragic-table .col-textarea { min-width: 300px; }
 .ragic-table td.col-content {
-  overflow: hidden;
-  text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
+    vertical-align: top;
 }
 .ragic-table td.col-content a,
 .ragic-table td.col-content span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 .ragic-table th input {
   max-width: 100%;
