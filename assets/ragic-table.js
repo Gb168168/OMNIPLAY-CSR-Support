@@ -668,12 +668,12 @@ const fieldColumnWidth = (field = {}) => {
     if (field.label === '日期') return 90;
     if (field.label === '班別') return 80;
     if (field.label === '客戶') return 300;
-    if (field.label === '分類') return 120;
-    if (field.label === '狀態') return 90;
-    if (field.label === '問題描述') return 900;
-    if (field.label === '接洽者') return 100;
-    if (field.label === '完成者') return 100;
-    if (field.label === '完成時間') return 150;
+    if (field.label === '分類') return 110;
+    if (field.label === '狀態') return 80;
+    if (field.label === '問題描述') return 800;
+    if (field.label === '接洽者') return 90;
+    if (field.label === '完成者') return 90;
+    if (field.label === '完成時間') return 90;
 
     if (field.label === '備註') return LOG_LIST_WIDTHS.note;
     if (field.type === 'image') return LOG_LIST_WIDTHS.image;
