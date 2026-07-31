@@ -1234,7 +1234,6 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .calendar-month-card span { color: var(--sidebar-text); font-weight: 800; }
 .calendar-month-card.is-current { outline: 2px solid rgba(59, 130, 246, .8); outline-offset: -2px; }
 
-.schedule-modal-card { width: min(500px, 70vw); }
 .schedule-form { display: grid; gap: 15px; }
 .schedule-form label,
 .schedule-form label span { display: grid; gap: 8px; }
