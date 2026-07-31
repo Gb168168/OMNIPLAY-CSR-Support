@@ -665,8 +665,8 @@ const normalizeFormFieldSize = (value, min = 1) => { const parsed = Number(value
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
 const fieldColumnWidth = (field = {}) => {
   if (isLogModule()) {
-    if (field.label === '日期') return 100;
-    if (field.label === '班別') return 60;
+    if (field.label === '日期') return 90;
+    if (field.label === '班別') return 65;
     if (field.label === '客戶') return 340;
     if (field.label === '分類') return 120;
     if (field.label === '狀態') return 90;
