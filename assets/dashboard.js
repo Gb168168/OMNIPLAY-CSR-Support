@@ -372,10 +372,7 @@ const reminderItems = (
     });
 };
 
-const todoTypeLabel = (type) => {
-  if (type === '日誌') return '日誌 NEW';
-  return type;
-};
+const todoTypeLabel = (type) => type;
 
 const renderTodoFilters = (items) => {
   const container = document.querySelector('#dashboardTodoFilters');
@@ -452,10 +449,10 @@ const renderTodoList = () => {
       fallback: '交接事項'
     }),
     ...shiftRecordItems(dashboardState.logs, {
-      type: '日誌',
-      icon: '📝',
+      type: '日誌 NEW',
+      icon: '✨',
       href: 'work/log.html',
-      fallback: '日誌'
+      fallback: '日誌 NEW'
     }),
     ...shiftRecordItems(dashboardState.reports, {
       type: '提報',
@@ -475,12 +472,6 @@ const renderTodoList = () => {
       icon: '💬',
       href: 'meeting/meeting.html',
       fallback: '會議紀錄'
-    }),
-    ...reminderItems(dashboardState.logs, {
-      type: '日誌 NEW',
-      icon: '✨',
-      href: 'work/log.html',
-      fallback: '日誌 NEW'
     }),
     ...reminderItems(dashboardState.handovers, {
       type: '交接',
