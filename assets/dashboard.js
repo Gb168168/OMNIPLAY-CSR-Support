@@ -249,7 +249,7 @@ const withRecordLink = (href, id) => id ? `${href}?id=${encodeURIComponent(id)}`
 const shiftRecordItems = (records, { type, icon, href, fallback, detailsFormatter, activityFormatter }) => {
   const range = getShiftRange(dashboardState.selectedShift);
   return records
-    .filter((record) => isFireRecord(record) || isInShiftRange(record, range))
+    .filter(() => true)
     .map((record) => {
       const at = recordDateForShift(record, range);
       return {
