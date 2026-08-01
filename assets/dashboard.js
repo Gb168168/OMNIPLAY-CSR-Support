@@ -11,7 +11,19 @@ const dashboardCollections = {
   trackingSchema: dashboardDb?.collection('tracking_schema')?.doc('active')
 };
 
-const dashboardState = { staff: [], leave: {}, handovers: [], tracking: [], trackingSchema: null, reports: [], logs: [], schedules: [], meetings: [], selectedShift: getDefaultShift() };
+const dashboardState = {
+  staff: [],
+  leave: {},
+  handovers: [],
+  tracking: [],
+  trackingSchema: null,
+  reports: [],
+  logs: [],
+  schedules: [],
+  meetings: [],
+  selectedShift: getDefaultShift(),
+  selectedTodoType: 'all'
+};
 const todoList = document.querySelector('#dashboardTodoList');
 const setText = (selector, value) => { const el = document.querySelector(selector); if (el) el.textContent = String(value); };
 const pad2 = (value) => String(value).padStart(2, '0');
@@ -263,30 +275,180 @@ const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
     sortAt: item.occurrenceAt.getTime()
   };
 });
+const todoTypeLabel = (type) => {
+  if (type === '日誌') return '日誌 NEW';
+  return type;
+};
+
+const renderTodoFilters = (items) => {
+  const container = document.querySelector('#dashboardTodoFilters');
+  if (!container) return;
+
+  const counts = items.reduce((result, item) => {
+    result[item.type] = (result[item.type] || 0) + 1;
+    return result;
+  }, {});
+
+  const types = ['日誌', '交接', '提報', '對接追蹤', '會議', '排程']
+    .filter((type) => counts[type] > 0);
+
+  if (!types.length) {
+    container.innerHTML = '';
+    container.hidden = true;
+    dashboardState.selectedTodoType = 'all';
+    return;
+  }
+
+  container.hidden = false;
+
+  const validTypes = ['all', ...types];
+  if (!validTypes.includes(dashboardState.selectedTodoType)) {
+    dashboardState.selectedTodoType = 'all';
+  }
+
+  const buttons = [];
+
+  if (types.length > 1) {
+    buttons.push(`
+      <button
+        type="button"
+        class="todo-filter-btn ${dashboardState.selectedTodoType === 'all' ? 'active' : ''}"
+        data-todo-type="all"
+      >
+        全部 (${items.length})
+      </button>
+    `);
+  } else {
+    dashboardState.selectedTodoType = types[0];
+  }
+
+  types.forEach((type) => {
+    buttons.push(`
+      <button
+        type="button"
+        class="todo-filter-btn ${dashboardState.selectedTodoType === type ? 'active' : ''}"
+        data-todo-type="${escapeDashboardHtml(type)}"
+      >
+        ${escapeDashboardHtml(todoTypeLabel(type))} (${counts[type]})
+      </button>
+    `);
+  });
+
+  container.innerHTML = buttons.join('');
+
+  container.querySelectorAll('.todo-filter-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      dashboardState.selectedTodoType = button.dataset.todoType || 'all';
+      renderTodoList();
+    });
+  });
+};
+
 const renderTodoList = () => {
   if (!todoList) return;
+
   const items = [
-    ...shiftRecordItems(dashboardState.handovers, { type: '交接', icon: '📋', href: 'work/handover.html', fallback: '交接事項' }),
-    ...shiftRecordItems(dashboardState.logs, { type: '日誌', icon: '📝', href: 'work/log.html', fallback: '日誌' }),
-    ...shiftRecordItems(dashboardState.reports, { type: '提報', icon: '📌', href: 'work/report.html', fallback: '提報追蹤' }),
-    ...shiftRecordItems(dashboardState.tracking, { type: '對接追蹤', icon: '🔎', href: 'work/tracking.html', fallback: '對接追蹤', detailsFormatter: trackingTodoDetails, activityFormatter: trackingActivityKind }),
-    ...shiftRecordItems(dashboardState.meetings, { type: '會議', icon: '💬', href: 'meeting/meeting.html', fallback: '會議紀錄' }),
+    ...shiftRecordItems(dashboardState.handovers, {
+      type: '交接',
+      icon: '📋',
+      href: 'work/handover.html',
+      fallback: '交接事項'
+    }),
+    ...shiftRecordItems(dashboardState.logs, {
+      type: '日誌',
+      icon: '📝',
+      href: 'work/log.html',
+      fallback: '日誌'
+    }),
+    ...shiftRecordItems(dashboardState.reports, {
+      type: '提報',
+      icon: '📌',
+      href: 'work/report.html',
+      fallback: '提報追蹤'
+    }),
+    ...shiftRecordItems(dashboardState.tracking, {
+      type: '對接追蹤',
+      icon: '🔎',
+      href: 'work/tracking.html',
+      fallback: '對接追蹤',
+      detailsFormatter: trackingTodoDetails,
+      activityFormatter: trackingActivityKind
+    }),
+    ...shiftRecordItems(dashboardState.meetings, {
+      type: '會議',
+      icon: '💬',
+      href: 'meeting/meeting.html',
+      fallback: '會議紀錄'
+    }),
     ...scheduleItems()
-  ].sort((a, b) => a.sortAt - b.sortAt || String(a.type).localeCompare(String(b.type), 'zh-Hant') || String(a.title).localeCompare(String(b.title), 'zh-Hant'));
+  ].sort((a, b) =>
+    a.sortAt - b.sortAt ||
+    String(a.type).localeCompare(String(b.type), 'zh-Hant') ||
+    String(a.title).localeCompare(String(b.title), 'zh-Hant')
+  );
+
+  renderTodoFilters(items);
+
+  const filteredItems = dashboardState.selectedTodoType === 'all'
+    ? items
+    : items.filter((item) => item.type === dashboardState.selectedTodoType);
 
   const renderTrackingDetails = (item) => {
     const details = item.details;
-    if (!details) return `<strong>${escapeDashboardHtml(item.type)} — ${escapeDashboardHtml(item.title)}</strong>`;
-    const rows = details.rows?.length ? details.rows : [{ app: '—', group: '—', wallet: '—' }];
-    return `<strong class="tracking-todo-main"><span class="tracking-todo-prefix">${escapeDashboardHtml(item.type)} —</span><span class="tracking-todo-data">${rows.map((row, index) => `
-      <span class="tracking-todo-cell tracking-todo-customer">${escapeDashboardHtml(details.customer)}</span>
-      <span class="tracking-todo-cell">${escapeDashboardHtml(row.app)}</span>
-      <span class="tracking-todo-cell tracking-todo-group">${escapeDashboardHtml(row.group)}</span>
-      <span class="tracking-todo-cell">${escapeDashboardHtml(row.wallet)}</span>`).join('')}</span></strong>`;
+
+    if (!details) {
+      return `<strong>${escapeDashboardHtml(todoTypeLabel(item.type))} — ${escapeDashboardHtml(item.title)}</strong>`;
+    }
+
+    const rows = details.rows?.length
+      ? details.rows
+      : [{ app: '—', group: '—', wallet: '—' }];
+
+    return `
+      <strong class="tracking-todo-main">
+        <span class="tracking-todo-prefix">
+          ${escapeDashboardHtml(item.type)} —
+        </span>
+        <span class="tracking-todo-data">
+          ${rows.map((row) => `
+            <span class="tracking-todo-cell tracking-todo-customer">
+              ${escapeDashboardHtml(details.customer)}
+            </span>
+            <span class="tracking-todo-cell">
+              ${escapeDashboardHtml(row.app)}
+            </span>
+            <span class="tracking-todo-cell tracking-todo-group">
+              ${escapeDashboardHtml(row.group)}
+            </span>
+            <span class="tracking-todo-cell">
+              ${escapeDashboardHtml(row.wallet)}
+            </span>
+          `).join('')}
+        </span>
+      </strong>
+    `;
   };
-  todoList.innerHTML = items.length
-    ? items.map((item) => `<li><a href="${item.href}"><span class="todo-type">${item.icon} ${escapeDashboardHtml(item.time)}</span>${renderTrackingDetails(item)}${item.activityKind ? `<span class="todo-activity-kind todo-activity-${item.activityKind === '建立' ? 'created' : 'updated'}">${escapeDashboardHtml(item.activityKind)}</span>` : ''}</a></li>`).join('')
-    : '<li class="dashboard-empty">目前沒有當前班次紀錄或今日排程。</li>';
+
+  todoList.innerHTML = filteredItems.length
+    ? filteredItems.map((item) => `
+        <li>
+          <a href="${item.href}">
+            <span class="todo-type">
+              ${item.icon} ${escapeDashboardHtml(item.time)}
+            </span>
+            ${renderTrackingDetails(item)}
+            ${item.activityKind
+              ? `
+                <span class="todo-activity-kind todo-activity-${item.activityKind === '建立' ? 'created' : 'updated'}">
+                  ${escapeDashboardHtml(item.activityKind)}
+                </span>
+              `
+              : ''
+            }
+          </a>
+        </li>
+      `).join('')
+    : '<li class="dashboard-empty">這個分類目前沒有資料。</li>';
 };
 const escapeDashboardHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
 
