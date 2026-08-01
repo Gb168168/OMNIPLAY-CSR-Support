@@ -1626,7 +1626,7 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .schedule-heading > .schedule-toolbar:last-child { justify-content: flex-end; }
 .schedule-meta { justify-content: flex-end; }
 .schedule-modal-card {
-    width: min(700px, 90vw);
+    width: min(600px, 90vw);
     max-height: 85vh;
     overflow: auto;
 }
