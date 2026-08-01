@@ -372,8 +372,6 @@ const reminderItems = (
     });
 };
 
-const todoTypeLabel = (type) => type;
-
 const renderTodoFilters = (items) => {
   const container = document.querySelector('#dashboardTodoFilters');
   if (!container) return;
@@ -548,14 +546,6 @@ const renderTodoList = () => {
               ${item.icon} ${escapeDashboardHtml(item.time)}
             </span>
             ${renderTrackingDetails(item)}
-            ${item.activityKind
-              ? `
-                <span class="todo-activity-kind todo-activity-${item.activityKind === '建立' ? 'created' : 'updated'}">
-                  ${escapeDashboardHtml(item.activityKind)}
-                </span>
-              `
-              : ''
-            }
           </a>
         </li>
       `).join('')
