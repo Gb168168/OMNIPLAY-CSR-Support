@@ -468,10 +468,6 @@ const subscribeDashboard = () => {
     ...doc.data()
   }));
 
-  console.log('===== LOG COLLECTION =====');
-  console.log('總筆數：', dashboardState.logs.length);
-  console.log(dashboardState.logs);
-
   updateDashboard();
 });
   dashboardCollections.schedule?.onSnapshot((snapshot) => { dashboardState.schedules = snapshot.docs.map((doc) => ({ id: doc.id, labelColor: '#3b82f6', ...doc.data() })); updateDashboard(); });
