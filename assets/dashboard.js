@@ -69,6 +69,67 @@ const isInShiftRange = (record = {}, range) => {
   return Boolean(updatedAt && updatedAt >= range.start && updatedAt <= range.end);
 };
 
+const isSameDate = (dateA, dateB = new Date()) => Boolean(
+  dateA &&
+  dateA.getFullYear() === dateB.getFullYear() &&
+  dateA.getMonth() === dateB.getMonth() &&
+  dateA.getDate() === dateB.getDate()
+);
+
+const recordCreatedAt = (record = {}) =>
+  valueDate(record.createdAt) ||
+  valueDate(record.createdDate) ||
+  valueDate(record.created_at);
+
+const recordUpdatedAt = (record = {}) =>
+  valueDate(record.updatedAt) ||
+  valueDate(record.updatedDate) ||
+  valueDate(record.updated_at) ||
+  valueDate(record.updated_time);
+
+const recordReminderAt = (record = {}) =>
+  valueDate(record.reminder_at) ||
+  valueDate(record.reminderAt);
+
+const reminderIsEnabled = (record = {}) =>
+  record.reminder_enabled === true ||
+  record.reminderEnabled === true;
+
+const recordBelongsToSelectedShift = (record = {}) => {
+  const shift = String(record.shift || '').trim();
+  if (!shift) return true;
+
+  if (dashboardState.selectedShift === 'morning') {
+    return ['早', '早班', 'morning'].includes(shift.toLowerCase());
+  }
+
+  return ['晚', '晚班', 'night'].includes(shift.toLowerCase());
+};
+
+const getTodayActivity = (record = {}) => {
+  const today = new Date();
+  const createdAt = recordCreatedAt(record);
+  const updatedAt = recordUpdatedAt(record);
+
+  const createdToday = isSameDate(createdAt, today);
+  const updatedToday = isSameDate(updatedAt, today);
+
+  if (createdToday && recordBelongsToSelectedShift(record)) {
+    return {
+      kind: '建立',
+      at: createdAt
+    };
+  }
+
+  if (updatedToday) {
+    return {
+      kind: '更新',
+      at: updatedAt
+    };
+  }
+
+  return null;
+};
 
 const getRepeatStepDays = (item) => {
   if (item.repeat === 'daily') return 1;
@@ -172,8 +233,7 @@ const updateDashboard = () => {
   const reportTrackStatuses = new Set(['待辦中', '處理中', '觀察中', '追客']);
   const normalizeReportStatus = (value) => String(value || '').trim().replace(/["']/g, '');
   const fireHandovers = dashboardState.handovers.filter((record) => record.fire === true);
-  const range = getShiftRange(dashboardState.selectedShift);
-  const logs = dashboardState.logs.filter((record) => isInShiftRange(record, range));
+  const logs = dashboardState.logs.filter((record) => Boolean(getTodayActivity(record)));
   setText('#handoverFireCount', fireHandovers.length);
   setText('#trackingOpenCount', dashboardState.reports.filter((record) => reportTrackStatuses.has(normalizeReportStatus(record.status))).length);
   setText('#shiftLogCount', logs.length);
@@ -246,23 +306,27 @@ const recordDateForShift = (record = {}, range) => {
 const formatRecordTime = (at) => at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : '--:--';
 const isFireRecord = (record = {}) => record.fire === true;
 const withRecordLink = (href, id) => id ? `${href}?id=${encodeURIComponent(id)}` : href;
-const shiftRecordItems = (records, { type, icon, href, fallback, detailsFormatter, activityFormatter }) => {
-  const range = getShiftRange(dashboardState.selectedShift);
+const shiftRecordItems = (
+  records,
+  { type, icon, href, fallback, detailsFormatter }
+) => {
   return records
-    .filter(() => true)
     .map((record) => {
-      const at = recordDateForShift(record, range);
+      const activity = getTodayActivity(record);
+      if (!activity) return null;
+
       return {
         icon: isFireRecord(record) ? '🔥' : icon,
-        time: isFireRecord(record) ? '--:--' : formatRecordTime(at),
+        time: formatRecordTime(activity.at),
         type,
         href: withRecordLink(href, record.id),
         title: todoTitle(record, fallback),
         details: detailsFormatter ? detailsFormatter(record) : null,
-        activityKind: activityFormatter ? activityFormatter(record) : '',
-        sortAt: isFireRecord(record) ? 0 : (at || new Date(8640000000000000)).getTime()
+        activityKind: activity.kind,
+        sortAt: activity.at?.getTime() || 0
       };
-    });
+    })
+    .filter(Boolean);
 };
 const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
   const allDay = item.allDay || item.isAllDay;
@@ -275,6 +339,37 @@ const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
     sortAt: item.occurrenceAt.getTime()
   };
 });
+
+const reminderItems = (
+  records,
+  { type, icon, href, fallback }
+) => {
+  const today = new Date();
+
+  return records
+    .filter((record) => {
+      const reminderAt = recordReminderAt(record);
+
+      return (
+        reminderIsEnabled(record) &&
+        isSameDate(reminderAt, today)
+      );
+    })
+    .map((record) => {
+      const reminderAt = recordReminderAt(record);
+
+      return {
+        icon: '⏰',
+        time: formatRecordTime(reminderAt),
+        type: '今日提醒',
+        href: withRecordLink(href, record.id),
+        title: `${type} — ${todoTitle(record, fallback)}`,
+        activityKind: '提醒',
+        sortAt: reminderAt?.getTime() || 0
+      };
+    });
+};
+
 const todoTypeLabel = (type) => {
   if (type === '日誌') return '日誌 NEW';
   return type;
@@ -289,7 +384,7 @@ const renderTodoFilters = (items) => {
     return result;
   }, {});
 
-  const types = ['日誌', '交接', '提報', '對接追蹤', '會議', '排程']
+  const types = ['日誌', '交接', '提報', '對接追蹤', '會議', '排程', '今日提醒']
     .filter((type) => counts[type] > 0);
 
   if (!types.length) {
@@ -382,10 +477,10 @@ const renderTodoList = () => {
     }),
     ...scheduleItems()
   ].sort((a, b) =>
-    a.sortAt - b.sortAt ||
-    String(a.type).localeCompare(String(b.type), 'zh-Hant') ||
-    String(a.title).localeCompare(String(b.title), 'zh-Hant')
-  );
+   b.sortAt - a.sortAt ||
+   String(a.type).localeCompare(String(b.type), 'zh-Hant') ||
+   String(a.title).localeCompare(String(b.title), 'zh-Hant')
+ );
 
   renderTodoFilters(items);
 
