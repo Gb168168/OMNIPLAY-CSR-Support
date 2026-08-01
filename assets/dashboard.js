@@ -475,6 +475,30 @@ const renderTodoList = () => {
       href: 'meeting/meeting.html',
       fallback: '會議紀錄'
     }),
+    ...reminderItems(dashboardState.logs, {
+      type: '日誌 NEW',
+      icon: '✨',
+      href: 'work/log.html',
+      fallback: '日誌 NEW'
+    }),
+    ...reminderItems(dashboardState.handovers, {
+      type: '交接',
+      icon: '📋',
+      href: 'work/handover.html',
+      fallback: '交接事項'
+    }),
+    ...reminderItems(dashboardState.reports, {
+      type: '提報',
+      icon: '📌',
+      href: 'work/report.html',
+      fallback: '提報追蹤'
+    }),
+    ...reminderItems(dashboardState.tracking, {
+      type: '對接追蹤',
+      icon: '🔎',
+      href: 'work/tracking.html',
+      fallback: '對接追蹤'
+    }),
     ...scheduleItems()
   ].sort((a, b) =>
    b.sortAt - a.sortAt ||
