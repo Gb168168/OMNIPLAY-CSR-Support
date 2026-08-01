@@ -383,7 +383,7 @@ const renderTodoFilters = (items) => {
     return result;
   }, {});
 
-  const types = ['日誌', '交接', '提報', '對接追蹤', '會議', '排程', '今日提醒']
+  const types = ['日誌 NEW', '交接', '提報', '對接追蹤', '會議', '排程', '今日提醒']
     .filter((type) => counts[type] > 0);
 
   if (!types.length) {
@@ -508,7 +508,7 @@ const renderTodoList = () => {
     const details = item.details;
 
     if (!details) {
-      return `<strong>${escapeDashboardHtml(todoTypeLabel(item.type))} — ${escapeDashboardHtml(item.title)}</strong>`;
+      return `<strong>${escapeDashboardHtml(item.type)} — ${escapeDashboardHtml(item.title)}</strong>`;
     }
 
     const rows = details.rows?.length
@@ -518,7 +518,7 @@ const renderTodoList = () => {
     return `
       <strong class="tracking-todo-main">
         <span class="tracking-todo-prefix">
-          ${escapeDashboardHtml(todoTypeLabel(item.type))} —
+          ${escapeDashboardHtml(item.type)} —
         </span>
         <span class="tracking-todo-data">
           ${rows.map((row) => `
