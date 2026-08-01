@@ -299,16 +299,22 @@ const shiftRecordItems = (
       const activity = getTodayActivity(record);
       if (!activity) return null;
 
-      return {
-        icon: isFireRecord(record) ? '🔥' : icon,
-        time: formatRecordTime(activity.at),
-        type,
-        href: withRecordLink(href, record.id),
-        title: todoTitle(record, fallback),
-        details: detailsFormatter ? detailsFormatter(record) : null,
-        activityKind: activity.kind,
-        sortAt: activity.at?.getTime() || 0
-      };
+     return {
+    icon: isFireRecord(record) ? '🔥' : icon,
+    time: formatRecordTime(activity.at),
+    type,
+    href: withRecordLink(href, record.id),
+    title: todoTitle(record, fallback),
+    details: detailsFormatter ? detailsFormatter(record) : null,
+
+    isCreated: activity.kind === '建立',
+    isUpdated: activity.kind === '更新',
+
+    reminderEnabled: reminderIsEnabled(record),
+    reminderTime: recordReminderAt(record),
+
+    sortAt: activity.at?.getTime() || 0
+};
     })
     .filter(Boolean);
 };
