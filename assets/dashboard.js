@@ -460,7 +460,18 @@ const subscribeDashboard = () => {
   dashboardCollections.tracking?.onSnapshot((snapshot) => { dashboardState.tracking = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
   dashboardCollections.trackingSchema?.onSnapshot((doc) => { dashboardState.trackingSchema = doc.exists ? doc.data() : null; updateDashboard(); });
   dashboardCollections.report?.onSnapshot((snapshot) => { dashboardState.reports = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
-  dashboardCollections.log?.onSnapshot((snapshot) => { dashboardState.logs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
+  dashboardCollections.log?.onSnapshot((snapshot) => {
+  dashboardState.logs = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  console.log('===== LOG COLLECTION =====');
+  console.log('總筆數：', dashboardState.logs.length);
+  console.log(dashboardState.logs);
+
+  updateDashboard();
+});
   dashboardCollections.schedule?.onSnapshot((snapshot) => { dashboardState.schedules = snapshot.docs.map((doc) => ({ id: doc.id, labelColor: '#3b82f6', ...doc.data() })); updateDashboard(); });
   dashboardCollections.meeting?.onSnapshot((snapshot) => { dashboardState.meetings = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
 };
