@@ -389,6 +389,8 @@ const renderTodoList = () => {
 
   renderTodoFilters(items);
 
+  console.table(items);
+  
   const filteredItems = dashboardState.selectedTodoType === 'all'
     ? items
     : items.filter((item) => item.type === dashboardState.selectedTodoType);
