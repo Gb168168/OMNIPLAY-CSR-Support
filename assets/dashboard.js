@@ -437,6 +437,54 @@ const renderTodoFilters = (items) => {
   });
 };
 
+const renderTodoEventFilters = (items) => {
+  const container = document.querySelector('#todoEventFilter');
+  if (!container) return;
+
+  const counts = {
+    created: items.filter(item => item.isCreated).length,
+    updated: items.filter(item => item.isUpdated).length,
+    reminder: items.filter(item => item.reminderEnabled).length
+  };
+
+  const events = [];
+
+  if (counts.created) events.push({ key: 'created', text: `🆕 建立 (${counts.created})` });
+  if (counts.updated) events.push({ key: 'updated', text: `✏️ 更新 (${counts.updated})` });
+  if (counts.reminder) events.push({ key: 'reminder', text: `⏰ 提醒 (${counts.reminder})` });
+
+  if (!events.length) {
+    container.hidden = true;
+    container.innerHTML = '';
+    dashboardState.selectedTodoEvent = 'all';
+    return;
+  }
+
+  container.hidden = false;
+
+  container.innerHTML = `
+    <button
+      class="todo-filter-btn ${dashboardState.selectedTodoEvent === 'all' ? 'active' : ''}"
+      data-event="all">
+      全部
+    </button>
+    ${events.map(event => `
+      <button
+        class="todo-filter-btn ${dashboardState.selectedTodoEvent === event.key ? 'active' : ''}"
+        data-event="${event.key}">
+        ${event.text}
+      </button>
+    `).join('')}
+  `;
+
+  container.querySelectorAll('button').forEach(button => {
+    button.onclick = () => {
+      dashboardState.selectedTodoEvent = button.dataset.event;
+      renderTodoList();
+    };
+  });
+};
+
 const renderTodoList = () => {
   if (!todoList) return;
 
