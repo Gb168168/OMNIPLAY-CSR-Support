@@ -245,7 +245,19 @@ const updateShiftButtons = () => {
   });
 };
 
-const todoTitle = (record = {}, fallback) => record.subject || record.title || record.item || record.category || record.content || record.note || record.serial || fallback;
+const todoTitle = (record = {}, fallback) => {
+  if (record.serial) return record.serial;
+
+  return (
+    record.subject ||
+    record.title ||
+    record.item ||
+    record.customer ||
+    record.content ||
+    record.note ||
+    fallback
+  );
+};
 const dashboardValueText = (value) => Array.isArray(value)
   ? value.map(dashboardValueText).filter(Boolean).join('、')
   : String(value ?? '').trim();
