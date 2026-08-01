@@ -421,7 +421,7 @@ const renderTodoFilters = (items) => {
         class="todo-filter-btn ${dashboardState.selectedTodoType === type ? 'active' : ''}"
         data-todo-type="${escapeDashboardHtml(type)}"
       >
-        ${escapeDashboardHtml(todoTypeLabel(type))} (${counts[type]})
+        ${escapeDashboardHtml(type)} (${counts[type]})
       </button>
     `);
   });
@@ -506,7 +506,7 @@ const renderTodoList = () => {
     const details = item.details;
 
     if (!details) {
-      return `<strong>${escapeDashboardHtml(item.type)} — ${escapeDashboardHtml(item.title)}</strong>`;
+      return `<strong>${escapeDashboardHtml(item.title)}</strong>`;
     }
 
     const rows = details.rows?.length
