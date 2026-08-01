@@ -5344,3 +5344,66 @@ body:has(.sidebar-toggle-btn.is-visible)
     padding-top: 12px;
     z-index: 10;
 }
+
+/* ===== 今日事項分類按鈕 ===== */
+
+.dashboard-todo-title-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.todo-category-filter{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.todo-category-filter[hidden]{
+    display:none;
+}
+
+.todo-filter-btn{
+    padding:6px 12px;
+    border:1px solid var(--border);
+    border-radius:999px;
+    background:var(--surface);
+    color:var(--text-secondary);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.todo-filter-btn:hover{
+    border-color:var(--primary);
+    color:var(--primary);
+}
+
+.todo-filter-btn.active{
+    background:var(--primary);
+    border-color:var(--primary);
+    color:#fff;
+}
+
+@media (max-width:768px){
+
+    .dashboard-todo-title-row{
+        align-items:flex-start;
+        flex-direction:column;
+    }
+
+    .todo-category-filter{
+        width:100%;
+        overflow-x:auto;
+        flex-wrap:nowrap;
+        padding-bottom:4px;
+    }
+
+    .todo-filter-btn{
+        white-space:nowrap;
+    }
+
+}
