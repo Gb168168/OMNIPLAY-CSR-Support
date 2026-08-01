@@ -64,11 +64,6 @@ function getDefaultShift() {
   return 'night';
 }
 
-const isInShiftRange = (record = {}, range) => {
-  const updatedAt = valueDate(record.updatedAt) || valueDate(record.updatedDate);
-  return Boolean(updatedAt && updatedAt >= range.start && updatedAt <= range.end);
-};
-
 const isSameDate = (dateA, dateB = new Date()) => Boolean(
   dateA &&
   dateA.getFullYear() === dateB.getFullYear() &&
@@ -292,17 +287,6 @@ const trackingTodoDetails = (record = {}) => {
   }));
   return { customer, rows };
 };
-const trackingActivityKind = (record = {}) => {
-  const createdAt = valueDate(record.createdAt) || valueDate(trackingDirectValue(record, '建立日期'));
-  const updatedAt = valueDate(record.updatedAt) || valueDate(trackingDirectValue(record, '更新日期'));
-  if (createdAt && updatedAt && Math.abs(updatedAt.getTime() - createdAt.getTime()) <= 60000) return '建立';
-  return '更新';
-};
-const recordDateForShift = (record = {}, range) => {
-  const updatedAt = valueDate(record.updatedAt) || valueDate(record.updatedDate);
-  if (updatedAt && updatedAt >= range.start && updatedAt <= range.end) return updatedAt;
-  return updatedAt;
-};
 const formatRecordTime = (at) => at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : '--:--';
 const isFireRecord = (record = {}) => record.fire === true;
 const withRecordLink = (href, id) => id ? `${href}?id=${encodeURIComponent(id)}` : href;
@@ -341,8 +325,8 @@ const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
 });
 
 const reminderItems = (
-  records,
-  { type, icon, href, fallback }
+    records,
+    { type, href, fallback }
 ) => {
   const today = new Date();
 
@@ -466,8 +450,7 @@ const renderTodoList = () => {
       icon: '🔎',
       href: 'work/tracking.html',
       fallback: '對接追蹤',
-      detailsFormatter: trackingTodoDetails,
-      activityFormatter: trackingActivityKind
+      detailsFormatter: trackingTodoDetails
     }),
     ...shiftRecordItems(dashboardState.meetings, {
       type: '會議',
@@ -507,8 +490,6 @@ const renderTodoList = () => {
  );
 
   renderTodoFilters(items);
-
-  console.table(items);
   
   const filteredItems = dashboardState.selectedTodoType === 'all'
     ? items
