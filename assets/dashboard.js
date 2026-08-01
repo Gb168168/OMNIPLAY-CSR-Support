@@ -449,7 +449,7 @@ const renderTodoList = () => {
     ...shiftRecordItems(dashboardState.logs, {
       type: '日誌 NEW',
       icon: '✨',
-      href: 'work/log_new.html',
+      href: 'work/log-new.html',
       fallback: '日誌 NEW'
     }),
     ...shiftRecordItems(dashboardState.reports, {
