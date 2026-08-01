@@ -515,7 +515,7 @@ const renderTodoList = () => {
     return `
       <strong class="tracking-todo-main">
         <span class="tracking-todo-prefix">
-          ${escapeDashboardHtml(item.type)} —
+          ${escapeDashboardHtml(todoTypeLabel(item.type))} —
         </span>
         <span class="tracking-todo-data">
           ${rows.map((row) => `
