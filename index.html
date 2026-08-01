@@ -10,6 +10,51 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <style>
+    .dashboard-todo-title-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .dashboard-todo-title-row h2 {
+      margin: 0;
+    }
+    .todo-category-filter {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .todo-category-btn {
+      appearance: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      color: #334155;
+      padding: 5px 12px;
+      font: inherit;
+      font-size: 14px;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    }
+    .todo-category-btn:hover {
+      border-color: #3b82f6;
+      color: #2563eb;
+    }
+    .todo-category-btn.active {
+      border-color: #2563eb;
+      background: #2563eb;
+      color: #fff;
+    }
+    @media (max-width: 720px) {
+      .dashboard-todo-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
 <body>
   <section class="login-view" id="loginView" aria-label="登入畫面">
@@ -100,7 +145,10 @@
         <section class="dashboard-todo-card" aria-label="今日事項列表">
           <div class="panel-heading dashboard-todo-heading">
             <div>
-              <h2>今日事項</h2>
+              <div class="dashboard-todo-title-row">
+                <h2>今日事項</h2>
+                <div class="todo-category-filter" id="todoCategoryFilter" role="group" aria-label="今日事項分類篩選" hidden></div>
+              </div>
               <p>顯示當前班次時段內更新的所有紀錄</p>
             </div>
             <div class="shift-toggle" role="group" aria-label="今日事項班次切換">
@@ -139,5 +187,80 @@
   <script src="assets/reminders.js?v=20260718-38"></script>
   <script src="assets/app.js?v=20260731-topnav1"></script>
   <script src="assets/dashboard.js?v=20260731-tracking-todo3"></script>
+  <script>
+    (() => {
+      const list = document.getElementById('dashboardTodoList');
+      const filter = document.getElementById('todoCategoryFilter');
+      if (!list || !filter) return;
+
+      const categoryOrder = ['日誌', '交接', '提報', '對接追蹤', '會議', '排程'];
+      const categoryLabels = { '日誌': '日誌 NEW' };
+      let selectedCategory = '全部';
+
+      const getItemCategory = (item) => {
+        const href = item.querySelector('a')?.getAttribute('href') || '';
+        if (href.includes('work/log.html')) return '日誌';
+        if (href.includes('work/handover.html')) return '交接';
+        if (href.includes('work/report.html')) return '提報';
+        if (href.includes('work/tracking.html')) return '對接追蹤';
+        if (href.includes('meeting/meeting.html')) return '會議';
+        if (href.includes('service/schedule.html')) return '排程';
+        return '';
+      };
+
+      const applyFilter = () => {
+        list.querySelectorAll(':scope > li:not(.dashboard-empty)').forEach((item) => {
+          const category = getItemCategory(item);
+          item.hidden = selectedCategory !== '全部' && category !== selectedCategory;
+        });
+      };
+
+      const renderCategoryButtons = () => {
+        const categories = new Set();
+        list.querySelectorAll(':scope > li:not(.dashboard-empty)').forEach((item) => {
+          const category = getItemCategory(item);
+          if (category) categories.add(category);
+        });
+
+        const visibleCategories = categoryOrder.filter((category) => categories.has(category));
+        if (!visibleCategories.includes(selectedCategory) && selectedCategory !== '全部') {
+          selectedCategory = '全部';
+        }
+
+        if (!visibleCategories.length) {
+          filter.hidden = true;
+          filter.innerHTML = '';
+          return;
+        }
+
+        const buttonCategories = visibleCategories.length > 1
+          ? ['全部', ...visibleCategories]
+          : visibleCategories;
+
+        if (visibleCategories.length === 1 && selectedCategory === '全部') {
+          selectedCategory = visibleCategories[0];
+        }
+
+        filter.innerHTML = buttonCategories.map((category) => {
+          const label = categoryLabels[category] || category;
+          const active = category === selectedCategory;
+          return `<button class="todo-category-btn${active ? ' active' : ''}" type="button" data-category="${category}" aria-pressed="${active}">${label}</button>`;
+        }).join('');
+        filter.hidden = false;
+        applyFilter();
+      };
+
+      filter.addEventListener('click', (event) => {
+        const button = event.target.closest('.todo-category-btn');
+        if (!button) return;
+        selectedCategory = button.dataset.category || '全部';
+        renderCategoryButtons();
+      });
+
+      const observer = new MutationObserver(renderCategoryButtons);
+      observer.observe(list, { childList: true });
+      renderCategoryButtons();
+    })();
+  </script>
 </body>
 </html>
