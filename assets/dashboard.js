@@ -5,7 +5,7 @@ const dashboardCollections = {
   handover: dashboardDb?.collection('handover'),
   tracking: dashboardDb?.collection('tracking'),
   report: dashboardDb?.collection('report'),
-  log: dashboardDb?.collection('log'),
+  log: dashboardDb?.collection('log_new'),
   schedule: dashboardDb?.collection('schedule'),
   meeting: dashboardDb?.collection('meeting'),
   trackingSchema: dashboardDb?.collection('tracking_schema')?.doc('active')
