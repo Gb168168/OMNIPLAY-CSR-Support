@@ -22,7 +22,8 @@ const dashboardState = {
   schedules: [],
   meetings: [],
   selectedShift: getDefaultShift(),
-  selectedTodoType: 'all'
+  selectedTodoType: 'all',
+  selectedTodoEvent: 'all'
 };
 const todoList = document.querySelector('#dashboardTodoList');
 const setText = (selector, value) => { const el = document.querySelector(selector); if (el) el.textContent = String(value); };
