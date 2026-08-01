@@ -547,11 +547,28 @@ const renderTodoList = () => {
 
   renderTodoFilters(items);
   
-  const filteredItems = dashboardState.selectedTodoType === 'all'
-    ? items
-    : items.filter((item) => item.type === dashboardState.selectedTodoType);
+  let filteredItems = items;
 
-  const renderTrackingDetails = (item) => {
+  // 第一層：模組分類
+    if (dashboardState.selectedTodoType !== 'all') {
+       filteredItems = filteredItems.filter(
+       (item) => item.type === dashboardState.selectedTodoType
+    );
+  }
+
+  // 第二層：事件分類
+    if (dashboardState.selectedTodoEvent === 'created') {
+      filteredItems = filteredItems.filter((item) => item.isCreated);
+    }
+
+    if (dashboardState.selectedTodoEvent === 'updated') {
+      filteredItems = filteredItems.filter((item) => item.isUpdated);
+    }
+
+    if (dashboardState.selectedTodoEvent === 'reminder') {
+      filteredItems = filteredItems.filter((item) => item.reminderEnabled);
+    }
+    const renderTrackingDetails = (item) => {
     const details = item.details;
 
     if (!details) {
