@@ -59,6 +59,8 @@ let currentMonth = new Date();
 currentMonth.setDate(1);
 let staffList = [];
 let leaveData = { records: {}, quotas: {}, shifts: {}, quota: 8 };
+let externalLeaveData = {};
+let externalLeaveLoadToken = 0;
 let shiftLoadToken = 0;
 let unsubscribeStaff = null;
 let unsubscribeLeave = null;
@@ -93,7 +95,7 @@ const getStaffSortOrder = (staff) => Number(staff.sortOrder ?? fixedStaffOrderMa
 const normalizeShift = (value) => value === '晚班' ? '晚' : value === '早班' ? '早' : value;
 const shiftDocId = (staffId, date = currentMonth) => `${staffId}_${monthKey(date)}`;
 const previousMonthOf = (date) => new Date(date.getFullYear(), date.getMonth() - 1, 1);
-const getStaffShift = (staff) => normalizeShift(leaveData.shifts?.[staff.id] || '早');
+const getStaffShift = (staff) => normalizeShift(externalLeaveData?.[staff.name]?.shift || leaveData.shifts?.[staff.id] || '早');
 const sortStaffForLeave = (items) => [...items].sort((a, b) => {
   const shiftCompare = (getStaffShift(a) === '晚' ? 1 : 0) - (getStaffShift(b) === '晚' ? 1 : 0);
   if (shiftCompare) return shiftCompare;
@@ -108,6 +110,9 @@ const getHolidayName = (day) => {
 };
 
 const getRecord = (staffId, day) => {
+  const staff = staffList.find((item) => item.id === staffId);
+  const externalRecord = staff ? externalLeaveData?.[staff.name]?.days?.[dayKey(day)] : null;
+  if (externalRecord) return { ...externalRecord, specials: [] };
   const record = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
   return { ...record, type: record.type || '', specials: record.specials || [] };
 };
@@ -115,7 +120,27 @@ const getGlobalQuota = () => Number(leaveData.quota ?? 8);
 const getQuota = () => getGlobalQuota();
 const editableAttribute = () => canEditLeave ? '' : ' disabled';
 const getShift = (staff) => getStaffShift(staff);
-const leaveCount = (staffId) => Object.entries(leaveData.records || {}).filter(([key, record]) => key.startsWith(`${staffId}_`) && ['leave', 'required'].includes(record?.type)).length;
+const leaveCount = (staffId) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => getRecord(staffId, index + 1)).filter((record) => ['leave', 'required'].includes(record?.type)).length;
+
+const loadExternalLeave = async () => {
+  const token = ++externalLeaveLoadToken;
+  const targetMonth = monthKey(currentMonth);
+  try {
+    const response = await fetch(`https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
+    externalLeaveData = payload.people || {};
+    staffList = sortStaffForLeave(staffList);
+    render();
+  } catch (error) {
+    if (token !== externalLeaveLoadToken) return;
+    externalLeaveData = {};
+    console.error('同步外部假表失敗：', error);
+    setStatus('外部假表暫時無法同步，現在顯示 OMNIPLAY 原有資料。', 'error');
+    render();
+  }
+};
 
 const queueSave = () => {
   clearTimeout(saveTimer);
@@ -234,6 +259,8 @@ const subscribeMonth = () => {
   unsubscribeLeave?.();
   if (!leaveCollection) return;
   setStatus('載入休假表資料中...', 'info');
+  externalLeaveData = {};
+  loadExternalLeave();
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
     leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, quota: 8, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, quota: 8 };
     staffList = sortStaffForLeave(staffList);
