@@ -496,6 +496,12 @@ const renderTodoList = () => {
       fallback: '交接事項'
     }),
     ...shiftRecordItems(dashboardState.logs, {
+      type: '日誌',
+      icon: '📒',
+      href: 'work/log.html',
+      fallback: '日誌'
+    }),
+    ...reminderItems(dashboardState.logs, {
       type: '日誌 NEW',
       icon: '✨',
       href: 'work/log-new.html',
