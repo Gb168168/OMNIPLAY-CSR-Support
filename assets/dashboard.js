@@ -6,8 +6,9 @@ const dashboardCollections = {
   tracking: dashboardDb?.collection('tracking'),
   report: dashboardDb?.collection('report'),
   log: dashboardDb?.collection('log_new'),
-  schedule: dashboardDb?.collection('schedule'),
-  meeting: dashboardDb?.collection('meeting'),
+  prod: dashboardDb?.collection('alert'),
+  knowledge: dashboardDb?.collection('knowledge'),
+  ai: dashboardDb?.collection('ai_database'),
   trackingSchema: dashboardDb?.collection('tracking_schema')?.doc('active')
 };
 
@@ -19,8 +20,10 @@ const dashboardState = {
   trackingSchema: null,
   reports: [],
   logs: [],
-  schedules: [],
-  meetings: [],
+  inbox: [],
+  prod: [],
+  knowledge: [],
+  ai: [],
   selectedShift: getDefaultShift(),
   selectedTodoType: 'all',
   selectedTodoEvent: 'all'
@@ -83,6 +86,15 @@ const recordUpdatedAt = (record = {}) =>
   valueDate(record.updated_at) ||
   valueDate(record.updated_time);
 
+const inboxCreatedAt = (record = {}) => valueDate(record.createdAt) || valueDate(record.created_at);
+const inboxUpdatedAt = (record = {}) =>
+  valueDate(record.updatedAt) ||
+  valueDate(record.updated_at) ||
+  valueDate(record.analyzedAt) ||
+  valueDate(record.analysis?.analyzedAt) ||
+  valueDate(record.importedAt) ||
+  valueDate(record.archivedAt);
+
 const recordReminderAt = (record = {}) =>
   valueDate(record.reminder_at) ||
   valueDate(record.reminderAt);
@@ -102,94 +114,23 @@ const recordBelongsToSelectedShift = (record = {}) => {
   return ['晚', '晚班', 'night'].includes(shift.toLowerCase());
 };
 
-const getTodayActivity = (record = {}) => {
+const getTodayActivity = (record = {}, { createdAt = recordCreatedAt, updatedAt = recordUpdatedAt } = {}) => {
   const today = new Date();
-  const createdAt = recordCreatedAt(record);
-  const updatedAt = recordUpdatedAt(record);
+  const createdDate = createdAt(record);
+  const updatedDate = updatedAt(record);
 
-  const createdToday = isSameDate(createdAt, today);
-  const updatedToday = isSameDate(updatedAt, today);
-
-  if (createdToday && recordBelongsToSelectedShift(record)) {
-    return {
-      kind: '建立',
-      at: createdAt
-    };
-  }
-
-  if (updatedToday) {
-    return {
-      kind: '更新',
-      at: updatedAt
-    };
-  }
-
-  return null;
-};
-
-const getRepeatStepDays = (item) => {
-  if (item.repeat === 'daily') return 1;
-  if (item.repeat === 'weekly') return 7;
-  if (item.repeat === 'custom') return Math.max(1, Number(item.repeatInterval) || 1);
-  return 0;
-};
-
-const daysBetween = (start, end) => Math.floor((new Date(end.getFullYear(), end.getMonth(), end.getDate()) - new Date(start.getFullYear(), start.getMonth(), start.getDate())) / 86400000);
-
-const addMonthsClamped = (date, count) => {
-  const next = new Date(date);
-  const day = next.getDate();
-  next.setDate(1);
-  next.setMonth(next.getMonth() + count);
-  next.setDate(Math.min(day, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
-  return next;
-};
-
-const scheduleDateFromParts = (dateValue, timeValue = '00:00') => {
-  const dateText = String(dateValue || '').trim().replace(/\//g, '-');
-  const match = dateText.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (!match) return null;
-  const [, year, month, day] = match.map(Number);
-  const [hour = 0, minute = 0] = String(timeValue || '00:00').split(':').map(Number);
-  const parsed = new Date(year, month - 1, day, hour || 0, minute || 0);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-const scheduleOriginalDate = (item = {}) => valueDate(item.reminderAt) || valueDate(item.datetime) || valueDate(item.startAt) || scheduleDateFromParts(item.date, item.time || item.startTime);
-
-const scheduleOccurrencesForDay = (date = new Date()) => {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const end = new Date(start);
-  end.setHours(23, 59, 59, 999);
-  const items = [];
-  const addOccurrence = (item, occurrenceAt, isRepeat) => {
-    items.push({ ...item, occurrenceAt, isRepeatOccurrence: isRepeat });
+  const createdToday = isSameDate(createdDate, today) && recordBelongsToSelectedShift(record);
+  const updatedToday = isSameDate(updatedDate, today);
+  if (!createdToday && !updatedToday) return null;
+  return {
+    createdToday,
+    updatedToday,
+    createdAt: createdToday ? createdDate : null,
+    updatedAt: updatedToday ? updatedDate : null,
+    at: [createdToday ? createdDate : null, updatedToday ? updatedDate : null]
+      .filter(Boolean)
+      .sort((a, b) => b - a)[0]
   };
-
-  dashboardState.schedules.filter((item) => item.deleted !== true).forEach((item) => {
-    const original = scheduleOriginalDate(item);
-    if (!(original instanceof Date) || Number.isNaN(original.getTime())) return;
-    if (original >= start && original <= end) addOccurrence(item, original, false);
-
-    if ((item.repeat || 'none') === 'monthly') {
-      for (let i = 1, occurrence = addMonthsClamped(original, i); occurrence <= end; i += 1, occurrence = addMonthsClamped(original, i)) {
-        if (occurrence >= start) addOccurrence(item, occurrence, true);
-      }
-      return;
-    }
-
-    const step = getRepeatStepDays(item);
-    if (!step) return;
-    const firstOffset = Math.max(step, Math.ceil(Math.max(1, daysBetween(original, start)) / step) * step);
-    for (let offset = firstOffset; ; offset += step) {
-      const occurrence = new Date(original);
-      occurrence.setDate(original.getDate() + offset);
-      if (occurrence > end) break;
-      if (occurrence >= start) addOccurrence(item, occurrence, true);
-    }
-  });
-  
-  return items.sort((a, b) => a.occurrenceAt - b.occurrenceAt || String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
 };
 
 const normalizeDashboardShift = (value) => {
@@ -226,13 +167,12 @@ const updateTodayWorking = () => {
 };
 
 const updateDashboard = () => {
-  const reportTrackStatuses = new Set(['待辦中', '處理中', '觀察中', '追客']);
-  const normalizeReportStatus = (value) => String(value || '').trim().replace(/["']/g, '');
   const fireHandovers = dashboardState.handovers.filter((record) => record.fire === true);
-  const logs = dashboardState.logs.filter((record) => Boolean(getTodayActivity(record)));
+  const items = buildDashboardItems();
   setText('#handoverFireCount', fireHandovers.length);
-  setText('#trackingOpenCount', dashboardState.reports.filter((record) => reportTrackStatuses.has(normalizeReportStatus(record.status))).length);
-  setText('#shiftLogCount', logs.length);
+  setText('#todayCreatedCount', items.filter((item) => item.isCreated).length);
+  setText('#todayUpdatedCount', items.filter((item) => item.isUpdated).length);
+  setText('#todayReminderCount', buildReminderItems(items).length);
   updateTodayWorking();
   updateShiftButtons();
   renderTodoList();
@@ -248,6 +188,7 @@ const updateShiftButtons = () => {
 
 const todoTitle = (record = {}, fallback) => {
   if (record.serial) return record.serial;
+  if (record.displayId) return record.displayId;
 
   return (
     record.subject ||
@@ -303,80 +244,50 @@ const trackingTodoDetails = (record = {}) => {
 const formatRecordTime = (at) => at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : '--:--';
 const isFireRecord = (record = {}) => record.fire === true;
 const withRecordLink = (href, id) => id ? `${href}?id=${encodeURIComponent(id)}` : href;
-const shiftRecordItems = (
+const buildRecordItems = (
   records,
-  { type, icon, href, fallback, detailsFormatter }
+  { type, icon, href, fallback, detailsFormatter, createdAt, updatedAt }
 ) => {
   return records
     .map((record) => {
-      const activity = getTodayActivity(record);
-      if (!activity) return null;
+      const activity = getTodayActivity(record, { createdAt, updatedAt });
+      const reminderAt = recordReminderAt(record);
+      const hasReminderToday = reminderIsEnabled(record) && isSameDate(reminderAt);
+      if (!activity && !hasReminderToday) return null;
 
-     return {
-    icon: isFireRecord(record) ? '🔥' : icon,
-    time: formatRecordTime(activity.at),
-    type,
-    href: withRecordLink(href, record.id),
-    title: todoTitle(record, fallback),
-    details: detailsFormatter ? detailsFormatter(record) : null,
-
-    isCreated: activity.kind === '建立',
-    isUpdated: activity.kind === '更新',
-
-    reminderEnabled: reminderIsEnabled(record),
-    reminderTime: recordReminderAt(record),
-
-    sortAt: activity.at?.getTime() || 0
-};
+      const eventAt = activity?.at || reminderAt;
+      return {
+        icon: isFireRecord(record) ? '🔥' : icon,
+        time: formatRecordTime(eventAt),
+        type,
+        href: withRecordLink(href, record.id),
+        title: todoTitle(record, fallback),
+        details: detailsFormatter ? detailsFormatter(record) : null,
+        isCreated: activity?.createdToday === true,
+        isUpdated: activity?.updatedToday === true,
+        reminderEnabled: hasReminderToday,
+        reminderTime: hasReminderToday ? reminderAt : null,
+        sortAt: Math.max(activity?.at?.getTime() || 0, hasReminderToday ? reminderAt?.getTime() || 0 : 0)
+      };
     })
     .filter(Boolean);
 };
-const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
-  const allDay = item.allDay || item.isAllDay;
-  return {
-    icon: '📅',
-    time: allDay ? '全天' : `${pad2(item.occurrenceAt.getHours())}:${pad2(item.occurrenceAt.getMinutes())}`,
-    type: '排程',
-    href: withRecordLink('service/schedule.html', item.id),
-    title: item.title || '未命名事項',
-    sortAt: item.occurrenceAt.getTime()
-  };
-});
 
-const reminderItems = (
-    records,
-    { type, icon, href, fallback }
-) => {
-  const today = new Date();
-
-  return records
-    .filter((record) => {
-      const reminderAt = recordReminderAt(record);
-
-      return (
-        reminderIsEnabled(record) &&
-        isSameDate(reminderAt, today)
-      );
-    })
-    .map((record) => {
-      const reminderAt = recordReminderAt(record);
-
-      return {
-          icon: icon || '⏰',
-          time:formatRecordTime(reminderAt),
-          type,
-          href:withRecordLink(href,record.id),
-          title:todoTitle(record,fallback),
-
-          isCreated:false,
-          isUpdated:false,
-          reminderEnabled:true,
-          reminderTime: reminderAt,
-
-          sortAt:reminderAt?.getTime() || 0
-      };
-    });
-};
+const buildLogNewItems = () => buildRecordItems(dashboardState.logs, { type: '日誌 NEW', icon: '✨', href: 'work/log-new.html', fallback: '日誌 NEW' });
+const buildInboxItems = () => buildRecordItems(dashboardState.inbox, { type: '收件匣', icon: '📥', href: 'work/inbox.html', fallback: 'Conversation', createdAt: inboxCreatedAt, updatedAt: inboxUpdatedAt });
+const buildHandoverItems = () => buildRecordItems(dashboardState.handovers, { type: '交接', icon: '🤝', href: 'work/handover.html', fallback: '交接事項' });
+const buildReportItems = () => buildRecordItems(dashboardState.reports, { type: '提報', icon: '📣', href: 'work/report.html', fallback: '提報追蹤' });
+const buildTrackingItems = () => buildRecordItems(dashboardState.tracking, { type: '對接追蹤', icon: '🔎', href: 'work/tracking.html', fallback: '對接追蹤', detailsFormatter: trackingTodoDetails });
+const buildProdItems = () => buildRecordItems(dashboardState.prod, { type: 'PROD告警紀錄', icon: '🚨', href: 'work/alert.html', fallback: 'PROD 告警' });
+const buildKnowledgeItems = () => buildRecordItems(dashboardState.knowledge, { type: '知識庫', icon: '📚', href: 'resource/knowledge.html', fallback: '知識庫' });
+const buildAiItems = () => buildRecordItems(dashboardState.ai, { type: 'AI資料庫', icon: '🤖', href: 'resource/ai-database.html', fallback: 'AI 資料庫' });
+const buildReminderItems = (items) => items.filter((item) => item.reminderEnabled);
+const dashboardItemBuilders = [buildLogNewItems, buildInboxItems, buildHandoverItems, buildReportItems, buildTrackingItems, buildProdItems, buildKnowledgeItems, buildAiItems];
+const buildDashboardItems = () => dashboardItemBuilders.flatMap((builder) => builder()).sort((a, b) =>
+  b.sortAt - a.sortAt ||
+  String(a.type).localeCompare(String(b.type), 'zh-Hant') ||
+  String(a.title).localeCompare(String(b.title), 'zh-Hant')
+);
 
 const renderTodoFilters = (items) => {
   const container = document.querySelector('#dashboardTodoFilters');
@@ -387,7 +298,7 @@ const renderTodoFilters = (items) => {
     return result;
   }, {});
 
-  const types = ['日誌 NEW', '交接', '提報', '對接追蹤', '會議', '排程']
+  const types = ['日誌 NEW', '收件匣', '交接', '提報', '對接追蹤', 'PROD告警紀錄', '知識庫', 'AI資料庫']
     .filter((type) => counts[type] > 0);
 
   if (!types.length) {
@@ -449,7 +360,7 @@ const renderTodoEventFilters = (items) => {
   const counts = {
     created: items.filter(item => item.isCreated).length,
     updated: items.filter(item => item.isUpdated).length,
-    reminder: items.filter(item => item.reminderEnabled).length
+    reminder: buildReminderItems(items).length
   };
 
   const events = [];
@@ -493,67 +404,7 @@ const renderTodoEventFilters = (items) => {
 const renderTodoList = () => {
   if (!todoList) return;
 
-  const items = [
-    ...shiftRecordItems(dashboardState.handovers, {
-      type: '交接',
-      icon: '📋',
-      href: 'work/handover.html',
-      fallback: '交接事項'
-    }),
-    ...shiftRecordItems(dashboardState.logs, {
-      type: '日誌 NEW',
-      icon: '✨',
-      href: 'work/log-new.html',
-      fallback: '日誌 NEW'
-    }),
-    ...reminderItems(dashboardState.logs, {
-      type: '日誌 NEW',
-      href: 'work/log-new.html',
-      fallback: '日誌 NEW'
-    }),
-    ...shiftRecordItems(dashboardState.reports, {
-      type: '提報',
-      icon: '📌',
-      href: 'work/report.html',
-      fallback: '提報追蹤'
-    }),
-    ...shiftRecordItems(dashboardState.tracking, {
-      type: '對接追蹤',
-      icon: '🔎',
-      href: 'work/tracking.html',
-      fallback: '對接追蹤',
-      detailsFormatter: trackingTodoDetails
-    }),
-    ...shiftRecordItems(dashboardState.meetings, {
-      type: '會議',
-      icon: '💬',
-      href: 'meeting/meeting.html',
-      fallback: '會議紀錄'
-    }),
-    ...reminderItems(dashboardState.handovers, {
-      type: '交接',
-      icon: '📋',
-      href: 'work/handover.html',
-      fallback: '交接事項'
-    }),
-    ...reminderItems(dashboardState.reports, {
-      type: '提報',
-      icon: '📌',
-      href: 'work/report.html',
-      fallback: '提報追蹤'
-    }),
-    ...reminderItems(dashboardState.tracking, {
-      type: '對接追蹤',
-      icon: '🔎',
-      href: 'work/tracking.html',
-      fallback: '對接追蹤'
-    }),
-    ...scheduleItems()
-  ].sort((a, b) =>
-   b.sortAt - a.sortAt ||
-   String(a.type).localeCompare(String(b.type), 'zh-Hant') ||
-   String(a.title).localeCompare(String(b.title), 'zh-Hant')
- );
+  const items = buildDashboardItems();
 
   renderTodoFilters(items);
   renderTodoEventFilters(items);
@@ -577,7 +428,7 @@ const renderTodoList = () => {
     }
 
     if (dashboardState.selectedTodoEvent === 'reminder') {
-      filteredItems = filteredItems.filter((item) => item.reminderEnabled);
+      filteredItems = buildReminderItems(filteredItems);
     }
     const renderTrackingDetails = (item) => {
     const details = item.details;
@@ -657,8 +508,23 @@ const subscribeDashboard = () => {
 
   updateDashboard();
 });
-  dashboardCollections.schedule?.onSnapshot((snapshot) => { dashboardState.schedules = snapshot.docs.map((doc) => ({ id: doc.id, labelColor: '#3b82f6', ...doc.data() })); updateDashboard(); });
-  dashboardCollections.meeting?.onSnapshot((snapshot) => { dashboardState.meetings = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
+  dashboardCollections.prod?.onSnapshot((snapshot) => { dashboardState.prod = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
+  dashboardCollections.knowledge?.onSnapshot((snapshot) => { dashboardState.knowledge = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
+  dashboardCollections.ai?.onSnapshot((snapshot) => { dashboardState.ai = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); updateDashboard(); });
+};
+
+const loadDashboardInbox = async () => {
+  const base = String(localStorage.getItem('omniplayInboxWorkerUrl') || '').replace(/\/$/, '');
+  const key = localStorage.getItem('omniplayInboxAccessKey') || '';
+  if (!base || !key) return;
+  try {
+    const response = await fetch(`${base}/api/conversations`, { headers: { authorization: `Bearer ${key}` } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    dashboardState.inbox = await response.json();
+    updateDashboard();
+  } catch (error) {
+    console.warn('首頁收件匣資料載入失敗', error);
+  }
 };
 
 document.querySelectorAll('.shift-btn').forEach((button) => {
@@ -668,5 +534,6 @@ document.querySelectorAll('.shift-btn').forEach((button) => {
   });
 });
 subscribeDashboard();
+loadDashboardInbox();
 window.getShiftRange = getShiftRange;
 window.getDefaultShift = getDefaultShift;
