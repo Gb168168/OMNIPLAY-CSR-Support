@@ -362,13 +362,17 @@ const reminderItems = (
       const reminderAt = recordReminderAt(record);
 
       return {
-        icon: '⏰',
-        time: formatRecordTime(reminderAt),
-        type: '今日提醒',
-        href: withRecordLink(href, record.id),
-        title: `${type} — ${todoTitle(record, fallback)}`,
-        activityKind: '提醒',
-        sortAt: reminderAt?.getTime() || 0
+          icon:'⏰',
+          time:formatRecordTime(reminderAt),
+          type,
+          href:withRecordLink(href,record.id),
+          title:todoTitle(record,fallback),
+
+          isCreated:false,
+          isUpdated:false,
+          reminderEnabled:true,
+
+          sortAt:reminderAt?.getTime() || 0
       };
     });
 };
@@ -496,10 +500,10 @@ const renderTodoList = () => {
       fallback: '交接事項'
     }),
     ...shiftRecordItems(dashboardState.logs, {
-      type: '日誌',
-      icon: '📒',
-      href: 'work/log.html',
-      fallback: '日誌'
+      type: '日誌 NEW',
+      icon: '✨',
+      href: 'work/log-new.html',
+      fallback: '日誌 NEW'
     }),
     ...reminderItems(dashboardState.logs, {
       type: '日誌 NEW',
