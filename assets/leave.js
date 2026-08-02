@@ -111,8 +111,15 @@ const getHolidayName = (day) => {
 
 const getRecord = (staffId, day) => {
   const staff = staffList.find((item) => item.id === staffId);
-  const externalRecord = staff ? externalLeaveData?.[staff.name]?.days?.[dayKey(day)] : null;
-  if (externalRecord) return { ...externalRecord, specials: [] };
+  const externalPerson = staff ? externalLeaveData?.[staff.name] : null;
+  if (externalPerson) {
+    const externalRecord = externalPerson.days?.[dayKey(day)] || {};
+    return {
+      ...externalRecord,
+      type: externalRecord.type || '',
+      specials: Array.isArray(externalRecord.specials) ? externalRecord.specials : []
+    };
+  }
   const record = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
   return { ...record, type: record.type || '', specials: record.specials || [] };
 };
@@ -126,7 +133,7 @@ const loadExternalLeave = async () => {
   const token = ++externalLeaveLoadToken;
   const targetMonth = monthKey(currentMonth);
   try {
-    const response = await fetch(`https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}`);
+    const response = await fetch(`https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
@@ -406,3 +413,9 @@ const syncLeavePermission = async () => {
   render();
 };
 syncLeavePermission();
+
+window.setInterval(loadExternalLeave, 60 * 1000);
+window.addEventListener('focus', loadExternalLeave);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadExternalLeave();
+});
