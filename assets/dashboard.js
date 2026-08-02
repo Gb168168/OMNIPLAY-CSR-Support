@@ -622,6 +622,12 @@ const renderTodoList = () => {
               ${item.icon} ${escapeDashboardHtml(item.time)}
             </span>
             ${renderTrackingDetails(item)}
+
+            <div class="todo-tags">
+              ${item.isCreated ? '<span class="todo-tag created">🆕 建立</span>' : ''}
+              ${item.isUpdated ? '<span class="todo-tag updated">✏️ 更新</span>' : ''}
+              ${item.reminderEnabled ? '<span class="todo-tag reminder">⏰ 提醒</span>' : ''}
+            </div>
           </a>
         </li>
       `).join('')
