@@ -386,7 +386,7 @@ const renderTodoFilters = (items) => {
     return result;
   }, {});
 
-  const types = ['日誌 NEW','交接','提報','對接追蹤','會議','排程'];
+  const types = ['日誌 NEW', '交接', '提報', '對接追蹤', '會議', '排程']
     .filter((type) => counts[type] > 0);
 
   if (!types.length) {
