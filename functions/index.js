@@ -20,6 +20,61 @@ const TEAMS_TENANT_ID=defineSecret('TEAMS_TENANT_ID');
 const CONVERSATION_WORKER_URL=defineSecret('CONVERSATION_WORKER_URL');
 const TEAMS_INGEST_TOKEN=defineSecret('TEAMS_INGEST_TOKEN');
 
+const EXTERNAL_LEAVE_ORIGIN='http://61.216.37.15:8080';
+const EXTERNAL_LEAVE_STAFF=new Map([
+  ['余中魁','中魁'],
+  ['宋佳臻','佳臻'],
+  ['熊茗雅','茗雅'],
+  ['鄭晴心','晴心'],
+  ['郭澄希','澄希']
+]);
+const externalLeaveCors={
+  'access-control-allow-origin':'https://gb168168.github.io',
+  'access-control-allow-methods':'GET,OPTIONS',
+  'access-control-allow-headers':'content-type',
+  'vary':'Origin'
+};
+const externalLeaveJson=(res,status,data)=>res.status(status).set({...externalLeaveCors,'cache-control':'public,max-age=120','content-type':'application/json;charset=utf-8'}).send(JSON.stringify(data));
+const externalLeaveFetch=async(path)=>{
+  const response=await fetch(`${EXTERNAL_LEAVE_ORIGIN}${path}`,{signal:AbortSignal.timeout(12000)});
+  if(!response.ok)throw new Error(`Upstream ${response.status}`);
+  return response.json();
+};
+
+exports.externalLeave=onRequest({region:'asia-east1',timeoutSeconds:30,memory:'256MiB'},async(req,res)=>{
+  if(req.method==='OPTIONS')return res.status(204).set(externalLeaveCors).send('');
+  if(req.method!=='GET')return externalLeaveJson(res,405,{error:'Method Not Allowed'});
+  const month=String(req.query.month||'');
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))return externalLeaveJson(res,400,{error:'Invalid month'});
+  try{
+    const [employeePayload,leavePayload]=await Promise.all([
+      externalLeaveFetch(`/api/employees?month=${encodeURIComponent(month)}`),
+      externalLeaveFetch(`/api/leave/${encodeURIComponent(month)}`)
+    ]);
+    const employees=Array.isArray(employeePayload)?employeePayload:(employeePayload?.data||[]);
+    const allLeaves=leavePayload?.data||{};
+    const people={};
+    for(const employee of employees){
+      const fullName=String(employee?.name||'').trim();
+      const shortName=EXTERNAL_LEAVE_STAFF.get(fullName);
+      if(!shortName)continue;
+      const sourceDays=allLeaves[employee.id]||allLeaves[String(employee.id)]||{};
+      const days={};
+      for(const [day,value] of Object.entries(sourceDays)){
+        if(!value||!/^\d{1,2}$/.test(day))continue;
+        const leaveTypes=Array.isArray(value.leave)?value.leave.filter(Boolean):[];
+        if(value.shift==='red')days[day]={type:'required'};
+        else if(value.shift==='black'||leaveTypes.length)days[day]={type:'leave'};
+      }
+      people[shortName]={fullName,shift:employee.shift==='晚班'?'晚':'早',days};
+    }
+    return externalLeaveJson(res,200,{month,people,syncedAt:new Date().toISOString()});
+  }catch(error){
+    console.error('externalLeave',error);
+    return externalLeaveJson(res,502,{error:'External leave service unavailable'});
+  }
+});
+
 exports.teamsWebhook=onRequest({
   region:'asia-east1',
   secrets:[TEAMS_APP_ID,TEAMS_APP_PASSWORD,TEAMS_TENANT_ID,CONVERSATION_WORKER_URL,TEAMS_INGEST_TOKEN],
