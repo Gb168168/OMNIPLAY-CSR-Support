@@ -546,6 +546,7 @@ const renderTodoList = () => {
  );
 
   renderTodoFilters(items);
+  renderTodoEventFilters(items);
   
   let filteredItems = items;
 
