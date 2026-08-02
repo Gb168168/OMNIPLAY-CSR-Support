@@ -345,7 +345,7 @@ const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
 
 const reminderItems = (
     records,
-    { type, href, fallback }
+    { type, icon, href, fallback }
 ) => {
   const today = new Date();
 
@@ -362,7 +362,7 @@ const reminderItems = (
       const reminderAt = recordReminderAt(record);
 
       return {
-          icon:'⏰',
+          icon: icon || '⏰',
           time:formatRecordTime(reminderAt),
           type,
           href:withRecordLink(href,record.id),
@@ -386,7 +386,7 @@ const renderTodoFilters = (items) => {
     return result;
   }, {});
 
-  const types = ['日誌 NEW', '交接', '提報', '對接追蹤', '會議', '排程', '今日提醒']
+  const types = ['日誌 NEW','交接','提報','對接追蹤','會議','排程'];
     .filter((type) => counts[type] > 0);
 
   if (!types.length) {
