@@ -507,7 +507,6 @@ const renderTodoList = () => {
     }),
     ...reminderItems(dashboardState.logs, {
       type: '日誌 NEW',
-      icon: '✨',
       href: 'work/log-new.html',
       fallback: '日誌 NEW'
     }),
