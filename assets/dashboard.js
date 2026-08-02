@@ -371,6 +371,7 @@ const reminderItems = (
           isCreated:false,
           isUpdated:false,
           reminderEnabled:true,
+          reminderTime: reminderAt,
 
           sortAt:reminderAt?.getTime() || 0
       };
@@ -626,7 +627,12 @@ const renderTodoList = () => {
             <div class="todo-tags">
               ${item.isCreated ? '<span class="todo-tag created">🆕 建立</span>' : ''}
               ${item.isUpdated ? '<span class="todo-tag updated">✏️ 更新</span>' : ''}
-              ${item.reminderEnabled ? '<span class="todo-tag reminder">⏰ 提醒</span>' : ''}
+              ${item.reminderEnabled
+                ? `<span class="todo-tag reminder">
+                    ⏰ ${escapeDashboardHtml(formatRecordTime(item.reminderTime))} 提醒
+                   </span>`
+                : ''
+               }
             </div>
           </a>
         </li>
