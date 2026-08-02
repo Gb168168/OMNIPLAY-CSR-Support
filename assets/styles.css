@@ -5407,3 +5407,33 @@ body:has(.sidebar-toggle-btn.is-visible)
     }
 
 }
+    .todo-tags {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+        flex-wrap: wrap;
+    }
+
+    .todo-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .todo-tag.created {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .todo-tag.updated {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .todo-tag.reminder {
+        background: #fef3c7;
+        color: #92400e;
+    }
