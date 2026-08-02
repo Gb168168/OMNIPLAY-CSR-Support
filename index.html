@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>首頁｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="assets/styles.css?v=20260803-dashboard-v2" />
+  <link rel="stylesheet" href="assets/styles.css?v=20260731-topnav1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -125,39 +125,34 @@
             <span class="dashboard-card-label" id="todayWorkingTitle">今日上班</span>
             <div class="today-working-list" id="todayWorkingList">載入中...</div>
           </a>
-          <a class="dashboard-card" href="#dashboardTodayWork">
-            <span class="dashboard-card-label">今天新增</span>
-            <strong id="todayCreatedCount">—</strong>
-            <small>今天建立的所有紀錄</small>
-          </a>
-          <a class="dashboard-card" href="#dashboardTodayWork">
-            <span class="dashboard-card-label">今天更新</span>
-            <strong id="todayUpdatedCount">—</strong>
-            <small>今天更新的所有紀錄</small>
-          </a>
-          <a class="dashboard-card" href="#dashboardTodayWork">
-            <span class="dashboard-card-label">今天提醒</span>
-            <strong id="todayReminderCount">—</strong>
-            <small>今天設定的所有提醒</small>
-          </a>
           <a class="dashboard-card" href="work/handover.html">
             <span class="dashboard-card-label">待交接</span>
             <strong id="handoverFireCount">—</strong>
             <small>已標記 🔥 的交接</small>
           </a>
+          <a class="dashboard-card" href="work/report.html?tracking=open&amp;build=20260718-30" onclick="sessionStorage.setItem('reportTrackingFilter','open')">
+            <span class="dashboard-card-label">提報追蹤</span>
+            <strong id="trackingOpenCount">—</strong>
+            <small>待辦中／處理中／觀察中／追客</small>
+          </a>
+          <a class="dashboard-card" href="work/log.html">
+            <span class="dashboard-card-label">日誌</span>
+            <strong id="shiftLogCount">—</strong>
+            <small>交接時段內日誌</small>
+          </a>
         </div>
 
-        <section class="dashboard-todo-card" id="dashboardTodayWork" aria-label="今天工作列表">
+        <section class="dashboard-todo-card" aria-label="今日事項列表">
           <div class="panel-heading dashboard-todo-heading">
             <div>
               <div class="dashboard-todo-title-row">
-                <h2>今天工作</h2>
-                <div class="todo-category-filter" id="dashboardTodoFilters" role="group" aria-label="今天工作分類篩選" hidden></div>
-                <div class="todo-event-filter" id="todoEventFilter" role="group" aria-label="今天工作事件篩選" hidden></div>
+                <h2>今日事項</h2>
+                <div class="todo-category-filter" id="dashboardTodoFilters" role="group" aria-label="今日事項分類篩選" hidden></div>
+                <div class="todo-event-filter" id="todoEventFilter" role="group" aria-label="今天更新事件篩選" hiddn></div>
               </div>
-              <p>顯示今天建立、今天更新及今天提醒的所有紀錄。</p>
+              <p>顯示當班建立、更新及當日提醒的所有事項。</p>
             </div>
-            <div class="shift-toggle" role="group" aria-label="今天工作班次切換">
+            <div class="shift-toggle" role="group" aria-label="今日事項班次切換">
               <button class="shift-btn" id="morningShiftBtn" type="button" data-shift="morning">☀️ 早班</button>
               <button class="shift-btn" id="nightShiftBtn" type="button" data-shift="night">🌙 晚班</button>
             </div>
@@ -192,6 +187,6 @@
   </script>
   <script src="assets/reminders.js?v=20260718-38"></script>
   <script src="assets/app.js?v=20260731-topnav1"></script>
-  <script src="assets/dashboard.js?v=20260803-dashboard-v2"></script>
+  <script src="assets/dashboard.js?v=20260731-tracking-todo3"></script>
 </body>
 </html>
