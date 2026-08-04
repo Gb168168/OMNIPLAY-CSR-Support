@@ -19,7 +19,7 @@ const messageEl = document.querySelector('#scheduleFormMessage');
 const deleteButton = document.querySelector('#deleteScheduleButton');
 const colorInput = document.querySelector('#scheduleLabelColor');
 const labelNameInput = document.querySelector('#scheduleLabelName');
-const savedLabelsEl = document.querySelector('#scheduleSavedLabels');
+const labelCategorySelect = document.querySelector('#scheduleLabelCategory');
 const staffSelect = document.querySelector('#scheduleStaff');
 const historyListEl = document.querySelector('#scheduleHistoryList');
 const tooltipEl = document.querySelector('#scheduleSpecialTooltip');
@@ -475,10 +475,16 @@ const renderStaffOptions = () => {
 };
 
 const renderSavedLabels = () => {
-  if (!savedLabelsEl) return;
-  savedLabelsEl.innerHTML = labelList.length
-    ? labelList.map((label) => `<button class="saved-label-chip" type="button" data-color="${escapeHtml(label.color)}" data-name="${escapeHtml(label.name)}"><i style="background:${escapeHtml(label.color)}"></i><span>${escapeHtml(label.name || '未命名')}</span></button>`).join('')
-    : '<span class="saved-label-empty">尚無已設置標籤</span>';
+  if (!labelCategorySelect) return;
+  const previousValue = labelCategorySelect.value;
+  const options = labelList
+    .filter((label) => label.name)
+    .map((label) => `<option value="${escapeHtml(label.id || label.name)}" data-color="${escapeHtml(label.color || '#3b82f6')}" data-name="${escapeHtml(label.name)}">${escapeHtml(label.name)}</option>`)
+    .join('');
+  labelCategorySelect.innerHTML = `<option value="">自訂／新增標籤</option>${options}`;
+  if ([...labelCategorySelect.options].some((option) => option.value === previousValue)) {
+    labelCategorySelect.value = previousValue;
+  }
 };
 
 const renderLabelFilter = () => {
@@ -653,6 +659,11 @@ const openModal = (dateKey, scheduleId = null) => {
   deleteButton.hidden = !item || !canDeleteSchedule;
   colorInput.value = item?.labelColor || '#3b82f6';
   labelNameInput.value = item?.labelName || '';
+  if (labelCategorySelect) {
+    const matchedLabel = labelList.find((label) =>
+      label.name === (item?.labelName || '') && label.color === (item?.labelColor || '#3b82f6'));
+    labelCategorySelect.value = matchedLabel?.id || '';
+  }
   document.querySelector('#scheduleTitle').value = item?.title || '';
   document.querySelector('#scheduleContent').value = item?.content || '';
   document.querySelector('#scheduleReminderAt').value = toDatetimeLocal(item?.reminderAt ? parseDateValue(item.reminderAt) : new Date(`${dateKey}T09:00`));
@@ -766,12 +777,22 @@ calendarEl?.addEventListener('click', (event) => {
   if (canEditSchedule) openModal(dateKey);
 });
 
-savedLabelsEl?.addEventListener('click', (event) => {
-  const chip = event.target.closest('.saved-label-chip');
-  if (!chip) return;
-  colorInput.value = chip.dataset.color;
-  labelNameInput.value = chip.dataset.name;
+labelCategorySelect?.addEventListener('change', () => {
+  const option = labelCategorySelect.selectedOptions[0];
+  if (!option?.value) return;
+  colorInput.value = option.dataset.color || '#3b82f6';
+  labelNameInput.value = option.dataset.name || option.textContent || '';
 });
+
+const syncLabelCategorySelection = () => {
+  if (!labelCategorySelect) return;
+  const matchedLabel = labelList.find((label) =>
+    label.name === labelNameInput.value.trim() && label.color === colorInput.value);
+  labelCategorySelect.value = matchedLabel?.id || '';
+};
+
+colorInput?.addEventListener('input', syncLabelCategorySelection);
+labelNameInput?.addEventListener('input', syncLabelCategorySelection);
 
 labelFilterSelect?.addEventListener('change', () => { activeLabelFilter = labelFilterSelect.value; renderCalendar(); });
 
