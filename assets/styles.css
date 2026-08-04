@@ -5996,3 +5996,16 @@ body:has(.sidebar-toggle-btn.is-visible)
   font-size: 14px !important;
   line-height: 1.65 !important;
 }
+
+
+/* Tracking edit: give the main detail subtable text areas room for multi-line content. */
+.tracking-page #ragicForm .is-tracking-detail-subtable .subtable-row-field-textarea textarea {
+  width: 100% !important;
+  min-height: 88px !important;
+  height: 88px !important;
+  max-height: none !important;
+  padding: 10px 12px !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  resize: vertical !important;
+}
