@@ -38,15 +38,18 @@ const GAME_SCHEDULE_FEED_URL = 'https://script.google.com/macros/s/AKfycbyaTbkqt
 const GAME_SCHEDULE_LABEL = { id: 'google-game-sheet', name: '遊戲上線', color: '#2563eb' };
 const GAME_SCHEDULE_COLORS = {
   pm: '#f59e0b',
+  marketing: '#14b8a6',
   uat: '#8b5cf6',
   prod: '#2563eb'
 };
 const GAME_EVENT_META = {
   'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 PM 確認', color: GAME_SCHEDULE_COLORS.pm },
-  'uat-material': { labelId: 'google-game-uat', labelName: 'UAT 資料待辦', color: GAME_SCHEDULE_COLORS.uat },
+  'marketing-material': { labelId: 'google-game-marketing', labelName: '行銷素材待辦', color: GAME_SCHEDULE_COLORS.marketing },
+  'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT 上架公告', color: GAME_SCHEDULE_COLORS.uat },
+  'uat-material': { labelId: 'google-game-uat', labelName: 'UAT 上架公告', color: GAME_SCHEDULE_COLORS.uat },
   'prod-launch': { labelId: 'google-game-prod', labelName: '預計 PROD 上線', color: GAME_SCHEDULE_COLORS.prod }
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:向 PM 確認|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:向 PM 確認|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const getScheduleEventMeta = (item = {}) => GAME_EVENT_META[item.eventType] || null;
 const getScheduleDisplayColor = (item = {}) => getScheduleEventMeta(item)?.color || item.labelColor || '#3b82f6';
@@ -134,12 +137,38 @@ const parseGameScheduleDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const subtractWorkdays = (date, workdays) => {
+const TAIWAN_CALENDAR_URL = (year) =>
+  `https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`;
+const taiwanHolidayCache = new Map();
+
+const loadTaiwanHolidaySet = async (years) => {
+  const holidaySet = new Set();
+  await Promise.all([...new Set(years)].map(async (year) => {
+    if (!taiwanHolidayCache.has(year)) {
+      const response = await fetch(TAIWAN_CALENDAR_URL(year), { cache: 'no-store' });
+      if (!response.ok) throw new Error(`無法取得 ${year} 年台灣辦公日曆`);
+      const rows = await response.json();
+      taiwanHolidayCache.set(year, Array.isArray(rows) ? rows : []);
+    }
+    taiwanHolidayCache.get(year).forEach((row) => {
+      if (!row?.isHoliday) return;
+      const raw = String(row.date || '');
+      if (/^\d{8}$/.test(raw)) {
+        holidaySet.add(`${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`);
+      }
+    });
+  }));
+  return holidaySet;
+};
+
+const subtractWorkdays = (date, workdays, holidaySet) => {
   const result = new Date(date);
   let remaining = workdays;
   while (remaining > 0) {
     result.setDate(result.getDate() - 1);
-    if (result.getDay() !== 0 && result.getDay() !== 6) remaining -= 1;
+    const weekend = result.getDay() === 0 || result.getDay() === 6;
+    const publicHoliday = holidaySet.has(toDateKey(result));
+    if (!weekend && !publicHoliday) remaining -= 1;
   }
   result.setHours(9, 0, 0, 0);
   return result;
@@ -147,6 +176,15 @@ const subtractWorkdays = (date, workdays) => {
 
 const gameLine = (game) =>
   `${game.gameId} ${game.gameNameZh || game.gameNameEn || ''}｜預計 PROD：${game.expectedOnlineDate}`.trim();
+
+const groupGamesByWorkday = (games, workdays, holidaySet) => games.reduce((result, game) => {
+  const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
+  if (!launchAt) return result;
+  const reminderAt = subtractWorkdays(launchAt, workdays, holidaySet);
+  const dateKey = toDateKey(reminderAt);
+  (result[dateKey] ||= { reminderAt, games: [] }).games.push(game);
+  return result;
+}, {});
 
 const createUatSchedules = async (item, actor) => {
   const games = Array.isArray(item?.games) && item.games.length
@@ -160,35 +198,46 @@ const createUatSchedules = async (item, actor) => {
         expectedOnlineDate: item.expectedOnlineDate
       }]
       : [];
-  if (!games.length) throw new Error('此排程缺少遊戲或預計上線日期，無法建立 UAT 待辦。');
-  const groups = games.reduce((result, game) => {
+  if (!games.length) throw new Error('此排程缺少遊戲或預計上線日期，無法建立流程待辦。');
+
+  const years = games.flatMap((game) => {
     const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
-    if (!launchAt) return result;
-    const reminderAt = subtractWorkdays(launchAt, 7);
-    const dateKey = toDateKey(reminderAt);
-    (result[dateKey] ||= { reminderAt, games: [] }).games.push(game);
-    return result;
-  }, {});
+    return launchAt ? [launchAt.getFullYear(), launchAt.getFullYear() - 1] : [];
+  });
+  let holidaySet;
+  try {
+    holidaySet = await loadTaiwanHolidaySet(years);
+  } catch (error) {
+    throw new Error(`國定假日資料載入失敗：${error.message || error}`);
+  }
+
+  const marketingGroups = groupGamesByWorkday(games, 8, holidaySet);
+  const uatGroups = groupGamesByWorkday(games, 7, holidaySet);
   const batch = scheduleDb.batch();
   const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-  const uatMeta = GAME_EVENT_META['uat-material'];
-  batch.set(scheduleLabelCollection.doc(uatMeta.labelId), {
-    name: uatMeta.labelName,
-    color: uatMeta.color,
-    updatedAt,
-    source: 'google-game-sheet'
-  }, { merge: true });
-  Object.entries(groups).forEach(([dateKey, group]) => {
+  const marketingMeta = GAME_EVENT_META['marketing-material'];
+  const uatMeta = GAME_EVENT_META['uat-announcement'];
+
+  [marketingMeta, uatMeta].forEach((meta) => {
+    batch.set(scheduleLabelCollection.doc(meta.labelId), {
+      name: meta.labelName,
+      color: meta.color,
+      updatedAt,
+      source: 'google-game-sheet'
+    }, { merge: true });
+  });
+
+  Object.entries(marketingGroups).forEach(([dateKey, group]) => {
     const lines = group.games.map(gameLine);
-    batch.set(scheduleCollection.doc(`game_uat_${dateKey}`), {
-      eventType: 'uat-material',
+    batch.set(scheduleCollection.doc(`game_marketing_${dateKey}`), {
+      eventType: 'marketing-material',
       date: dateKey,
-      title: `UAT 資料待辦｜${group.games.length} 款遊戲`,
-      content: lines.join('\n'),
+      title: `行銷素材待辦｜${group.games.length} 款遊戲`,
+      content: `請行銷於今日提供下列遊戲素材：\n${lines.join('\n')}`,
       reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
-      labelId: GAME_EVENT_META['uat-material'].labelId,
-      labelName: GAME_EVENT_META['uat-material'].labelName,
-      labelColor: GAME_EVENT_META['uat-material'].color,
+      labelId: marketingMeta.labelId,
+      labelName: marketingMeta.labelName,
+      labelColor: marketingMeta.color,
       repeat: 'none',
       staffIds: [],
       staffNames: [],
@@ -199,6 +248,29 @@ const createUatSchedules = async (item, actor) => {
       updatedBy: actor
     }, { merge: true });
   });
+
+  Object.entries(uatGroups).forEach(([dateKey, group]) => {
+    const lines = group.games.map(gameLine);
+    batch.set(scheduleCollection.doc(`game_uat_${dateKey}`), {
+      eventType: 'uat-announcement',
+      date: dateKey,
+      title: `UAT 上架公告｜${group.games.length} 款遊戲`,
+      content: `請於今日發送下列遊戲的 UAT 環境上架公告：\n${lines.join('\n')}`,
+      reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
+      labelId: uatMeta.labelId,
+      labelName: uatMeta.labelName,
+      labelColor: uatMeta.color,
+      repeat: 'none',
+      staffIds: [],
+      staffNames: [],
+      deleted: false,
+      source: 'google-game-sheet',
+      games: group.games,
+      updatedAt,
+      updatedBy: actor
+    }, { merge: true });
+  });
+
   batch.update(scheduleCollection.doc(item.id), {
     pmConfirmedAt: updatedAt,
     pmConfirmedBy: actor,
@@ -206,7 +278,7 @@ const createUatSchedules = async (item, actor) => {
     updatedBy: actor
   });
   await batch.commit();
-  return Object.keys(groups).length;
+  return Object.keys(marketingGroups).length + Object.keys(uatGroups).length;
 };
 
 const syncGameSchedules = async () => {
@@ -556,7 +628,7 @@ const openModal = (dateKey, scheduleId = null) => {
   if (gamePmConfirmedLabel) gamePmConfirmedLabel.hidden = !isPmConfirmation;
   if (gamePmConfirmedInput) {
     gamePmConfirmedInput.checked = Boolean(item?.pmConfirmedAt);
-    gamePmConfirmedInput.disabled = !canEditSchedule || Boolean(item?.pmConfirmedAt);
+    gamePmConfirmedInput.disabled = !canEditSchedule;
   }
   formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
   document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
@@ -734,10 +806,10 @@ formEl?.addEventListener('submit', async (event) => {
     if (editingId) await scheduleCollection.doc(editingId).update(payload);
     else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
     const editingItem = scheduleList.find((entry) => entry.id === editingId);
-    if (editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked && !editingItem.pmConfirmedAt) {
+    if (editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
       const createdCount = await createUatSchedules(editingItem, user);
       if (!createdCount) throw new Error('沒有可建立的 UAT 資料待辦。');
-      const successMessage = `PM 已確認，已建立 ${createdCount} 筆 UAT 資料待辦。`;
+      const successMessage = `PM 已確認，已建立／更新 ${createdCount} 筆流程待辦（行銷素材＋UAT 上架公告）。`;
       setStatus(successMessage, 'success');
       window.alert(successMessage);
     }
