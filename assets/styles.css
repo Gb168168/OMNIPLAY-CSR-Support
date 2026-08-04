@@ -5727,3 +5727,111 @@ body:has(.sidebar-toggle-btn.is-visible)
   flex: 0 0 18px;
   accent-color: var(--primary);
 }
+
+
+/* Schedule help entry and guide modal. */
+.schedule-help-button {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.schedule-help-card {
+  width: min(760px, calc(100vw - 28px));
+  max-height: min(84vh, 820px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.schedule-help-card .modal-heading > div {
+  min-width: 0;
+}
+
+.schedule-help-card .modal-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.schedule-help-content {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.schedule-help-content section {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.schedule-help-content h3 {
+  margin: 0 0 9px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.schedule-help-content p,
+.schedule-help-content ol {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.schedule-help-content ol {
+  padding-left: 22px;
+}
+
+.schedule-help-legends {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 16px;
+}
+
+.schedule-help-legends span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.schedule-help-legends i {
+  width: 7px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--help-color);
+}
+
+.help-line {
+  width: 30px;
+  height: 18px;
+  border: 1px solid var(--primary);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--primary) 18%, var(--card));
+}
+
+.help-line.is-dashed {
+  border-style: dashed;
+  opacity: .72;
+  background: transparent;
+}
+
+.schedule-help-note {
+  margin-top: 8px !important;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  color: var(--text) !important;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .schedule-help-button {
+    width: 100%;
+  }
+
+  .schedule-help-legends {
+    grid-template-columns: 1fr;
+  }
+}
