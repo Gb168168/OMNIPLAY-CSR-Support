@@ -51,9 +51,25 @@ const GAME_EVENT_META = {
 };
 const GAME_TITLE_PREFIX_PATTERN = /^(?:向 PM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
+const LABEL_CATEGORY_ORDER = [
+  '向 PM 確認',
+  '行銷素材待辦',
+  'UAT 上架公告',
+  'PROD 上架公告',
+  '問題/需求-代辦提醒'
+];
+
+const canonicalScheduleLabelName = (name = '') => {
+  const normalized = String(name).trim().replace(/\s+/g, ' ');
+  if (normalized === '預計 PROD 上線') return 'PROD 上架公告';
+  if (normalized === '代辦事項') return '問題/需求-代辦提醒';
+  return normalized;
+};
+
 const getScheduleEventMeta = (item = {}) => GAME_EVENT_META[item.eventType] || null;
 const getScheduleDisplayColor = (item = {}) => getScheduleEventMeta(item)?.color || item.labelColor || '#3b82f6';
-const getScheduleDisplayLabel = (item = {}) => getScheduleEventMeta(item)?.labelName || item.labelName || '';
+const getScheduleDisplayLabel = (item = {}) =>
+  getScheduleEventMeta(item)?.labelName || canonicalScheduleLabelName(item.labelName);
 const getScheduleGames = (item = {}) => {
   if (Array.isArray(item.games) && item.games.length) return item.games;
   if (item.gameId) return [{
@@ -502,16 +518,27 @@ const renderStaffOptions = () => {
   staffSelect.innerHTML = staffList.map((staff) => `<option value="${staff.id}">${escapeHtml(staff.name || staff.code || '未命名')}</option>`).join('');
 };
 
-const normalizeLabelName = (name = '') => String(name).trim().replace(/\s+/g, ' ');
+const normalizeLabelName = (name = '') => canonicalScheduleLabelName(name);
 
 const getUniqueLabels = () => {
   const seen = new Set();
-  return labelList.filter((label) => {
-    const normalizedName = normalizeLabelName(label.name);
-    if (!normalizedName || seen.has(normalizedName)) return false;
-    seen.add(normalizedName);
-    return true;
-  });
+  return labelList
+    .map((label) => ({ ...label, name: normalizeLabelName(label.name) }))
+    .filter((label) => {
+      if (!label.name || seen.has(label.name)) return false;
+      seen.add(label.name);
+      return true;
+    })
+    .sort((a, b) => {
+      const aIndex = LABEL_CATEGORY_ORDER.indexOf(a.name);
+      const bIndex = LABEL_CATEGORY_ORDER.indexOf(b.name);
+      if (aIndex !== -1 || bIndex !== -1) {
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      }
+      return a.name.localeCompare(b.name, 'zh-Hant');
+    });
 };
 
 const renderSavedLabels = () => {
