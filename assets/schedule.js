@@ -41,11 +41,21 @@ const GAME_SCHEDULE_COLORS = {
   uat: '#8b5cf6',
   prod: '#2563eb'
 };
-const getScheduleDisplayColor = (item = {}) => {
-  if (item.eventType === 'pm-confirmation') return GAME_SCHEDULE_COLORS.pm;
-  if (item.eventType === 'uat-material') return GAME_SCHEDULE_COLORS.uat;
-  if (item.eventType === 'prod-launch') return GAME_SCHEDULE_COLORS.prod;
-  return item.labelColor || '#3b82f6';
+const GAME_EVENT_META = {
+  'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 PM 確認', color: GAME_SCHEDULE_COLORS.pm },
+  'uat-material': { labelId: 'google-game-uat', labelName: 'UAT 資料待辦', color: GAME_SCHEDULE_COLORS.uat },
+  'prod-launch': { labelId: 'google-game-prod', labelName: '預計 PROD 上線', color: GAME_SCHEDULE_COLORS.prod }
+};
+const GAME_TITLE_PREFIX_PATTERN = /^(?:向 PM 確認|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦)\s*[｜|]\s*/;
+
+const getScheduleEventMeta = (item = {}) => GAME_EVENT_META[item.eventType] || null;
+const getScheduleDisplayColor = (item = {}) => getScheduleEventMeta(item)?.color || item.labelColor || '#3b82f6';
+const getScheduleDisplayLabel = (item = {}) => getScheduleEventMeta(item)?.labelName || item.labelName || '';
+const getScheduleDisplayTitle = (item = {}) => {
+  const meta = getScheduleEventMeta(item);
+  if (!meta) return item.title || '';
+  const titleBody = String(item.title || '').replace(GAME_TITLE_PREFIX_PATTERN, '').trim();
+  return `${meta.labelName}｜${titleBody || '未命名排程'}`;
 };
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
@@ -139,8 +149,18 @@ const gameLine = (game) =>
   `${game.gameId} ${game.gameNameZh || game.gameNameEn || ''}｜預計 PROD：${game.expectedOnlineDate}`.trim();
 
 const createUatSchedules = async (item, actor) => {
-  const games = Array.isArray(item?.games) ? item.games : [];
-  if (!games.length) return 0;
+  const games = Array.isArray(item?.games) && item.games.length
+    ? item.games
+    : item?.gameId && item?.expectedOnlineDate
+      ? [{
+        gameId: String(item.gameId),
+        gameNameZh: item.gameNameZh || '',
+        gameNameEn: item.gameNameEn || '',
+        status: item.gameStatus || item.status || '',
+        expectedOnlineDate: item.expectedOnlineDate
+      }]
+      : [];
+  if (!games.length) throw new Error('此排程缺少遊戲或預計上線日期，無法建立 UAT 待辦。');
   const groups = games.reduce((result, game) => {
     const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
     if (!launchAt) return result;
@@ -151,17 +171,24 @@ const createUatSchedules = async (item, actor) => {
   }, {});
   const batch = scheduleDb.batch();
   const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+  const uatMeta = GAME_EVENT_META['uat-material'];
+  batch.set(scheduleLabelCollection.doc(uatMeta.labelId), {
+    name: uatMeta.labelName,
+    color: uatMeta.color,
+    updatedAt,
+    source: 'google-game-sheet'
+  }, { merge: true });
   Object.entries(groups).forEach(([dateKey, group]) => {
     const lines = group.games.map(gameLine);
     batch.set(scheduleCollection.doc(`game_uat_${dateKey}`), {
       eventType: 'uat-material',
       date: dateKey,
-      title: `向行銷索取 UAT 公告資料｜${group.games.length} 款遊戲`,
+      title: `UAT 資料待辦｜${group.games.length} 款遊戲`,
       content: lines.join('\n'),
       reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
-      labelId: GAME_SCHEDULE_LABEL.id,
-      labelName: GAME_SCHEDULE_LABEL.name,
-      labelColor: GAME_SCHEDULE_COLORS.uat,
+      labelId: GAME_EVENT_META['uat-material'].labelId,
+      labelName: GAME_EVENT_META['uat-material'].labelName,
+      labelColor: GAME_EVENT_META['uat-material'].color,
       repeat: 'none',
       staffIds: [],
       staffNames: [],
@@ -221,9 +248,10 @@ const syncGameSchedules = async () => {
       .filter((item) => item.source === 'google-game-sheet' && !desiredPmIds.has(item.id))
       .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
-    batch.set(scheduleLabelCollection.doc(GAME_SCHEDULE_LABEL.id), {
-      name: GAME_SCHEDULE_LABEL.name,
-      color: GAME_SCHEDULE_LABEL.color,
+    const pmMeta = GAME_EVENT_META['pm-confirmation'];
+    batch.set(scheduleLabelCollection.doc(pmMeta.labelId), {
+      name: pmMeta.labelName,
+      color: pmMeta.color,
       updatedAt: syncedAt,
       source: 'google-game-sheet'
     }, { merge: true });
@@ -236,9 +264,9 @@ const syncGameSchedules = async () => {
         title: `向 PM 確認｜${group.games.length} 款遊戲`,
         content: `${lines.join('\n')}\n\nPM 確認後，請在編輯視窗勾選「PM 已確認」，系統會建立上線前 7 個工作日的 UAT 資料待辦。`,
         reminderAt: firebase.firestore.Timestamp.fromDate(group.pmAt),
-        labelId: GAME_SCHEDULE_LABEL.id,
-        labelName: GAME_SCHEDULE_LABEL.name,
-        labelColor: GAME_SCHEDULE_COLORS.pm,
+        labelId: pmMeta.labelId,
+        labelName: pmMeta.labelName,
+        labelColor: pmMeta.color,
         repeat: 'none',
         staffIds: [],
         staffNames: [],
@@ -484,7 +512,7 @@ const subscribeSchedules = () => {
     scheduleList = snapshot.docs.map((doc) => {
       const data = doc.data();
       const reminder = parseDateValue(data.reminderAt);
-      return { id: doc.id, ...data, date: data.date || (reminder ? toDateKey(reminder) : doc.id.slice(0, 10)), labelColor: getScheduleDisplayColor(data), history: data.history || [] };
+      return { id: doc.id, ...data, date: data.date || (reminder ? toDateKey(reminder) : doc.id.slice(0, 10)), labelName: getScheduleDisplayLabel(data), labelColor: getScheduleDisplayColor(data), title: getScheduleDisplayTitle(data), history: data.history || [] };
     });
     renderCalendar();
     openScheduleFromQuery();
@@ -708,7 +736,10 @@ formEl?.addEventListener('submit', async (event) => {
     const editingItem = scheduleList.find((entry) => entry.id === editingId);
     if (editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked && !editingItem.pmConfirmedAt) {
       const createdCount = await createUatSchedules(editingItem, user);
-      setStatus(`PM 已確認，已建立 ${createdCount} 筆 UAT 資料待辦。`, 'success');
+      if (!createdCount) throw new Error('沒有可建立的 UAT 資料待辦。');
+      const successMessage = `PM 已確認，已建立 ${createdCount} 筆 UAT 資料待辦。`;
+      setStatus(successMessage, 'success');
+      window.alert(successMessage);
     }
     closeModal();
   } catch (error) { console.error('儲存排程失敗：', error); setMessage('儲存排程失敗，請稍後再試。'); }
