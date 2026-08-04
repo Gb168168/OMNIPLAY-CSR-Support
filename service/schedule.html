@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260805-three-items1" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260805-day-agenda1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -60,6 +60,16 @@
         <div class="calendar-grid" id="scheduleCalendar" aria-label="排程月曆"></div>
       </section>
       
+      <div class="modal-backdrop" id="dayAgendaModal" aria-hidden="true">
+        <section class="modal-card day-agenda-card" role="dialog" aria-modal="true" aria-labelledby="dayAgendaTitle">
+          <div class="modal-heading">
+            <h2 id="dayAgendaTitle">當日排程</h2>
+            <button class="icon-button" id="closeDayAgendaModal" type="button" aria-label="關閉當日排程">✕</button>
+          </div>
+          <div class="day-agenda-list" id="dayAgendaList"></div>
+        </section>
+      </div>
+
       <div class="modal-backdrop" id="scheduleModal" aria-hidden="true">
         <section class="modal-card schedule-modal-card" role="dialog" aria-modal="true" aria-labelledby="scheduleModalTitle">
           <div class="modal-heading">
@@ -112,6 +122,6 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260731-topnav1"></script>
-  <script src="../assets/schedule.js?v=20260805-calendar-density1"></script>
+  <script src="../assets/schedule.js?v=20260805-day-agenda1"></script>
 </body>
 </html>
