@@ -5729,6 +5729,19 @@ body:has(.sidebar-toggle-btn.is-visible)
 }
 
 
+/* Keep the schedule help dialog below the fixed navigation bars. */
+#scheduleHelpModal {
+  align-items: flex-start;
+  box-sizing: border-box;
+  padding: 108px 14px 20px;
+  overflow-y: auto;
+}
+
+#scheduleHelpModal .schedule-help-card {
+  margin: 0 auto;
+  max-height: calc(100dvh - 128px);
+}
+
 /* Schedule help entry and guide modal. */
 .schedule-help-button {
   margin-left: auto;
