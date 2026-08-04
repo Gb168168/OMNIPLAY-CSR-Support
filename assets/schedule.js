@@ -495,11 +495,22 @@ const renderStaffOptions = () => {
   staffSelect.innerHTML = staffList.map((staff) => `<option value="${staff.id}">${escapeHtml(staff.name || staff.code || '未命名')}</option>`).join('');
 };
 
+const normalizeLabelName = (name = '') => String(name).trim().replace(/\s+/g, ' ');
+
+const getUniqueLabels = () => {
+  const seen = new Set();
+  return labelList.filter((label) => {
+    const normalizedName = normalizeLabelName(label.name);
+    if (!normalizedName || seen.has(normalizedName)) return false;
+    seen.add(normalizedName);
+    return true;
+  });
+};
+
 const renderSavedLabels = () => {
   if (!labelCategorySelect) return;
   const previousValue = labelCategorySelect.value;
-  const options = labelList
-    .filter((label) => label.name)
+  const options = getUniqueLabels()
     .map((label) => `<option value="${escapeHtml(label.id || label.name)}" data-color="${escapeHtml(label.color || '#3b82f6')}" data-name="${escapeHtml(label.name)}">${escapeHtml(label.name)}</option>`)
     .join('');
   labelCategorySelect.innerHTML = `<option value="">自訂／新增標籤</option>${options}`;
@@ -511,8 +522,7 @@ const renderSavedLabels = () => {
 const renderLabelFilter = () => {
   if (!labelFilterSelect) return;
   const previousValue = activeLabelFilter;
-  const options = labelList
-    .filter((label) => label.name)
+  const options = getUniqueLabels()
     .map((label) => {
       const value = label.id || label.name;
       const selected = value === previousValue ? 'selected' : '';
@@ -723,10 +733,24 @@ const showSpecials = (type, anchor) => {
 };
 
 const saveLabelIfNeeded = async (name, color) => {
-  if (!scheduleLabelCollection || !name) return;
-  const same = labelList.find((label) => label.name === name && label.color === color);
-  if (same) return;
-  await scheduleLabelCollection.add({ name, color, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const normalizedName = normalizeLabelName(name);
+  if (!scheduleLabelCollection || !normalizedName) return;
+  const existing = labelList.find((label) => normalizeLabelName(label.name) === normalizedName);
+  if (existing) {
+    if (existing.color === color && existing.name === normalizedName) return;
+    await scheduleLabelCollection.doc(existing.id).set({
+      name: normalizedName,
+      color,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    return;
+  }
+  await scheduleLabelCollection.add({
+    name: normalizedName,
+    color,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
 };
 
 
