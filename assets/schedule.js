@@ -32,6 +32,11 @@ const gamePmConfirmedInput = document.querySelector('#gamePmConfirmed');
 
 const GAME_SCHEDULE_FEED_URL = 'https://script.google.com/macros/s/AKfycbyaTbkqtkBfAzbPNqCw8VEnh43VrNLpfYK3WR3TUNtIZF8_QCh6AOncZ6jG_LbxVyni9g/exec';
 const GAME_SCHEDULE_LABEL = { id: 'google-game-sheet', name: '遊戲上線', color: '#2563eb' };
+const GAME_SCHEDULE_COLORS = {
+  pm: '#f59e0b',
+  uat: '#8b5cf6',
+  prod: '#2563eb'
+};
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 const SCHEDULE_SESSION_KEYS = { id: 'omniplayStaffId', code: 'omniplayStaffCode', name: 'omniplayStaffName' };
@@ -146,7 +151,7 @@ const createUatSchedules = async (item, actor) => {
       reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
       labelId: GAME_SCHEDULE_LABEL.id,
       labelName: GAME_SCHEDULE_LABEL.name,
-      labelColor: GAME_SCHEDULE_LABEL.color,
+      labelColor: GAME_SCHEDULE_COLORS.uat,
       repeat: 'none',
       staffIds: [],
       staffNames: [],
@@ -223,7 +228,7 @@ const syncGameSchedules = async () => {
         reminderAt: firebase.firestore.Timestamp.fromDate(group.pmAt),
         labelId: GAME_SCHEDULE_LABEL.id,
         labelName: GAME_SCHEDULE_LABEL.name,
-        labelColor: GAME_SCHEDULE_LABEL.color,
+        labelColor: GAME_SCHEDULE_COLORS.pm,
         repeat: 'none',
         staffIds: [],
         staffNames: [],
@@ -368,6 +373,8 @@ const renderCalendar = () => {
   if (!calendarEl) return;
   const today = new Date();
   calendarEl.classList.toggle('is-year-view', viewMode === 'year');
+  calendarEl.classList.toggle('is-month-view', viewMode === 'month');
+  calendarEl.classList.toggle('is-week-view', viewMode === 'week');
   const { start, end } = getVisibleRange();
   const schedulesByDay = getScheduleOccurrencesByDay(start, end);
   const days = [];
@@ -396,9 +403,12 @@ const renderCalendar = () => {
     const key = toDateKey(day);
     const items = (schedulesByDay[key] || []).sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
     const otherMonth = day.getMonth() !== currentDate.getMonth() && viewMode === 'month';
+    const countBadge = items.length > 3
+      ? `<span class="day-count" title="本日共 ${items.length} 則事項">${items.length}</span>`
+      : '';
     return `<button class="calendar-day weekday-${day.getDay()} ${otherMonth ? 'is-muted' : ''} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}">
-      <span class="day-number">${day.getDate()}</span>
-      <span class="day-events">${items.map((item) => `<span class="calendar-event ${item.hasOccurred ? '' : 'is-repeat'}" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
+      <span class="day-heading"><span class="day-number">${day.getDate()}</span>${countBadge}</span>
+      <span class="day-events ${items.length > 3 ? 'is-scrollable' : ''}" aria-label="本日 ${items.length} 則事項">${items.map((item) => `<span class="calendar-event ${item.hasOccurred ? '' : 'is-repeat'}" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
     </button>`;
   }).join('');
   calendarEl.innerHTML = header + cells;

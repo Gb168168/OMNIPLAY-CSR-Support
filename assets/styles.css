@@ -5437,3 +5437,84 @@ body:has(.sidebar-toggle-btn.is-visible)
         background: #fef3c7;
         color: #92400e;
     }
+
+
+/* Schedule calendar: fixed month cells, per-day scrolling, and event-type colors. */
+.calendar-grid.is-month-view {
+  grid-template-rows: 46px repeat(6, 156px);
+  align-content: start;
+}
+
+.calendar-grid.is-month-view .calendar-day {
+  height: 156px;
+  min-height: 156px;
+  max-height: 156px;
+  grid-template-rows: 24px minmax(0, 1fr);
+  gap: 6px;
+  overflow: hidden;
+}
+
+.calendar-grid.is-month-view .day-number {
+  width: 24px;
+  height: 24px;
+}
+
+.calendar-grid.is-week-view {
+  grid-template-rows: 46px minmax(156px, 1fr);
+}
+
+.day-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.day-count {
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.day-events {
+  align-content: start;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.day-events.is-scrollable {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 3px;
+}
+
+.calendar-event {
+  min-height: 31px;
+  background: color-mix(in srgb, var(--event-color, #3b82f6) 18%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--event-color, #3b82f6) 42%, transparent);
+}
+
+.calendar-event.is-repeat {
+  background: color-mix(in srgb, var(--event-color, #3b82f6) 10%, var(--card));
+}
+
+@media (max-width: 720px) {
+  .calendar-grid.is-month-view {
+    grid-template-rows: 42px repeat(6, 142px);
+  }
+
+  .calendar-grid.is-month-view .calendar-day {
+    height: 142px;
+    min-height: 142px;
+    max-height: 142px;
+  }
+}
