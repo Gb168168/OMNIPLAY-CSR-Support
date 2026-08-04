@@ -265,24 +265,24 @@ const updateDashboard = () => {
   renderTodoList();
 };
 
-const updateShiftButtons = () => {
-  const loadDashboardExternalLeave = async () => {
-  const targetMonth = monthKey();
-  try {
-    const response = await fetch(`https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    if (payload.month !== targetMonth) return;
-    dashboardState.externalLeave = payload.people || {};
-  } catch (error) {
-    console.warn('首頁外部假表載入失敗', error);
-    dashboardState.externalLeave = {};
-  } finally {
-    dashboardState.externalLeaveLoaded = true;
-    updateDashboard();
-  }
+const loadDashboardExternalLeave = async () => {
+const targetMonth = monthKey();
+try {
+  const response = await fetch(`https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const payload = await response.json();
+  if (payload.month !== targetMonth) return;
+  dashboardState.externalLeave = payload.people || {};
+} catch (error) {
+  console.warn('首頁外部假表載入失敗', error);
+  dashboardState.externalLeave = {};
+} finally {
+  dashboardState.externalLeaveLoaded = true;
+  updateDashboard();
+}
 };
 
+const updateShiftButtons = () => {
 document.querySelectorAll('.shift-btn').forEach((button) => {
     const active = button.dataset.shift === dashboardState.selectedShift;
     button.classList.toggle('active', active);
