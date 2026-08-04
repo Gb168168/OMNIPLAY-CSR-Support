@@ -333,28 +333,37 @@ const syncGameSchedules = async () => {
       const released = /已上線|released/i.test(String(game.status || ''));
       return launchAt && launchAt >= today && !released;
     });
-    const groups = games.reduce((result, game) => {
+    const rows = games.map((game) => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
       const pmAt = addMonthsClamped(launchAt, -1);
       pmAt.setHours(9, 0, 0, 0);
       const dateKey = toDateKey(pmAt);
-      (result[dateKey] ||= { pmAt, games: [] }).games.push({
+      const normalizedGame = {
         gameId: String(game.gameId),
         gameNameZh: game.gameNameZh || '',
         gameNameEn: game.gameNameEn || '',
         status: game.status || '',
         expectedOnlineDate: game.expectedOnlineDate
-      });
-      return result;
-    }, {});
+      };
+      return {
+        id: `game_pm_${dateKey}_${gameScheduleDocSuffix(normalizedGame)}`,
+        legacyId: `game_pm_${dateKey}`,
+        dateKey,
+        pmAt,
+        game: normalizedGame
+      };
+    });
 
     const batch = scheduleDb.batch();
     const syncedAt = firebase.firestore.FieldValue.serverTimestamp();
     const actor = { id: 'google-game-sheet', code: 'SYNC', name: 'Google 遊戲上線表' };
+    const desiredPmIds = new Set(rows.map((row) => row.id));
+    const confirmedRows = [];
 
-    const desiredPmIds = new Set(Object.keys(groups).map((dateKey) => `game_pm_${dateKey}`));
     scheduleList
-      .filter((item) => item.source === 'google-game-sheet' && !desiredPmIds.has(item.id))
+      .filter((item) => item.source === 'google-game-sheet'
+        && item.eventType === 'pm-confirmation'
+        && !desiredPmIds.has(item.id))
       .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
     const pmMeta = GAME_EVENT_META['pm-confirmation'];
@@ -365,14 +374,17 @@ const syncGameSchedules = async () => {
       source: 'google-game-sheet'
     }, { merge: true });
 
-    Object.entries(groups).forEach(([dateKey, group]) => {
-      const lines = group.games.map(gameLine);
-      batch.set(scheduleCollection.doc(`game_pm_${dateKey}`), {
+    rows.forEach((row) => {
+      const existingItem = scheduleList.find((item) => item.id === row.id);
+      const legacyItem = scheduleList.find((item) => item.id === row.legacyId
+        && getScheduleGames(item).some((game) => String(game.gameId) === row.game.gameId));
+      const confirmationSource = existingItem?.pmConfirmedAt ? existingItem : legacyItem?.pmConfirmedAt ? legacyItem : null;
+      const payload = {
         eventType: 'pm-confirmation',
-        date: dateKey,
-        title: `${pmMeta.labelName}｜${getGameTitle(group.games)}`,
-        content: `${lines.join('\n')}\n\nPM 確認後，請在編輯視窗勾選「PM 已確認」，系統會建立上線前 7 個工作日的 UAT 資料待辦。`,
-        reminderAt: firebase.firestore.Timestamp.fromDate(group.pmAt),
+        date: row.dateKey,
+        title: `${pmMeta.labelName}｜${getGameTitle([row.game])}`,
+        content: `${gameLine(row.game)}\n\nPM 確認後，請在編輯視窗勾選「PM 已確認」，系統會建立行銷素材與 UAT 上架公告待辦。`,
+        reminderAt: firebase.firestore.Timestamp.fromDate(row.pmAt),
         labelId: pmMeta.labelId,
         labelName: pmMeta.labelName,
         labelColor: pmMeta.color,
@@ -381,14 +393,23 @@ const syncGameSchedules = async () => {
         staffNames: [],
         deleted: false,
         source: 'google-game-sheet',
-        games: group.games,
+        games: [row.game],
         updatedAt: syncedAt,
         updatedBy: actor
-      });
+      };
+      if (confirmationSource) {
+        payload.pmConfirmedAt = confirmationSource.pmConfirmedAt;
+        payload.pmConfirmedBy = confirmationSource.pmConfirmedBy || actor;
+        confirmedRows.push({ id: row.id, ...payload });
+      }
+      batch.set(scheduleCollection.doc(row.id), payload, { merge: true });
     });
 
     await batch.commit();
-    setStatus(`遊戲排程同步完成：已清除舊匯入資料，並建立 ${Object.keys(groups).length} 筆 PM 確認排程。`, 'success');
+    for (const confirmedRow of confirmedRows) {
+      await createUatSchedules(confirmedRow, actor);
+    }
+    setStatus(`遊戲排程同步完成：已更新 ${rows.length} 筆 PM 確認排程，並保留已確認及後續流程資料。`, 'success');
   } catch (error) {
     console.error('同步遊戲排程失敗：', error);
     setStatus(`同步遊戲排程失敗：${error.message || error}`, 'error');
