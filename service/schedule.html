@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260805-day-agenda1" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260805-schedule-color2" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -87,7 +87,7 @@
             <label><span>提醒時間</span><input id="scheduleReminderAt" type="datetime-local" required /></label>
             <label class="game-pm-confirmed" id="gamePmConfirmedLabel" hidden>
               <span>遊戲上線流程</span>
-              <span><input id="gamePmConfirmed" type="checkbox" /> PM 已確認，建立上線前 7 個工作日的 UAT 資料待辦</span>
+              <span><input id="gamePmConfirmed" type="checkbox" /> PM 已確認（勾選並儲存後，自動建立 UAT 資料待辦）</span>
             </label>
             <div class="label-row repeat-row">
               <label><span>重複提醒</span><select id="scheduleRepeat">
@@ -122,6 +122,6 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260731-topnav1"></script>
-  <script src="../assets/schedule.js?v=20260805-day-agenda1"></script>
+  <script src="../assets/schedule.js?v=20260805-schedule-color2"></script>
 </body>
 </html>
