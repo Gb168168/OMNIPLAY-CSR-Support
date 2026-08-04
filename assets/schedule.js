@@ -208,6 +208,17 @@ const groupGamesByWorkday = (games, workdays, holidaySet) => games.reduce((resul
   return result;
 }, {});
 
+const mergeScheduleGames = (existingGames = [], incomingGames = []) => {
+  const merged = new Map();
+  [...existingGames, ...incomingGames].forEach((game) => {
+    const gameId = String(game?.gameId || '').trim();
+    if (!gameId) return;
+    const key = `${gameId}|${game?.expectedOnlineDate || ''}`;
+    merged.set(key, { ...merged.get(key), ...game, gameId });
+  });
+  return [...merged.values()];
+};
+
 const createUatSchedules = async (item, actor) => {
   const games = Array.isArray(item?.games) && item.games.length
     ? item.games
@@ -235,72 +246,65 @@ const createUatSchedules = async (item, actor) => {
 
   const marketingGroups = groupGamesByWorkday(games, 8, holidaySet);
   const uatGroups = groupGamesByWorkday(games, 7, holidaySet);
-  const batch = scheduleDb.batch();
   const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
   const marketingMeta = GAME_EVENT_META['marketing-material'];
   const uatMeta = GAME_EVENT_META['uat-announcement'];
+  const targets = [
+    ...Object.entries(marketingGroups).map(([dateKey, group]) => ({
+      id: `game_marketing_${dateKey}`, dateKey, group, meta: marketingMeta,
+      eventType: 'marketing-material', contentPrefix: '請行銷於今日提供下列遊戲素材：'
+    })),
+    ...Object.entries(uatGroups).map(([dateKey, group]) => ({
+      id: `game_uat_${dateKey}`, dateKey, group, meta: uatMeta,
+      eventType: 'uat-announcement', contentPrefix: '請於今日發送下列遊戲的 UAT 環境上架公告：'
+    }))
+  ];
 
-  [marketingMeta, uatMeta].forEach((meta) => {
-    batch.set(scheduleLabelCollection.doc(meta.labelId), {
-      name: meta.labelName,
-      color: meta.color,
-      updatedAt,
-      source: 'google-game-sheet'
-    }, { merge: true });
-  });
+  await scheduleDb.runTransaction(async (transaction) => {
+    const refs = targets.map((target) => scheduleCollection.doc(target.id));
+    const snapshots = await Promise.all(refs.map((ref) => transaction.get(ref)));
 
-  Object.entries(marketingGroups).forEach(([dateKey, group]) => {
-    const lines = group.games.map(gameLine);
-    batch.set(scheduleCollection.doc(`game_marketing_${dateKey}`), {
-      eventType: 'marketing-material',
-      date: dateKey,
-      title: `${marketingMeta.labelName}｜${getGameTitle(group.games)}`,
-      content: `請行銷於今日提供下列遊戲素材：\n${lines.join('\n')}`,
-      reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
-      labelId: marketingMeta.labelId,
-      labelName: marketingMeta.labelName,
-      labelColor: marketingMeta.color,
-      repeat: 'none',
-      staffIds: [],
-      staffNames: [],
-      deleted: false,
-      source: 'google-game-sheet',
-      games: group.games,
+    [marketingMeta, uatMeta].forEach((meta) => {
+      transaction.set(scheduleLabelCollection.doc(meta.labelId), {
+        name: meta.labelName,
+        color: meta.color,
+        updatedAt,
+        source: 'google-game-sheet'
+      }, { merge: true });
+    });
+
+    targets.forEach((target, index) => {
+      const existingGames = snapshots[index].exists ? snapshots[index].data()?.games : [];
+      const mergedGames = mergeScheduleGames(existingGames, target.group.games);
+      const lines = mergedGames.map(gameLine);
+      transaction.set(refs[index], {
+        eventType: target.eventType,
+        date: target.dateKey,
+        title: `${target.meta.labelName}｜${getGameTitle(mergedGames)}`,
+        content: `${target.contentPrefix}\n${lines.join('\n')}`,
+        reminderAt: firebase.firestore.Timestamp.fromDate(target.group.reminderAt),
+        labelId: target.meta.labelId,
+        labelName: target.meta.labelName,
+        labelColor: target.meta.color,
+        repeat: 'none',
+        staffIds: [],
+        staffNames: [],
+        deleted: false,
+        source: 'google-game-sheet',
+        games: mergedGames,
+        updatedAt,
+        updatedBy: actor
+      }, { merge: true });
+    });
+
+    transaction.update(scheduleCollection.doc(item.id), {
+      pmConfirmedAt: updatedAt,
+      pmConfirmedBy: actor,
       updatedAt,
       updatedBy: actor
-    }, { merge: true });
+    });
   });
-
-  Object.entries(uatGroups).forEach(([dateKey, group]) => {
-    const lines = group.games.map(gameLine);
-    batch.set(scheduleCollection.doc(`game_uat_${dateKey}`), {
-      eventType: 'uat-announcement',
-      date: dateKey,
-      title: `${uatMeta.labelName}｜${getGameTitle(group.games)}`,
-      content: `請於今日發送下列遊戲的 UAT 環境上架公告：\n${lines.join('\n')}`,
-      reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
-      labelId: uatMeta.labelId,
-      labelName: uatMeta.labelName,
-      labelColor: uatMeta.color,
-      repeat: 'none',
-      staffIds: [],
-      staffNames: [],
-      deleted: false,
-      source: 'google-game-sheet',
-      games: group.games,
-      updatedAt,
-      updatedBy: actor
-    }, { merge: true });
-  });
-
-  batch.update(scheduleCollection.doc(item.id), {
-    pmConfirmedAt: updatedAt,
-    pmConfirmedBy: actor,
-    updatedAt,
-    updatedBy: actor
-  });
-  await batch.commit();
-  return Object.keys(marketingGroups).length + Object.keys(uatGroups).length;
+  return targets.length;
 };
 
 const syncGameSchedules = async () => {
