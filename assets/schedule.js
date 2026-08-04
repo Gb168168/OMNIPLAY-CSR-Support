@@ -9,6 +9,9 @@ const periodLabel = document.querySelector('#schedulePeriodLabel');
 const statusEl = document.querySelector('#scheduleStatus');
 const selectedDateEl = document.querySelector('#selectedScheduleDate');
 const modalEl = document.querySelector('#scheduleModal');
+const dayAgendaModalEl = document.querySelector('#dayAgendaModal');
+const dayAgendaTitleEl = document.querySelector('#dayAgendaTitle');
+const dayAgendaListEl = document.querySelector('#dayAgendaList');
 const modalTitleEl = document.querySelector('#scheduleModalTitle');
 const formEl = document.querySelector('#scheduleForm');
 const messageEl = document.querySelector('#scheduleFormMessage');
@@ -403,12 +406,13 @@ const renderCalendar = () => {
     const key = toDateKey(day);
     const items = (schedulesByDay[key] || []).sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
     const otherMonth = day.getMonth() !== currentDate.getMonth() && viewMode === 'month';
-    const countBadge = items.length > 3
-      ? `<span class="day-count" title="本日共 ${items.length} 則事項">${items.length}</span>`
+    const countBadge = items.length > 2
+      ? `<span class="day-count" title="點擊查看本日全部 ${items.length} 則事項">${items.length}</span>`
       : '';
-    return `<button class="calendar-day weekday-${day.getDay()} ${otherMonth ? 'is-muted' : ''} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}">
+    const visibleItems = items.slice(0, 2);
+    return `<button class="calendar-day weekday-${day.getDay()} ${otherMonth ? 'is-muted' : ''} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}" data-item-count="${items.length}">
       <span class="day-heading"><span class="day-number">${day.getDate()}</span>${countBadge}</span>
-      <span class="day-events ${items.length > 3 ? 'is-scrollable' : ''}" aria-label="本日 ${items.length} 則事項">${items.map((item) => `<span class="calendar-event ${item.hasOccurred ? '' : 'is-repeat'}" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
+      <span class="day-events" aria-label="本日 ${items.length} 則事項">${visibleItems.map((item) => `<span class="calendar-event ${item.hasOccurred ? '' : 'is-repeat'}" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
     </button>`;
   }).join('');
   calendarEl.innerHTML = header + cells;
@@ -420,6 +424,39 @@ const subscribeLeave = () => {
   unsubscribeLeave = scheduleLeaveCollection.doc(toMonthKey(selectedDate)).onSnapshot((doc) => { leaveData = doc.exists ? { records: {}, ...doc.data() } : { records: {} }; });
 };
 
+
+const getDayScheduleItems = (dateKey) => {
+  const start = new Date(`${dateKey}T00:00:00`);
+  const end = new Date(`${dateKey}T23:59:59.999`);
+  return (getScheduleOccurrencesByDay(start, end)[dateKey] || [])
+    .sort((a, b) => {
+      const aTime = parseDateValue(a.reminderAt)?.getTime() || 0;
+      const bTime = parseDateValue(b.reminderAt)?.getTime() || 0;
+      return aTime - bTime || String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant');
+    });
+};
+
+const openDayAgenda = (dateKey) => {
+  if (!dayAgendaModalEl || !dayAgendaListEl) return;
+  const items = getDayScheduleItems(dateKey);
+  if (dayAgendaTitleEl) dayAgendaTitleEl.textContent = `${dateKey}｜共 ${items.length} 則排程`;
+  dayAgendaListEl.innerHTML = items.length
+    ? items.map((item) => {
+      const at = parseDateValue(item.reminderAt);
+      const time = at ? `${pad(at.getHours())}:${pad(at.getMinutes())}` : '—';
+      return `<button class="day-agenda-item" type="button" data-id="${escapeHtml(item.id)}" style="--event-color:${escapeHtml(item.labelColor || '#3b82f6')}">
+        <i></i><time>${time}</time><span><strong>${escapeHtml(item.title || '未命名排程')}</strong><small>${escapeHtml(item.content || '')}</small></span>
+      </button>`;
+    }).join('')
+    : '<p class="history-empty">本日沒有排程</p>';
+  dayAgendaModalEl.classList.add('is-open');
+  dayAgendaModalEl.setAttribute('aria-hidden', 'false');
+};
+
+const closeDayAgenda = () => {
+  dayAgendaModalEl?.classList.remove('is-open');
+  dayAgendaModalEl?.setAttribute('aria-hidden', 'true');
+};
 
 const openScheduleFromQuery = () => {
   const id = new URLSearchParams(window.location.search).get('id');
@@ -574,11 +611,15 @@ calendarEl?.addEventListener('click', (event) => {
   const eventEl = event.target.closest('.calendar-event');
   const dayEl = event.target.closest('.calendar-day');
   if (!dayEl) return;
-  selectedDate = new Date(`${dayEl.dataset.date}T00:00:00`);
+  const dateKey = dayEl.dataset.date;
+  const itemCount = Number(dayEl.dataset.itemCount || 0);
+  selectedDate = new Date(`${dateKey}T00:00:00`);
   currentDate = viewMode === 'week' ? new Date(selectedDate) : currentDate;
   subscribeLeave();
   renderCalendar();
-  if (canEditSchedule) openModal(dayEl.dataset.date, eventEl?.dataset.id || null);
+  if (eventEl && canEditSchedule) return openModal(dateKey, eventEl.dataset.id);
+  if (itemCount > 2) return openDayAgenda(dateKey);
+  if (canEditSchedule) openModal(dateKey);
 });
 
 savedLabelsEl?.addEventListener('click', (event) => {
@@ -601,6 +642,17 @@ document.querySelector('#closeScheduleModal')?.addEventListener('click', closeMo
 document.querySelector('#cancelScheduleButton')?.addEventListener('click', closeModal);
 modalEl?.addEventListener('click', (event) => { if (event.target === modalEl) closeModal(); });
 document.addEventListener('click', (event) => { if (tooltipEl && !tooltipEl.contains(event.target) && !event.target.closest('.schedule-special-trigger')) tooltipEl.hidden = true; });
+
+document.querySelector('#closeDayAgendaModal')?.addEventListener('click', closeDayAgenda);
+dayAgendaModalEl?.addEventListener('click', (event) => {
+  if (event.target === dayAgendaModalEl) closeDayAgenda();
+});
+dayAgendaListEl?.addEventListener('click', (event) => {
+  const item = event.target.closest('.day-agenda-item');
+  if (!item || !canEditSchedule) return;
+  closeDayAgenda();
+  openModal(toDateKey(selectedDate), item.dataset.id);
+});
 
 formEl?.addEventListener('submit', async (event) => {
   event.preventDefault();
