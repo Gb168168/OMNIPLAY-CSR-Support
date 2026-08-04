@@ -1900,7 +1900,8 @@ const renderSubtableRow = (field, item = {}) => {
   fieldsGrid.className = 'subtable-row-fields';
   fieldsGrid.style.setProperty('--subtable-cols', normalizeSubtableColumnsPerRow(field.columnsPerRow));
   const configuredWidths = (field.fields || []).map(subtableViewColumnWidth);
-  if (configuredWidths.length && configuredWidths.every(Boolean)) {
+  const usesResponsiveLogCardLayout = isLogModule() && field.key === 'items';
+  if (!usesResponsiveLogCardLayout && configuredWidths.length && configuredWidths.every(Boolean)) {
     fieldsGrid.style.setProperty(
       'grid-template-columns',
       configuredWidths.map((width) => `${width}px`).join(' '),
