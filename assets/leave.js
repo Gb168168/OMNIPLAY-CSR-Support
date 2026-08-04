@@ -120,11 +120,23 @@ const fixedPhoneAssignments = {
 };
 const externalRecordFor = (name, day) => externalLeaveData?.[name]?.days?.[dayKey(day)] || {};
 const isWorkingRecord = (record) => !record?.type && !record?.label && (!Array.isArray(record?.specials) || record.specials.length === 0);
+const phoneDutyPartners = {
+  '佳臻': '茗雅',
+  '茗雅': '佳臻',
+  '晴心': '澄希',
+  '澄希': '晴心'
+};
+const canPairForPhone = (name, day) => {
+  const partner = phoneDutyPartners[name];
+  return Boolean(partner) &&
+    isWorkingRecord(externalRecordFor(name, day)) &&
+    isWorkingRecord(externalRecordFor(partner, day));
+};
 const hasExternalPhoneDuty = (name, day) => {
   const targetMonth = monthKey(currentMonth);
   const fixedDays = fixedPhoneAssignments[targetMonth]?.[name];
   if (Array.isArray(fixedDays)) {
-    return fixedDays.includes(day) && isWorkingRecord(externalRecordFor(name, day));
+    return fixedDays.includes(day) && canPairForPhone(name, day);
   }
   if (!['晴心', '澄希'].includes(name)) return false;
   const eligibleDays = Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((candidateDay) =>
@@ -139,21 +151,22 @@ const savedRecordFor = (name, day) => {
   return staff ? leaveData.records?.[`${staff.id}_${dayKey(day)}`] || {} : {};
 };
 const hasPhoneDuty = (name, day) => {
-  if (!isWorkingRecord(externalRecordFor(name, day))) return false;
+  if (!canPairForPhone(name, day)) return false;
   const override = savedRecordFor(name, day).phoneOverride;
   return typeof override === 'boolean' ? override : hasExternalPhoneDuty(name, day);
 };
 
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
   if (mode === 'phone') return hasPhoneDuty(staff.name, day);
-  if (!isWorkingRecord(externalRecordFor(staff.name, day))) return false;
-  if (hasPhoneDuty(staff.name, day)) return false;
+  const partner = phoneDutyPartners[staff.name];
+  if (!partner || !isWorkingRecord(externalRecordFor(staff.name, day))) return false;
+  if (!hasPhoneDuty(partner, day)) return false;
   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
   return !(getStaffShift(staff) === '早' && date.getDay() === 3);
 });
 const renderSummaryGroup = (shift, mode) => {
   const rows = staffList
-    .filter((staff) => getStaffShift(staff) === shift && (mode !== 'phone' || staff.name !== '中魁'))
+    .filter((staff) => getStaffShift(staff) === shift && staff.name !== '中魁')
     .map((staff) => {
       const days = summaryDaysFor(staff, mode);
       return `<li><strong>${escapeHtml(staff.name)}：</strong>${days.length ? days.join('、') : '—'}</li>`;
@@ -375,12 +388,21 @@ const toggleSpecial = (staffId, day, specialType) => {
   const staff = staffList.find((item) => item.id === staffId);
   if (specialType === 'phone' && staff && externalLeaveData?.[staff.name]) {
     const currentlyAssigned = hasPhoneDuty(staff.name, numericDay);
-    if (!currentlyAssigned && !isWorkingRecord(externalRecordFor(staff.name, numericDay))) {
-      alert('📱 值公務機只能安排在完全空白的日期。');
+    if (!currentlyAssigned && !canPairForPhone(staff.name, numericDay)) {
+      alert('📱 值公務機只能安排在同班別兩人都上班、且兩格完全空白的日期。');
       return;
     }
     const savedRecord = leaveData.records[key] || {};
     leaveData.records[key] = { ...savedRecord, phoneOverride: !currentlyAssigned };
+    if (!currentlyAssigned) {
+      const partnerName = phoneDutyPartners[staff.name];
+      const partnerStaff = staffList.find((item) => item.name === partnerName);
+      if (partnerStaff) {
+        const partnerKey = `${partnerStaff.id}_${dayKey(day)}`;
+        const partnerRecord = leaveData.records[partnerKey] || {};
+        leaveData.records[partnerKey] = { ...partnerRecord, phoneOverride: false };
+      }
+    }
     render();
     queueSave();
     return;
