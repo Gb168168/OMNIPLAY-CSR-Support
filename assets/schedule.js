@@ -358,7 +358,8 @@ const syncGameSchedules = async () => {
     });
     const rows = games.map((game) => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
-      const pmAt = addMonthsClamped(launchAt, -1);
+      const pmAt = new Date(launchAt);
+      pmAt.setDate(pmAt.getDate() - 14);
       pmAt.setHours(9, 0, 0, 0);
       const dateKey = toDateKey(pmAt);
       const normalizedGame = {
@@ -401,12 +402,21 @@ const syncGameSchedules = async () => {
       const existingItem = scheduleList.find((item) => item.id === row.id);
       const legacyItem = scheduleList.find((item) => item.id === row.legacyId
         && getScheduleGames(item).some((game) => String(game.gameId) === row.game.gameId));
-      const confirmationSource = existingItem?.pmConfirmedAt ? existingItem : legacyItem?.pmConfirmedAt ? legacyItem : null;
+      const previousGameItem = scheduleList.find((item) =>
+        item.source === 'google-game-sheet'
+        && item.eventType === 'pm-confirmation'
+        && getScheduleGames(item).some((game) => String(game.gameId) === row.game.gameId)
+        && item.pmConfirmedAt);
+      const confirmationSource = existingItem?.pmConfirmedAt
+        ? existingItem
+        : legacyItem?.pmConfirmedAt
+          ? legacyItem
+          : previousGameItem || null;
       const payload = {
         eventType: 'pm-confirmation',
         date: row.dateKey,
         title: `${pmMeta.labelName}｜${getGameTitle([row.game])}`,
-        content: `${gameLine(row.game)}\n\nPM 確認後，請在編輯視窗勾選「PM 已確認」，系統會建立行銷素材與 UAT 上架公告待辦。`,
+        content: `${gameLine(row.game)}\n\nPM 確認後，請在編輯視窗勾選「PM 已確認」，系統會建立行銷素材、UAT 上架公告與 PROD 上架公告待辦。`,
         reminderAt: firebase.firestore.Timestamp.fromDate(row.pmAt),
         labelId: pmMeta.labelId,
         labelName: pmMeta.labelName,
