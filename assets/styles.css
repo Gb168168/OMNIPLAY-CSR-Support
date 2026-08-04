@@ -5518,3 +5518,63 @@ body:has(.sidebar-toggle-btn.is-visible)
     max-height: 142px;
   }
 }
+
+
+/* Schedule month view: always fit the complete six-week month inside one screen. */
+.schedule-panel {
+  min-height: 0;
+}
+
+.calendar-grid.is-month-view {
+  min-height: 0;
+  grid-template-rows: 42px repeat(6, minmax(0, 1fr));
+  overflow-y: hidden;
+}
+
+.calendar-grid.is-month-view .calendar-day {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  padding: 7px 8px;
+  gap: 4px;
+}
+
+.calendar-grid.is-month-view .day-events {
+  gap: 4px;
+}
+
+.calendar-grid.is-month-view .calendar-event {
+  min-height: 24px;
+  padding: 3px 7px;
+  font-size: 12px;
+}
+
+.calendar-grid.is-month-view .calendar-event i {
+  min-height: 16px;
+}
+
+@media (max-height: 760px) and (min-width: 721px) {
+  .calendar-grid.is-month-view {
+    grid-template-rows: 36px repeat(6, minmax(0, 1fr));
+  }
+
+  .calendar-grid.is-month-view .calendar-weekday {
+    padding-block: 7px;
+  }
+
+  .calendar-grid.is-month-view .calendar-day {
+    padding: 4px 6px;
+  }
+
+  .calendar-grid.is-month-view .day-number {
+    width: 20px;
+    height: 20px;
+    font-size: 13px;
+  }
+
+  .calendar-grid.is-month-view .day-count {
+    min-width: 19px;
+    height: 19px;
+    font-size: 11px;
+  }
+}
