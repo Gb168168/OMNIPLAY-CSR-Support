@@ -120,6 +120,13 @@ const fixedPhoneAssignments = {
 };
 const externalRecordFor = (name, day) => externalLeaveData?.[name]?.days?.[dayKey(day)] || {};
 const isWorkingRecord = (record) => !record?.type && !record?.label && (!Array.isArray(record?.specials) || record.specials.length === 0);
+const isWorkingForFlexible = (record) => {
+  if (isWorkingRecord(record)) return true;
+  if (Array.isArray(record?.specials) && record.specials.length) return false;
+  const match = String(record?.label || '').trim().match(/(\d+(?:\.\d+)?)\s*(?:小時|H|HR)?$/i);
+  const hours = Number(match?.[1]);
+  return Number.isFinite(hours) && hours > 0 && hours < 8;
+};
 const phoneDutyPartners = {
   '佳臻': '茗雅',
   '茗雅': '佳臻',
@@ -159,7 +166,7 @@ const hasPhoneDuty = (name, day) => {
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
   if (mode === 'phone') return hasPhoneDuty(staff.name, day);
   const partner = phoneDutyPartners[staff.name];
-  if (!partner || !isWorkingRecord(externalRecordFor(staff.name, day))) return false;
+  if (!partner || !isWorkingForFlexible(externalRecordFor(staff.name, day))) return false;
   if (!hasPhoneDuty(partner, day)) return false;
   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
   return !(getStaffShift(staff) === '早' && date.getDay() === 3);
