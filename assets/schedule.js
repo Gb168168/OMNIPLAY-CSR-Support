@@ -40,6 +40,12 @@ const GAME_SCHEDULE_COLORS = {
   uat: '#8b5cf6',
   prod: '#2563eb'
 };
+const getScheduleDisplayColor = (item = {}) => {
+  if (item.eventType === 'pm-confirmation') return GAME_SCHEDULE_COLORS.pm;
+  if (item.eventType === 'uat-material') return GAME_SCHEDULE_COLORS.uat;
+  if (item.eventType === 'prod-launch') return GAME_SCHEDULE_COLORS.prod;
+  return item.labelColor || '#3b82f6';
+};
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 const SCHEDULE_SESSION_KEYS = { id: 'omniplayStaffId', code: 'omniplayStaffCode', name: 'omniplayStaffName' };
@@ -477,7 +483,7 @@ const subscribeSchedules = () => {
     scheduleList = snapshot.docs.map((doc) => {
       const data = doc.data();
       const reminder = parseDateValue(data.reminderAt);
-      return { id: doc.id, ...data, date: data.date || (reminder ? toDateKey(reminder) : doc.id.slice(0, 10)), labelColor: data.labelColor || '#3b82f6', history: data.history || [] };
+      return { id: doc.id, ...data, date: data.date || (reminder ? toDateKey(reminder) : doc.id.slice(0, 10)), labelColor: getScheduleDisplayColor(data), history: data.history || [] };
     });
     renderCalendar();
     openScheduleFromQuery();
