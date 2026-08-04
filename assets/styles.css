@@ -5903,3 +5903,79 @@ body:has(.sidebar-toggle-btn.is-visible)
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Tracking detail subtable: keep date controls readable and use the full form width. */
+.tracking-page #ragicForm .is-tracking-detail-subtable {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.tracking-page #ragicForm .is-tracking-detail-subtable .ragic-table-wrap {
+  width: 100% !important;
+  overflow-x: auto !important;
+}
+
+.tracking-page #ragicForm .is-tracking-detail-subtable .subtable-row-fields {
+  width: 100% !important;
+  grid-template-columns:
+    minmax(280px, 2.2fr)
+    minmax(104px, .75fr)
+    repeat(3, minmax(140px, 1fr))
+    minmax(280px, 2.2fr) !important;
+}
+
+.tracking-page #ragicForm .is-tracking-detail-subtable .subtable-row-field-date {
+  min-width: 140px !important;
+}
+
+.tracking-page #ragicForm .is-tracking-detail-subtable .subtable-row-field-date input {
+  width: 100% !important;
+  min-width: 140px !important;
+  max-width: none !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable .ragic-view-subtable {
+  width: 100% !important;
+  min-width: 1050px !important;
+  table-layout: fixed !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable col:nth-child(1),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable th:nth-child(1),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable td:nth-child(1) {
+  width: 28% !important;
+  min-width: 280px !important;
+  max-width: none !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable col:nth-child(2),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable th:nth-child(2),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable td:nth-child(2) {
+  width: 10% !important;
+  min-width: 104px !important;
+  max-width: none !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable col:nth-child(3),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable col:nth-child(4),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable col:nth-child(5),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable th:nth-child(3),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable th:nth-child(4),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable th:nth-child(5),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable td:nth-child(3),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable td:nth-child(4),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable td:nth-child(5) {
+  width: 13% !important;
+  min-width: 140px !important;
+  max-width: none !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable col:nth-child(6),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable th:nth-child(6),
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-detail-subtable td:nth-child(6) {
+  width: 23% !important;
+  min-width: 280px !important;
+  max-width: none !important;
+}
