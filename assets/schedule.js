@@ -9,6 +9,7 @@ const periodLabel = document.querySelector('#schedulePeriodLabel');
 const statusEl = document.querySelector('#scheduleStatus');
 const selectedDateEl = document.querySelector('#selectedScheduleDate');
 const modalEl = document.querySelector('#scheduleModal');
+const scheduleHelpModalEl = document.querySelector('#scheduleHelpModal');
 const dayAgendaModalEl = document.querySelector('#dayAgendaModal');
 const dayAgendaTitleEl = document.querySelector('#dayAgendaTitle');
 const dayAgendaListEl = document.querySelector('#dayAgendaList');
@@ -648,6 +649,22 @@ document.querySelector('#closeScheduleModal')?.addEventListener('click', closeMo
 document.querySelector('#cancelScheduleButton')?.addEventListener('click', closeModal);
 modalEl?.addEventListener('click', (event) => { if (event.target === modalEl) closeModal(); });
 document.addEventListener('click', (event) => { if (tooltipEl && !tooltipEl.contains(event.target) && !event.target.closest('.schedule-special-trigger')) tooltipEl.hidden = true; });
+
+const openScheduleHelp = () => {
+  scheduleHelpModalEl?.classList.add('is-open');
+  scheduleHelpModalEl?.setAttribute('aria-hidden', 'false');
+};
+
+const closeScheduleHelp = () => {
+  scheduleHelpModalEl?.classList.remove('is-open');
+  scheduleHelpModalEl?.setAttribute('aria-hidden', 'true');
+};
+
+document.querySelector('#openScheduleHelp')?.addEventListener('click', openScheduleHelp);
+document.querySelector('#closeScheduleHelp')?.addEventListener('click', closeScheduleHelp);
+scheduleHelpModalEl?.addEventListener('click', (event) => {
+  if (event.target === scheduleHelpModalEl) closeScheduleHelp();
+});
 
 document.querySelector('#closeDayAgendaModal')?.addEventListener('click', closeDayAgenda);
 dayAgendaModalEl?.addEventListener('click', (event) => {
