@@ -27,6 +27,8 @@ const yearSelect = document.querySelector('#scheduleYearSelect');
 const monthPicker = document.querySelector('#scheduleMonthPicker');
 const labelFilterSelect = document.querySelector('#scheduleLabelFilter');
 const syncGameScheduleButton = document.querySelector('#syncGameScheduleButton');
+const gamePmConfirmedLabel = document.querySelector('#gamePmConfirmedLabel');
+const gamePmConfirmedInput = document.querySelector('#gamePmConfirmed');
 
 const GAME_SCHEDULE_FEED_URL = 'https://script.google.com/macros/s/AKfycbyaTbkqtkBfAzbPNqCw8VEnh43VrNLpfYK3WR3TUNtIZF8_QCh6AOncZ6jG_LbxVyni9g/exec';
 const GAME_SCHEDULE_LABEL = { id: 'google-game-sheet', name: '遊戲上線', color: '#2563eb' };
@@ -107,11 +109,69 @@ const parseGameScheduleDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const syncGameSchedules = async ({ silent = false } = {}) => {
+const subtractWorkdays = (date, workdays) => {
+  const result = new Date(date);
+  let remaining = workdays;
+  while (remaining > 0) {
+    result.setDate(result.getDate() - 1);
+    if (result.getDay() !== 0 && result.getDay() !== 6) remaining -= 1;
+  }
+  result.setHours(9, 0, 0, 0);
+  return result;
+};
+
+const gameLine = (game) =>
+  `${game.gameId} ${game.gameNameZh || game.gameNameEn || ''}｜預計 PROD：${game.expectedOnlineDate}`.trim();
+
+const createUatSchedules = async (item, actor) => {
+  const games = Array.isArray(item?.games) ? item.games : [];
+  if (!games.length) return 0;
+  const groups = games.reduce((result, game) => {
+    const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
+    if (!launchAt) return result;
+    const reminderAt = subtractWorkdays(launchAt, 7);
+    const dateKey = toDateKey(reminderAt);
+    (result[dateKey] ||= { reminderAt, games: [] }).games.push(game);
+    return result;
+  }, {});
+  const batch = scheduleDb.batch();
+  const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+  Object.entries(groups).forEach(([dateKey, group]) => {
+    const lines = group.games.map(gameLine);
+    batch.set(scheduleCollection.doc(`game_uat_${dateKey}`), {
+      eventType: 'uat-material',
+      date: dateKey,
+      title: `向行銷索取 UAT 公告資料｜${group.games.length} 款遊戲`,
+      content: lines.join('\n'),
+      reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
+      labelId: GAME_SCHEDULE_LABEL.id,
+      labelName: GAME_SCHEDULE_LABEL.name,
+      labelColor: GAME_SCHEDULE_LABEL.color,
+      repeat: 'none',
+      staffIds: [],
+      staffNames: [],
+      deleted: false,
+      source: 'google-game-sheet',
+      games: group.games,
+      updatedAt,
+      updatedBy: actor
+    }, { merge: true });
+  });
+  batch.update(scheduleCollection.doc(item.id), {
+    pmConfirmedAt: updatedAt,
+    pmConfirmedBy: actor,
+    updatedAt,
+    updatedBy: actor
+  });
+  await batch.commit();
+  return Object.keys(groups).length;
+};
+
+const syncGameSchedules = async () => {
   if (!canEditSchedule || !scheduleCollection || !scheduleLabelCollection) return;
   syncGameScheduleButton?.setAttribute('disabled', '');
   if (syncGameScheduleButton) syncGameScheduleButton.textContent = '同步中…';
-  if (!silent) setStatus('正在同步 Google 遊戲排程…', 'info');
+  setStatus('正在同步 Google 遊戲排程…', 'info');
 
   try {
     const payload = await loadGameScheduleFeed();
@@ -122,9 +182,29 @@ const syncGameSchedules = async ({ silent = false } = {}) => {
       const released = /已上線|released/i.test(String(game.status || ''));
       return launchAt && launchAt >= today && !released;
     });
+    const groups = games.reduce((result, game) => {
+      const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
+      const pmAt = addMonthsClamped(launchAt, -1);
+      pmAt.setHours(9, 0, 0, 0);
+      const dateKey = toDateKey(pmAt);
+      (result[dateKey] ||= { pmAt, games: [] }).games.push({
+        gameId: String(game.gameId),
+        gameNameZh: game.gameNameZh || '',
+        gameNameEn: game.gameNameEn || '',
+        status: game.status || '',
+        expectedOnlineDate: game.expectedOnlineDate
+      });
+      return result;
+    }, {});
+
     const batch = scheduleDb.batch();
     const syncedAt = firebase.firestore.FieldValue.serverTimestamp();
     const actor = { id: 'google-game-sheet', code: 'SYNC', name: 'Google 遊戲上線表' };
+
+    const desiredPmIds = new Set(Object.keys(groups).map((dateKey) => `game_pm_${dateKey}`));
+    scheduleList
+      .filter((item) => item.source === 'google-game-sheet' && !desiredPmIds.has(item.id))
+      .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
     batch.set(scheduleLabelCollection.doc(GAME_SCHEDULE_LABEL.id), {
       name: GAME_SCHEDULE_LABEL.name,
@@ -133,11 +213,14 @@ const syncGameSchedules = async ({ silent = false } = {}) => {
       source: 'google-game-sheet'
     }, { merge: true });
 
-    games.forEach((game) => {
-      const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
-      const pmAt = addMonthsClamped(launchAt, -1);
-      pmAt.setHours(9, 0, 0, 0);
-      const common = {
+    Object.entries(groups).forEach(([dateKey, group]) => {
+      const lines = group.games.map(gameLine);
+      batch.set(scheduleCollection.doc(`game_pm_${dateKey}`), {
+        eventType: 'pm-confirmation',
+        date: dateKey,
+        title: `向 PM 確認｜${group.games.length} 款遊戲`,
+        content: `${lines.join('\n')}\n\nPM 確認後，請在編輯視窗勾選「PM 已確認」，系統會建立上線前 7 個工作日的 UAT 資料待辦。`,
+        reminderAt: firebase.firestore.Timestamp.fromDate(group.pmAt),
         labelId: GAME_SCHEDULE_LABEL.id,
         labelName: GAME_SCHEDULE_LABEL.name,
         labelColor: GAME_SCHEDULE_LABEL.color,
@@ -146,43 +229,14 @@ const syncGameSchedules = async ({ silent = false } = {}) => {
         staffNames: [],
         deleted: false,
         source: 'google-game-sheet',
-        sourceId: String(game.gameId),
-        gameId: String(game.gameId),
-        gameNameZh: game.gameNameZh || '',
-        gameNameEn: game.gameNameEn || '',
-        gameStatus: game.status || '',
-        expectedOnlineDate: game.expectedOnlineDate,
+        games: group.games,
         updatedAt: syncedAt,
         updatedBy: actor
-      };
-      const description = [
-        `遊戲 ID：${game.gameId}`,
-        `遊戲名稱：${game.gameNameZh || '—'}${game.gameNameEn ? ` / ${game.gameNameEn}` : ''}`,
-        `預計 PROD 上線：${game.expectedOnlineDate}`,
-        `狀態：${game.status || '—'}`
-      ].join('\n');
-
-      batch.set(scheduleCollection.doc(`game_${game.gameId}_pm`), {
-        ...common,
-        eventType: 'pm-confirmation',
-        date: toDateKey(pmAt),
-        title: `向 PM 確認｜${game.gameId} ${game.gameNameZh || game.gameNameEn || ''}`.trim(),
-        content: `${description}\n確認後請安排 PROD 上線前 7 個工作日向行銷索取 UAT 公告資料。`,
-        reminderAt: firebase.firestore.Timestamp.fromDate(pmAt)
-      }, { merge: true });
-
-      batch.set(scheduleCollection.doc(`game_${game.gameId}_launch`), {
-        ...common,
-        eventType: 'prod-launch',
-        date: toDateKey(launchAt),
-        title: `預計 PROD 上線｜${game.gameId} ${game.gameNameZh || game.gameNameEn || ''}`.trim(),
-        content: description,
-        reminderAt: firebase.firestore.Timestamp.fromDate(launchAt)
-      }, { merge: true });
+      });
     });
 
     await batch.commit();
-    setStatus(`遊戲排程同步完成，共更新 ${games.length} 款遊戲、${games.length * 2} 筆排程。`, 'success');
+    setStatus(`遊戲排程同步完成：已清除舊匯入資料，並建立 ${Object.keys(groups).length} 筆 PM 確認排程。`, 'success');
   } catch (error) {
     console.error('同步遊戲排程失敗：', error);
     setStatus(`同步遊戲排程失敗：${error.message || error}`, 'error');
@@ -416,6 +470,12 @@ const openModal = (dateKey, scheduleId = null) => {
   toggleRepeatInterval();
   selectDefaultStaff(item);
   renderHistory(item?.history || []);
+  const isPmConfirmation = item?.eventType === 'pm-confirmation';
+  if (gamePmConfirmedLabel) gamePmConfirmedLabel.hidden = !isPmConfirmation;
+  if (gamePmConfirmedInput) {
+    gamePmConfirmedInput.checked = Boolean(item?.pmConfirmedAt);
+    gamePmConfirmedInput.disabled = !canEditSchedule || Boolean(item?.pmConfirmedAt);
+  }
   formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
   document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
   document.querySelector('#saveScheduleButton')?.toggleAttribute('disabled', !canEditSchedule);
@@ -560,6 +620,11 @@ formEl?.addEventListener('submit', async (event) => {
     await saveLabelIfNeeded(labelName, labelColor);
     if (editingId) await scheduleCollection.doc(editingId).update(payload);
     else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    const editingItem = scheduleList.find((entry) => entry.id === editingId);
+    if (editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked && !editingItem.pmConfirmedAt) {
+      const createdCount = await createUatSchedules(editingItem, user);
+      setStatus(`PM 已確認，已建立 ${createdCount} 筆 UAT 資料待辦。`, 'success');
+    }
     closeModal();
   } catch (error) { console.error('儲存排程失敗：', error); setMessage('儲存排程失敗，請稍後再試。'); }
 });
@@ -580,8 +645,6 @@ else {
   subscribeLeave();
 }
 
-syncSchedulePermission().then(() => {
-  if (canEditSchedule) syncGameSchedules({ silent: true });
-});
+syncSchedulePermission();
 renderCalendar();
 window.addEventListener('beforeunload', () => { unsubscribeStaff?.(); unsubscribeSchedules?.(); unsubscribeLabels?.(); unsubscribeLeave?.(); });
