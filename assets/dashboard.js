@@ -377,12 +377,17 @@ const shiftRecordItems = (
 };
 const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
   const allDay = item.allDay || item.isAllDay;
+  const labelColor = /^#[0-9a-f]{6}$/i.test(String(item.labelColor || ''))
+    ? item.labelColor
+    : '#3b82f6';
   return {
     icon: '📅',
     time: allDay ? '全天' : `${pad2(item.occurrenceAt.getHours())}:${pad2(item.occurrenceAt.getMinutes())}`,
     type: '排程',
     href: withRecordLink('service/schedule.html', item.id),
     title: item.title || '未命名事項',
+    scheduleLabel: item.labelName || item.eventType || '排程',
+    labelColor,
     sortAt: item.occurrenceAt.getTime()
   };
 });
@@ -669,6 +674,11 @@ const renderTodoList = () => {
             ${renderTrackingDetails(item)}
 
             <div class="todo-tags">
+              ${item.scheduleLabel
+                ? `<span class="todo-tag schedule" style="--schedule-label-color: ${escapeDashboardHtml(item.labelColor)}">
+                    ● ${escapeDashboardHtml(item.scheduleLabel)}
+                   </span>`
+                : ''}
               ${item.isCreated ? '<span class="todo-tag created">🆕 建立</span>' : ''}
               ${item.isUpdated ? '<span class="todo-tag updated">✏️ 更新</span>' : ''}
               ${item.reminderEnabled
