@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260805-merge-games5" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260805-separate-game-rows6" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -100,8 +100,8 @@
                 <li>按「同步遊戲排程」，讀取 Google 遊戲上線表的最新資料。</li>
                 <li>系統會依預計上線日期，在前一個月建立橘色「向 PM 確認」排程；同一天會合併顯示。</li>
                 <li>PM 確認後，打開該筆排程並勾選「PM 已確認」，再按儲存。</li>
-                <li>系統會在上線前 8 個工作日建立「行銷素材待辦」，提醒行銷提供遊戲素材。</li>
-                <li>系統會在上線前 7 個工作日建立紫色「UAT 上架公告」，提醒客服發送 UAT 環境上架公告。</li>
+                <li>系統會在上線前 8 個工作日為每款遊戲各建立一列「行銷素材待辦」，提醒行銷提供遊戲素材。</li>
+                <li>系統會在上線前 7 個工作日為每款遊戲各建立一列紫色「UAT 上架公告」，提醒客服發送 UAT 環境上架公告。</li>
               </ol>
               <p class="schedule-help-note">工作日會排除星期六、星期日及台灣政府行政機關辦公日曆中的國定假日。</p>
             </section>
@@ -171,6 +171,6 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260731-topnav1"></script>
-  <script src="../assets/schedule.js?v=20260805-merge-games5"></script>
+  <script src="../assets/schedule.js?v=20260805-separate-game-rows6"></script>
 </body>
 </html>
