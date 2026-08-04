@@ -5578,3 +5578,51 @@ body:has(.sidebar-toggle-btn.is-visible)
     font-size: 11px;
   }
 }
+
+
+/* Schedule month cells: guarantee three complete visible event rows. */
+.calendar-grid.is-month-view .calendar-day {
+  padding: 4px 6px;
+  grid-template-rows: 20px minmax(0, 1fr);
+  gap: 2px;
+}
+
+.calendar-grid.is-month-view .day-heading {
+  height: 20px;
+  gap: 4px;
+}
+
+.calendar-grid.is-month-view .day-number {
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+}
+
+.calendar-grid.is-month-view .day-count {
+  min-width: 19px;
+  height: 19px;
+  padding-inline: 5px;
+  font-size: 11px;
+}
+
+.calendar-grid.is-month-view .day-events {
+  gap: 4px;
+}
+
+.calendar-grid.is-month-view .calendar-event {
+  min-height: 18px;
+  height: 18px;
+  padding: 1px 6px;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.calendar-grid.is-month-view .calendar-event i {
+  width: 4px;
+  min-height: 12px;
+}
+
+.calendar-grid.is-month-view .day-events.is-scrollable {
+  padding-right: 2px;
+}
