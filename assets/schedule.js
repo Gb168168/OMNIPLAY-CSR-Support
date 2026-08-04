@@ -131,7 +131,7 @@ const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) =
   const addOccurrence = (date, isRepeat) => {
     const key = toDateKey(date);
     groups[key] ||= [];
-    groups[key].push({ ...item, occurrenceDate: key, isRepeatOccurrence: isRepeat });
+    groups[key].push({ ...item, occurrenceDate: key, isRepeatOccurrence: isRepeat, hasOccurred: date.getTime() <= Date.now() });
   };
   if (original >= start && original <= end) addOccurrence(original, false);
   const repeat = item.repeat || 'none';
@@ -234,7 +234,7 @@ const renderCalendar = () => {
     const otherMonth = day.getMonth() !== currentDate.getMonth() && viewMode === 'month';
     return `<button class="calendar-day weekday-${day.getDay()} ${otherMonth ? 'is-muted' : ''} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}">
       <span class="day-number">${day.getDate()}</span>
-      <span class="day-events">${items.map((item) => `<span class="calendar-event ${item.isRepeatOccurrence ? 'is-repeat' : ''}" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
+      <span class="day-events">${items.map((item) => `<span class="calendar-event ${item.hasOccurred ? '' : 'is-repeat'}" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
     </button>`;
   }).join('');
   calendarEl.innerHTML = header + cells;
