@@ -48,6 +48,11 @@
       background: #2563eb;
       color: #fff;
     }
+    .todo-tag.schedule {
+      border-color: color-mix(in srgb, var(--schedule-label-color) 55%, #cbd5e1);
+      background: color-mix(in srgb, var(--schedule-label-color) 12%, #fff);
+      color: var(--schedule-label-color);
+    }
     @media (max-width: 720px) {
       .dashboard-todo-title-row {
         align-items: flex-start;
@@ -187,6 +192,6 @@
   </script>
   <script src="assets/reminders.js?v=20260718-38"></script>
   <script src="assets/app.js?v=20260731-topnav1"></script>
-  <script src="assets/dashboard.js?v=20260804-working-leave2"></script>
+  <script src="assets/dashboard.js?v=20260805-today-schedule1"></script>
 </body>
 </html>
