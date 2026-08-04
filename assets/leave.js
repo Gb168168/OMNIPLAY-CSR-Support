@@ -110,15 +110,40 @@ const getHolidayName = (day) => {
   return taiwanHolidays[currentMonth.getFullYear()]?.[key] || '';
 };
 
+const fixedPhoneAssignments = {
+  '2026-08': {
+    '佳臻': [4, 6, 12, 17, 29],
+    '茗雅': [5, 13, 16, 18, 22, 23]
+  }
+};
+const externalRecordFor = (name, day) => externalLeaveData?.[name]?.days?.[dayKey(day)] || {};
+const isWorkingRecord = (record) => !record?.type && !record?.label;
+const hasExternalPhoneDuty = (name, day) => {
+  const targetMonth = monthKey(currentMonth);
+  const fixedDays = fixedPhoneAssignments[targetMonth]?.[name];
+  if (Array.isArray(fixedDays)) {
+    return fixedDays.includes(day) && isWorkingRecord(externalRecordFor(name, day));
+  }
+  if (!['晴心', '澄希'].includes(name)) return false;
+  const eligibleDays = Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((candidateDay) =>
+    isWorkingRecord(externalRecordFor('晴心', candidateDay)) &&
+    isWorkingRecord(externalRecordFor('澄希', candidateDay))
+  );
+  const dutyIndex = eligibleDays.indexOf(day);
+  return dutyIndex >= 0 && (dutyIndex % 2 === 0 ? name === '晴心' : name === '澄希');
+};
+
 const getRecord = (staffId, day) => {
   const staff = staffList.find((item) => item.id === staffId);
   const externalPerson = staff ? externalLeaveData?.[staff.name] : null;
   if (externalPerson) {
     const externalRecord = externalPerson.days?.[dayKey(day)] || {};
+    const specials = Array.isArray(externalRecord.specials) ? [...externalRecord.specials] : [];
+    if (hasExternalPhoneDuty(staff.name, day) && !specials.includes('phone')) specials.push('phone');
     return {
       ...externalRecord,
       type: externalRecord.type || '',
-      specials: Array.isArray(externalRecord.specials) ? externalRecord.specials : []
+      specials
     };
   }
   const record = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
