@@ -119,7 +119,7 @@ const fixedPhoneAssignments = {
   }
 };
 const externalRecordFor = (name, day) => externalLeaveData?.[name]?.days?.[dayKey(day)] || {};
-const isWorkingRecord = (record) => !record?.type && !record?.label;
+const isWorkingRecord = (record) => !record?.type && !record?.label && (!Array.isArray(record?.specials) || record.specials.length === 0);
 const hasExternalPhoneDuty = (name, day) => {
   const targetMonth = monthKey(currentMonth);
   const fixedDays = fixedPhoneAssignments[targetMonth]?.[name];
@@ -134,11 +134,20 @@ const hasExternalPhoneDuty = (name, day) => {
   const dutyIndex = eligibleDays.indexOf(day);
   return dutyIndex >= 0 && (dutyIndex % 2 === 0 ? name === '晴心' : name === '澄希');
 };
+const savedRecordFor = (name, day) => {
+  const staff = staffList.find((item) => item.name === name);
+  return staff ? leaveData.records?.[`${staff.id}_${dayKey(day)}`] || {} : {};
+};
+const hasPhoneDuty = (name, day) => {
+  if (!isWorkingRecord(externalRecordFor(name, day))) return false;
+  const override = savedRecordFor(name, day).phoneOverride;
+  return typeof override === 'boolean' ? override : hasExternalPhoneDuty(name, day);
+};
 
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
-  if (mode === 'phone') return hasExternalPhoneDuty(staff.name, day);
+  if (mode === 'phone') return hasPhoneDuty(staff.name, day);
   if (!isWorkingRecord(externalRecordFor(staff.name, day))) return false;
-  if (hasExternalPhoneDuty(staff.name, day)) return false;
+  if (hasPhoneDuty(staff.name, day)) return false;
   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
   return !(getStaffShift(staff) === '早' && date.getDay() === 3);
 });
@@ -162,7 +171,7 @@ const getRecord = (staffId, day) => {
   if (externalPerson) {
     const externalRecord = externalPerson.days?.[dayKey(day)] || {};
     const specials = Array.isArray(externalRecord.specials) ? [...externalRecord.specials] : [];
-    if (hasExternalPhoneDuty(staff.name, day) && !specials.includes('phone')) specials.push('phone');
+    if (hasPhoneDuty(staff.name, day) && !specials.includes('phone')) specials.push('phone');
     return {
       ...externalRecord,
       type: externalRecord.type || '',
@@ -360,8 +369,22 @@ const setSpecialMode = (mode) => {
 };
 
 const toggleSpecial = (staffId, day, specialType) => {
+  const numericDay = Number(day);
   const key = `${staffId}_${dayKey(day)}`;
   leaveData.records ||= {};
+  const staff = staffList.find((item) => item.id === staffId);
+  if (specialType === 'phone' && staff && externalLeaveData?.[staff.name]) {
+    const currentlyAssigned = hasPhoneDuty(staff.name, numericDay);
+    if (!currentlyAssigned && !isWorkingRecord(externalRecordFor(staff.name, numericDay))) {
+      alert('📱 值公務機只能安排在完全空白的日期。');
+      return;
+    }
+    const savedRecord = leaveData.records[key] || {};
+    leaveData.records[key] = { ...savedRecord, phoneOverride: !currentlyAssigned };
+    render();
+    queueSave();
+    return;
+  }
   const record = getRecord(staffId, day);
   const specials = new Set(record.specials || []);
   specials.has(specialType) ? specials.delete(specialType) : specials.add(specialType);
