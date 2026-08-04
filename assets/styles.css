@@ -5883,3 +5883,21 @@ body:has(.sidebar-toggle-btn.is-visible)
 .schedule-help-label-note {
   margin-bottom: 10px !important;
 }
+
+
+/* Schedule label editor: color, free-text name and saved-label category. */
+.schedule-form .schedule-label-row {
+  grid-template-columns: 120px minmax(180px, 1fr) minmax(180px, 1fr);
+  align-items: end;
+  gap: 12px;
+}
+
+.schedule-form .schedule-label-row input[type="color"] {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .schedule-form .schedule-label-row {
+    grid-template-columns: 1fr;
+  }
+}
