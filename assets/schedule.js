@@ -212,6 +212,15 @@ const subtractWorkdays = (date, workdays, holidaySet) => {
   return result;
 };
 
+const moveToPreviousWorkday = (date, holidaySet) => {
+  const result = new Date(date);
+  while (result.getDay() === 0 || result.getDay() === 6 || holidaySet.has(toDateKey(result))) {
+    result.setDate(result.getDate() - 1);
+  }
+  result.setHours(9, 0, 0, 0);
+  return result;
+};
+
 const gameLine = (game) =>
   `${game.gameId} ${game.gameNameZh || game.gameNameEn || ''}｜預計 PROD：${game.expectedOnlineDate}`.trim();
 
@@ -356,11 +365,16 @@ const syncGameSchedules = async () => {
       const released = /已上線|released/i.test(String(game.status || ''));
       return launchAt && launchAt >= today && !released;
     });
+    const calendarYears = games.flatMap((game) => {
+      const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
+      return launchAt ? [launchAt.getFullYear(), launchAt.getFullYear() - 1] : [];
+    });
+    const pmHolidaySet = await loadTaiwanHolidaySet(calendarYears);
     const rows = games.map((game) => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
-      const pmAt = new Date(launchAt);
-      pmAt.setDate(pmAt.getDate() - 14);
-      pmAt.setHours(9, 0, 0, 0);
+      const pmCandidate = new Date(launchAt);
+      pmCandidate.setDate(pmCandidate.getDate() - 14);
+      const pmAt = moveToPreviousWorkday(pmCandidate, pmHolidaySet);
       const dateKey = toDateKey(pmAt);
       const normalizedGame = {
         gameId: String(game.gameId),
