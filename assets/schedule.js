@@ -47,9 +47,9 @@ const GAME_EVENT_META = {
   'marketing-material': { labelId: 'google-game-marketing', labelName: '行銷素材待辦', color: GAME_SCHEDULE_COLORS.marketing },
   'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT 上架公告', color: GAME_SCHEDULE_COLORS.uat },
   'uat-material': { labelId: 'google-game-uat', labelName: 'UAT 上架公告', color: GAME_SCHEDULE_COLORS.uat },
-  'prod-launch': { labelId: 'google-game-prod', labelName: '預計 PROD 上線', color: GAME_SCHEDULE_COLORS.prod }
+  'prod-launch': { labelId: 'google-game-prod', labelName: 'PROD 上架公告', color: GAME_SCHEDULE_COLORS.prod }
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:向 PM 確認|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:向 PM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const getScheduleEventMeta = (item = {}) => GAME_EVENT_META[item.eventType] || null;
 const getScheduleDisplayColor = (item = {}) => getScheduleEventMeta(item)?.color || item.labelColor || '#3b82f6';
@@ -65,7 +65,11 @@ const getScheduleGames = (item = {}) => {
 };
 
 const getGameTitle = (games = []) => games
-  .map((game) => `${game.gameId || ''} ${game.gameNameZh || game.gameNameEn || ''}`.trim())
+  .map((game) => {
+    const gameId = String(game.gameId || '').trim();
+    const gameName = String(game.gameNameZh || game.gameNameEn || '').trim();
+    return gameName ? `${gameId} (${gameName})`.trim() : gameId;
+  })
   .filter(Boolean)
   .join('、');
 
@@ -73,9 +77,10 @@ const getScheduleDisplayTitle = (item = {}) => {
   const meta = getScheduleEventMeta(item);
   if (!meta) return item.title || '';
   const gameTitle = getGameTitle(getScheduleGames(item));
-  if (gameTitle) return gameTitle;
+  if (gameTitle) return `${meta.labelName}｜${gameTitle}`;
   const titleBody = String(item.title || '').replace(GAME_TITLE_PREFIX_PATTERN, '').trim();
-  return titleBody && !/^\d+\s*款遊戲$/.test(titleBody) ? titleBody : '未命名遊戲';
+  const fallbackTitle = titleBody && !/^\d+\s*款遊戲$/.test(titleBody) ? titleBody : '未命名遊戲';
+  return `${meta.labelName}｜${fallbackTitle}`;
 };
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
@@ -249,7 +254,7 @@ const createUatSchedules = async (item, actor) => {
     batch.set(scheduleCollection.doc(`game_marketing_${dateKey}`), {
       eventType: 'marketing-material',
       date: dateKey,
-      title: getGameTitle(group.games),
+      title: `${marketingMeta.labelName}｜${getGameTitle(group.games)}`,
       content: `請行銷於今日提供下列遊戲素材：\n${lines.join('\n')}`,
       reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
       labelId: marketingMeta.labelId,
@@ -271,7 +276,7 @@ const createUatSchedules = async (item, actor) => {
     batch.set(scheduleCollection.doc(`game_uat_${dateKey}`), {
       eventType: 'uat-announcement',
       date: dateKey,
-      title: getGameTitle(group.games),
+      title: `${uatMeta.labelName}｜${getGameTitle(group.games)}`,
       content: `請於今日發送下列遊戲的 UAT 環境上架公告：\n${lines.join('\n')}`,
       reminderAt: firebase.firestore.Timestamp.fromDate(group.reminderAt),
       labelId: uatMeta.labelId,
@@ -350,7 +355,7 @@ const syncGameSchedules = async () => {
       batch.set(scheduleCollection.doc(`game_pm_${dateKey}`), {
         eventType: 'pm-confirmation',
         date: dateKey,
-        title: getGameTitle(group.games),
+        title: `${pmMeta.labelName}｜${getGameTitle(group.games)}`,
         content: `${lines.join('\n')}\n\nPM 確認後，請在編輯視窗勾選「PM 已確認」，系統會建立上線前 7 個工作日的 UAT 資料待辦。`,
         reminderAt: firebase.firestore.Timestamp.fromDate(group.pmAt),
         labelId: pmMeta.labelId,
