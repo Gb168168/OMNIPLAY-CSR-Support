@@ -5702,3 +5702,28 @@ body:has(.sidebar-toggle-btn.is-visible)
 .day-agenda-item small {
   color: var(--muted);
 }
+
+
+/* Game PM confirmation: keep the checkbox compact and readable. */
+.game-pm-confirmed {
+  gap: 8px;
+}
+
+.game-pm-confirmed > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.game-pm-confirmed input[type="checkbox"] {
+  width: 18px !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 18px;
+  accent-color: var(--primary);
+}
