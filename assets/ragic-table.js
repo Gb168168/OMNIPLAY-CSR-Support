@@ -1828,7 +1828,11 @@ const renderViewForm = (form, record = {}) => {
         String(field.label || '').includes('群組名稱') ||
         (field.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱')
       )
-    ) section.classList.add('is-tracking-group-subtable');
+    ) {
+      section.classList.add('is-tracking-group-subtable');
+    } else if (isTrackingModule() && field.type === 'subtable') {
+      section.classList.add('is-tracking-detail-subtable');
+    }
     if (!fixedLogLayout) applyFormLayout(section, field);
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
@@ -1905,6 +1909,17 @@ const renderSubtableRow = (field, item = {}) => {
     fieldsGrid.style.setProperty(
       'grid-template-columns',
       configuredWidths.map((width) => `${width}px`).join(' '),
+      'important'
+    );
+  }
+  const isTrackingGroupField = isTrackingModule() && (
+    String(field.label || '').includes('群組名稱') ||
+    (field.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱')
+  );
+  if (isTrackingModule() && !isTrackingGroupField && (field.fields || []).length === 6) {
+    fieldsGrid.style.setProperty(
+      'grid-template-columns',
+      'minmax(280px, 2.2fr) minmax(104px, .75fr) repeat(3, minmax(140px, 1fr)) minmax(280px, 2.2fr)',
       'important'
     );
   }
@@ -2042,7 +2057,11 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
         String(field.label || '').includes('群組名稱') ||
         (field.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱')
       )
-    ) section.classList.add('is-tracking-group-subtable');
+    ) {
+      section.classList.add('is-tracking-group-subtable');
+    } else if (isTrackingModule() && field.type === 'subtable') {
+      section.classList.add('is-tracking-detail-subtable');
+    }
       if (!fixedLogLayout) applyFormLayout(section, field);
       section.dataset.subtable = field.key;
       section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
