@@ -5578,3 +5578,127 @@ body:has(.sidebar-toggle-btn.is-visible)
     font-size: 11px;
   }
 }
+
+
+/* Schedule month cells: guarantee three complete visible event rows. */
+.calendar-grid.is-month-view .calendar-day {
+  padding: 4px 6px;
+  grid-template-rows: 20px minmax(0, 1fr);
+  gap: 2px;
+}
+
+.calendar-grid.is-month-view .day-heading {
+  height: 20px;
+  gap: 4px;
+}
+
+.calendar-grid.is-month-view .day-number {
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+}
+
+.calendar-grid.is-month-view .day-count {
+  min-width: 19px;
+  height: 19px;
+  padding-inline: 5px;
+  font-size: 11px;
+}
+
+.calendar-grid.is-month-view .day-events {
+  gap: 4px;
+}
+
+.calendar-grid.is-month-view .calendar-event {
+  min-height: 18px;
+  height: 18px;
+  padding: 1px 6px;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.calendar-grid.is-month-view .calendar-event i {
+  width: 4px;
+  min-height: 12px;
+}
+
+.calendar-grid.is-month-view .day-events.is-scrollable {
+  padding-right: 2px;
+}
+
+
+/* Schedule day agenda: show two items in-cell, list all items in a modal from the third item onward. */
+.calendar-grid.is-month-view .calendar-day {
+  grid-template-rows: 20px minmax(0, 1fr);
+}
+
+.calendar-grid.is-month-view .calendar-event {
+  min-height: 22px;
+  height: 22px;
+  padding: 2px 7px;
+  font-size: 12px;
+}
+
+.day-agenda-card {
+  width: min(680px, calc(100vw - 28px));
+  max-height: min(76vh, 720px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.day-agenda-list {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.day-agenda-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 6px 52px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--event-color, #3b82f6) 38%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--event-color, #3b82f6) 12%, var(--card));
+  color: var(--text);
+  text-align: left;
+}
+
+.day-agenda-item:hover {
+  border-color: var(--event-color, #3b82f6);
+  transform: translateY(-1px);
+}
+
+.day-agenda-item > i {
+  width: 6px;
+  min-height: 42px;
+  border-radius: 999px;
+  background: var(--event-color, #3b82f6);
+}
+
+.day-agenda-item time {
+  color: var(--event-color, #3b82f6);
+  font-weight: 800;
+}
+
+.day-agenda-item span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.day-agenda-item strong,
+.day-agenda-item small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-agenda-item small {
+  color: var(--muted);
+}
