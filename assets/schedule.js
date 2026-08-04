@@ -600,6 +600,18 @@ const renderHistory = (history = []) => {
     : '<p class="history-empty">尚無歷程</p>';
 };
 
+const getDayCountBackground = (items = []) => {
+  const colors = [...new Set(items
+    .map((item) => String(item.labelColor || '').trim())
+    .filter((color) => /^#[0-9a-f]{6}$/i.test(color)))];
+  if (!colors.length) return '#3b82f6';
+  if (colors.length === 1) return colors[0];
+  const segment = 100 / colors.length;
+  const stops = colors.map((color, index) =>
+    `${color} ${index * segment}% ${(index + 1) * segment}%`);
+  return `conic-gradient(${stops.join(', ')})`;
+};
+
 const renderCalendar = () => {
   if (!calendarEl) return;
   const today = new Date();
@@ -634,8 +646,9 @@ const renderCalendar = () => {
     const key = toDateKey(day);
     const items = (schedulesByDay[key] || []).sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
     const otherMonth = day.getMonth() !== currentDate.getMonth() && viewMode === 'month';
+    const countBadgeBackground = getDayCountBackground(items);
     const countBadge = items.length > 2
-      ? `<span class="day-count" title="點擊查看本日全部 ${items.length} 則事項">${items.length}</span>`
+      ? `<span class="day-count" style="--day-count-bg:${escapeHtml(countBadgeBackground)}" title="點擊查看本日全部 ${items.length} 則事項">${items.length}</span>`
       : '';
     const visibleItems = items.slice(0, 2);
     return `<button class="calendar-day weekday-${day.getDay()} ${otherMonth ? 'is-muted' : ''} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}" data-item-count="${items.length}">
