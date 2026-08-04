@@ -87,32 +87,18 @@ const syncSchedulePermission = async () => {
 };
 
 
-const loadGameScheduleFeed = () => new Promise((resolve, reject) => {
-  const callbackName = `__omniplayGameSchedule_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const script = document.createElement('script');
-  const cleanup = () => {
-    delete window[callbackName];
-    script.remove();
-  };
-  const timeout = window.setTimeout(() => {
-    cleanup();
-    reject(new Error('同步逾時'));
-  }, 20000);
-
-  window[callbackName] = (payload) => {
-    window.clearTimeout(timeout);
-    cleanup();
-    if (!payload?.success || !Array.isArray(payload.games)) return reject(new Error(payload?.error || '回傳格式錯誤'));
-    resolve(payload);
-  };
-  script.onerror = () => {
-    window.clearTimeout(timeout);
-    cleanup();
-    reject(new Error('無法連接遊戲排程資料'));
-  };
-  script.src = `${GAME_SCHEDULE_FEED_URL}?callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-  document.head.appendChild(script);
-});
+const loadGameScheduleFeed = async () => {
+  const response = await fetch(`${GAME_SCHEDULE_FEED_URL}?_=${Date.now()}`, {
+    method: 'GET',
+    cache: 'no-store'
+  });
+  if (!response.ok) throw new Error(`同步服務回應 ${response.status}`);
+  const payload = await response.json();
+  if (!payload?.success || !Array.isArray(payload.games)) {
+    throw new Error(payload?.error || '回傳格式錯誤');
+  }
+  return payload;
+};
 
 const parseGameScheduleDate = (value) => {
   const parts = String(value || '').trim().match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
