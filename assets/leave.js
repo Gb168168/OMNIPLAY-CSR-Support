@@ -212,9 +212,10 @@ const renderDayCell = (staff, day) => {
   const weekend = [0, 6].includes(date.getDay());
   const holiday = getHolidayName(day);
   const marker = record.type === 'required' ? '<span class="leave-marker is-required">▲</span>' : record.type === 'leave' ? '<span class="leave-marker">▲</span>' : '';
+  const leaveLabel = record.label ? `<span class="external-leave-label">${escapeHtml(record.label)}</span>` : '';
   const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : '🎰').join('');
   return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
-    <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(staff.name)} ${day} 號休假狀態"${editableAttribute()}>${marker}<span class="special-icons">${specials}</span></button>
+    <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(staff.name)} ${day} 號休假狀態"${editableAttribute()}>${marker}${leaveLabel}<span class="special-icons">${specials}</span></button>
   </td>`;
 };
 
