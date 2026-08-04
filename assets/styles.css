@@ -5979,3 +5979,20 @@ body:has(.sidebar-toggle-btn.is-visible)
   min-width: 280px !important;
   max-width: none !important;
 }
+
+
+/* Tracking view: improve readability of the main information cards. */
+.tracking-page #ragicForm .ragic-view-grid > .ragic-view-field > .ragic-view-label {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+.tracking-page #ragicForm .ragic-view-grid > .ragic-view-field > .ragic-view-value {
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+
+.tracking-page #ragicForm .ragic-view-grid > .ragic-view-field-textarea > .ragic-view-value {
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+}
