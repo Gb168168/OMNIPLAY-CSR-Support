@@ -250,9 +250,11 @@ const createUatSchedules = async (item, actor) => {
 
   const marketingGroups = groupGamesByWorkday(games, 8, holidaySet);
   const uatGroups = groupGamesByWorkday(games, 7, holidaySet);
+  const prodGroups = groupGamesByWorkday(games, 0, holidaySet);
   const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
   const marketingMeta = GAME_EVENT_META['marketing-material'];
   const uatMeta = GAME_EVENT_META['uat-announcement'];
+  const prodMeta = GAME_EVENT_META['prod-launch'];
   const groups = [
     ...Object.entries(marketingGroups).map(([dateKey, group]) => ({
       legacyId: `game_marketing_${dateKey}`, idPrefix: `game_marketing_${dateKey}`,
@@ -263,6 +265,11 @@ const createUatSchedules = async (item, actor) => {
       legacyId: `game_uat_${dateKey}`, idPrefix: `game_uat_${dateKey}`,
       dateKey, group, meta: uatMeta, eventType: 'uat-announcement',
       contentPrefix: '請於今日發送下列遊戲的 UAT 環境上架公告：'
+    })),
+    ...Object.entries(prodGroups).map(([dateKey, group]) => ({
+      legacyId: `game_prod_${dateKey}`, idPrefix: `game_prod_${dateKey}`,
+      dateKey, group, meta: prodMeta, eventType: 'prod-launch',
+      contentPrefix: '請於今日發送下列遊戲的 PROD 上架公告：'
     }))
   ];
 
@@ -270,7 +277,7 @@ const createUatSchedules = async (item, actor) => {
     const legacyRefs = groups.map((target) => scheduleCollection.doc(target.legacyId));
     const legacySnapshots = await Promise.all(legacyRefs.map((ref) => transaction.get(ref)));
 
-    [marketingMeta, uatMeta].forEach((meta) => {
+    [marketingMeta, uatMeta, prodMeta].forEach((meta) => {
       transaction.set(scheduleLabelCollection.doc(meta.labelId), {
         name: meta.labelName,
         color: meta.color,
@@ -912,7 +919,7 @@ formEl?.addEventListener('submit', async (event) => {
     if (editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
       const createdCount = await createUatSchedules(editingItem, user);
       if (!createdCount) throw new Error('沒有可建立的 UAT 資料待辦。');
-      const successMessage = `PM 已確認，已建立／更新 ${createdCount} 筆流程待辦（行銷素材＋UAT 上架公告）。`;
+      const successMessage = `PM 已確認，已建立／更新 ${createdCount} 筆流程待辦（行銷素材＋UAT 上架公告＋PROD 上架公告）。`;
       setStatus(successMessage, 'success');
       window.alert(successMessage);
     }
