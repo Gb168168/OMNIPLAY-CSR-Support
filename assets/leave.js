@@ -151,9 +151,9 @@ const savedRecordFor = (name, day) => {
   return staff ? leaveData.records?.[`${staff.id}_${dayKey(day)}`] || {} : {};
 };
 const hasPhoneDuty = (name, day) => {
-  if (!canPairForPhone(name, day)) return false;
   const override = savedRecordFor(name, day).phoneOverride;
-  return typeof override === 'boolean' ? override : hasExternalPhoneDuty(name, day);
+  if (typeof override === 'boolean') return override && Boolean(phoneDutyPartners[name]);
+  return canPairForPhone(name, day) && hasExternalPhoneDuty(name, day);
 };
 
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
@@ -388,8 +388,8 @@ const toggleSpecial = (staffId, day, specialType) => {
   const staff = staffList.find((item) => item.id === staffId);
   if (specialType === 'phone' && staff && externalLeaveData?.[staff.name]) {
     const currentlyAssigned = hasPhoneDuty(staff.name, numericDay);
-    if (!currentlyAssigned && !canPairForPhone(staff.name, numericDay)) {
-      alert('📱 值公務機只能安排在同班別兩人都上班、且兩格完全空白的日期。');
+    if (!currentlyAssigned && !phoneDutyPartners[staff.name]) {
+      alert('此人員不在 📱 值公務機的配對名單中。');
       return;
     }
     const savedRecord = leaveData.records[key] || {};
