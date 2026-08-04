@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260805-schedule-color2" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260805-schedule-help1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -51,6 +51,7 @@
             <select class="schedule-filter-select" id="scheduleLabelFilter" aria-label="依標籤篩選排程">
               <option value="">全部標籤</option>
             </select>
+            <button class="secondary-button schedule-help-button" id="openScheduleHelp" type="button">❔ 使用說明</button>
           </div>
         </div>
         <div class="schedule-meta">
@@ -60,6 +61,52 @@
         <div class="calendar-grid" id="scheduleCalendar" aria-label="排程月曆"></div>
       </section>
       
+      <div class="modal-backdrop" id="scheduleHelpModal" aria-hidden="true">
+        <section class="modal-card schedule-help-card" role="dialog" aria-modal="true" aria-labelledby="scheduleHelpTitle">
+          <div class="modal-heading">
+            <div>
+              <h2 id="scheduleHelpTitle">排程表使用說明</h2>
+              <p>快速了解新增排程、查看當日事項與遊戲上線流程。</p>
+            </div>
+            <button class="icon-button" id="closeScheduleHelp" type="button" aria-label="關閉使用說明">✕</button>
+          </div>
+          <div class="schedule-help-content">
+            <section>
+              <h3>📅 基本操作</h3>
+              <ol>
+                <li>使用「上個月／下個月」切換日期，或點擊月份直接選擇年月。</li>
+                <li>點日期空白處可新增排程；點排程項目可查看或編輯。</li>
+                <li>可切換「週／月／年」檢視，並使用「全部標籤」篩選。</li>
+              </ol>
+            </section>
+            <section>
+              <h3>🔢 每日事項顯示</h3>
+              <p>月檢視每個日期顯示前 2 筆。第 3 筆開始，日期旁會出現總數圓圈；點日期空白處或圓圈即可查看當天全部排程。</p>
+            </section>
+            <section>
+              <h3>🎨 顏色與框線</h3>
+              <div class="schedule-help-legends">
+                <span><i style="--help-color:#f59e0b"></i>橘色：向 PM 確認</span>
+                <span><i style="--help-color:#8b5cf6"></i>紫色：UAT 資料待辦</span>
+                <span><i style="--help-color:#2563eb"></i>藍色：預計 PROD 上線</span>
+                <span><b class="help-line is-dashed"></b>虛線：尚未發生</span>
+                <span><b class="help-line"></b>實心：時間已到或已發生</span>
+              </div>
+            </section>
+            <section>
+              <h3>🔄 同步遊戲排程</h3>
+              <ol>
+                <li>按「同步遊戲排程」，讀取 Google 遊戲上線表的最新資料。</li>
+                <li>系統會依預計上線日期，在前一個月建立橘色「向 PM 確認」排程；同一天會合併顯示。</li>
+                <li>PM 確認後，打開該筆排程並勾選「PM 已確認」，再按儲存。</li>
+                <li>系統會自動在上線前 7 個工作日建立紫色「向行銷索取 UAT 公告資料」待辦。</li>
+              </ol>
+              <p class="schedule-help-note">目前工作日會排除星期六與星期日。</p>
+            </section>
+          </div>
+        </section>
+      </div>
+
       <div class="modal-backdrop" id="dayAgendaModal" aria-hidden="true">
         <section class="modal-card day-agenda-card" role="dialog" aria-modal="true" aria-labelledby="dayAgendaTitle">
           <div class="modal-heading">
@@ -122,6 +169,6 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260731-topnav1"></script>
-  <script src="../assets/schedule.js?v=20260805-schedule-color2"></script>
+  <script src="../assets/schedule.js?v=20260805-schedule-help1"></script>
 </body>
 </html>
