@@ -14,6 +14,8 @@ const dashboardCollections = {
 const dashboardState = {
   staff: [],
   leave: {},
+  externalLeave: {},
+  externalLeaveLoaded: false,
   handovers: [],
   tracking: [],
   trackingSchema: null,
@@ -198,30 +200,55 @@ const normalizeDashboardShift = (value) => {
   return '早';
 };
 
+const dashboardExcludedWorkingNames = new Set(['rondo', '中魁']);
+const dashboardPhonePartners = { '佳臻': '茗雅', '茗雅': '佳臻', '晴心': '澄希', '澄希': '晴心' };
+const dashboardFixedPhoneAssignments = { '2026-08': { '佳臻': [4, 6, 12, 17, 29], '茗雅': [5, 13, 16, 18, 22, 23] } };
+const dashboardExternalRecord = (name, day) => dashboardState.externalLeave?.[name]?.days?.[String(day)] || {};
+const dashboardRecordIsBlank = (record = {}) => !record.type && !record.label && (!Array.isArray(record.specials) || record.specials.length === 0);
+const dashboardRecordIsWorking = (record = {}) => {
+  if (dashboardRecordIsBlank(record)) return true;
+  if (Array.isArray(record.specials) && record.specials.length) return false;
+  const match = String(record.label || '').trim().match(/(\d+(?:\.\d+)?)\s*(?:小時|H|HR)?$/i);
+  const hours = Number(match?.[1]);
+  return Number.isFinite(hours) && hours > 0 && hours < 8;
+};
+const dashboardSavedLeaveRecord = (staff, day) => dashboardState.leave.records?.[`${staff.id}_${String(day)}`] || {};
+const dashboardCanAutoAssignPhone = (name, day) => {
+  const partner = dashboardPhonePartners[name];
+  return Boolean(partner) && dashboardRecordIsBlank(dashboardExternalRecord(name, day)) && dashboardRecordIsBlank(dashboardExternalRecord(partner, day));
+};
+const dashboardHasPhoneDuty = (staff, day, date) => {
+  const name = String(staff.name || '').trim();
+  const override = dashboardSavedLeaveRecord(staff, day).phoneOverride;
+  if (typeof override === 'boolean') return override && Boolean(dashboardPhonePartners[name]);
+  if (!dashboardCanAutoAssignPhone(name, day)) return false;
+  const fixedDays = dashboardFixedPhoneAssignments[monthKey(date)]?.[name];
+  if (Array.isArray(fixedDays)) return fixedDays.includes(day);
+  if (!['晴心', '澄希'].includes(name)) return false;
+  const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const eligibleDays = Array.from({ length: totalDays }, (_, index) => index + 1).filter((candidateDay) => dashboardCanAutoAssignPhone('晴心', candidateDay));
+  const dutyIndex = eligibleDays.indexOf(day);
+  return dutyIndex >= 0 && (dutyIndex % 2 === 0 ? name === '晴心' : name === '澄希');
+};
 const updateTodayWorking = () => {
   const today = new Date();
-  const todayKey = dayKey(today);
-  const records = dashboardState.leave.records || {};
+  const todayNumber = today.getDate();
   const groups = { '早': [], '晚': [] };
-
+  const list = document.querySelector('#todayWorkingList');
+  setText('#todayWorkingTitle', `今日上班（${displayDate(today)}）`);
+  if (!list) return;
+  if (!dashboardState.externalLeaveLoaded) { list.textContent = '載入中...'; return; }
   dashboardState.staff
     .filter((staff) => isActiveStaff(staff) && !isSystemStaff(staff))
+    .filter((staff) => !dashboardExcludedWorkingNames.has(String(staff.name || staff.code || '').trim().toLowerCase()))
     .forEach((staff) => {
-      const record = records[`${staff.id}_${todayKey}`] || {};
-      if (['leave', 'required'].includes(record.type)) return;
-
-      const specials = Array.isArray(record.specials) ? record.specials : [];
-      const name = `${staff.name || staff.code || staff.account || '未命名'}${specials.includes('phone') ? '📱' : ''}`;
-      groups[normalizeDashboardShift(staff.shift)].push(name);
+      const name = String(staff.name || staff.code || staff.account || '未命名').trim();
+      const externalPerson = dashboardState.externalLeave?.[name];
+      if (!externalPerson || !dashboardRecordIsWorking(dashboardExternalRecord(name, todayNumber))) return;
+      const displayName = `${name}${dashboardHasPhoneDuty(staff, todayNumber, today) ? '📱' : ''}`;
+      groups[normalizeDashboardShift(externalPerson.shift || staff.shift)].push(displayName);
     });
-
-  setText('#todayWorkingTitle', `今日上班（${displayDate(today)}）`);
-
-  const list = document.querySelector('#todayWorkingList');
-  if (!list) return;
-  const rows = Object.entries(groups)
-    .filter(([, names]) => names.length > 0)
-    .map(([shift, names]) => `<div class="today-working-row"><span>${shift} - </span>${escapeDashboardHtml(names.join('、'))}</div>`);
+  const rows = Object.entries(groups).filter(([, names]) => names.length > 0).map(([shift, names]) => `<div class="today-working-row"><span>${shift} - </span>${escapeDashboardHtml(names.join('、'))}</div>`);
   list.innerHTML = rows.length ? rows.join('') : '<div class="today-working-empty">今日無人上班</div>';
 };
 
@@ -239,7 +266,24 @@ const updateDashboard = () => {
 };
 
 const updateShiftButtons = () => {
-  document.querySelectorAll('.shift-btn').forEach((button) => {
+  const loadDashboardExternalLeave = async () => {
+  const targetMonth = monthKey();
+  try {
+    const response = await fetch(`https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    if (payload.month !== targetMonth) return;
+    dashboardState.externalLeave = payload.people || {};
+  } catch (error) {
+    console.warn('首頁外部假表載入失敗', error);
+    dashboardState.externalLeave = {};
+  } finally {
+    dashboardState.externalLeaveLoaded = true;
+    updateDashboard();
+  }
+};
+
+document.querySelectorAll('.shift-btn').forEach((button) => {
     const active = button.dataset.shift === dashboardState.selectedShift;
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
@@ -668,5 +712,11 @@ document.querySelectorAll('.shift-btn').forEach((button) => {
   });
 });
 subscribeDashboard();
+loadDashboardExternalLeave();
+window.setInterval(loadDashboardExternalLeave, 60 * 1000);
+window.addEventListener('focus', loadDashboardExternalLeave);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadDashboardExternalLeave();
+});
 window.getShiftRange = getShiftRange;
 window.getDefaultShift = getDefaultShift;
