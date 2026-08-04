@@ -219,6 +219,10 @@ const mergeScheduleGames = (existingGames = [], incomingGames = []) => {
   return [...merged.values()];
 };
 
+const gameScheduleDocSuffix = (game = {}) => String(game.gameId || '')
+  .trim()
+  .replace(/[^a-zA-Z0-9_-]+/g, '_');
+
 const createUatSchedules = async (item, actor) => {
   const games = Array.isArray(item?.games) && item.games.length
     ? item.games
@@ -249,20 +253,22 @@ const createUatSchedules = async (item, actor) => {
   const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
   const marketingMeta = GAME_EVENT_META['marketing-material'];
   const uatMeta = GAME_EVENT_META['uat-announcement'];
-  const targets = [
+  const groups = [
     ...Object.entries(marketingGroups).map(([dateKey, group]) => ({
-      id: `game_marketing_${dateKey}`, dateKey, group, meta: marketingMeta,
-      eventType: 'marketing-material', contentPrefix: '請行銷於今日提供下列遊戲素材：'
+      legacyId: `game_marketing_${dateKey}`, idPrefix: `game_marketing_${dateKey}`,
+      dateKey, group, meta: marketingMeta, eventType: 'marketing-material',
+      contentPrefix: '請行銷於今日提供下列遊戲素材：'
     })),
     ...Object.entries(uatGroups).map(([dateKey, group]) => ({
-      id: `game_uat_${dateKey}`, dateKey, group, meta: uatMeta,
-      eventType: 'uat-announcement', contentPrefix: '請於今日發送下列遊戲的 UAT 環境上架公告：'
+      legacyId: `game_uat_${dateKey}`, idPrefix: `game_uat_${dateKey}`,
+      dateKey, group, meta: uatMeta, eventType: 'uat-announcement',
+      contentPrefix: '請於今日發送下列遊戲的 UAT 環境上架公告：'
     }))
   ];
 
   await scheduleDb.runTransaction(async (transaction) => {
-    const refs = targets.map((target) => scheduleCollection.doc(target.id));
-    const snapshots = await Promise.all(refs.map((ref) => transaction.get(ref)));
+    const legacyRefs = groups.map((target) => scheduleCollection.doc(target.legacyId));
+    const legacySnapshots = await Promise.all(legacyRefs.map((ref) => transaction.get(ref)));
 
     [marketingMeta, uatMeta].forEach((meta) => {
       transaction.set(scheduleLabelCollection.doc(meta.labelId), {
@@ -273,28 +279,33 @@ const createUatSchedules = async (item, actor) => {
       }, { merge: true });
     });
 
-    targets.forEach((target, index) => {
-      const existingGames = snapshots[index].exists ? snapshots[index].data()?.games : [];
-      const mergedGames = mergeScheduleGames(existingGames, target.group.games);
-      const lines = mergedGames.map(gameLine);
-      transaction.set(refs[index], {
-        eventType: target.eventType,
-        date: target.dateKey,
-        title: `${target.meta.labelName}｜${getGameTitle(mergedGames)}`,
-        content: `${target.contentPrefix}\n${lines.join('\n')}`,
-        reminderAt: firebase.firestore.Timestamp.fromDate(target.group.reminderAt),
-        labelId: target.meta.labelId,
-        labelName: target.meta.labelName,
-        labelColor: target.meta.color,
-        repeat: 'none',
-        staffIds: [],
-        staffNames: [],
-        deleted: false,
-        source: 'google-game-sheet',
-        games: mergedGames,
-        updatedAt,
-        updatedBy: actor
-      }, { merge: true });
+    groups.forEach((target, index) => {
+      const legacyGames = legacySnapshots[index].exists ? legacySnapshots[index].data()?.games : [];
+      const rowGames = mergeScheduleGames(legacyGames, target.group.games);
+      rowGames.forEach((game) => {
+        const suffix = gameScheduleDocSuffix(game);
+        if (!suffix) return;
+        const rowRef = scheduleCollection.doc(`${target.idPrefix}_${suffix}`);
+        transaction.set(rowRef, {
+          eventType: target.eventType,
+          date: target.dateKey,
+          title: `${target.meta.labelName}｜${getGameTitle([game])}`,
+          content: `${target.contentPrefix}\n${gameLine(game)}`,
+          reminderAt: firebase.firestore.Timestamp.fromDate(target.group.reminderAt),
+          labelId: target.meta.labelId,
+          labelName: target.meta.labelName,
+          labelColor: target.meta.color,
+          repeat: 'none',
+          staffIds: [],
+          staffNames: [],
+          deleted: false,
+          source: 'google-game-sheet',
+          games: [game],
+          updatedAt,
+          updatedBy: actor
+        }, { merge: true });
+      });
+      if (legacySnapshots[index].exists) transaction.delete(legacyRefs[index]);
     });
 
     transaction.update(scheduleCollection.doc(item.id), {
@@ -304,7 +315,7 @@ const createUatSchedules = async (item, actor) => {
       updatedBy: actor
     });
   });
-  return targets.length;
+  return groups.reduce((count, target) => count + target.group.games.length, 0);
 };
 
 const syncGameSchedules = async () => {
