@@ -60,6 +60,7 @@ currentMonth.setDate(1);
 let staffList = [];
 let leaveData = { records: {}, quotas: {}, shifts: {}, quota: 8 };
 let externalLeaveData = {};
+let externalMaxDays = null;
 let externalLeaveLoadToken = 0;
 let shiftLoadToken = 0;
 let unsubscribeStaff = null;
@@ -123,11 +124,11 @@ const getRecord = (staffId, day) => {
   const record = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
   return { ...record, type: record.type || '', specials: record.specials || [] };
 };
-const getGlobalQuota = () => Number(leaveData.quota ?? 8);
+const getGlobalQuota = () => externalMaxDays !== null ? externalMaxDays : Number(leaveData.quota ?? 8);
 const getQuota = () => getGlobalQuota();
 const editableAttribute = () => canEditLeave ? '' : ' disabled';
 const getShift = (staff) => getStaffShift(staff);
-const leaveCount = (staffId) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => getRecord(staffId, index + 1)).filter((record) => ['leave', 'required'].includes(record?.type)).length;
+const leaveCount = (staffId) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => getRecord(staffId, index + 1)).filter((record) => ['leave', 'required'].includes(record?.type) && !record?.label).length;
 
 const loadExternalLeave = async () => {
   const token = ++externalLeaveLoadToken;
@@ -138,11 +139,14 @@ const loadExternalLeave = async () => {
     const payload = await response.json();
     if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
     externalLeaveData = payload.people || {};
+    const maxDays = Number(payload.maxDays);
+    externalMaxDays = Number.isFinite(maxDays) && maxDays >= 0 ? maxDays : null;
     staffList = sortStaffForLeave(staffList);
     render();
   } catch (error) {
     if (token !== externalLeaveLoadToken) return;
     externalLeaveData = {};
+    externalMaxDays = null;
     console.error('同步外部假表失敗：', error);
     setStatus('外部假表暫時無法同步，現在顯示 OMNIPLAY 原有資料。', 'error');
     render();
@@ -180,7 +184,7 @@ const renderHeader = () => {
     const holiday = getHolidayName(day);
     return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}</small></th>`;
   }).join('');
-  leaveTableHead.innerHTML = `<tr><th class="sticky-col shift-col">班別</th><th class="sticky-col name-col">姓名</th>${dayHeaders}</tr>`;
+  leaveTableHead.innerHTML = `<tr><th class="sticky-col name-col">姓名 / 班別</th>${dayHeaders}</tr>`;
 };
 
 const renderBody = () => {
@@ -191,14 +195,8 @@ const renderBody = () => {
     const overQuota = used > quota;
     const cells = Array.from({ length: totalDays }, (_, index) => renderDayCell(staff, index + 1)).join('');
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
-      <td class="sticky-col shift-col">
-        <select class="leave-shift-select" data-action="shift" aria-label="${escapeHtml(staff.name)} 班別"${editableAttribute()}>
-          <option value="早" ${getShift(staff) === '早' ? 'selected' : ''}>早</option>
-          <option value="晚" ${getShift(staff) === '晚' ? 'selected' : ''}>晚</option>
-        </select>
-      </td>
       <th class="sticky-col name-col" scope="row">
-        <span>${escapeHtml(staff.name || staff.code || '未命名')}</span>
+        <span>${escapeHtml(staff.name || staff.code || '未命名')} / ${escapeHtml(getShift(staff))}</span>
         <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}</small>
       </th>${cells}</tr>`;
   }).join('');
@@ -223,7 +221,7 @@ const render = () => {
   monthLabel.textContent = `${currentMonth.getFullYear()} 年 ${currentMonth.getMonth() + 1} 月`;
   if (globalQuotaInput) {
     globalQuotaInput.value = getGlobalQuota();
-    globalQuotaInput.disabled = !canEditLeave;
+    globalQuotaInput.disabled = externalMaxDays !== null || !canEditLeave;
   }
   renderHeader();
   renderBody();
@@ -268,6 +266,7 @@ const subscribeMonth = () => {
   if (!leaveCollection) return;
   setStatus('載入休假表資料中...', 'info');
   externalLeaveData = {};
+  externalMaxDays = null;
   loadExternalLeave();
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
     leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, quota: 8, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, quota: 8 };
