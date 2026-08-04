@@ -8,6 +8,17 @@
   <style>
     .external-leave-label { display: inline-block; margin-left: 0; font-size: 11px; line-height: 1; font-weight: 800; color: var(--text); }
     .leave-table .name-col { left: 0; min-width: 110px; width: 110px; max-width: 110px; }
+    .leave-summary-cards { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .leave-summary-card { min-width: 0; max-height: 132px; overflow: auto; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .leave-summary-card h3 { margin: 0 0 5px; font-size: 14px; }
+    .leave-summary-card-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; font-size: 12px; line-height: 1.45; }
+    .leave-summary-shift > strong { display: block; margin-bottom: 2px; }
+    .leave-summary-shift ul { margin: 0; padding-left: 18px; }
+    .leave-summary-shift li { margin: 1px 0; white-space: normal; }
+    @media (max-width: 900px) {
+      .leave-summary-cards { width: 100%; grid-template-columns: 1fr; }
+      .leave-summary-card-content { grid-template-columns: 1fr 1fr; }
+    }
   </style>
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
@@ -37,6 +48,16 @@
             <button class="ghost-button" id="todayLeaveMonth" type="button">本月</button>
             <label class="global-quota-field" for="globalLeaveQuota">可休：<input id="globalLeaveQuota" data-action="quota" type="number" min="0" max="31" step="1" value="8" aria-label="當月全員可休天數" /></label>
           </div>
+          <div class="leave-summary-cards" aria-label="當月排班摘要">
+            <section class="leave-summary-card">
+              <h3>📱 值公務機</h3>
+              <div class="leave-summary-card-content" id="phoneDutySummary">載入中...</div>
+            </section>
+            <section class="leave-summary-card">
+              <h3>🏃 彈性早退</h3>
+              <div class="leave-summary-card-content" id="flexibleLeaveSummary">載入中...</div>
+            </section>
+          </div>
         </div>
 
         <div class="leave-meta">
@@ -61,6 +82,6 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260727-1"></script>
-  <script src="../assets/leave.js?v=20260804-external-leave6"></script>
+  <script src="../assets/leave.js?v=20260804-external-leave7"></script>
 </body>
 </html>

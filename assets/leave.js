@@ -12,6 +12,8 @@ const leaveTableBody = document.querySelector('#leaveTableBody');
 const leaveStatus = document.querySelector('#leaveStatus');
 const leaveLegend = document.querySelector('#leaveLegend');
 const globalQuotaInput = document.querySelector('#globalLeaveQuota');
+const phoneDutySummary = document.querySelector('#phoneDutySummary');
+const flexibleLeaveSummary = document.querySelector('#flexibleLeaveSummary');
 const specialModeButtons = document.querySelectorAll('.special-mode-button');
 
 const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
@@ -133,6 +135,27 @@ const hasExternalPhoneDuty = (name, day) => {
   return dutyIndex >= 0 && (dutyIndex % 2 === 0 ? name === '晴心' : name === '澄希');
 };
 
+const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
+  if (mode === 'phone') return hasExternalPhoneDuty(staff.name, day);
+  if (!isWorkingRecord(externalRecordFor(staff.name, day))) return false;
+  if (hasExternalPhoneDuty(staff.name, day)) return false;
+  const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+  return !(getStaffShift(staff) === '早' && date.getDay() === 3);
+});
+const renderSummaryGroup = (shift, mode) => {
+  const rows = staffList
+    .filter((staff) => getStaffShift(staff) === shift && (mode !== 'phone' || staff.name !== '中魁'))
+    .map((staff) => {
+      const days = summaryDaysFor(staff, mode);
+      return `<li><strong>${escapeHtml(staff.name)}：</strong>${days.length ? days.join('、') : '—'}</li>`;
+    }).join('');
+  return `<div class="leave-summary-shift"><strong>${shift === '早' ? '早班' : '晚班'}：</strong><ul>${rows}</ul></div>`;
+};
+const renderMonthlySummaries = () => {
+  if (phoneDutySummary) phoneDutySummary.innerHTML = renderSummaryGroup('早', 'phone') + renderSummaryGroup('晚', 'phone');
+  if (flexibleLeaveSummary) flexibleLeaveSummary.innerHTML = renderSummaryGroup('早', 'flexible') + renderSummaryGroup('晚', 'flexible');
+};
+
 const getRecord = (staffId, day) => {
   const staff = staffList.find((item) => item.id === staffId);
   const externalPerson = staff ? externalLeaveData?.[staff.name] : null;
@@ -250,6 +273,7 @@ const render = () => {
   }
   renderHeader();
   renderBody();
+  renderMonthlySummaries();
 };
 
 const loadMonthlyShifts = async () => {
