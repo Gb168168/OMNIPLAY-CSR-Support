@@ -5835,3 +5835,38 @@ body:has(.sidebar-toggle-btn.is-visible)
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Schedule labels: keep chips separated from the title field. */
+.schedule-form .saved-labels {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  min-height: 38px;
+  margin: 0 0 12px;
+  padding: 2px 0;
+  align-content: flex-start;
+  row-gap: 8px;
+}
+
+.schedule-form .saved-label-chip {
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.schedule-form .saved-label-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-form .saved-labels + label {
+  position: relative;
+  z-index: 1;
+  margin-top: 2px;
+  clear: both;
+}
+
+.schedule-help-label-note {
+  margin-bottom: 10px !important;
+}
