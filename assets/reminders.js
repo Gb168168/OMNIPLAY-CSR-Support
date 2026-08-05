@@ -16,7 +16,7 @@
   };
   const MODULES = {
     log: { title: '日誌提醒', path: 'work/log.html', text: (r) => detailText(r, 'log') },
-    handover: { title: '交接提醒', path: 'work/handover.html', text: (r) => r.item || r.note || r.serial || '交接事項' },
+    handover: { title: '交接提醒', collection: 'workHandover', path: 'work/handover.html', text: (r) => r.item || r.note || r.serial || '交接事項' },
     report: { title: '提報提醒', path: 'work/report.html', text: (r) => detailText(r, 'report') }
   };
   const ROOT = '/OMNIPLAY-CSR-Support/';
@@ -118,7 +118,7 @@
   };
   const watch = () => {
     if (!db) return;
-    Object.keys(MODULES).forEach((module) => db.collection(module).onSnapshot((snapshot) => snapshot.docs.forEach((doc) => schedule(module, doc.id, doc.data()))));
+    Object.entries(MODULES).forEach(([module, config]) => db.collection(config.collection || module).onSnapshot((snapshot) => snapshot.docs.forEach((doc) => schedule(module, doc.id, doc.data()))));
   };
   async function enableNotifications() {
     if (!('Notification' in window)) return alert('此瀏覽器不支援通知');
