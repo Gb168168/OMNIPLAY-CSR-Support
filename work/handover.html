@@ -58,7 +58,7 @@
   <script src="../assets/reminders.js?v=20260805-work-handover1"></script>
   <script src="../assets/app.js?v=20260719-6"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260731-designer-add4"></script>
+  <script src="../assets/ragic-table.js?v=20260805-handover-layout2"></script>
   <script>
     initRagicPage({
       title: '交接',
@@ -83,27 +83,29 @@
         { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 }
       ],
-      formLayout: [
-        { label: '日期', formRow: 1, formCol: 1 },
-        { label: '班別', formRow: 1, formCol: 2 },
-        { label: '部門', formRow: 1, formCol: 3 },
-        { label: '分類', formRow: 1, formCol: 4 },
-        { label: '建立者', formRow: 2, formCol: 1 },
-        { label: '發布者', formRow: 2, formCol: 1 },
-        { label: '狀態', formRow: 2, formCol: 2 },
-        { label: '完成者', formRow: 2, formCol: 3 },
-        { label: '完成時間', formRow: 3, formCol: 4 },
-        { label: '圖片', formRow: 2, formCol: 4, formRowSpan: 2 },
-        { label: '圖片上傳', formRow: 2, formCol: 4, formRowSpan: 2 },
-        { label: '連結', formRow: 3, formCol: 1 },
-        { label: '編號', formRow: 3, formCol: 2 },
-        { label: '檔案', formRow: 3, formCol: 3 },
-        { label: '交接事項', formRow: 4, formCol: 1, formColSpan: 2 },
-        { label: '備註', formRow: 4, formCol: 3, formColSpan: 2 },
-        { label: '更新時間', formRow: 5, formCol: 1 },
-        { label: '提醒時間', formRow: 5, formCol: 2 },
-        { label: '啟用提醒', formRow: 5, formCol: 3 }
-      ],
+      formLayout: {
+        version: 'handover-view-v2',
+        columns: 4,
+        rows: 5,
+        fields: {
+          date: { row: 1, col: 1 },
+          shift: { row: 1, col: 2 },
+          department: { row: 1, col: 3 },
+          category: { row: 1, col: 4 },
+          status: { row: 2, col: 1 },
+          publisher: { row: 2, col: 2 },
+          finisher: { row: 2, col: 3 },
+          completed_at: { row: 2, col: 4 },
+          serial: { row: 3, col: 1 },
+          updated_time: { row: 3, col: 2 },
+          reminder_at: { row: 3, col: 3 },
+          reminder_enabled: { row: 3, col: 4 },
+          item: { row: 4, col: 1, colSpan: 2, height: 176 },
+          note: { row: 4, col: 3, colSpan: 2, height: 176 },
+          image: { row: 5, col: 1, colSpan: 2, height: 96 },
+          attachment: { row: 5, col: 3, colSpan: 2, height: 96 }
+        }
+      },
       listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'completed_at', 'image', 'attachment', 'updated_time', 'serial']
     });
   </script>
