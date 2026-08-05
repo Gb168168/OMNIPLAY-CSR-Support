@@ -62,10 +62,10 @@ const renderSidebar = () => {
     <nav class="menu" aria-label="主功能表">
       <div class="top-nav-primary-links">
         ${renderSidebarLink(sidebarItems[0])}
-        ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span></a>`).join('')}
+        ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}" aria-controls="${group.id}Menu" aria-expanded="${group === activeGroup ? 'true' : 'false'}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span><span class="mobile-category-caret" aria-hidden="true">›</span></a>`).join('')}
       </div>
       <div class="top-nav-secondary">
-        ${sidebarItems.slice(1).map((group) => `<section class="sidebar-group${group === activeGroup ? ' is-current-group' : ''}" data-group="${group.id}" aria-labelledby="${group.id}">
+        ${sidebarItems.slice(1).map((group) => `<section class="sidebar-group${group === activeGroup ? ' is-current-group is-mobile-expanded' : ''}" data-group="${group.id}" aria-labelledby="${group.id}" id="${group.id}Menu">
           <h2 class="sidebar-group-title" id="${group.id}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span></h2>
           <div class="top-nav-submenu">${group.items.map(renderSidebarLink).join('')}</div>
         </section>`).join('')}
@@ -142,8 +142,22 @@ const closeMobileSidebar = () => {
   sidebarToggle?.setAttribute('aria-expanded', 'false');
   sidebarCollapsedToggle.classList.add('is-visible');
 };
+const setMobileSidebarGroup = (groupId, forceOpen = false) => {
+  if (!sidebar || !groupId) return;
+  const target = sidebar.querySelector(`.sidebar-group[data-group="${groupId}"]`);
+  const shouldOpen = Boolean(target) && (forceOpen || !target.classList.contains('is-mobile-expanded'));
+  sidebar.querySelectorAll('.sidebar-group').forEach((group) => {
+    group.classList.toggle('is-mobile-expanded', shouldOpen && group === target);
+  });
+  sidebar.querySelectorAll('.top-nav-category').forEach((category) => {
+    category.setAttribute('aria-expanded', String(shouldOpen && category.dataset.group === groupId));
+  });
+};
+
 const openMobileSidebar = () => {
   sidebar?.classList.remove('is-collapsed');
+  const activeCategory = sidebar?.querySelector('.top-nav-category.is-active');
+  if (activeCategory?.dataset.group) setMobileSidebarGroup(activeCategory.dataset.group, true);
   sidebar?.classList.add('is-open');
   sidebarOverlay?.classList.add('is-visible');
   document.documentElement.classList.add('mobile-menu-open');
@@ -431,7 +445,14 @@ enhanceSidebarNavigation();
 sidebarToggle?.addEventListener('click', toggleSidebar);
 sidebarOverlay?.addEventListener('click', closeMobileSidebar);
 window.addEventListener('resize', () => applySidebarState(getStoredSidebarCollapsed()));
-sidebar?.querySelectorAll('.home-link, .top-nav-category, .sidebar-sub-item').forEach((link) => {
+sidebar?.querySelectorAll('.top-nav-category').forEach((category) => {
+  category.addEventListener('click', (event) => {
+    if (!isMobileViewport()) return;
+    event.preventDefault();
+    setMobileSidebarGroup(category.dataset.group);
+  });
+});
+sidebar?.querySelectorAll('.home-link, .sidebar-sub-item').forEach((link) => {
   link.addEventListener('click', () => {
     if (isMobileViewport()) closeMobileSidebar();
   });
