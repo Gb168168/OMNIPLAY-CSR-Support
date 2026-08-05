@@ -9,6 +9,7 @@ const LOG_FIELD_LAYOUT_BY_LABEL = {
 };
 
 const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').includes('日誌');
+const isLogNewModule = (config = RAGIC_STATE?.config) => ['log_new', 'workLogsNew'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').trim() === '日誌 NEW';
 const isTrackingModule = (config = RAGIC_STATE?.config) => ['tracking', 'workTracking'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '') === '對接追蹤';
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
@@ -1648,6 +1649,152 @@ const validateLogCompletionRules = () => {
   alert(`請完成以下欄位：\n• ${errors.join('\n• ')}`);
   firstInvalid?.focus();
   firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return false;
+};
+
+const showLogNewRequiredModal = (items, firstInvalid) => {
+  document.querySelector('#logNewRequiredModal')?.remove();
+  if (!document.querySelector('#logNewRequiredModalStyles')) {
+    const style = document.createElement('style');
+    style.id = 'logNewRequiredModalStyles';
+    style.textContent = `
+      #logNewRequiredModal { z-index: 10020; }
+      #logNewRequiredModal .log-new-required-card {
+        width: min(520px, calc(100vw - 28px));
+        max-height: min(720px, calc(100vh - 40px));
+        overflow: hidden;
+        border-radius: 20px;
+        background: var(--panel, #fff);
+        color: var(--text, #0f172a);
+        box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
+      }
+      #logNewRequiredModal .log-new-required-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 22px 24px 14px;
+        border-bottom: 1px solid var(--line, #e2e8f0);
+      }
+      #logNewRequiredModal h2 { margin: 0 0 6px; font-size: 21px; line-height: 1.3; }
+      #logNewRequiredModal p { margin: 0; color: var(--muted, #64748b); font-size: 14px; }
+      #logNewRequiredModal .log-new-required-close {
+        width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid var(--line, #dbe3ef);
+        border-radius: 10px; background: transparent; color: inherit; font-size: 20px; cursor: pointer;
+      }
+      #logNewRequiredModal .log-new-required-body { padding: 18px 24px; overflow: auto; max-height: 52vh; }
+      #logNewRequiredModal ul { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+      #logNewRequiredModal li {
+        display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px;
+        border: 1px solid #fecaca; border-radius: 12px; background: #fff7f7; color: #991b1b;
+        font-weight: 650; line-height: 1.45;
+      }
+      #logNewRequiredModal li::before { content: '!'; display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%; background: #ef4444; color: #fff; font-size: 12px; }
+      #logNewRequiredModal .log-new-required-actions { display: flex; justify-content: flex-end; padding: 14px 24px 22px; }
+      #logNewRequiredModal .log-new-required-confirm { min-width: 108px; }
+      @media (max-width: 600px) {
+        #logNewRequiredModal { padding: 14px; align-items: center; }
+        #logNewRequiredModal .log-new-required-header { padding: 18px 18px 12px; }
+        #logNewRequiredModal .log-new-required-body { padding: 14px 18px; max-height: 55vh; }
+        #logNewRequiredModal .log-new-required-actions { padding: 12px 18px 18px; }
+        #logNewRequiredModal .log-new-required-confirm { width: 100%; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'logNewRequiredModal';
+  modal.className = 'ragic-modal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'logNewRequiredTitle');
+  modal.innerHTML = `
+    <div class="log-new-required-card">
+      <div class="log-new-required-header">
+        <div><h2 id="logNewRequiredTitle">必填欄位尚未完成</h2><p>請先完成下列 ${items.length} 個欄位，再儲存日誌。</p></div>
+        <button class="log-new-required-close" type="button" aria-label="關閉">×</button>
+      </div>
+      <div class="log-new-required-body"><ul></ul></div>
+      <div class="log-new-required-actions"><button class="primary log-new-required-confirm" type="button">知道了</button></div>
+    </div>`;
+  const list = modal.querySelector('ul');
+  items.forEach((item) => {
+    const li = document.createElement('li');
+    li.textContent = item;
+    list.appendChild(li);
+  });
+  document.body.appendChild(modal);
+
+  const close = () => {
+    modal.remove();
+    firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => firstInvalid?.focus({ preventScroll: true }), 260);
+  };
+  modal.querySelector('.log-new-required-close').addEventListener('click', close);
+  modal.querySelector('.log-new-required-confirm').addEventListener('click', close);
+  modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
+  modal.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+  modal.querySelector('.log-new-required-confirm').focus();
+};
+
+const validateLogNewRequiredFields = () => {
+  if (!isLogNewModule()) return true;
+  const form = document.querySelector('#ragicForm');
+  const fields = getFields();
+  const missing = [];
+  let firstInvalid = null;
+  const addMissing = (label, target) => {
+    if (!label || missing.includes(label)) return;
+    missing.push(label);
+    firstInvalid ||= target;
+  };
+  const hasValue = (field, target) => {
+    if (!target) return false;
+    if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field.type)) return Boolean(target.checked);
+    if (field.type === 'multiselect') return Boolean(target.selectedOptions?.length);
+    if (field.type === 'image') return getImageInputValues(target).length > 0;
+    if (field.type === 'file') return Boolean(target.files?.length || getFileInputValue(target));
+    return Boolean(String(target.value || '').trim());
+  };
+
+  fields.forEach((field) => {
+    if (field.type === 'subtable') {
+      const requiredSubfields = (field.fields || []).filter((subfield) => subfield.required);
+      if (!requiredSubfields.length) return;
+      const rows = [...form.querySelectorAll(`[data-subtable="${CSS.escape(field.key)}"] .subtable-row`)];
+      rows.forEach((row, rowIndex) => requiredSubfields.forEach((subfield) => {
+        const target = row.querySelector(`[data-subfield="${CSS.escape(subfield.key)}"]`);
+        if (!hasValue(subfield, target)) addMissing(`${field.label}：第 ${rowIndex + 1} 列「${subfield.label}」`, target);
+      }));
+      return;
+    }
+    if (!field.required) return;
+    const target = form.querySelector(`[name="${CSS.escape(field.key)}"]`);
+    if (!hasValue(field, target)) addMissing(field.label || field.key, target);
+  });
+
+  const control = (key) => form.querySelector(`[name="${CSS.escape(key)}"]`);
+  const value = (key) => String(control(key)?.value || '').trim();
+  const completedBy = value('completed_by');
+  const completedAt = value('completed_at');
+  const status = value('status');
+  if (status === '已完成') {
+    if (!completedBy) addMissing('完成者（狀態為已完成）', control('completed_by'));
+    if (!completedAt) addMissing('完成時間（狀態為已完成）', control('completed_at'));
+  } else if (completedBy && !completedAt) {
+    addMissing('完成時間（已填寫完成者）', control('completed_at'));
+  } else if (completedAt && !completedBy) {
+    addMissing('完成者（已填寫完成時間）', control('completed_by'));
+  } else if (!completedBy && !completedAt) {
+    if (!control('reminder_enabled')?.checked) addMissing('啟用提醒（尚未完成）', control('reminder_enabled'));
+    if (!value('reminder_at')) addMissing('提醒時間（尚未完成）', control('reminder_at'));
+    if (!value('processing_department')) addMissing('處理部門（尚未完成）', control('processing_department'));
+    if (!value('note')) addMissing('備註（請填入詢問部門的日期時間）', control('note'));
+  }
+
+  if (!missing.length) return true;
+  showLogNewRequiredModal(missing, firstInvalid);
   return false;
 };
 
@@ -3848,7 +3995,9 @@ const addDesignerPairFields = (pairType) => {
     }
   });
   document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？\n資料將不再存在🚫')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
-  document.querySelector('#ragicForm').addEventListener('submit', async (event) => {
+  const ragicForm = document.querySelector('#ragicForm');
+  if (isLogNewModule()) ragicForm.noValidate = true;
+  ragicForm.addEventListener('submit', async (event) => {
   event.preventDefault();
     const fields = getFields();
     if (!fields.length) {
@@ -3856,7 +4005,9 @@ const addDesignerPairFields = (pairType) => {
       return;
     }
     if (!canUse('edit')) return alert('您沒有編輯權限');
-    if (!validateCompletedStatusRules() || !validateLogCompletionRules()) return;
+    if (isLogNewModule()) {
+      if (!validateLogNewRequiredFields()) return;
+    } else if (!validateCompletedStatusRules() || !validateLogCompletionRules()) return;
     const saveButton = document.querySelector('button[form="ragicForm"][type="submit"]');
     const originalText = saveButton?.textContent || '儲存';
     if (saveButton) { saveButton.disabled = true; saveButton.textContent = '儲存中...'; }
