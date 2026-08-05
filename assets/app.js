@@ -62,10 +62,10 @@ const renderSidebar = () => {
     <nav class="menu" aria-label="主功能表">
       <div class="top-nav-primary-links">
         ${renderSidebarLink(sidebarItems[0])}
-        ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}" aria-controls="${group.id}Menu" aria-expanded="${group === activeGroup ? 'true' : 'false'}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span><span class="mobile-category-caret" aria-hidden="true">›</span></a>`).join('')}
+        ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}" aria-controls="${group.id}Menu" aria-expanded="false"><span class="icon">${group.icon}</span><span class="label">${group.title}</span><span class="mobile-category-caret" aria-hidden="true">›</span></a>`).join('')}
       </div>
       <div class="top-nav-secondary">
-        ${sidebarItems.slice(1).map((group) => `<section class="sidebar-group${group === activeGroup ? ' is-current-group is-mobile-expanded' : ''}" data-group="${group.id}" aria-labelledby="${group.id}" id="${group.id}Menu">
+        ${sidebarItems.slice(1).map((group) => `<section class="sidebar-group${group === activeGroup ? ' is-current-group' : ''}" data-group="${group.id}" aria-labelledby="${group.id}" id="${group.id}Menu">
           <h2 class="sidebar-group-title" id="${group.id}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span></h2>
           <div class="top-nav-submenu">${group.items.map(renderSidebarLink).join('')}</div>
         </section>`).join('')}
@@ -156,8 +156,6 @@ const setMobileSidebarGroup = (groupId, forceOpen = false) => {
 
 const openMobileSidebar = () => {
   sidebar?.classList.remove('is-collapsed');
-  const activeCategory = sidebar?.querySelector('.top-nav-category.is-active');
-  if (activeCategory?.dataset.group) setMobileSidebarGroup(activeCategory.dataset.group, true);
   sidebar?.classList.add('is-open');
   sidebarOverlay?.classList.add('is-visible');
   document.documentElement.classList.add('mobile-menu-open');
