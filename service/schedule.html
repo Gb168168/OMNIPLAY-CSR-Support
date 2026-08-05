@@ -43,6 +43,7 @@
           </div>
           <div class="schedule-heading-actions">
             <button class="secondary-button" id="syncGameScheduleButton" type="button" hidden>🔄 同步遊戲排程</button>
+            <button class="secondary-button" id="gameChangeLogButton" type="button">📝 試算表變更</button>
             <div class="view-switch" aria-label="檢視切換">
               <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
               <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
@@ -60,7 +61,20 @@
         </div>
         <div class="calendar-grid" id="scheduleCalendar" aria-label="排程月曆"></div>
       </section>
-      
+
+      <div class="modal-backdrop" id="gameChangeLogModal" aria-hidden="true">
+        <section class="modal-card game-change-log-card" role="dialog" aria-modal="true" aria-labelledby="gameChangeLogTitle">
+          <div class="modal-heading">
+            <div>
+              <h2 id="gameChangeLogTitle">試算表變更紀錄</h2>
+              <p>排程頁開啟時會自動同步，並每 5 分鐘檢查一次。</p>
+            </div>
+            <button class="icon-button" id="closeGameChangeLog" type="button" aria-label="關閉試算表變更紀錄">✕</button>
+          </div>
+          <div class="game-change-log-list" id="gameChangeLogList"><p class="history-empty">載入中...</p></div>
+        </section>
+      </div>
+
       <div class="modal-backdrop" id="scheduleHelpModal" aria-hidden="true">
         <section class="modal-card schedule-help-card" role="dialog" aria-modal="true" aria-labelledby="scheduleHelpTitle">
           <div class="modal-heading">
@@ -97,7 +111,8 @@
             <section>
               <h3>🔄 同步遊戲排程</h3>
               <ol>
-                <li>按「同步遊戲排程」，讀取 Google 遊戲上線表的最新資料；同步只更新 AM 排程，會保留已確認狀態、行銷素材、UAT 與 PROD 公告。</li>
+                <li>開啟排程表時會自動讀取 Google 遊戲上線表，之後每 5 分鐘同步一次；也可按「同步遊戲排程」立即更新。同步會保留已確認狀態、行銷素材、UAT 與 PROD 公告。</li>
+                <li>按「試算表變更」可查看遊戲、變更欄位及原值 → 新值。</li>
                 <li>系統會從預計上線日往前倒數 14 個日曆天，星期六、星期日及台灣國定假日都計入，再為每款遊戲各建立一列橘色「向 AM 確認」排程。</li>
                 <li>AM 確認後，打開該筆排程並勾選「AM 已確認」，再按儲存。</li>
                 <li>系統會在上線前 8 個日曆天為每款遊戲各建立一列「行銷素材待辦」，提醒行銷提供遊戲素材。</li>
@@ -174,6 +189,6 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260731-topnav1"></script>
-  <script src="../assets/schedule.js?v=20260805-am-calendar-days1"></script>
+  <script src="../assets/schedule.js?v=20260805-auto-sync-changes1"></script>
 </body>
 </html>
