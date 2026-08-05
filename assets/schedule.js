@@ -3,6 +3,7 @@ const scheduleCollection = scheduleDb?.collection('schedule');
 const scheduleLabelCollection = scheduleDb?.collection('scheduleLabels');
 const scheduleStaffCollection = scheduleDb?.collection('staff');
 const scheduleLeaveCollection = scheduleDb?.collection('leave');
+const scheduleGameChangeCollection = scheduleDb?.collection('scheduleGameChanges');
 
 const calendarEl = document.querySelector('#scheduleCalendar');
 const periodLabel = document.querySelector('#schedulePeriodLabel');
@@ -31,6 +32,9 @@ const yearSelect = document.querySelector('#scheduleYearSelect');
 const monthPicker = document.querySelector('#scheduleMonthPicker');
 const labelFilterSelect = document.querySelector('#scheduleLabelFilter');
 const syncGameScheduleButton = document.querySelector('#syncGameScheduleButton');
+const gameChangeLogButton = document.querySelector('#gameChangeLogButton');
+const gameChangeLogModalEl = document.querySelector('#gameChangeLogModal');
+const gameChangeLogListEl = document.querySelector('#gameChangeLogList');
 const gamePmConfirmedLabel = document.querySelector('#gamePmConfirmedLabel');
 const gamePmConfirmedInput = document.querySelector('#gamePmConfirmed');
 
@@ -138,6 +142,9 @@ let unsubscribeSchedules = null;
 let unsubscribeLabels = null;
 let unsubscribeLeave = null;
 let activeLabelFilter = '';
+let scheduleDataLoaded = false;
+let gameScheduleSyncing = false;
+let gameScheduleAutoTimer = null;
 
 const storedSchedulePermission = () => window.getPagePermission?.('schedule') || { view: false, edit: false, delete: false, design: false };
 let canEditSchedule = Boolean(window.isOmniplayAdmin?.());
@@ -153,6 +160,7 @@ const syncSchedulePermission = async () => {
   syncGameScheduleButton?.toggleAttribute('hidden', !canEditSchedule);
   if (deleteButton) deleteButton.hidden = !canDeleteSchedule || !editingId;
   formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
+  startAutomaticGameScheduleSync();
 };
 
 
@@ -209,6 +217,46 @@ const mergeScheduleGames = (existingGames = [], incomingGames = []) => {
 const gameScheduleDocSuffix = (game = {}) => String(game.gameId || '')
   .trim()
   .replace(/[^a-zA-Z0-9_-]+/g, '_');
+
+const GAME_CHANGE_FIELDS = [
+  ['gameNameZh', '遊戲名稱（中文）'],
+  ['gameNameEn', '遊戲名稱（英文）'],
+  ['status', '狀態'],
+  ['expectedOnlineDate', '預計上線日期']
+];
+
+const normalizeFeedGame = (game = {}) => ({
+  gameId: String(game.gameId || '').trim(),
+  gameNameZh: String(game.gameNameZh || '').trim(),
+  gameNameEn: String(game.gameNameEn || '').trim(),
+  status: String(game.status || '').trim(),
+  expectedOnlineDate: String(game.expectedOnlineDate || '').trim()
+});
+
+const collectGameScheduleChanges = (incomingGames = []) => {
+  const previousGames = new Map();
+  scheduleList
+    .filter((item) => item.source === 'google-game-sheet' && item.eventType === 'pm-confirmation')
+    .flatMap(getScheduleGames)
+    .map(normalizeFeedGame)
+    .filter((game) => game.gameId)
+    .forEach((game) => previousGames.set(game.gameId, game));
+
+  const incomingMap = new Map(incomingGames.filter((game) => game.gameId).map((game) => [game.gameId, game]));
+  const changes = [];
+  incomingMap.forEach((game, gameId) => {
+    const previous = previousGames.get(gameId);
+    if (!previous) return;
+    GAME_CHANGE_FIELDS.forEach(([field, label]) => {
+      if (String(previous[field] || '') === String(game[field] || '')) return;
+      changes.push({ gameId, gameName: game.gameNameZh || game.gameNameEn || previous.gameNameZh || previous.gameNameEn || '', field, fieldLabel: label, before: previous[field] || '—', after: game[field] || '—' });
+    });
+  });
+  previousGames.forEach((game, gameId) => {
+    if (!incomingMap.has(gameId)) changes.push({ gameId, gameName: game.gameNameZh || game.gameNameEn || '', field: 'removed', fieldLabel: '試算表排程', before: '存在', after: '已移除' });
+  });
+  return changes.slice(0, 200);
+};
 
 const createUatSchedules = async (item, actor) => {
   const games = Array.isArray(item?.games) && item.games.length
@@ -315,8 +363,9 @@ const createUatSchedules = async (item, actor) => {
   return groups.reduce((count, target) => count + target.group.games.length, 0);
 };
 
-const syncGameSchedules = async () => {
-  if (!canEditSchedule || !scheduleCollection || !scheduleLabelCollection) return;
+const syncGameSchedules = async ({ manual = false } = {}) => {
+  if (!canEditSchedule || !scheduleCollection || !scheduleLabelCollection || gameScheduleSyncing) return;
+  gameScheduleSyncing = true;
   syncGameScheduleButton?.setAttribute('disabled', '');
   if (syncGameScheduleButton) syncGameScheduleButton.textContent = '同步中…';
   setStatus('正在同步 Google 遊戲排程…', 'info');
@@ -325,7 +374,9 @@ const syncGameSchedules = async () => {
     const payload = await loadGameScheduleFeed();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const games = payload.games.filter((game) => {
+    const feedGames = payload.games.map(normalizeFeedGame).filter((game) => game.gameId);
+    const detectedChanges = collectGameScheduleChanges(feedGames);
+    const games = feedGames.filter((game) => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
       const released = /已上線|released/i.test(String(game.status || ''));
       return launchAt && launchAt >= today && !released;
@@ -355,6 +406,14 @@ const syncGameSchedules = async () => {
     const actor = { id: 'google-game-sheet', code: 'SYNC', name: 'Google 遊戲上線表' };
     const desiredPmIds = new Set(rows.map((row) => row.id));
     const confirmedRows = [];
+
+    detectedChanges.forEach((change) => {
+      batch.set(scheduleGameChangeCollection.doc(), {
+        ...change,
+        changedAt: syncedAt,
+        changedBy: actor
+      });
+    });
 
     scheduleList
       .filter((item) => item.source === 'google-game-sheet'
@@ -414,14 +473,51 @@ const syncGameSchedules = async () => {
     for (const confirmedRow of confirmedRows) {
       await createUatSchedules(confirmedRow, actor);
     }
-    setStatus(`遊戲排程同步完成：已更新 ${rows.length} 筆 AM 確認排程，並保留已確認及後續流程資料。`, 'success');
+    const changeText = detectedChanges.length ? `，發現 ${detectedChanges.length} 項試算表變更` : '，試算表沒有新變更';
+    setStatus(`遊戲排程同步完成：已更新 ${rows.length} 筆 AM 確認排程${changeText}。`, 'success');
   } catch (error) {
     console.error('同步遊戲排程失敗：', error);
     setStatus(`同步遊戲排程失敗：${error.message || error}`, 'error');
   } finally {
+    gameScheduleSyncing = false;
     syncGameScheduleButton?.removeAttribute('disabled');
     if (syncGameScheduleButton) syncGameScheduleButton.textContent = '🔄 同步遊戲排程';
   }
+};
+
+const startAutomaticGameScheduleSync = () => {
+  if (!canEditSchedule || !scheduleDataLoaded || gameScheduleAutoTimer) return;
+  window.setTimeout(() => syncGameSchedules(), 800);
+  gameScheduleAutoTimer = window.setInterval(() => syncGameSchedules(), 5 * 60 * 1000);
+};
+
+const formatGameChangeTime = (value) => {
+  const date = parseDateValue(value);
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleString('zh-TW', { hour12: false }) : '—';
+};
+
+const openGameChangeLog = async () => {
+  gameChangeLogModalEl?.classList.add('is-open');
+  gameChangeLogModalEl?.setAttribute('aria-hidden', 'false');
+  if (!gameChangeLogListEl || !scheduleGameChangeCollection) return;
+  gameChangeLogListEl.innerHTML = '<p class="history-empty">載入中...</p>';
+  try {
+    const snapshot = await scheduleGameChangeCollection.orderBy('changedAt', 'desc').limit(100).get();
+    const changes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    gameChangeLogListEl.innerHTML = changes.length ? changes.map((change) => `
+      <article class="game-change-log-item">
+        <div><strong>${escapeHtml(change.gameId)}${change.gameName ? `（${escapeHtml(change.gameName)}）` : ''}</strong><time>${escapeHtml(formatGameChangeTime(change.changedAt))}</time></div>
+        <p><b>${escapeHtml(change.fieldLabel || change.field || '欄位')}</b><span class="change-before">${escapeHtml(change.before || '—')}</span><i>→</i><span class="change-after">${escapeHtml(change.after || '—')}</span></p>
+      </article>`).join('') : '<p class="history-empty">目前尚無試算表變更紀錄。</p>';
+  } catch (error) {
+    console.error('讀取試算表變更紀錄失敗：', error);
+    gameChangeLogListEl.innerHTML = '<p class="history-empty">變更紀錄載入失敗，請稍後再試。</p>';
+  }
+};
+
+const closeGameChangeLog = () => {
+  gameChangeLogModalEl?.classList.remove('is-open');
+  gameChangeLogModalEl?.setAttribute('aria-hidden', 'true');
 };
 
 const setStatus = (message, type = 'info') => {
@@ -689,6 +785,8 @@ const subscribeSchedules = () => {
       const reminder = parseDateValue(data.reminderAt);
       return { id: doc.id, ...data, date: data.date || (reminder ? toDateKey(reminder) : doc.id.slice(0, 10)), labelName: getScheduleDisplayLabel(data), labelColor: getScheduleDisplayColor(data), title: getScheduleDisplayTitle(data), history: data.history || [] };
     });
+    scheduleDataLoaded = true;
+    startAutomaticGameScheduleSync();
     renderCalendar();
     openScheduleFromQuery();
     setStatus('資料已載入。', 'success');
@@ -876,7 +974,10 @@ document.querySelector('#todaySchedulePeriod')?.addEventListener('click', () => 
 document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => { viewMode = button.dataset.view; document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('is-active', item === button)); currentDate = new Date(selectedDate); renderCalendar(); }));
 document.querySelector('#phoneDutyButton')?.addEventListener('click', (event) => showSpecials('phone', event.currentTarget));
 document.querySelector('#companyEventButton')?.addEventListener('click', (event) => showSpecials('event', event.currentTarget));
-syncGameScheduleButton?.addEventListener('click', () => syncGameSchedules());
+syncGameScheduleButton?.addEventListener('click', () => syncGameSchedules({ manual: true }));
+gameChangeLogButton?.addEventListener('click', openGameChangeLog);
+document.querySelector('#closeGameChangeLog')?.addEventListener('click', closeGameChangeLog);
+gameChangeLogModalEl?.addEventListener('click', (event) => { if (event.target === gameChangeLogModalEl) closeGameChangeLog(); });
 document.querySelector('#closeScheduleModal')?.addEventListener('click', closeModal);
 document.querySelector('#cancelScheduleButton')?.addEventListener('click', closeModal);
 modalEl?.addEventListener('click', (event) => { if (event.target === modalEl) closeModal(); });
@@ -967,4 +1068,4 @@ else {
 
 syncSchedulePermission();
 renderCalendar();
-window.addEventListener('beforeunload', () => { unsubscribeStaff?.(); unsubscribeSchedules?.(); unsubscribeLabels?.(); unsubscribeLeave?.(); });
+window.addEventListener('beforeunload', () => { unsubscribeStaff?.(); unsubscribeSchedules?.(); unsubscribeLabels?.(); unsubscribeLeave?.(); if (gameScheduleAutoTimer) window.clearInterval(gameScheduleAutoTimer); });
