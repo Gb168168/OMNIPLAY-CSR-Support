@@ -6856,3 +6856,54 @@ body .app-shell[data-auth-protected].is-hidden {
     -webkit-tap-highlight-color: rgba(59, 130, 246, .14);
   }
 }
+
+
+/* ===== 2026-08-06 手機側欄分類展開 ===== */
+@media (max-width: 768px) {
+  body .sidebar.top-navigation .sidebar-group {
+    display: none !important;
+    margin: 4px 0 8px !important;
+    padding: 4px 0 4px 14px !important;
+    border-left: 2px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
+  }
+
+  body .sidebar.top-navigation .sidebar-group.is-mobile-expanded {
+    display: block !important;
+  }
+
+  body .sidebar.top-navigation .sidebar-group-title {
+    display: none !important;
+  }
+
+  body .sidebar.top-navigation .top-nav-category .mobile-category-caret {
+    display: inline-block !important;
+    margin-left: auto !important;
+    font-size: 22px !important;
+    line-height: 1 !important;
+    transition: transform .18s ease !important;
+  }
+
+  body .sidebar.top-navigation .top-nav-category[aria-expanded="true"] .mobile-category-caret {
+    transform: rotate(90deg) !important;
+  }
+
+  body .sidebar.top-navigation .top-nav-category[aria-expanded="true"] {
+    color: var(--primary) !important;
+    background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  }
+
+  body .sidebar.top-navigation .top-nav-secondary {
+    margin-top: 4px !important;
+    padding-top: 4px !important;
+    border-top: 0 !important;
+  }
+
+  body .sidebar.top-navigation .top-nav-submenu {
+    gap: 3px !important;
+  }
+
+  body .sidebar.top-navigation .sidebar-sub-item {
+    min-height: 42px !important;
+    padding-left: 14px !important;
+  }
+}
