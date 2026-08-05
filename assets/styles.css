@@ -7348,3 +7348,81 @@ body .app-shell[data-auth-protected].is-hidden {
     min-width: 590px !important;
   }
 }
+
+
+/* ===== 2026-08-06 手機目前分類快速功能列 =====
+   目前分類的所有分頁固定顯示於標題列下方，可水平滑動切換。 */
+.mobile-quick-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body .sidebar.top-navigation:has(.mobile-quick-nav) {
+    height: 102px !important;
+    min-height: 102px !important;
+    max-height: 102px !important;
+    flex-direction: column !important;
+  }
+
+  body .sidebar.top-navigation .sidebar-header {
+    flex: 0 0 56px !important;
+    min-height: 56px !important;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav {
+    display: flex !important;
+    flex: 0 0 46px !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 46px !important;
+    padding: 4px 8px 6px !important;
+    gap: 5px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    background: var(--sidebar) !important;
+    border-top: 1px solid var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav .sidebar-sub-item {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    min-height: 34px !important;
+    padding: 6px 9px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav .sidebar-sub-item.is-active {
+    color: var(--primary) !important;
+    background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+    box-shadow: inset 0 -2px 0 var(--primary) !important;
+  }
+
+  body .sidebar.top-navigation:has(.mobile-quick-nav) .menu {
+    top: 102px !important;
+    height: calc(100dvh - 102px) !important;
+  }
+
+  body .sidebar.top-navigation:has(.mobile-quick-nav) + .sidebar-overlay.is-visible,
+  body:has(.sidebar.top-navigation .mobile-quick-nav) .sidebar-overlay.is-visible {
+    inset: 102px 0 0 !important;
+  }
+
+  body .app-shell:has(.mobile-quick-nav) > .main,
+  body .app-shell:has(.mobile-quick-nav) > .main-content {
+    min-height: calc(100dvh - 102px) !important;
+  }
+}
