@@ -6009,3 +6009,55 @@ body:has(.sidebar-toggle-btn.is-visible)
   line-height: 1.5 !important;
   resize: vertical !important;
 }
+
+
+/* Handover view: readable cards and compact empty attachments */
+.handover-page .ragic-view-grid {
+  grid-auto-rows: minmax(78px, auto);
+  align-items: stretch;
+}
+.handover-page .ragic-view-field {
+  min-height: 78px;
+  height: auto !important;
+  overflow: visible;
+}
+.handover-page .ragic-view-field .ragic-view-value,
+.handover-page .ragic-view-field .field-value {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  text-overflow: clip;
+}
+.handover-page .ragic-view-field-textarea {
+  min-height: 176px;
+}
+.handover-page .ragic-view-field-textarea .ragic-view-value,
+.handover-page .ragic-view-field-textarea .field-value {
+  max-height: 132px;
+  overflow-y: auto;
+}
+.handover-page .ragic-view-field-image,
+.handover-page .ragic-view-field-file {
+  min-height: 96px;
+}
+.handover-page .ragic-view-field-image:has(.ragic-view-empty),
+.handover-page .ragic-view-field-file:has(.ragic-view-empty) {
+  min-height: 78px;
+}
+.handover-page .ragic-view-label {
+  margin-bottom: 6px;
+}
+.handover-page .ragic-view-value {
+  font-size: 14px;
+  line-height: 1.5;
+}
+@media (max-width: 900px) {
+  .handover-page .ragic-view-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .handover-page .ragic-view-grid {
+    grid-template-columns: 1fr;
+  }
+}
