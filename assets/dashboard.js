@@ -1,4 +1,8 @@
-const dashboardDb = window.omniplayDb;
+const dashboardAuthenticated = Boolean(
+  sessionStorage.getItem('omniplayStaffCode') &&
+  sessionStorage.getItem('omniplayStaffName')
+);
+const dashboardDb = dashboardAuthenticated ? window.omniplayDb : null;
 const dashboardCollections = {
   staff: dashboardDb?.collection('staff'),
   leave: dashboardDb?.collection('leave'),
@@ -699,12 +703,14 @@ document.querySelectorAll('.shift-btn').forEach((button) => {
     updateDashboard();
   });
 });
-subscribeDashboard();
-loadDashboardExternalLeave();
-window.setInterval(loadDashboardExternalLeave, 60 * 1000);
-window.addEventListener('focus', loadDashboardExternalLeave);
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') loadDashboardExternalLeave();
-});
+if (dashboardAuthenticated) {
+  subscribeDashboard();
+  loadDashboardExternalLeave();
+  window.setInterval(loadDashboardExternalLeave, 60 * 1000);
+  window.addEventListener('focus', loadDashboardExternalLeave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadDashboardExternalLeave();
+  });
+}
 window.getShiftRange = getShiftRange;
 window.getDefaultShift = getDefaultShift;
