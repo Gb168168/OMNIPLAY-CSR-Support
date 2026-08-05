@@ -367,7 +367,11 @@ const setAppVisibility = () => {
   const loggedIn = isLoggedIn();
   if (isIndexPage) {
     loginView?.classList.toggle('is-hidden', loggedIn);
-    appShell?.classList.toggle('is-hidden', !loggedIn);
+    if (appShell) {
+      appShell.hidden = !loggedIn;
+      appShell.setAttribute('aria-hidden', String(!loggedIn));
+      appShell.classList.toggle('is-hidden', !loggedIn);
+    }
   } else if (!loggedIn) {
     window.location.href = loginPath;
   }
