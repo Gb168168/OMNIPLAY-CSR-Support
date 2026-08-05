@@ -3945,7 +3945,7 @@ const addDesignerPairFields = (pairType) => {
       );
     }
 
-    RAGIC_STATE.schema = normalizeSchema(loadedSchema);
+    RAGIC_STATE.schema = normalizeSchema(mergeLogConfigFields(loadedSchema, config));
   }
 
     renderHeader();
