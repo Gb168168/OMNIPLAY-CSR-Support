@@ -6808,3 +6808,10 @@ body:has(.sidebar-toggle-btn.is-visible)
     max-height: none !important;
   }
 }
+
+
+/* Authentication gate must override every legacy/mobile app-shell display rule. */
+body .app-shell[data-auth-protected][hidden],
+body .app-shell[data-auth-protected].is-hidden {
+  display: none !important;
+}
