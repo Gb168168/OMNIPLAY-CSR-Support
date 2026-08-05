@@ -49,10 +49,14 @@ const renderSidebarLink = (item) => {
 const renderSidebar = () => {
   if (!sidebar) return;
   const activeGroup = currentSidebarGroup();
+  const activePage = sidebarItems[0].href === 'index.html' && isIndexPage
+    ? sidebarItems[0]
+    : activeGroup?.items.find((item) => isActiveSidebarHref(item.href));
   sidebar.className = 'sidebar top-navigation';
   sidebar.innerHTML = `
     <div class="sidebar-header">
       <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
+      <strong class="mobile-current-page" aria-current="page">${activePage?.icon || '🏠'} ${activePage?.label || '首頁'}</strong>
       <button class="toggle-btn mobile-menu-btn" id="sidebarToggle" type="button" aria-label="展開功能表">☰</button>
     </div>
     <nav class="menu" aria-label="主功能表">
