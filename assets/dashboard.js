@@ -24,8 +24,8 @@ const dashboardState = {
   schedules: [],
   meetings: [],
   selectedShift: getDefaultShift(),
-  selectedTodoType: 'all',
-  selectedTodoEvent: 'all'
+  selectedTodoSection: 'all',
+  selectedTodoType: 'all'
 };
 const todoList = document.querySelector('#dashboardTodoList');
 const setText = (selector, value) => { const el = document.querySelector(selector); if (el) el.textContent = String(value); };
@@ -427,65 +427,60 @@ const reminderItems = (
     });
 };
 
+const todoSectionDefinitions = [
+  { key: 'home', label: '🏠首頁', types: ['排程'] },
+  { key: 'service', label: '👥客服內部', types: ['對接追蹤', '交接'] },
+  { key: 'work', label: '🗂️作業管理', types: ['日誌 NEW', '提報'] },
+  { key: 'meeting', label: '🗂️會議歷程', types: ['會議'] },
+  { key: 'database', label: '🧠資料庫', types: ['知識庫', 'AI 資料庫'] }
+];
+const todoSectionByKey = (key) => todoSectionDefinitions.find((section) => section.key === key);
+
 const renderTodoFilters = (items) => {
   const container = document.querySelector('#dashboardTodoFilters');
   if (!container) return;
 
-  const counts = items.reduce((result, item) => {
-    result[item.type] = (result[item.type] || 0) + 1;
-    return result;
-  }, {});
-
-  const types = ['日誌 NEW', '交接', '提報', '對接追蹤', '會議', '排程']
-    .filter((type) => counts[type] > 0);
-
-  if (!types.length) {
+  if (!items.length) {
     container.innerHTML = '';
     container.hidden = true;
+    dashboardState.selectedTodoSection = 'all';
     dashboardState.selectedTodoType = 'all';
     return;
   }
 
   container.hidden = false;
-
-  const validTypes = ['all', ...types];
-  if (!validTypes.includes(dashboardState.selectedTodoType)) {
+  const sectionButtons = todoSectionDefinitions.map((section) => ({
+    ...section,
+    count: items.filter((item) => section.types.includes(item.type)).length
+  })).filter((section) => section.count > 0);
+  const createdCount = items.filter((item) => item.isCreated).length;
+  const updatedCount = items.filter((item) => item.isUpdated).length;
+  const validSections = ['all', ...sectionButtons.map((section) => section.key), ...(createdCount ? ['created'] : []), ...(updatedCount ? ['updated'] : [])];
+  if (!validSections.includes(dashboardState.selectedTodoSection)) {
+    dashboardState.selectedTodoSection = 'all';
     dashboardState.selectedTodoType = 'all';
   }
 
-  const buttons = [];
-
-  if (types.length > 1) {
-    buttons.push(`
+  const buttons = [
+    { key: 'all', label: '全部', count: items.length },
+    ...sectionButtons,
+    ...(createdCount ? [{ key: 'created', label: '建立', count: createdCount }] : []),
+    ...(updatedCount ? [{ key: 'updated', label: '更新', count: updatedCount }] : [])
+  ];
+  container.innerHTML = buttons.map((button) => `
       <button
         type="button"
-        class="todo-filter-btn ${dashboardState.selectedTodoType === 'all' ? 'active' : ''}"
-        data-todo-type="all"
+        class="todo-filter-btn ${dashboardState.selectedTodoSection === button.key ? 'active' : ''}"
+        data-todo-section="${escapeDashboardHtml(button.key)}"
       >
-        全部 (${items.length})
+        ${escapeDashboardHtml(button.label)} (${button.count})
       </button>
-    `);
-  } else {
-    dashboardState.selectedTodoType = types[0];
-  }
-
-  types.forEach((type) => {
-    buttons.push(`
-      <button
-        type="button"
-        class="todo-filter-btn ${dashboardState.selectedTodoType === type ? 'active' : ''}"
-        data-todo-type="${escapeDashboardHtml(type)}"
-      >
-        ${escapeDashboardHtml(type)} (${counts[type]})
-      </button>
-    `);
-  });
-
-  container.innerHTML = buttons.join('');
+    `).join('');
 
   container.querySelectorAll('.todo-filter-btn').forEach((button) => {
     button.addEventListener('click', () => {
-      dashboardState.selectedTodoType = button.dataset.todoType || 'all';
+      dashboardState.selectedTodoSection = button.dataset.todoSection || 'all';
+      dashboardState.selectedTodoType = 'all';
       renderTodoList();
     });
   });
@@ -494,46 +489,36 @@ const renderTodoFilters = (items) => {
 const renderTodoEventFilters = (items) => {
   const container = document.querySelector('#todoEventFilter');
   if (!container) return;
-
-  const counts = {
-    created: items.filter(item => item.isCreated).length,
-    updated: items.filter(item => item.isUpdated).length,
-    reminder: items.filter(item => item.reminderEnabled).length
-  };
-
-  const events = [];
-
-  if (counts.created) events.push({ key: 'created', text: `🆕 建立 (${counts.created})` });
-  if (counts.updated) events.push({ key: 'updated', text: `✏️ 更新 (${counts.updated})` });
-  if (counts.reminder) events.push({ key: 'reminder', text: `⏰ 提醒 (${counts.reminder})` });
-
-  if (!events.length) {
+  const section = todoSectionByKey(dashboardState.selectedTodoSection);
+  if (!section) {
     container.hidden = true;
     container.innerHTML = '';
-    dashboardState.selectedTodoEvent = 'all';
     return;
   }
-
+  const typeButtons = section.types.map((type) => ({
+    type,
+    count: items.filter((item) => item.type === type).length
+  })).filter((button) => button.count > 0);
+  if (!typeButtons.length) {
+    container.hidden = true;
+    container.innerHTML = '';
+    dashboardState.selectedTodoType = 'all';
+    return;
+  }
+  if (!['all', ...typeButtons.map((button) => button.type)].includes(dashboardState.selectedTodoType)) {
+    dashboardState.selectedTodoType = 'all';
+  }
   container.hidden = false;
-
-  container.innerHTML = `
-    <button
-      class="todo-filter-btn ${dashboardState.selectedTodoEvent === 'all' ? 'active' : ''}"
-      data-event="all">
-      全部
-    </button>
-    ${events.map(event => `
+  container.innerHTML = typeButtons.map((button) => `
       <button
-        class="todo-filter-btn ${dashboardState.selectedTodoEvent === event.key ? 'active' : ''}"
-        data-event="${event.key}">
-        ${event.text}
+        class="todo-filter-btn ${dashboardState.selectedTodoType === button.type ? 'active' : ''}"
+        data-todo-type="${escapeDashboardHtml(button.type)}">
+        ${escapeDashboardHtml(button.type)} (${button.count})
       </button>
-    `).join('')}
-  `;
-
+    `).join('');
   container.querySelectorAll('button').forEach(button => {
     button.onclick = () => {
-      dashboardState.selectedTodoEvent = button.dataset.event;
+      dashboardState.selectedTodoType = button.dataset.todoType || 'all';
       renderTodoList();
     };
   });
@@ -609,25 +594,18 @@ const renderTodoList = () => {
   
   let filteredItems = items;
 
-  // 第一層：模組分類
-    if (dashboardState.selectedTodoType !== 'all') {
-       filteredItems = filteredItems.filter(
-       (item) => item.type === dashboardState.selectedTodoType
-    );
+  // 第一層：區域或事件分類
+  const selectedSection = todoSectionByKey(dashboardState.selectedTodoSection);
+  if (selectedSection) {
+    filteredItems = filteredItems.filter((item) => selectedSection.types.includes(item.type));
   }
+  if (dashboardState.selectedTodoSection === 'created') filteredItems = filteredItems.filter((item) => item.isCreated);
+  if (dashboardState.selectedTodoSection === 'updated') filteredItems = filteredItems.filter((item) => item.isUpdated);
 
-  // 第二層：事件分類
-    if (dashboardState.selectedTodoEvent === 'created') {
-      filteredItems = filteredItems.filter((item) => item.isCreated);
-    }
-
-    if (dashboardState.selectedTodoEvent === 'updated') {
-      filteredItems = filteredItems.filter((item) => item.isUpdated);
-    }
-
-    if (dashboardState.selectedTodoEvent === 'reminder') {
-      filteredItems = filteredItems.filter((item) => item.reminderEnabled);
-    }
+  // 第二層：所選區域內的分頁
+  if (selectedSection && dashboardState.selectedTodoType !== 'all') {
+    filteredItems = filteredItems.filter((item) => item.type === dashboardState.selectedTodoType);
+  }
     const renderTrackingDetails = (item) => {
     const details = item.details;
 

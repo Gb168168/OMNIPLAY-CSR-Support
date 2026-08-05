@@ -20,11 +20,19 @@
     .dashboard-todo-title-row h2 {
       margin: 0;
     }
-    .todo-category-filter {
+    .todo-category-filter,
+    .todo-event-filter {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
       gap: 6px;
+    }
+    .todo-event-filter {
+      flex-basis: 100%;
+      padding-left: 0;
+    }
+    .todo-event-filter[hidden] {
+      display: none;
     }
     .todo-category-btn {
       appearance: none;
@@ -153,7 +161,7 @@
               <div class="dashboard-todo-title-row">
                 <h2>今日事項</h2>
                 <div class="todo-category-filter" id="dashboardTodoFilters" role="group" aria-label="今日事項分類篩選" hidden></div>
-                <div class="todo-event-filter" id="todoEventFilter" role="group" aria-label="今天更新事件篩選" hiddn></div>
+                <div class="todo-event-filter" id="todoEventFilter" role="group" aria-label="今日事項分頁篩選" hidden></div>
               </div>
               <p>顯示當班建立、更新及當日提醒的所有事項。</p>
             </div>
@@ -192,6 +200,6 @@
   </script>
   <script src="assets/reminders.js?v=20260805-background-push1"></script>
   <script src="assets/app.js?v=20260731-topnav1"></script>
-  <script src="assets/dashboard.js?v=20260805-today-schedule1"></script>
+  <script src="assets/dashboard.js?v=20260805-section-filters1"></script>
 </body>
 </html>
