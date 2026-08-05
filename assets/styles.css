@@ -6860,14 +6860,16 @@ body .app-shell[data-auth-protected].is-hidden {
 
 /* ===== 2026-08-06 手機側欄分類展開 ===== */
 @media (max-width: 768px) {
-  body .sidebar.top-navigation .sidebar-group {
+  body .sidebar.top-navigation .sidebar-group,
+  body .sidebar.top-navigation .sidebar-group.is-current-group {
     display: none !important;
     margin: 4px 0 8px !important;
     padding: 4px 0 4px 14px !important;
     border-left: 2px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
   }
 
-  body .sidebar.top-navigation .sidebar-group.is-mobile-expanded {
+  body .sidebar.top-navigation .sidebar-group.is-mobile-expanded,
+  body .sidebar.top-navigation .sidebar-group.is-current-group.is-mobile-expanded {
     display: block !important;
   }
 
