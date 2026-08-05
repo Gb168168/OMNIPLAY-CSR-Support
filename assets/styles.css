@@ -6061,3 +6061,33 @@ body:has(.sidebar-toggle-btn.is-visible)
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Handover fixed row tracks: prevent saved inline heights from overlapping rows */
+.handover-page .ragic-view-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-rows: 78px 78px 78px 176px 96px !important;
+  grid-auto-rows: minmax(78px, auto) !important;
+  column-gap: 12px !important;
+  row-gap: 12px !important;
+  align-items: stretch !important;
+  align-content: start !important;
+}
+.handover-page .ragic-view-grid > .ragic-view-field {
+  box-sizing: border-box !important;
+  align-self: stretch !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+.handover-page .ragic-view-grid > .ragic-view-field-textarea {
+  height: 176px !important;
+}
+.handover-page .ragic-view-grid > .ragic-view-field-image,
+.handover-page .ragic-view-grid > .ragic-view-field-file {
+  height: 96px !important;
+}
+@media (max-width: 900px) {
+  .handover-page .ragic-view-grid {
+    min-width: 920px;
+  }
+}
