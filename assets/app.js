@@ -59,6 +59,9 @@ const renderSidebar = () => {
       <strong class="mobile-current-page" aria-current="page">${activePage?.icon || '🏠'} ${activePage?.label || '首頁'}</strong>
       <button class="toggle-btn mobile-menu-btn" id="sidebarToggle" type="button" aria-label="展開功能表">☰</button>
     </div>
+    ${activeGroup ? `<nav class="mobile-quick-nav" aria-label="${activeGroup.title}快速功能列">
+      ${activeGroup.items.map(renderSidebarLink).join('')}
+    </nav>` : ''}
     <nav class="menu" aria-label="主功能表">
       <div class="top-nav-primary-links">
         ${renderSidebarLink(sidebarItems[0])}
