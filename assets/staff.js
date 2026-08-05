@@ -49,13 +49,18 @@ const fixedStaffOrder = ['中魁', '佳臻', '晴心', '澄希', '茗雅'];
 const fixedStaffOrderMap = fixedStaffOrder.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
 const getDefaultSortOrder = (name) => fixedStaffOrderMap[name] ?? 999;
 const maskPassword = (password = '') => password ? '**' : '—';
+const canViewStaffSecrets = () => window.isOmniplayAdmin?.() === true;
 
 const staffPermission = () => window.getPagePermission?.('staff') || { view: false, edit: false, delete: false, design: false };
 const canEditStaff = () => window.isOmniplayAdmin?.() || staffPermission().edit === true;
 const canDeleteStaff = () => window.isOmniplayAdmin?.() || staffPermission().delete === true;
 const applyStaffPermissionUi = () => {
   const editable = canEditStaff();
-  if (addButton) addButton.hidden = !editable;
+  const secretVisible = canViewStaffSecrets();
+  document.querySelectorAll('[data-omniplay-secret]').forEach((element) => {
+    element.hidden = !secretVisible;
+  });
+  if (addButton) addButton.hidden = !editable || !secretVisible;
   if (!editable && staffModal?.classList.contains('is-open')) toggleModal(false);
 };
 
@@ -67,6 +72,7 @@ const renderStaff = (staffList) => {
   applyStaffPermissionUi();
   const editable = canEditStaff();
   const deletable = canDeleteStaff();
+  const secretVisible = canViewStaffSecrets();
   staffTableBody.innerHTML = staffList.map((staff) => {
     const passwordVisible = visiblePasswordRows.has(staff.id);
     const passwordText = passwordVisible ? staff.password : maskPassword(staff.password);
@@ -77,12 +83,12 @@ const renderStaff = (staffList) => {
         <td>${escapeHtml(staff.code)}</td>
         <td>${escapeHtml(staff.name)}</td>
         <td>${escapeHtml(staff.account)}</td>
-        <td>
+        ${secretVisible ? `<td>
           <div class="password-cell">
             <span>${escapeHtml(passwordText)}</span>
             <button class="icon-button" type="button" data-action="toggle-password" data-id="${staff.id}" aria-label="切換密碼顯示">${passwordVisible ? '🙈' : '👁️'}</button>
           </div>
-        </td>
+        </td>` : ''}
         <td>${escapeHtml(staff.shift || '早班')}</td>
         <td><span class="status-badge ${staff.leaveVisible === false ? 'is-disabled' : 'is-enabled'}">${staff.leaveVisible === false ? '不顯示' : '顯示'}</span></td>
         <td><span class="status-badge ${staff.status === '停用' ? 'is-disabled' : 'is-enabled'}">${escapeHtml(staff.status || '啟用')}</span></td>
@@ -99,7 +105,7 @@ const renderStaff = (staffList) => {
 };
 
 const openCreateModal = () => {
-  if (!canEditStaff()) return;
+  if (!canEditStaff() || !canViewStaffSecrets()) return;
   editingStaffId = null;
   modalTitle.textContent = '新增人員';
   submitButton.textContent = '儲存人員';
@@ -118,7 +124,7 @@ const openEditModal = (staffId) => {
   document.querySelector('#staffCode').value = staff.code || '';
   document.querySelector('#staffName').value = staff.name || '';
   document.querySelector('#staffAccount').value = staff.account || '';
-  document.querySelector('#staffPassword').value = staff.password || '';
+  if (canViewStaffSecrets()) document.querySelector('#staffPassword').value = staff.password || '';
   if (staffShiftInput) staffShiftInput.value = staff.shift || '早班';
   if (staffLeaveVisibleInput) staffLeaveVisibleInput.checked = staff.leaveVisible !== false;
   toggleModal(true);
@@ -146,11 +152,11 @@ staffForm?.addEventListener('submit', async (event) => {
   if (!canEditStaff()) return setMessage('您沒有編輯人員管理的權限。');
   if (!staffCollection) return setMessage('Firebase 尚未完成初始化，無法儲存資料。');
 
+  const currentStaff = editingStaffId ? staffCache.find((item) => item.id === editingStaffId) : null;
   const payload = {
     code: document.querySelector('#staffCode').value.trim(),
     name: document.querySelector('#staffName').value.trim(),
     account: document.querySelector('#staffAccount').value.trim(),
-    password: document.querySelector('#staffPassword').value.trim(),
     shift: staffShiftInput?.value || '早班',
     leaveVisible: staffLeaveVisibleInput?.checked !== false,
     sortOrder: getDefaultSortOrder(document.querySelector('#staffName').value.trim()),
@@ -158,7 +164,9 @@ staffForm?.addEventListener('submit', async (event) => {
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
-  if (!payload.code || !payload.name || !payload.account || !payload.password) {
+  if (canViewStaffSecrets()) payload.password = document.querySelector('#staffPassword').value.trim();
+
+  if (!payload.code || !payload.name || !payload.account || (canViewStaffSecrets() && !payload.password)) {
     setMessage('請完整填寫編號、姓名、帳號與密碼。');
     return;
   }
@@ -168,7 +176,6 @@ staffForm?.addEventListener('submit', async (event) => {
 
   try {
     if (editingStaffId) {
-      const currentStaff = staffCache.find((item) => item.id === editingStaffId);
       await staffCollection.doc(editingStaffId).update({
         ...payload,
         status: isProtectedOmniplay(currentStaff) ? '啟用' : (currentStaff?.status || '啟用'),
@@ -196,6 +203,7 @@ staffTableBody?.addEventListener('click', async (event) => {
   const { action, id } = button.dataset;
 
   if (action === 'toggle-password') {
+    if (!canViewStaffSecrets()) return;
     visiblePasswordRows.has(id) ? visiblePasswordRows.delete(id) : visiblePasswordRows.add(id);
     renderStaff(staffCache);
     return;
