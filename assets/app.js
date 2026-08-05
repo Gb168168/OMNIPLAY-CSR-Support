@@ -137,6 +137,8 @@ const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
 const closeMobileSidebar = () => {
   sidebar?.classList.remove('is-open');
   sidebarOverlay?.classList.remove('is-visible');
+  document.documentElement.classList.remove('mobile-menu-open');
+  sidebarToggle?.setAttribute('aria-label', '開啟左側功能表');
   sidebarToggle?.setAttribute('aria-expanded', 'false');
   sidebarCollapsedToggle.classList.add('is-visible');
 };
@@ -144,6 +146,7 @@ const openMobileSidebar = () => {
   sidebar?.classList.remove('is-collapsed');
   sidebar?.classList.add('is-open');
   sidebarOverlay?.classList.add('is-visible');
+  document.documentElement.classList.add('mobile-menu-open');
   sidebarToggle?.setAttribute('aria-label', '關閉左側功能表');
   sidebarToggle?.setAttribute('aria-expanded', 'true');
   sidebarCollapsedToggle.classList.remove('is-visible');
@@ -428,13 +431,19 @@ enhanceSidebarNavigation();
 sidebarToggle?.addEventListener('click', toggleSidebar);
 sidebarOverlay?.addEventListener('click', closeMobileSidebar);
 window.addEventListener('resize', () => applySidebarState(getStoredSidebarCollapsed()));
-sidebar?.querySelectorAll('.home-link, .sidebar-sub-item').forEach((link) => {
+sidebar?.querySelectorAll('.home-link, .top-nav-category, .sidebar-sub-item').forEach((link) => {
   link.addEventListener('click', () => {
     if (isMobileViewport()) closeMobileSidebar();
   });
 });
 
 sidebarCollapsedToggle.addEventListener('click', toggleSidebar);
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && isMobileViewport() && sidebar?.classList.contains('is-open')) {
+    closeMobileSidebar();
+    sidebarToggle?.focus();
+  }
+});
   
 setupForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
