@@ -6815,3 +6815,44 @@ body .app-shell[data-auth-protected][hidden],
 body .app-shell[data-auth-protected].is-hidden {
   display: none !important;
 }
+
+
+/* ===== 2026-08-06 手機抽屜觸控修正 =====
+   遮罩必須位於頁面內容之上、導覽抽屜之下；否則抽屜看得到但所有觸控會被遮罩攔截。 */
+@media (max-width: 768px) {
+  html.mobile-menu-open,
+  html.mobile-menu-open body {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+
+  body .sidebar.top-navigation {
+    z-index: 1100 !important;
+  }
+
+  body .sidebar.top-navigation .sidebar-header {
+    position: relative !important;
+    z-index: 1102 !important;
+  }
+
+  body .sidebar.top-navigation .menu {
+    z-index: 1101 !important;
+    pointer-events: auto !important;
+    touch-action: pan-y;
+  }
+
+  body .sidebar-overlay.is-visible {
+    z-index: 1090 !important;
+    pointer-events: auto !important;
+  }
+
+  body .sidebar.top-navigation .home-link,
+  body .sidebar.top-navigation .top-nav-category,
+  body .sidebar.top-navigation .sidebar-sub-item {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(59, 130, 246, .14);
+  }
+}
