@@ -6147,7 +6147,7 @@ body:has(.sidebar-toggle-btn.is-visible)
 }
 
 /* Schedule: true phone layout instead of squeezing the desktop toolbar. */
-@media (max-width: 720px) {
+@media (max-width: 1100px) {
   .main:has(.schedule-panel) {
     padding: 8px !important;
   }
