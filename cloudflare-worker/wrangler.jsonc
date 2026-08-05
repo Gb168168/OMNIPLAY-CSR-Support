@@ -1,1 +1,13 @@
-{"$schema":"node_modules/wrangler/config-schema.json","name":"omniplay-conversation-inbox","main":"src/worker.js","compatibility_date":"2026-07-01","workers_dev":true,"observability":{"enabled":true}}
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "omniplay-conversation-inbox",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-07-01",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    "REMINDER_SOURCE": "firestore",
+    "FIREBASE_PROJECT_ID": "omniplay-csr-support"
+  }
+}
