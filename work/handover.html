@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>交接｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260805-handover-no-overlap3" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260805-handover-no-overlap4" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -70,7 +70,7 @@
         { key: 'department', label: '部門', type: 'text', formRow: 1, formCol: 3 },
         { key: 'category', label: '分類', type: 'text', formRow: 1, formCol: 4 },
         { key: 'status', label: '狀態', type: 'select', options: ['已完成', '處理中', '必看⚠️'], formRow: 2, formCol: 2 },
-        { key: 'item', label: '交接事項', type: 'textarea', rows: 5, formRow: 4, formCol: 1, formColSpan: 2 },
+        { key: 'item', label: '交接事項', type: 'textarea', rows: 6, formRow: 4, formCol: 1, formColSpan: 2 },
         { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 3, formColSpan: 2 },
         { key: 'publisher', label: '發佈者', type: 'text', formRow: 2, formCol: 1 },
         { key: 'finisher', label: '完成者', type: 'text', formRow: 2, formCol: 3 },
@@ -97,13 +97,14 @@
           finisher: { row: 2, col: 3 },
           completed_at: { row: 2, col: 4 },
           serial: { row: 3, col: 1 },
-          updated_time: { row: 3, col: 2 },
-          reminder_at: { row: 3, col: 3 },
-          reminder_enabled: { row: 3, col: 4 },
-          item: { row: 4, col: 1, colSpan: 2, height: 176 },
-          note: { row: 4, col: 3, colSpan: 2, height: 176 },
-          image: { row: 5, col: 1, colSpan: 2, height: 96 },
-          attachment: { row: 5, col: 3, colSpan: 2, height: 96 }
+          link: { row: 3, col: 2 },
+          updated_time: { row: 3, col: 3 },
+          reminder_at: { row: 3, col: 4 },
+          reminder_enabled: { row: 4, col: 4 },
+          item: { row: 5, col: 1, colSpan: 2, height: 176 },
+          note: { row: 5, col: 3, colSpan: 2, height: 176 },
+          image: { row: 6, col: 1, colSpan: 2, height: 96 },
+          attachment: { row: 6, col: 3, colSpan: 2, height: 96 }
         }
       },
       listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'completed_at', 'image', 'attachment', 'updated_time', 'serial']
