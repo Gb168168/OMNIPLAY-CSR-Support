@@ -22,6 +22,7 @@
     tracking: { title: '對接追蹤提醒', collection: 'tracking', path: 'work/tracking.html', text: (r) => detailText(r, 'log') }
   };
   const ROOT = '/OMNIPLAY-CSR-Support/';
+  const PUSH_API = 'https://omniplay-conversation-inbox.omniplaycsr168168.workers.dev/api/reminder-tokens';
   const state = { timers: new Map(), ringing: null, audio: null };
   const db = window.omniplayDb;
   const moduleName = () => document.body.dataset.reminderModule || '';
@@ -138,7 +139,14 @@
       if (!vapidKey) return;
       const registration = await navigator.serviceWorker.ready;
       const token = await firebase.messaging().getToken({ vapidKey, serviceWorkerRegistration: registration });
-      if (token) await db.collection('notification_tokens').doc(token).set({ token, module: moduleName(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent }, { merge: true });
+      if (token) {
+        const response = await fetch(PUSH_API, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token, module: moduleName(), userAgent: navigator.userAgent })
+        });
+        if (!response.ok) throw new Error(`推播裝置註冊失敗 (${response.status})`);
+      }
     } catch (error) { console.warn('背景推播尚未完成設定', error); }
   };
   const init = () => {

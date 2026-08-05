@@ -5,7 +5,7 @@ if ('serviceWorker' in navigator) {
 // 所有客服系統頁面都載入共用提醒監聽器。
 if (!document.querySelector('script[data-csr-reminders]')) {
   const reminderScript = document.createElement('script');
-  reminderScript.src = `${window.location.pathname.includes('/work/') || window.location.pathname.includes('/service/') || window.location.pathname.includes('/meeting/') || window.location.pathname.includes('/resource/') ? '../' : ''}assets/reminders.js?v=20260805-reminder-view2`;
+  reminderScript.src = `${window.location.pathname.includes('/work/') || window.location.pathname.includes('/service/') || window.location.pathname.includes('/meeting/') || window.location.pathname.includes('/resource/') ? '../' : ''}assets/reminders.js?v=20260805-background-push1`;
   reminderScript.dataset.csrReminders = 'true';
   document.head.appendChild(reminderScript);
 }
