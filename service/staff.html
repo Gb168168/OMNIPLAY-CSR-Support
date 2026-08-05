@@ -40,7 +40,7 @@
                 <th scope="col">編號</th>
                 <th scope="col">姓名</th>
                 <th scope="col">帳號</th>
-                <th scope="col">密碼</th>
+                <th scope="col" data-omniplay-secret hidden>密碼</th>
                 <th scope="col">班別</th>
                 <th scope="col">休假表顯示</th>
                 <th scope="col">狀態</th>
@@ -72,7 +72,7 @@
               <span>帳號</span>
               <input id="staffAccount" name="account" type="text" autocomplete="username" required />
             </label>
-            <label>
+            <label data-omniplay-secret hidden>
               <span>密碼</span>
               <div class="password-input">
                 <input id="staffPassword" name="password" type="password" autocomplete="new-password" required />
@@ -120,6 +120,6 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260718-38"></script>
   <script src="../assets/app.js?v=20260731-topnav1"></script>
-  <script src="../assets/staff.js?v=20260727-1"></script>
+  <script src="../assets/staff.js?v=20260805-secret-admin1"></script>
 </body>
 </html>
