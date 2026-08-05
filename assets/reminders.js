@@ -16,8 +16,10 @@
   };
   const MODULES = {
     log: { title: '日誌提醒', path: 'work/log.html', text: (r) => detailText(r, 'log') },
-    handover: { title: '交接提醒', collection: 'workHandover', path: 'work/handover.html', text: (r) => r.item || r.note || r.serial || '交接事項' },
-    report: { title: '提報提醒', path: 'work/report.html', text: (r) => detailText(r, 'report') }
+    log_new: { title: '日誌 NEW 提醒', collection: 'log_new', path: 'work/log-new.html', text: (r) => detailText(r, 'log') },
+    handover: { title: '交接提醒', collection: 'handover', path: 'work/handover.html', text: (r) => r.item || r.note || r.serial || '交接事項' },
+    report: { title: '提報提醒', path: 'work/report.html', text: (r) => detailText(r, 'report') },
+    tracking: { title: '對接追蹤提醒', collection: 'tracking', path: 'work/tracking.html', text: (r) => detailText(r, 'log') }
   };
   const ROOT = '/OMNIPLAY-CSR-Support/';
   const state = { timers: new Map(), ringing: null, audio: null };
@@ -33,48 +35,8 @@
   const hasFired = (module, id, at) => localStorage.getItem(firedKey(module, id, at)) === '1';
   const markFired = (module, id, at) => localStorage.setItem(firedKey(module, id, at), '1');
 
-  const placeReminderButton = () => {
-    const button = document.querySelector('#enableReminderButton');
-    const topbar = document.querySelector('.topbar');
-    if (!button || !topbar) return;
-    let actions = topbar.querySelector('.topbar-actions');
-    if (!actions) {
-      actions = document.createElement('div');
-      actions.className = 'topbar-actions';
-      topbar.appendChild(actions);
-    }
-    let controls = actions.querySelector(':scope > .topbar-controls');
-    if (!controls) {
-      controls = document.createElement('div');
-      controls.className = 'topbar-controls';
-      actions.prepend(controls);
-    }
-    const userPill = topbar.querySelector('.user-pill');
-    if (userPill && userPill.parentElement !== actions) actions.appendChild(userPill);
-    const designButton = [...topbar.querySelectorAll('#designTableButton, #designMeetingTableButton')]
-      .find((item) => !item.hidden && getComputedStyle(item).display !== 'none');
-    if (designButton && designButton.parentElement !== controls) controls.prepend(designButton);
-    if (button.parentElement !== controls) controls.appendChild(button);
-    if (designButton && designButton.nextElementSibling !== button) designButton.after(button);
-    if (!designButton && controls.firstElementChild !== button) controls.prepend(button);
-  };
-
   const ensureUi = () => {
-    if (!document.querySelector('#csrReminderPositionStyles')) {
-      const style = document.createElement('style');
-      style.id = 'csrReminderPositionStyles';
-      style.textContent = '.topbar-controls{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}.topbar-controls .reminder-enable-button{white-space:nowrap}';
-      document.head.appendChild(style);
-    }
-    if (!document.querySelector('#enableReminderButton')) {
-      const button = document.createElement('button');
-      button.id = 'enableReminderButton'; button.className = 'secondary reminder-enable-button'; button.type = 'button';
-      button.textContent = ('Notification' in window && Notification.permission === 'granted') ? '🔔 提醒已啟用' : '🔕 啟用提醒';
-      const actions = document.querySelector('.topbar-actions');
-      if (actions) actions.prepend(button); else document.querySelector('.topbar .user-pill')?.before(button);
-      button.addEventListener('click', enableNotifications);
-    }
-    placeReminderButton();
+    document.querySelector('#enableReminderButton')?.remove();
     if (!document.querySelector('#reminderAlarmModal')) {
       document.body.insertAdjacentHTML('beforeend', `<div class="reminder-alarm" id="reminderAlarmModal" hidden><div class="reminder-alarm-card" role="alertdialog" aria-modal="true"><div class="reminder-alarm-icon">⏰</div><h2 id="reminderAlarmTitle">提醒時間到了</h2><p id="reminderAlarmText"></p><div class="reminder-alarm-actions"><button class="secondary" id="reminderSnoozeButton" type="button">稍後 5 分鐘</button><button class="primary" id="reminderStopButton" type="button">停止鈴聲</button></div></div></div>`);
       document.querySelector('#reminderStopButton').addEventListener('click', stopAlarm);
@@ -106,28 +68,69 @@
     beep(); state.ringing = { module, id, record, interval: window.setInterval(beep, 1400) };
     if ('Notification' in window && Notification.permission === 'granted') {
       const registration = await navigator.serviceWorker?.ready;
-      registration?.showNotification(config.title, { body: text, icon: `${ROOT}assets/icon-192.png`, badge: `${ROOT}assets/icon-192.png`, tag: `csr-${module}-${id}`, requireInteraction: true, data: { url: `${ROOT}${config.path}?record=${encodeURIComponent(id)}` } });
+      registration?.showNotification(config.title, { body: text, icon: `${ROOT}assets/icon-192.png`, badge: `${ROOT}assets/icon-192.png`, tag: `csr-${module}-${id}`, requireInteraction: true, data: { url: `${ROOT}${config.path}?id=${encodeURIComponent(id)}` } });
     }
   };
   const schedule = (module, id, record) => {
-    const at = toDate(record.reminder_at); const enabled = record.reminder_enabled !== false && record.reminder_enabled !== 'false';
-    if (!enabled || !at || hasFired(module, id, at)) return;
-    const key = `${module}:${id}`; clearTimeout(state.timers.get(key)); const delay = at.getTime() - Date.now();
-    if (delay <= 0) { if (delay > -86400000) trigger(module, id, record, at); return; }
-    state.timers.set(key, window.setTimeout(() => trigger(module, id, record, at), Math.min(delay, 2147483647)));
+    const at = toDate(record.reminder_at);
+    const key = `${module}:${id}`;
+    clearTimeout(state.timers.get(key));
+    state.timers.delete(key);
+    if (!at || hasFired(module, id, at)) return;
+    const waitUntilDue = () => {
+      const delay = at.getTime() - Date.now();
+      if (delay <= 0) {
+        state.timers.delete(key);
+        if (delay > -86400000) trigger(module, id, record, at);
+        return;
+      }
+      state.timers.set(key, window.setTimeout(waitUntilDue, Math.min(delay, 2147483647)));
+    };
+    waitUntilDue();
   };
   const watch = () => {
     if (!db) return;
-    Object.entries(MODULES).forEach(([module, config]) => db.collection(config.collection || module).onSnapshot((snapshot) => snapshot.docs.forEach((doc) => schedule(module, doc.id, doc.data()))));
+    Object.entries(MODULES).forEach(([module, config]) => db.collection(config.collection || module).onSnapshot((snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        const key = `${module}:${change.doc.id}`;
+        if (change.type === 'removed') {
+          clearTimeout(state.timers.get(key));
+          state.timers.delete(key);
+          return;
+        }
+        schedule(module, change.doc.id, change.doc.data());
+      });
+    }, (error) => console.warn(`${module} 提醒監聽失敗`, error)));
   };
   async function enableNotifications() {
-    if (!('Notification' in window)) return alert('此瀏覽器不支援通知');
+    if (!('Notification' in window)) return;
     const permission = await Notification.requestPermission();
-    document.querySelector('#enableReminderButton').textContent = permission === 'granted' ? '🔔 提醒已啟用' : '🔕 通知未允許';
-    if (permission !== 'granted') return alert('請在瀏覽器網站設定中允許通知');
+    if (permission !== 'granted') return;
     try { const AudioContext = window.AudioContext || window.webkitAudioContext; state.audio ||= new AudioContext(); await state.audio.resume(); } catch (_) {}
     await registerPushToken();
   }
+  const unlockAudioOnFirstUse = () => {
+    const unlock = async () => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        state.audio ||= new AudioContext();
+        if (state.audio.state === 'suspended') await state.audio.resume();
+      } catch (_) {}
+    };
+    document.addEventListener('pointerdown', unlock, { once: true, capture: true });
+    document.addEventListener('keydown', unlock, { once: true, capture: true });
+  };
+  const enableNotificationsOnFirstUse = () => {
+    if (!('Notification' in window) || Notification.permission !== 'default' || sessionStorage.getItem('csr-notification-prompted') === '1') return;
+    const request = () => {
+      if (sessionStorage.getItem('csr-notification-prompted') === '1') return;
+      sessionStorage.setItem('csr-notification-prompted', '1');
+      enableNotifications();
+    };
+    document.addEventListener('pointerdown', request, { once: true, capture: true });
+    document.addEventListener('keydown', request, { once: true, capture: true });
+  };
   const registerPushToken = async () => {
     if (!window.firebase?.messaging || !db) return;
     try {
@@ -140,12 +143,10 @@
   };
   const init = () => {
     ensureUi();
-    const topbar = document.querySelector('.topbar');
-    if (topbar) new MutationObserver(placeReminderButton).observe(topbar, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
-    window.addEventListener('permissionsready', placeReminderButton);
-    window.setTimeout(placeReminderButton, 0);
     watch();
+    unlockAudioOnFirstUse();
     if ('Notification' in window && Notification.permission === 'granted') registerPushToken();
+    else enableNotificationsOnFirstUse();
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
