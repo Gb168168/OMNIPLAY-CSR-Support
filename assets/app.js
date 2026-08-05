@@ -545,3 +545,93 @@ window.permissionReady?.then(() => {
   }
 });
 checkInitialSetupRequired();
+
+// 手機版／加入主畫面的 PWA：從頁面頂端下拉並放開即可重新整理。
+const setupPullToRefresh = () => {
+  const mobilePointer = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+  if (!mobilePointer || document.querySelector('[data-pull-refresh]')) return;
+
+  const indicator = document.createElement('div');
+  indicator.dataset.pullRefresh = 'true';
+  indicator.setAttribute('role', 'status');
+  indicator.setAttribute('aria-live', 'polite');
+  Object.assign(indicator.style, {
+    position: 'fixed',
+    zIndex: '10000',
+    top: 'calc(env(safe-area-inset-top, 0px) + 10px)',
+    left: '50%',
+    minWidth: '150px',
+    padding: '10px 16px',
+    border: '1px solid rgba(148, 163, 184, .45)',
+    borderRadius: '999px',
+    background: 'rgba(255, 255, 255, .96)',
+    boxShadow: '0 8px 24px rgba(15, 23, 42, .18)',
+    color: '#334155',
+    fontSize: '14px',
+    fontWeight: '700',
+    textAlign: 'center',
+    opacity: '0',
+    pointerEvents: 'none',
+    transform: 'translate(-50%, -72px)',
+    transition: 'transform 160ms ease, opacity 160ms ease'
+  });
+  document.body.appendChild(indicator);
+
+  const threshold = 82;
+  let startY = 0;
+  let distance = 0;
+  let tracking = false;
+  let refreshing = false;
+
+  const atPageTop = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+  const resetIndicator = () => {
+    indicator.style.opacity = '0';
+    indicator.style.transform = 'translate(-50%, -72px)';
+    indicator.textContent = '';
+  };
+
+  document.addEventListener('touchstart', (event) => {
+    if (refreshing || event.touches.length !== 1 || !atPageTop()) return;
+    if (event.target.closest('input, textarea, select, [contenteditable="true"], .ragic-table-wrap')) return;
+    startY = event.touches[0].clientY;
+    distance = 0;
+    tracking = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (event) => {
+    if (!tracking || refreshing || event.touches.length !== 1) return;
+    const delta = event.touches[0].clientY - startY;
+    if (delta <= 0 || !atPageTop()) {
+      tracking = false;
+      resetIndicator();
+      return;
+    }
+    event.preventDefault();
+    distance = Math.min(120, delta * 0.55);
+    indicator.textContent = distance >= threshold ? '↻ 放開重新整理' : '↓ 下拉重新整理';
+    indicator.style.opacity = String(Math.min(1, distance / 34));
+    indicator.style.transform = `translate(-50%, ${Math.min(18, distance - 72)}px)`;
+  }, { passive: false });
+
+  document.addEventListener('touchend', async () => {
+    if (!tracking || refreshing) return;
+    tracking = false;
+    if (distance < threshold) {
+      resetIndicator();
+      return;
+    }
+    refreshing = true;
+    indicator.textContent = '↻ 正在重新整理…';
+    indicator.style.opacity = '1';
+    indicator.style.transform = 'translate(-50%, 8px)';
+    try { await navigator.serviceWorker?.getRegistration()?.then((registration) => registration?.update()); } catch (_) {}
+    window.location.reload();
+  }, { passive: true });
+
+  document.addEventListener('touchcancel', () => {
+    tracking = false;
+    if (!refreshing) resetIndicator();
+  }, { passive: true });
+};
+
+setupPullToRefresh();
