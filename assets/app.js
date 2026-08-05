@@ -191,3 +191,464 @@ applySidebarState(getStoredSidebarCollapsed());
 
 const SESSION_KEYS = {
   id: 'omniplayStaffId',
+  code: 'omniplayStaffCode',
+  name: 'omniplayStaffName',
+  account: 'omniplayStaffAccount',
+  permissions: 'omniplayPermissions'
+};
+
+const loginPath = isIndexPage ? 'index.html' : '../index.html';
+
+const getCurrentStaff = () => ({
+  id: sessionStorage.getItem(SESSION_KEYS.id),
+  code: sessionStorage.getItem(SESSION_KEYS.code),
+  name: sessionStorage.getItem(SESSION_KEYS.name),
+  account: sessionStorage.getItem(SESSION_KEYS.account)
+});
+
+const isLoggedIn = () => Boolean(getCurrentStaff().code && getCurrentStaff().name);
+
+// 閒置自動登出
+let idleTimer = null;
+const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 分鐘
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  if (!isLoggedIn()) return;
+
+  idleTimer = setTimeout(() => {
+    alert('已閒置超過 30 分鐘，系統將自動登出。');
+    logout();
+  }, IDLE_TIMEOUT);
+}
+
+['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach((event) => {
+  document.addEventListener(event, resetIdleTimer);
+});
+const isOmniplayAdmin = () => {
+  const staff = getCurrentStaff();
+  return [staff.account, staff.code, staff.name].some((value) => String(value || '').toUpperCase() === 'OMNIPLAY');
+};
+
+const PAGE_KEYS = {
+  'index.html': 'home',
+  'staff.html': 'staff',
+  'leave.html': 'leave',
+  'schedule.html': 'schedule',
+  'kpi.html': 'kpi',
+  'log.html': 'log',
+  'log-new.html': 'log',
+  'inbox.html': 'inbox',
+  'handover.html': 'handover',
+  'report.html': 'report',
+  'tracking.html': 'tracking',
+  'alert.html': 'alert',
+  'meeting.html': 'meeting',
+  'knowledge.html': 'knowledge',
+  'ai-database.html': 'ai_database'
+};
+
+const currentPageKey = () => PAGE_KEYS[window.location.pathname.split('/').pop() || 'index.html'] || 'home';
+const FULL_PERMISSION = { view: true, edit: true, delete: true, design: true };
+const EMPTY_PERMISSION = { view: false, edit: false, delete: false, design: false };
+const makeDefaultPermissions = () => ({ pages: Object.fromEntries([...new Set(Object.values(PAGE_KEYS))].map((page) => [page, { ...FULL_PERMISSION }])) });
+const getStoredPermissions = () => {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEYS.permissions) || '{}'); } catch { return {}; }
+};
+const getPagePermission = (page = currentPageKey()) => {
+  if (isOmniplayAdmin()) return { ...FULL_PERMISSION };
+  const pages = getStoredPermissions().pages;
+  if (!pages) return { ...EMPTY_PERMISSION };
+  return { ...FULL_PERMISSION, ...(pages[page] || {}) };
+};
+const canUse = (pageOrAction, maybeAction) => {
+  const page = maybeAction ? pageOrAction : currentPageKey();
+  const action = maybeAction || pageOrAction;
+  return getPagePermission(page)[action] === true;
+};
+
+
+const applyPermissionUi = () => {
+  if (!isLoggedIn()) return;
+  const permissions = getStoredPermissions();
+  const restrict = !isOmniplayAdmin() && permissions.pages;
+  document.querySelectorAll('.menu a[href]').forEach((link) => {
+    const page = PAGE_KEYS[link.getAttribute('href').split('/').pop()];
+    if (page && restrict && !getPagePermission(page).view) link.remove();
+  });
+  document.querySelectorAll('.sidebar-group').forEach((group) => {
+    if (!group.querySelector('.sidebar-sub-item')) {
+      const groupId = group.dataset.group;
+      document.querySelector(`.top-nav-category[data-group="${groupId}"]`)?.remove();
+      group.remove();
+    }
+  });
+  if (restrict && !getPagePermission().view && !isIndexPage) window.location.href = loginPath;
+};
+
+window.getPagePermission = getPagePermission;
+window.canUse = canUse;
+window.isOmniplayAdmin = isOmniplayAdmin;
+
+const loadCurrentPermissions = async () => {
+  if (!isLoggedIn() || isOmniplayAdmin()) { sessionStorage.removeItem(SESSION_KEYS.permissions); applyPermissionUi(); return; }
+  const staffId = getCurrentStaff().id;
+  const permissionsCollection = window.omniplayDb?.collection('permissions');
+  if (!staffId || !permissionsCollection) { applyPermissionUi(); return; }
+  try {
+    const doc = await permissionsCollection.doc(staffId).get();
+    if (doc.exists) sessionStorage.setItem(SESSION_KEYS.permissions, JSON.stringify(doc.data()));
+    else sessionStorage.setItem(SESSION_KEYS.permissions, JSON.stringify(makeDefaultPermissions()));
+  } catch (error) { console.error('讀取權限失敗：', error); }
+  applyPermissionUi();
+};
+
+window.loadCurrentPermissions = loadCurrentPermissions;
+window.permissionReady = loadCurrentPermissions();
+
+const showLoginMessage = (message) => {
+  if (!loginMessage) return;
+  loginMessage.textContent = message;
+  loginMessage.hidden = !message;
+};
+
+const showSetupMessage = (message, type = '') => {
+  if (!setupMessage) return;
+  setupMessage.textContent = message;
+  setupMessage.hidden = !message;
+  setupMessage.dataset.type = type;
+};
+
+const sanitizeEnglishAlphanumericInput = (input) => {
+  if (input.dataset.composing === 'true') return;
+  const sanitizedValue = input.value.replace(/[^A-Za-z0-9]/g, '');
+  if (input.value === sanitizedValue) return;
+
+  const cursorPosition = input.selectionStart || sanitizedValue.length;
+  const removedBeforeCursor = input.value.slice(0, cursorPosition).length - input.value.slice(0, cursorPosition).replace(/[^A-Za-z0-9]/g, '').length;
+  input.value = sanitizedValue;
+  input.setSelectionRange?.(Math.max(cursorPosition - removedBeforeCursor, 0), Math.max(cursorPosition - removedBeforeCursor, 0));
+};
+
+englishAlphanumericInputs.forEach((input) => {
+  input.addEventListener('compositionstart', () => { input.dataset.composing = 'true'; });
+  input.addEventListener('compositionend', () => { input.dataset.composing = 'false'; sanitizeEnglishAlphanumericInput(input); });
+  input.addEventListener('input', () => sanitizeEnglishAlphanumericInput(input));
+  input.addEventListener('paste', () => requestAnimationFrame(() => sanitizeEnglishAlphanumericInput(input)));
+});
+
+const setInitialSetupVisibility = (showSetup) => {
+  if (!isIndexPage || isLoggedIn()) return;
+  loginForm?.classList.toggle('is-hidden', showSetup);
+  setupForm?.classList.toggle('is-hidden', !showSetup);
+};
+
+const checkInitialSetupRequired = async () => {
+  if (!isIndexPage || isLoggedIn() || !setupForm) return;
+
+  const staffCollection = window.omniplayDb?.collection('staff');
+  if (!staffCollection) {
+    setInitialSetupVisibility(false);
+    showLoginMessage('Firebase 尚未完成初始化，請稍後再試');
+    return;
+  }
+
+  try {
+    const snapshot = await staffCollection.limit(1).get();
+    setInitialSetupVisibility(snapshot.empty);
+    if (snapshot.empty) {
+      showSetupMessage('偵測到尚未建立任何人員資料，請先建立管理員帳號。', 'info');
+    }
+  } catch (error) {
+    console.error('首次設定檢查失敗：', error);
+    setInitialSetupVisibility(false);
+    showLoginMessage('無法檢查首次設定狀態，請稍後再試');
+  }
+};
+
+const setAppVisibility = () => {
+  const loggedIn = isLoggedIn();
+  if (isIndexPage) {
+    loginView?.classList.toggle('is-hidden', loggedIn);
+    if (appShell) {
+      appShell.hidden = !loggedIn;
+      appShell.setAttribute('aria-hidden', String(!loggedIn));
+      appShell.classList.toggle('is-hidden', !loggedIn);
+    }
+  } else if (!loggedIn) {
+    window.location.href = loginPath;
+  }
+};
+
+
+const makeThemeToggleButton = () => {
+  const button = document.createElement('button');
+  button.dataset.themeToggle = 'true';
+  button.className = 'theme-toggle';
+  button.type = 'button';
+  button.addEventListener('click', toggleTheme);
+  return button;
+};
+
+const renderThemeToggle = () => {
+  const loginCard = document.querySelector('.login-card');
+  if (loginCard && !loginCard.querySelector('[data-theme-toggle]')) loginCard.appendChild(makeThemeToggleButton());
+  applyTheme(getStoredTheme());
+};
+
+const renderSidebarUser = () => {
+  if (!sidebar || !isLoggedIn()) return;
+  const currentStaff = getCurrentStaff();
+  let footer = sidebar.querySelector('#sidebarUserFooter');
+  if (!footer) {
+    footer = document.createElement('div');
+    footer.id = 'sidebarUserFooter';
+    footer.className = 'sidebar-footer';
+    footer.innerHTML = `
+      <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
+        <div class="sidebar-user-row">
+        <div class="sidebar-user-info"><span class="sidebar-user-label label">登入者</span><strong class="sidebar-user-name label"></strong></div>
+        <button class="logout-button" id="logoutButton" type="button"><span class="icon">⎋</span><span class="label">登出</span></button>
+      </div>
+    `;
+    sidebar.appendChild(footer);
+  }
+  const sidebarThemeToggle = footer.querySelector('[data-theme-toggle]');
+  if (sidebarThemeToggle) sidebarThemeToggle.onclick = toggleTheme;
+  const nameElement = footer.querySelector('.sidebar-user-name');
+  if (nameElement) nameElement.textContent = currentStaff.name;
+  enhanceSidebarNavigation();
+};
+
+const logout = () => {
+  clearTimeout(idleTimer);
+  Object.values(SESSION_KEYS).forEach((key) => sessionStorage.removeItem(key));
+  window.location.href = loginPath;
+};
+
+enhanceSidebarNavigation();
+
+sidebarToggle?.addEventListener('click', toggleSidebar);
+sidebarOverlay?.addEventListener('click', closeMobileSidebar);
+window.addEventListener('resize', () => applySidebarState(getStoredSidebarCollapsed()));
+sidebar?.querySelectorAll('.home-link, .top-nav-category, .sidebar-sub-item').forEach((link) => {
+  link.addEventListener('click', () => {
+    if (isMobileViewport()) closeMobileSidebar();
+  });
+});
+
+sidebarCollapsedToggle.addEventListener('click', toggleSidebar);
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && isMobileViewport() && sidebar?.classList.contains('is-open')) {
+    closeMobileSidebar();
+    sidebarToggle?.focus();
+  }
+});
+  
+setupForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  showSetupMessage('');
+
+  const code = document.querySelector('#setupCode')?.value.trim();
+  const name = document.querySelector('#setupName')?.value.trim();
+  const account = document.querySelector('#setupAccount')?.value.trim();
+  const password = document.querySelector('#setupPassword')?.value.trim();
+  const staffCollection = window.omniplayDb?.collection('staff');
+
+  if (!code || !name || !account || !password) return showSetupMessage('請完整填寫所有欄位');
+  if (!staffCollection) return showSetupMessage('Firebase 尚未完成初始化，請稍後再試');
+
+  const submitButton = setupForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = '建立中...';
+
+  try {
+    const existingStaff = await staffCollection.limit(1).get();
+    if (!existingStaff.empty) {
+      showSetupMessage('已存在人員資料，請使用正常登入。');
+      setInitialSetupVisibility(false);
+      return;
+    }
+
+    const docRef = await staffCollection.add({
+      code,
+      name,
+      account,
+      password,
+      status: '啟用',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    sessionStorage.setItem(SESSION_KEYS.id, docRef.id);
+    sessionStorage.setItem(SESSION_KEYS.code, code);
+    sessionStorage.setItem(SESSION_KEYS.name, name);
+    sessionStorage.setItem(SESSION_KEYS.account, account);
+    setupForm.reset();
+    setInitialSetupVisibility(false);
+    setAppVisibility();
+    loadCurrentPermissions();
+    renderSidebarUser();
+    resetIdleTimer();
+  } catch (error) {
+    console.error('建立管理員帳號失敗：', error);
+    showSetupMessage('建立失敗，請稍後再試');
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = '建立第一個帳號';
+  }
+});
+
+loginForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  showLoginMessage('');
+
+  const account = document.querySelector('#account')?.value.trim();
+  const password = document.querySelector('#loginPassword')?.value.trim();
+  const staffCollection = window.omniplayDb?.collection('staff');
+
+  if (!account || !password) return showLoginMessage('請輸入帳號與密碼');
+  if (!staffCollection) return showLoginMessage('Firebase 尚未完成初始化，請稍後再試');
+
+  const submitButton = loginForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = '登入中...';
+
+  try {
+    const snapshot = await staffCollection.where('account', '==', account).limit(1).get();
+    if (snapshot.empty) {
+      showLoginMessage('帳號或密碼錯誤');
+      return;
+    }
+
+    const doc = snapshot.docs[0];
+    const staff = doc.data();
+    if (staff.password !== password) {
+      showLoginMessage('帳號或密碼錯誤');
+      return;
+    }
+    if (staff.status === '停用') {
+      showLoginMessage('帳號已停用，請聯繫管理員');
+      return;
+    }
+
+    sessionStorage.setItem(SESSION_KEYS.id, doc.id);
+    sessionStorage.setItem(SESSION_KEYS.code, staff.code || '');
+    sessionStorage.setItem(SESSION_KEYS.name, staff.name || '');
+    sessionStorage.setItem(SESSION_KEYS.account, staff.account || '');
+    await loadCurrentPermissions();
+    setAppVisibility();
+    renderSidebarUser();
+    resetIdleTimer();
+  } catch (error) {
+    console.error('登入失敗：', error);
+    showLoginMessage('帳號或密碼錯誤');
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = '登入';
+  }
+});
+
+document.addEventListener('click', (event) => {
+  if (event.target.closest('#logoutButton')) logout();
+});
+
+renderThemeToggle();
+setAppVisibility();
+window.permissionReady?.then(() => {
+  renderSidebarUser();
+  if (isLoggedIn()) {
+    resetIdleTimer();
+  }
+});
+checkInitialSetupRequired();
+
+// 手機版／加入主畫面的 PWA：從頁面頂端下拉並放開即可重新整理。
+const setupPullToRefresh = () => {
+  const mobilePointer = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+  if (!mobilePointer || document.querySelector('[data-pull-refresh]')) return;
+
+  const indicator = document.createElement('div');
+  indicator.dataset.pullRefresh = 'true';
+  indicator.setAttribute('role', 'status');
+  indicator.setAttribute('aria-live', 'polite');
+  Object.assign(indicator.style, {
+    position: 'fixed',
+    zIndex: '10000',
+    top: 'calc(env(safe-area-inset-top, 0px) + 10px)',
+    left: '50%',
+    minWidth: '150px',
+    padding: '10px 16px',
+    border: '1px solid rgba(148, 163, 184, .45)',
+    borderRadius: '999px',
+    background: 'rgba(255, 255, 255, .96)',
+    boxShadow: '0 8px 24px rgba(15, 23, 42, .18)',
+    color: '#334155',
+    fontSize: '14px',
+    fontWeight: '700',
+    textAlign: 'center',
+    opacity: '0',
+    pointerEvents: 'none',
+    transform: 'translate(-50%, -72px)',
+    transition: 'transform 160ms ease, opacity 160ms ease'
+  });
+  document.body.appendChild(indicator);
+
+  const threshold = 82;
+  let startY = 0;
+  let distance = 0;
+  let tracking = false;
+  let refreshing = false;
+
+  const atPageTop = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+  const resetIndicator = () => {
+    indicator.style.opacity = '0';
+    indicator.style.transform = 'translate(-50%, -72px)';
+    indicator.textContent = '';
+  };
+
+  document.addEventListener('touchstart', (event) => {
+    if (refreshing || event.touches.length !== 1 || !atPageTop()) return;
+    if (event.target.closest('input, textarea, select, [contenteditable="true"], .ragic-table-wrap')) return;
+    startY = event.touches[0].clientY;
+    distance = 0;
+    tracking = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (event) => {
+    if (!tracking || refreshing || event.touches.length !== 1) return;
+    const delta = event.touches[0].clientY - startY;
+    if (delta <= 0 || !atPageTop()) {
+      tracking = false;
+      resetIndicator();
+      return;
+    }
+    event.preventDefault();
+    distance = Math.min(120, delta * 0.55);
+    indicator.textContent = distance >= threshold ? '↻ 放開重新整理' : '↓ 下拉重新整理';
+    indicator.style.opacity = String(Math.min(1, distance / 34));
+    indicator.style.transform = `translate(-50%, ${Math.min(18, distance - 72)}px)`;
+  }, { passive: false });
+
+  document.addEventListener('touchend', async () => {
+    if (!tracking || refreshing) return;
+    tracking = false;
+    if (distance < threshold) {
+      resetIndicator();
+      return;
+    }
+    refreshing = true;
+    indicator.textContent = '↻ 正在重新整理…';
+    indicator.style.opacity = '1';
+    indicator.style.transform = 'translate(-50%, 8px)';
+    try { await navigator.serviceWorker?.getRegistration()?.then((registration) => registration?.update()); } catch (_) {}
+    window.location.reload();
+  }, { passive: true });
+
+  document.addEventListener('touchcancel', () => {
+    tracking = false;
+    if (!refreshing) resetIndicator();
+  }, { passive: true });
+};
+
+setupPullToRefresh();
