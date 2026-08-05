@@ -12,6 +12,13 @@ const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includ
 const isLogNewModule = (config = RAGIC_STATE?.config) => ['log_new', 'workLogsNew'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').trim() === '日誌 NEW';
 const isTrackingModule = (config = RAGIC_STATE?.config) => ['tracking', 'workTracking'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '') === '對接追蹤';
 const isReminderEnabledField = (field = {}) => field.type === 'reminderEnabled' || field.key === 'reminder_enabled' || String(field.label || '').trim() === '啟用提醒';
+const reminderRecordValue = (record = {}, field = {}) => {
+  if (isReminderEnabledField(field)) return true;
+  if (field.type === 'reminderTime' || field.key === 'reminder_at' || String(field.label || '').trim() === '提醒時間') {
+    return record[field.key] ?? record.reminder_at ?? record.reminderTime ?? '';
+  }
+  return record[field.key];
+};
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', editDirty: false, sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
@@ -184,7 +191,12 @@ const normalizeDateValue = (value) => {
   return text;
 };
 const displayDate = (value) => value ? String(value).replace(/-/g, '/') : '';
-const displayDateTime = (value) => value ? String(value).replace('T', ' ').replace(/-/g, '/') : '';
+const displayDateTime = (value) => {
+  if (!value) return '';
+  if (typeof value?.toDate === 'function') return formatLocalDateTime(value.toDate());
+  if (Number.isFinite(value?.seconds)) return formatLocalDateTime(new Date(value.seconds * 1000));
+  return String(value).replace('T', ' ').replace(/-/g, '/');
+};
 const dataCollectionName = (config) => config.dataCollection || COLLECTION_MAP[config.collection] || config.collection;
 const schemaCollectionName = (config) => config.schemaCollection || SCHEMA_MAP[dataCollectionName(config)] || `${dataCollectionName(config)}_schema`;
 const generateFieldKey = () => 'field_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -1264,8 +1276,9 @@ const createField = (field, value = '') => {
   const control = createControl(field, value);
   if (isReminderEnabledField(field)) {
     control.checked = true;
-    wrap.hidden = true;
-    wrap.setAttribute('aria-hidden', 'true');
+    control.disabled = true;
+    control.setAttribute('aria-readonly', 'true');
+    control.title = '提醒固定啟用';
   }
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
   return wrap;
@@ -1953,18 +1966,18 @@ const renderViewForm = (form, record = {}) => {
   applyFormGridLayout(grid);
   getFields().filter((field) => {
     if (field.type === 'subtable') return false;
-    if (isReminderEnabledField(field)) return false;
     return !fixedLogLayout || Boolean(logFieldLayoutFor(field));
   }).forEach((field) => {
     const item = document.createElement('div');
     const isPairToggle = ['reminderEnabled', 'reportEnabled'].includes(field.type);
-    const isChecked = record[field.key] === true || record[field.key] === 'true' || record[field.key] === '1';
+    const fieldValue = reminderRecordValue(record, field);
+    const isChecked = fieldValue === true || fieldValue === 'true' || fieldValue === '1';
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}${isPairToggle ? ' ragic-view-field-pair-toggle' : ''}${isPairToggle && isChecked ? ' is-checked' : ''}`;
     if (isTrackingModule() && field.type === 'text' && String(field.label || '').trim() === '單行文字') {
       item.classList.add('is-tracking-placeholder-field');
     }
     applyFormLayout(item, field);
-    item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${isPairToggle ? '' : renderDisplayValue(field, record[field.key])}</div>`;
+    item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${isReminderEnabledField(field) ? '已啟用' : (isPairToggle ? '' : renderDisplayValue(field, fieldValue))}</div>`;
     appendFormResizeHandles(item, field);
     grid.appendChild(item);
   });
