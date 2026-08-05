@@ -2762,6 +2762,343 @@ textarea,
   .designer-field-row { grid-template-columns: 1fr; }
 }
 
+/* ===== 2026-08 手機操作模式 =====
+   手機只保留一列頁首；完整導覽收進可開合抽屜，避免整個桌面導覽被縮成小字。 */
+.mobile-current-page { display: none; }
+
+@media (max-width: 768px) {
+  html,
+  body {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .app-shell {
+    min-width: 0 !important;
+    max-width: 100vw !important;
+  }
+
+  .sidebar.top-navigation {
+    position: sticky !important;
+    top: 0 !important;
+    display: flex !important;
+    width: 100% !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    overflow: visible !important;
+  }
+
+  .sidebar.top-navigation .sidebar-header {
+    position: relative;
+    z-index: 1003;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 7px 10px !important;
+    background: var(--sidebar) !important;
+  }
+
+  .sidebar.top-navigation .logo .label { display: none !important; }
+  .sidebar.top-navigation .logo-mark {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 14px !important;
+  }
+
+  .mobile-current-page {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.2;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar.top-navigation .mobile-menu-btn {
+    display: inline-grid !important;
+    place-items: center;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    font-size: 22px !important;
+  }
+
+  .sidebar-toggle-btn { display: none !important; }
+
+  .sidebar.top-navigation .menu {
+    position: fixed !important;
+    z-index: 1002;
+    top: 56px !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    display: block !important;
+    width: min(88vw, 360px) !important;
+    height: calc(100dvh - 56px) !important;
+    padding: 12px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    background: var(--sidebar) !important;
+    box-shadow: 18px 0 38px rgba(15, 23, 42, .22);
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+  }
+
+  .sidebar.top-navigation.is-open .menu { transform: translateX(0); }
+
+  .sidebar.top-navigation .top-nav-primary-links {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 5px !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .sidebar.top-navigation .home-link,
+  .sidebar.top-navigation .top-nav-category {
+    justify-content: flex-start !important;
+    width: 100% !important;
+    min-height: 48px !important;
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    font-size: 15px !important;
+  }
+
+  .sidebar.top-navigation .home-link.is-active,
+  .sidebar.top-navigation .top-nav-category.is-active {
+    color: var(--primary) !important;
+    background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  }
+
+  .sidebar.top-navigation .home-link.is-active::after,
+  .sidebar.top-navigation .top-nav-category.is-active::after { display: none !important; }
+
+  .sidebar.top-navigation .top-nav-secondary {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    background: transparent !important;
+  }
+
+  .sidebar.top-navigation .sidebar-group.is-current-group { display: block !important; }
+  .sidebar.top-navigation .sidebar-group-title {
+    display: flex !important;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 7px;
+    padding: 0 8px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .sidebar.top-navigation .top-nav-submenu {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .sidebar.top-navigation .sidebar-sub-item {
+    justify-content: flex-start !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: 10px 12px !important;
+    font-size: 15px !important;
+  }
+
+  .sidebar.top-navigation .sidebar-sub-item.is-active::after,
+  .sidebar.top-navigation .sidebar-sub-item.active::after { display: none !important; }
+
+  .sidebar.top-navigation .sidebar-footer { display: none !important; }
+  .sidebar-overlay.is-visible {
+    display: block !important;
+    position: fixed !important;
+    z-index: 1001 !important;
+    inset: 56px 0 0 !important;
+    background: rgba(15, 23, 42, .46) !important;
+  }
+
+  .app-shell > .main,
+  .app-shell > .main-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    height: auto !important;
+    min-height: calc(100dvh - 56px) !important;
+    max-height: none !important;
+    padding: 8px !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  .topbar {
+    min-height: 0 !important;
+    padding: 12px !important;
+  }
+
+  .topbar h1,
+  .panel-heading h1,
+  .panel-heading h2 { font-size: 20px !important; }
+
+  .topbar-actions,
+  .panel-actions,
+  .ragic-toolbar,
+  .ragic-form-toolbar {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  button,
+  .button,
+  .primary-button,
+  .ghost-button,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+  }
+
+  .ragic-card,
+  .staff-panel,
+  .leave-panel,
+  .schedule-panel,
+  .placeholder-card,
+  .form-container,
+  .ragic-form-wrapper,
+  .ragic-form-container {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .ragic-table-wrapper,
+  .ragic-table-wrap,
+  .table-wrap,
+  .staff-table-wrap,
+  .leave-table-wrap,
+  .ragic-subtable,
+  .meeting-detail-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+
+  .ragic-table {
+    width: max-content !important;
+    min-width: max(100%, 720px) !important;
+    table-layout: auto !important;
+  }
+
+  .ragic-table th,
+  .ragic-table td {
+    min-width: 112px !important;
+    max-width: 260px !important;
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+
+  .ragic-table th:first-child,
+  .ragic-table td:first-child {
+    min-width: 78px !important;
+  }
+
+  .ragic-form-grid,
+  .ragic-view-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .ragic-form-grid > *,
+  .ragic-view-grid > *,
+  .form-field,
+  .ragic-view-field {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 72px !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .ragic-view-field-textarea,
+  .ragic-view-field-image,
+  .ragic-view-field-file {
+    min-height: 112px !important;
+  }
+
+  .handover-page .ragic-view-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+  }
+
+  .handover-page .ragic-view-grid > .ragic-view-field {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    min-height: 78px !important;
+  }
+
+  .modal,
+  .dialog,
+  .ragic-modal,
+  .schedule-modal-card,
+  .schedule-help-card {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 24px) !important;
+    margin: 8px !important;
+    overflow: auto !important;
+  }
+
+  textarea { min-height: 110px; }
+}
+
+@media (max-width: 430px) {
+  .ragic-toolbar,
+  .ragic-form-toolbar,
+  .panel-heading {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .ragic-toolbar > *,
+  .ragic-form-toolbar > *,
+  .panel-heading > * { min-width: 0 !important; }
+
+  .ragic-pagination,
+  .ragic-pagination .page-nav {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
 @media (max-width: 400px) {
   .dashboard-stats { grid-template-columns: 1fr; }
 }
@@ -6271,5 +6608,203 @@ body:has(.sidebar-toggle-btn.is-visible)
 
   .calendar-grid.is-month-view .day-number {
     font-size: 12px !important;
+  }
+}
+
+/* Final mobile overrides: keep these last so legacy desktop/sidebar rules cannot win. */
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  body .app-shell {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
+  }
+
+  body .sidebar.top-navigation {
+    position: sticky !important;
+    top: 0 !important;
+    left: 0 !important;
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body .sidebar.top-navigation .sidebar-header {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) 44px !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+    padding: 7px 10px !important;
+  }
+
+  body .sidebar.top-navigation .logo .label { display: none !important; }
+  body .sidebar.top-navigation .logo-mark { width: 38px !important; height: 38px !important; }
+  body .sidebar.top-navigation .mobile-current-page {
+    display: block !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    font-size: 16px !important;
+    text-align: left !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  body .sidebar.top-navigation .mobile-menu-btn {
+    display: inline-grid !important;
+    position: static !important;
+    place-items: center !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 22px !important;
+  }
+  body .sidebar-toggle-btn { display: none !important; }
+
+  body .sidebar.top-navigation .menu {
+    position: fixed !important;
+    z-index: 1002 !important;
+    top: 56px !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    display: block !important;
+    width: min(88vw, 360px) !important;
+    min-width: 0 !important;
+    height: calc(100dvh - 56px) !important;
+    padding: 12px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    background: var(--sidebar) !important;
+    transform: translateX(-105%) !important;
+  }
+  body .sidebar.top-navigation.is-open .menu { transform: translateX(0) !important; }
+  body .sidebar.top-navigation .top-nav-primary-links,
+  body .sidebar.top-navigation .top-nav-submenu {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    justify-content: stretch !important;
+    gap: 4px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body .sidebar.top-navigation .home-link,
+  body .sidebar.top-navigation .top-nav-category,
+  body .sidebar.top-navigation .sidebar-sub-item {
+    justify-content: flex-start !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    font-size: 15px !important;
+  }
+  body .sidebar.top-navigation .top-nav-secondary {
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+    background: transparent !important;
+  }
+  body .sidebar.top-navigation .sidebar-group-title { display: flex !important; }
+  body .sidebar.top-navigation .sidebar-footer { display: none !important; }
+  body .sidebar-overlay.is-visible {
+    display: block !important;
+    position: fixed !important;
+    z-index: 1001 !important;
+    inset: 56px 0 0 !important;
+    background: rgba(15, 23, 42, .46) !important;
+  }
+
+  body .app-shell > .main,
+  body .app-shell > .main-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    height: auto !important;
+    min-height: calc(100dvh - 56px) !important;
+    max-height: none !important;
+    padding: 8px !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  body .ragic-form-grid,
+  body .ragic-view-grid,
+  body.handover-page .ragic-view-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    gap: 10px !important;
+    min-width: 0 !important;
+  }
+  body .ragic-form-grid > *,
+  body .ragic-view-grid > *,
+  body.handover-page .ragic-view-grid > .ragic-view-field {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 72px !important;
+    max-height: none !important;
+  }
+
+  body .ragic-table-wrapper,
+  body .ragic-table-wrap,
+  body .table-wrap,
+  body .staff-table-wrap,
+  body .leave-table-wrap,
+  body .ragic-subtable {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  body .ragic-table {
+    width: max-content !important;
+    min-width: max(100%, 720px) !important;
+    table-layout: auto !important;
+  }
+  body .ragic-table th,
+  body .ragic-table td {
+    min-width: 112px !important;
+    max-width: 260px !important;
+    padding: 9px 8px !important;
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+
+  body .ragic-card,
+  body .staff-panel,
+  body .leave-panel,
+  body .schedule-panel,
+  body .placeholder-card,
+  body .form-container,
+  body .ragic-form-wrapper,
+  body .ragic-form-container {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
   }
 }
