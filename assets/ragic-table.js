@@ -11,6 +11,7 @@ const LOG_FIELD_LAYOUT_BY_LABEL = {
 const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').includes('日誌');
 const isLogNewModule = (config = RAGIC_STATE?.config) => ['log_new', 'workLogsNew'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').trim() === '日誌 NEW';
 const isTrackingModule = (config = RAGIC_STATE?.config) => ['tracking', 'workTracking'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '') === '對接追蹤';
+const isReminderEnabledField = (field = {}) => field.type === 'reminderEnabled' || field.key === 'reminder_enabled' || String(field.label || '').trim() === '啟用提醒';
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', editDirty: false, sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
@@ -1261,6 +1262,11 @@ const createField = (field, value = '') => {
   wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   applyFormLayout(wrap, field);
   const control = createControl(field, value);
+  if (isReminderEnabledField(field)) {
+    control.checked = true;
+    wrap.hidden = true;
+    wrap.setAttribute('aria-hidden', 'true');
+  }
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
   return wrap;
 };
@@ -1617,6 +1623,7 @@ const getFormData = async () => {
       const container = input.closest('.image-upload-area');
       data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (getFileInputValue(input)));
     }
+    else if (isReminderEnabledField(field)) data[field.key] = true;
     else if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field.type)) data[field.key] = input.checked;
     else data[field.key] = input.value.trim();
   }
@@ -1640,7 +1647,6 @@ const validateLogCompletionRules = () => {
   if (completedBy && !completedAt) requireControl('completed_at', '已填寫完成者，完成時間為必填');
   if (completedAt && !completedBy) requireControl('completed_by', '已填寫完成時間，完成者為必填');
   if (!completedBy && !completedAt) {
-    requireControl('reminder_enabled', '尚未完成時，必須勾選啟用提醒', Boolean(control('reminder_enabled')?.checked));
     requireControl('reminder_at', '尚未完成時，提醒時間為必填');
     requireControl('processing_department', '尚未完成時，處理部門為必填');
     requireControl('note', '尚未完成時，備註必須填入詢問部門的日期時間');
@@ -1787,7 +1793,6 @@ const validateLogNewRequiredFields = () => {
   } else if (completedAt && !completedBy) {
     addMissing('完成者（已填寫完成時間）', control('completed_by'));
   } else if (!completedBy && !completedAt) {
-    if (!control('reminder_enabled')?.checked) addMissing('啟用提醒（尚未完成）', control('reminder_enabled'));
     if (!value('reminder_at')) addMissing('提醒時間（尚未完成）', control('reminder_at'));
     if (!value('processing_department')) addMissing('處理部門（尚未完成）', control('processing_department'));
     if (!value('note')) addMissing('備註（請填入詢問部門的日期時間）', control('note'));
@@ -1948,6 +1953,7 @@ const renderViewForm = (form, record = {}) => {
   applyFormGridLayout(grid);
   getFields().filter((field) => {
     if (field.type === 'subtable') return false;
+    if (isReminderEnabledField(field)) return false;
     return !fixedLogLayout || Boolean(logFieldLayoutFor(field));
   }).forEach((field) => {
     const item = document.createElement('div');
