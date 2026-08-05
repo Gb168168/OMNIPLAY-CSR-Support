@@ -15,8 +15,20 @@
     .leave-summary-shift > strong { display: block; margin-bottom: 2px; }
     .leave-summary-shift ul { margin: 0; padding-left: 18px; }
     .leave-summary-shift li { margin: 1px 0; white-space: normal; }
-    @media (max-width: 900px) {
-      .leave-summary-cards { width: 100%; grid-template-columns: 1fr; }
+    @media (max-width: 1024px) {
+      .leave-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+      }
+      .leave-toolbar {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .leave-summary-cards {
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
       .leave-summary-card-content { grid-template-columns: 1fr 1fr; }
     }
   </style>
