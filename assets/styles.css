@@ -7953,4 +7953,18 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     height: auto !important;
     min-height: 58px !important;
   }
+
+  #ragicForm .compact-view-grid > .ragic-view-subtable-section {
+    max-height: clamp(220px, calc(100dvh - 600px), 360px) !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+
+  #ragicForm .compact-view-grid > .ragic-view-subtable-section .ragic-subtable-head {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--surface);
+  }
 }
