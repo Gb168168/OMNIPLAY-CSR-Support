@@ -752,7 +752,26 @@ const manualSystemDateField = (field = {}) =>
   RAGIC_STATE.config?.manualSystemDates === true &&
   ['createdDate', 'updatedDate'].includes(field.type);
 const inlineReadonlyFieldTypes = new Set([...readonlyFieldTypes, 'image', 'file', 'subtable']);
-const DEFAULT_FIELD_WIDTHS = { text: 180, textarea: 300, date: 100, datetime: 150, select: 100, multiselect: 120, image: 80, file: 160, serial: 90, createdDate: 150, updatedDate: 150, link: 180 };
+const DEFAULT_LIST_COLUMN_WIDTH = 180;
+const DEFAULT_FIELD_WIDTHS = {
+  text: 180,
+  textarea: 320,
+  number: 120,
+  date: 120,
+  time: 100,
+  datetime: 170,
+  select: 150,
+  multiselect: 180,
+  checkbox: 100,
+  boolean: 100,
+  image: 100,
+  file: 180,
+  serial: 120,
+  createdDate: 170,
+  updatedDate: 170,
+  link: 220,
+  subtable: 320
+};
 const MIN_FORM_FIELD_WIDTH = 56;
 const MIN_FORM_FIELD_HEIGHT = 38;
 const DEFAULT_FORM_FIELD_HEIGHT = 48;
@@ -778,7 +797,7 @@ const fieldColumnWidth = (field = {}) => {
     if (['date', 'datetime', 'updatedDate'].includes(field.type)) return LOG_LIST_WIDTHS.date;
   }
 
-  return normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || null;
+  return normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || DEFAULT_LIST_COLUMN_WIDTH;
 };
 const defaultFormFieldHeight = (field = {}) => field.type === 'subtable' ? DEFAULT_SUBTABLE_FIELD_HEIGHT : DEFAULT_FORM_FIELD_HEIGHT;
 const layoutHeightValue = (item = {}, field = {}) => normalizeFormLayoutNumber(item.height ?? field.formHeight, { min: MIN_FORM_FIELD_HEIGHT, max: 2000, fallback: defaultFormFieldHeight(field) });
@@ -788,6 +807,14 @@ const applyColumnWidth = (element, width) => {
   element.style.setProperty('--col-width', `${width}px`);
   element.style.setProperty('min-width', `${width}px`, 'important');
   element.style.setProperty('width', `${width}px`);
+};
+const syncRagicTableWidth = (table) => {
+  if (!table) return;
+  const total = [...table.querySelectorAll('colgroup col')].reduce((sum, col) => {
+    const width = Number.parseFloat(col.style.width || getComputedStyle(col).width);
+    return sum + (Number.isFinite(width) ? width : 0);
+  }, 0);
+  if (total > 0) table.style.setProperty('--ragic-table-width', `${Math.round(total)}px`);
 };
 
 
@@ -800,6 +827,7 @@ const setColumnWidth = (table, th, width) => {
   const col = table.querySelector(`colgroup col:nth-child(${colIndex + 1})`);
   if (col) applyColumnWidth(col, newWidth);
   table.querySelectorAll(`tbody td:nth-child(${colIndex + 1})`).forEach((td) => applyColumnWidth(td, newWidth));
+  syncRagicTableWidth(table);
   return newWidth;
 };
 const saveSchema = async () => {
@@ -911,15 +939,16 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   markerCol.style.setProperty('min-width', '50px', 'important');
   markerCol.style.setProperty('width', '50px');
   colgroup.appendChild(markerCol);
+  let tableWidth = 50;
   fields.forEach((field) => {
     const col = document.createElement('col');
     const width = fieldColumnWidth(field);
-    if (width) {
-      col.style.setProperty('min-width', `${width}px`, 'important');
-      col.style.setProperty('width', `${width}px`);
-    }
+    tableWidth += width;
+    col.style.setProperty('min-width', `${width}px`, 'important');
+    col.style.setProperty('width', `${width}px`);
     colgroup.appendChild(col);
   });
+  table.style.setProperty('--ragic-table-width', `${tableWidth}px`);
   table.insertBefore(colgroup, table.firstChild);
 };
 
@@ -2781,7 +2810,7 @@ const renderHeader = () => {
   const thead = headerRow?.closest('thead');
   const table = headerRow?.closest('table');
   if (table) {
-    table.style.tableLayout = 'auto';
+    table.style.tableLayout = 'fixed';
     applyRagicColumnGroup(table);
   }
   document.querySelector('#ragicFilterRow')?.remove();
