@@ -7901,6 +7901,101 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
+/* Desktop 高資訊密度表單：只調整排版，不影響資料與事件邏輯。 */
+@media (min-width: 769px) {
+  #ragicForm .dense-ragic-grid {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    grid-auto-flow: row dense !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field {
+    order: var(--dense-order, 25);
+    grid-column: auto / span var(--dense-span, 3) !important;
+    grid-row: auto !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 54px !important;
+    padding: 8px 10px !important;
+    align-self: stretch !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field > span:first-child,
+  #ragicForm .dense-ragic-grid > .dense-form-field > .ragic-view-label {
+    margin-bottom: 4px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field input,
+  #ragicForm .dense-ragic-grid > .dense-form-field select {
+    min-height: 34px !important;
+    padding: 6px 8px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-media {
+    min-height: 88px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative {
+    min-height: 132px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative textarea,
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative .ragic-view-value,
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative .field-value {
+    min-height: 88px !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #ragicForm .dense-ragic-grid > [data-field-label="圖片"] {
+    order: 50 !important;
+    grid-column: 1 / span 6 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > [data-field-label="檔案"] {
+    order: 50 !important;
+    grid-column: 7 / span 6 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > [data-field-label="問題描述"] {
+    order: 60 !important;
+    grid-column: 1 / span 7 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > [data-field-label="備註"] {
+    order: 60 !important;
+    grid-column: 8 / span 5 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-subtable {
+    order: 100 !important;
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    align-self: start !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-subtable:has(.ragic-view-empty) {
+    height: auto !important;
+    max-height: 96px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .ragic-field-pair-toggle,
+  #ragicForm .dense-ragic-grid > .ragic-view-field-pair-toggle {
+    min-height: 54px !important;
+    padding: 8px 10px !important;
+  }
+}
+
 /* 桌面檢視模式：保留欄位寬度配置，但移除設計器留下的固定列高與空白列。 */
 @media (min-width: 769px) {
   #ragicForm .compact-view-grid {
@@ -7966,5 +8061,15 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     top: 0;
     z-index: 4;
     background: var(--surface);
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative {
+    min-height: 132px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative .ragic-view-value,
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative .field-value,
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative textarea {
+    min-height: 88px !important;
   }
 }
