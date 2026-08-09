@@ -7877,8 +7877,16 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   #ragicListView .ragic-table td.col-content a,
   #ragicListView .ragic-table td.col-content span {
     max-width: 100% !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere;
+  }
+
+  #ragicListView .ragic-table td:not(.col-content) {
+    white-space: normal !important;
+    word-break: break-word !important;
     overflow-wrap: anywhere;
   }
 }
