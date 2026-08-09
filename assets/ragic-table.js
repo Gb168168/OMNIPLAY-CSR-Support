@@ -634,6 +634,22 @@ const applyDenseSubtableLayout = (section) => {
   section.style.setProperty('--dense-span', '12');
   return section;
 };
+const groupDenseFieldPairs = (grid) => {
+  if (!grid) return grid;
+  [
+    { className: 'dense-field-pair-media', order: 50, labels: ['圖片', '檔案'] },
+    { className: 'dense-field-pair-narrative', order: 60, labels: ['問題描述', '備註'] }
+  ].forEach(({ className, order, labels }) => {
+    const fields = labels.map((label) => [...grid.children].find((child) => child.dataset?.fieldLabel === label));
+    if (fields.some((field) => !field)) return;
+    const pair = document.createElement('div');
+    pair.className = `dense-field-pair ${className}`;
+    pair.style.setProperty('--dense-order', String(order));
+    fields.forEach((field) => pair.appendChild(field));
+    grid.appendChild(pair);
+  });
+  return grid;
+};
 const applyFormLayoutOverrides = (schema = {}, config = {}) => {
   const activeLayout = schema.formLayout || config.formLayout;
   const { columns, overrides: rawOverrides } = normalizeFormLayoutConfig(activeLayout);
@@ -2135,6 +2151,7 @@ const renderViewForm = (form, record = {}) => {
     grid.appendChild(item);
   });
   if (!fixedLogLayout) titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
+  groupDenseFieldPairs(grid);
   form.appendChild(grid);
   
   getFields().filter((field) => field.type === 'subtable').forEach((field) => {
@@ -2377,6 +2394,7 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     const grid = document.createElement('div'); grid.className = 'ragic-form-grid dense-ragic-grid'; applyFormGridLayout(grid);
     getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key])));
     titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
+    groupDenseFieldPairs(grid);
     form.appendChild(grid);
     getFields().filter((field) => field.type === 'subtable').forEach((field) => {
      const section = document.createElement('section');

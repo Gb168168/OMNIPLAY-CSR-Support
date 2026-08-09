@@ -7994,6 +7994,52 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     min-height: 54px !important;
     padding: 8px 10px !important;
   }
+
+  #ragicForm .dense-ragic-grid > .dense-field-pair {
+    order: var(--dense-order) !important;
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #ragicForm .dense-field-pair > .dense-form-field {
+    grid-row: 1 !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    padding: 8px 10px !important;
+    align-self: stretch !important;
+  }
+
+  #ragicForm .dense-field-pair-media > [data-field-label="圖片"] {
+    grid-column: 1 / span 6 !important;
+    min-height: 88px !important;
+  }
+
+  #ragicForm .dense-field-pair-media > [data-field-label="檔案"] {
+    grid-column: 7 / span 6 !important;
+    min-height: 88px !important;
+  }
+
+  #ragicForm .dense-field-pair-narrative > [data-field-label="問題描述"] {
+    grid-column: 1 / span 7 !important;
+    min-height: 132px !important;
+  }
+
+  #ragicForm .dense-field-pair-narrative > [data-field-label="備註"] {
+    grid-column: 8 / span 5 !important;
+    min-height: 132px !important;
+  }
+
+  #ragicForm .dense-field-pair-narrative .ragic-view-value,
+  #ragicForm .dense-field-pair-narrative .field-value,
+  #ragicForm .dense-field-pair-narrative textarea {
+    min-height: 88px !important;
+    max-height: none !important;
+  }
 }
 
 /* 桌面檢視模式：保留欄位寬度配置，但移除設計器留下的固定列高與空白列。 */
