@@ -591,6 +591,49 @@ const fieldLayoutOverrideMatches = (field = {}, override = {}) => {
   if (override.label && label === override.label) return true;
   return false;
 };
+
+const DENSE_FORM_LAYOUT = {
+  '日期': { order: 10, span: 2 },
+  '班別': { order: 10, span: 2 },
+  '部門': { order: 10, span: 2 },
+  '分類': { order: 10, span: 2 },
+  '狀態': { order: 10, span: 2 },
+  '提報者': { order: 10, span: 2 },
+  '提報人員': { order: 10, span: 2 },
+  '級數': { order: 20, span: 2 },
+  '客戶': { order: 20, span: 6 },
+  '客戶域名': { order: 20, span: 6 },
+  '編號': { order: 20, span: 2 },
+  '完成者': { order: 30, span: 2 },
+  '完成時間': { order: 30, span: 2 },
+  '更新時間': { order: 30, span: 2 },
+  '提醒時間': { order: 40, span: 2 },
+  '啟用提醒': { order: 40, span: 2 },
+  '日誌連結': { order: 40, span: 8 },
+  '提醒連結': { order: 40, span: 8 },
+  '圖片': { order: 50, span: 6, role: 'media' },
+  '檔案': { order: 50, span: 6, role: 'media' },
+  '問題描述': { order: 60, span: 7, role: 'narrative' },
+  '備註': { order: 60, span: 5, role: 'narrative' }
+};
+const applyDenseFormLayout = (element, field = {}) => {
+  if (!element) return element;
+  const label = String(field.label || field.key || '').trim();
+  const layout = DENSE_FORM_LAYOUT[label] || { order: 25, span: 3 };
+  element.classList.add('dense-form-field');
+  if (layout.role) element.classList.add(`dense-form-field-${layout.role}`);
+  element.dataset.fieldLabel = label;
+  element.style.setProperty('--dense-order', String(layout.order));
+  element.style.setProperty('--dense-span', String(layout.span));
+  return element;
+};
+const applyDenseSubtableLayout = (section) => {
+  if (!section) return section;
+  section.classList.add('dense-form-subtable');
+  section.style.setProperty('--dense-order', '100');
+  section.style.setProperty('--dense-span', '12');
+  return section;
+};
 const applyFormLayoutOverrides = (schema = {}, config = {}) => {
   const activeLayout = schema.formLayout || config.formLayout;
   const { columns, overrides: rawOverrides } = normalizeFormLayoutConfig(activeLayout);
@@ -1367,6 +1410,7 @@ const createField = (field, value = '') => {
   }
   wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   applyFormLayout(wrap, field);
+  applyDenseFormLayout(wrap, field);
   const control = createControl(field, value);
   if (isReminderEnabledField(field)) {
     control.checked = true;
@@ -2063,7 +2107,7 @@ const renderSubtableView = (field, rows = []) => {
 const renderViewForm = (form, record = {}) => {
   const fixedLogLayout = false;
   const grid = document.createElement('div');
-  grid.className = 'ragic-form-grid ragic-view-grid compact-view-grid';
+  grid.className = 'ragic-form-grid ragic-view-grid compact-view-grid dense-ragic-grid';
   applyFormGridLayout(grid);
   getFields().filter((field) => {
     if (field.type === 'subtable') return false;
@@ -2078,6 +2122,7 @@ const renderViewForm = (form, record = {}) => {
       item.classList.add('is-tracking-placeholder-field');
     }
     applyFormLayout(item, field);
+    applyDenseFormLayout(item, field);
     item.style.setProperty('--form-row', 'auto');
     item.style.setProperty('--form-col', 'auto');
     item.style.setProperty('--form-rowspan', '1');
@@ -2108,6 +2153,7 @@ const renderViewForm = (form, record = {}) => {
       section.classList.add('is-tracking-detail-subtable');
     }
     if (!fixedLogLayout) applyFormLayout(section, field);
+    applyDenseSubtableLayout(section);
     section.style.setProperty('--form-row', 'auto');
     section.style.setProperty('--form-col', 'auto');
     section.style.setProperty('--form-rowspan', '1');
@@ -2328,7 +2374,7 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
   if (mode === 'view' && record.id) {
     renderViewForm(form, record);
   } else {
-    const grid = document.createElement('div'); grid.className = 'ragic-form-grid'; applyFormGridLayout(grid);
+    const grid = document.createElement('div'); grid.className = 'ragic-form-grid dense-ragic-grid'; applyFormGridLayout(grid);
     getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key])));
     titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
     form.appendChild(grid);
@@ -2348,6 +2394,7 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
       section.classList.add('is-tracking-detail-subtable');
     }
       if (!fixedLogLayout) applyFormLayout(section, field);
+      applyDenseSubtableLayout(section);
       section.dataset.subtable = field.key;
       section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
       const body = section.querySelector('tbody');
