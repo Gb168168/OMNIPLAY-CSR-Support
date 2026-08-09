@@ -467,13 +467,39 @@ nextFields[key] = {
 
   return { columns, rows, fields: nextFields, version: String(source.version || '') };
 };
+const compactEmptyLayoutRows = (layout = {}, enabled = false) => {
+  if (!enabled) return layout;
+  const entries = Object.entries(layout.fields || {}).filter(([, item]) => Number(item?.row) > 0);
+  const occupiedRows = new Set();
+  entries.forEach(([, item]) => {
+    const start = Math.max(1, Number(item.row) || 1);
+    const span = Math.max(1, Number(item.rowSpan) || 1);
+    for (let row = start; row < start + span; row += 1) occupiedRows.add(row);
+  });
+  const orderedRows = [...occupiedRows].sort((a, b) => a - b);
+  const rowMap = new Map(orderedRows.map((row, index) => [row, index + 1]));
+  if (!orderedRows.length || orderedRows.every((row, index) => row === index + 1)) return layout;
+  const fields = Object.fromEntries(Object.entries(layout.fields || {}).map(([key, item]) => {
+    if (!Number(item?.row)) return [key, item];
+    const start = Number(item.row);
+    const span = Math.max(1, Number(item.rowSpan) || 1);
+    const end = start + span - 1;
+    const mappedStart = rowMap.get(start) || start;
+    const mappedEnd = rowMap.get(end) || mappedStart;
+    return [key, { ...item, row: mappedStart, rowSpan: Math.max(1, mappedEnd - mappedStart + 1) }];
+  }));
+  return { ...layout, rows: orderedRows.length, fields };
+};
+
+const resolvedFormLayout = (config = RAGIC_STATE.config) => compactEmptyLayoutRows(
+  normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout || config?.formLayout, getFields()),
+  Boolean(config?.compactEmptyRows)
+);
+
 const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   if (!grid) return grid;
 
-  const layout = normalizeDesignerFormLayout(
-    RAGIC_STATE.schema?.formLayout || config?.formLayout,
-    getFields()
-  );
+  const layout = resolvedFormLayout(config);
 
   const columns = layout.columns || 5;
   const configuredRows = layout.rows || 4;
@@ -499,7 +525,7 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
     const desiredHeight =
       field.type === 'textarea' ? (isTrackingModule() ? 48 : 178) :
       ['image', 'file'].includes(field.type) ? 175 :
-      60;
+      Math.max(60, Number(config?.formRowHeight) || 60);
     const trackHeight = Math.max(48, Math.ceil((desiredHeight - (rowGap * (span - 1))) / span));
     for (let offset = 0; offset < span; offset += 1) {
       rowHeights[start + offset] = Math.max(rowHeights[start + offset], trackHeight);
@@ -523,7 +549,7 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
 
 const applyFormLayout = (element, field = {}) => {
   if (!element) return element;
-  const activeLayout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout || RAGIC_STATE.config?.formLayout, getFields());
+  const activeLayout = resolvedFormLayout(RAGIC_STATE.config);
   const layoutItem = activeLayout.fields?.[field.key] || {};
   const row = normalizeFormLayoutNumber(layoutItem.row ?? field.formRow);
   const columns = activeLayout.columns || 5;
