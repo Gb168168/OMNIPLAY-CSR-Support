@@ -7911,6 +7911,34 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
+/* iPhone「要求桌面網站」與平板寬度：三排導覽使用明確座標，
+   避免舊版 footer 的 auto margin 再把主題切換鈕推進第二排。 */
+@media (min-width: 769px) and (max-width: 1200px) {
+  .sidebar.top-navigation {
+    height: 130px !important;
+    min-height: 130px !important;
+    max-height: 130px !important;
+  }
+
+  .sidebar.top-navigation .sidebar-footer {
+    position: absolute !important;
+    z-index: 2;
+    top: 94px !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: 0 !important;
+    display: flex !important;
+    width: 100% !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    margin: 0 !important;
+    padding: 4px 12px !important;
+    overflow: hidden !important;
+    background: var(--sidebar) !important;
+    border-top: 1px solid var(--border) !important;
+  }
+}
+
 /* PROD 告警的舊排版曾留下空白列；單列欄位需完整容納標籤與內容。 */
 .alert-page #ragicForm .ragic-view-grid > .ragic-view-field:not(.ragic-view-field-textarea):not(.ragic-view-field-image):not(.ragic-view-field-file) {
   min-height: 84px !important;
