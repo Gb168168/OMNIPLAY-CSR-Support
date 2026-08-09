@@ -2009,6 +2009,9 @@ const createTitleOnlyField = (field = {}, record = {}) => {
   const item = document.createElement('div');
   item.className = 'ragic-view-field ragic-view-field-title-only';
   applyFormLayout(item, field);
+  item.style.setProperty('--form-row', 'auto');
+  item.style.setProperty('--form-col', 'auto');
+  item.style.setProperty('--form-rowspan', '1');
   item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${titleOnlyDisplayValue(field, record)}</div>`;
   appendFormResizeHandles(item, field);
   return item;
@@ -2060,7 +2063,7 @@ const renderSubtableView = (field, rows = []) => {
 const renderViewForm = (form, record = {}) => {
   const fixedLogLayout = false;
   const grid = document.createElement('div');
-  grid.className = 'ragic-form-grid ragic-view-grid';
+  grid.className = 'ragic-form-grid ragic-view-grid compact-view-grid';
   applyFormGridLayout(grid);
   getFields().filter((field) => {
     if (field.type === 'subtable') return false;
@@ -2075,6 +2078,13 @@ const renderViewForm = (form, record = {}) => {
       item.classList.add('is-tracking-placeholder-field');
     }
     applyFormLayout(item, field);
+    item.style.setProperty('--form-row', 'auto');
+    item.style.setProperty('--form-col', 'auto');
+    item.style.setProperty('--form-rowspan', '1');
+    const hasValue = Array.isArray(fieldValue)
+      ? fieldValue.some((entry) => entry && Object.values(entry).some(Boolean))
+      : ![undefined, null, ''].includes(fieldValue);
+    item.classList.toggle('is-empty-view-field', !hasValue);
     item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${isReminderEnabledField(field) ? '已啟用' : (isPairToggle ? '' : renderDisplayValue(field, fieldValue))}</div>`;
     appendFormResizeHandles(item, field);
     grid.appendChild(item);
@@ -2098,6 +2108,9 @@ const renderViewForm = (form, record = {}) => {
       section.classList.add('is-tracking-detail-subtable');
     }
     if (!fixedLogLayout) applyFormLayout(section, field);
+    section.style.setProperty('--form-row', 'auto');
+    section.style.setProperty('--form-col', 'auto');
+    section.style.setProperty('--form-rowspan', '1');
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
     appendFormResizeHandles(section, field);
