@@ -2111,6 +2111,14 @@ const renderViewForm = (form, record = {}) => {
     section.style.setProperty('--form-row', 'auto');
     section.style.setProperty('--form-col', 'auto');
     section.style.setProperty('--form-rowspan', '1');
+    if (window.matchMedia('(min-width: 769px)').matches) {
+      const viewportHeight = Math.max(220, Math.min(360, window.innerHeight - 600));
+      section.style.setProperty('height', 'auto', 'important');
+      section.style.setProperty('min-height', '0px', 'important');
+      section.style.setProperty('max-height', `${viewportHeight}px`, 'important');
+      section.style.setProperty('overflow-x', 'auto', 'important');
+      section.style.setProperty('overflow-y', 'auto', 'important');
+    }
     section.dataset.subtable = field.key;
     section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div>${renderSubtableView(field, record[field.key])}`;
     appendFormResizeHandles(section, field);
