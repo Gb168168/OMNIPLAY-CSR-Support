@@ -7851,42 +7851,35 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   line-height: 1.55;
 }
 
-/* 2026-08-10：桌面列表使用固定欄寬，避免資料載入或換頁時欄位忽大忽小。 */
+/* 2026-08-10：桌面列表依標題與內容自動決定欄寬，呈現緊湊的資料表。 */
 @media (min-width: 769px) {
   #ragicListView .ragic-table {
-    width: max(100%, var(--ragic-table-width, 100%)) !important;
-    min-width: var(--ragic-table-width, 100%) !important;
-    table-layout: fixed !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    table-layout: auto !important;
   }
 
   #ragicListView .ragic-table th,
   #ragicListView .ragic-table td {
-    width: var(--col-width, 180px) !important;
-    min-width: var(--col-width, 180px) !important;
-    max-width: var(--col-width, 180px) !important;
+    max-width: none;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
   }
 
   #ragicListView .ragic-table th:first-child,
   #ragicListView .ragic-table td:first-child {
     width: 50px !important;
     min-width: 50px !important;
-    max-width: 50px !important;
+    max-width: none;
   }
 
   #ragicListView .ragic-table td.col-content,
   #ragicListView .ragic-table td.col-content a,
   #ragicListView .ragic-table td.col-content span {
-    max-width: 100% !important;
+    max-width: none !important;
     overflow: visible !important;
     text-overflow: clip !important;
     white-space: pre-wrap !important;
-    word-break: break-word !important;
-    overflow-wrap: anywhere;
-  }
-
-  #ragicListView .ragic-table td:not(.col-content) {
-    white-space: normal !important;
-    word-break: break-word !important;
-    overflow-wrap: anywhere;
   }
 }

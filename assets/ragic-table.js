@@ -779,25 +779,7 @@ const DEFAULT_SUBTABLE_FIELD_HEIGHT = 180;
 const normalizeFormFieldSize = (value, min = 1) => { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? Math.max(min, Math.round(parsed)) : null; };
 const normalizeFieldWidth = (width) => { const value = Number(width); return Number.isFinite(value) && value > 0 ? Math.round(value) : null; };
 const fieldColumnWidth = (field = {}) => {
-  if (isLogModule()) {
-    if (field.label === '日期') return 90;
-    if (field.label === '班別') return 80;
-    if (field.label === '客戶') return 300;
-    if (field.label === '分類') return 100;
-    if (field.label === '狀態') return 80;
-    if (field.label === '問題描述') return 750;
-    if (field.label === '接洽者') return 90;
-    if (field.label === '完成者') return 90;
-    if (field.label === '完成時間') return 90;
-
-    if (field.label === '備註') return LOG_LIST_WIDTHS.note;
-    if (field.type === 'image') return LOG_LIST_WIDTHS.image;
-    if (field.type === 'file') return LOG_LIST_WIDTHS.file;
-    if (field.type === 'serial' || field.label === '編號') return LOG_LIST_WIDTHS.serial;
-    if (['date', 'datetime', 'updatedDate'].includes(field.type)) return LOG_LIST_WIDTHS.date;
-  }
-
-  return normalizeFieldWidth(field.width) || DEFAULT_FIELD_WIDTHS[field.type] || DEFAULT_LIST_COLUMN_WIDTH;
+  return field.manualWidth === true ? normalizeFieldWidth(field.width) : null;
 };
 const defaultFormFieldHeight = (field = {}) => field.type === 'subtable' ? DEFAULT_SUBTABLE_FIELD_HEIGHT : DEFAULT_FORM_FIELD_HEIGHT;
 const layoutHeightValue = (item = {}, field = {}) => normalizeFormLayoutNumber(item.height ?? field.formHeight, { min: MIN_FORM_FIELD_HEIGHT, max: 2000, fallback: defaultFormFieldHeight(field) });
@@ -922,6 +904,7 @@ const attachColumnResizers = (headerRow) => {
         const field = getFields().find((item) => item.key === th.dataset.fieldKey);
         if (field) {
           field.width = Math.max(MIN_COLUMN_WIDTH, Math.round(th.offsetWidth));
+          field.manualWidth = true;
           await saveSchema();
         }
       };
@@ -939,16 +922,16 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   markerCol.style.setProperty('min-width', '50px', 'important');
   markerCol.style.setProperty('width', '50px');
   colgroup.appendChild(markerCol);
-  let tableWidth = 50;
   fields.forEach((field) => {
     const col = document.createElement('col');
     const width = fieldColumnWidth(field);
-    tableWidth += width;
-    col.style.setProperty('min-width', `${width}px`, 'important');
-    col.style.setProperty('width', `${width}px`);
+    if (width) {
+      col.style.setProperty('min-width', `${width}px`, 'important');
+      col.style.setProperty('width', `${width}px`);
+    }
     colgroup.appendChild(col);
   });
-  table.style.setProperty('--ragic-table-width', `${tableWidth}px`);
+  table.style.removeProperty('--ragic-table-width');
   table.insertBefore(colgroup, table.firstChild);
 };
 
@@ -2810,7 +2793,7 @@ const renderHeader = () => {
   const thead = headerRow?.closest('thead');
   const table = headerRow?.closest('table');
   if (table) {
-    table.style.tableLayout = 'fixed';
+    table.style.tableLayout = 'auto';
     applyRagicColumnGroup(table);
   }
   document.querySelector('#ragicFilterRow')?.remove();
