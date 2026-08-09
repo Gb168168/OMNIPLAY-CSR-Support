@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>收件匣｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260806-mobile-category3" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260809-mobile-cards2" />
   <style>
     .inbox-shell{display:grid;gap:16px}.inbox-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 18px;border-bottom:1px solid var(--border)}
     .inbox-toolbar select,.inbox-toolbar input{width:auto;min-width:150px}.inbox-table td{vertical-align:middle}.inbox-actions{display:flex;gap:6px;flex-wrap:wrap}
@@ -17,7 +17,8 @@
     .conversation-message header{display:flex;gap:10px;padding:0 0 7px;border:0;font-size:12px;color:var(--text-secondary)}.conversation-message p{white-space:pre-wrap;margin:0;line-height:1.6}
     .conversation-attachment{display:flex;gap:10px;align-items:center}.conversation-attachment img,.conversation-attachment video{max-width:min(720px,78vw);max-height:62vh;border-radius:10px;object-fit:contain}.conversation-attachment img{cursor:zoom-in}
     .analysis-card{padding:14px;border:1px solid #bfdbfe;border-radius:14px;background:#eff6ff;white-space:pre-wrap;line-height:1.65}
-    @media(max-width:760px){.inbox-actions{min-width:220px}.conversation-attachment{align-items:flex-start;flex-direction:column}}
+    .inbox-setup-dialog{width:min(560px,96vw)}.inbox-setup-body{display:grid;gap:14px;padding:18px 20px}.inbox-setup-body label{display:grid;gap:7px;font-weight:800}.inbox-setup-body input{width:100%;min-height:44px}.inbox-setup-note{margin:0;color:var(--text-secondary);line-height:1.55}.inbox-setup-error{margin:0;color:#dc2626;font-weight:800}.inbox-setup-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 20px}
+    @media(max-width:760px){.inbox-toolbar{display:grid;grid-template-columns:1fr 1fr;padding:12px}.inbox-toolbar select,.inbox-toolbar input{width:100%;min-width:0;min-height:42px}.inbox-toolbar #inboxSearch{grid-column:1/-1}.inbox-actions{min-width:220px}.conversation-attachment{align-items:flex-start;flex-direction:column}.inbox-setup-actions button{flex:1;min-height:42px}}
   </style>
 </head>
 <body>
@@ -37,8 +38,20 @@
     </main>
   </section>
   <section class="conversation-modal" id="conversationModal" hidden><article class="conversation-dialog"><header><h2 id="conversationTitle">Conversation</h2><button class="ghost" data-close-modal type="button">關閉</button></header><div class="conversation-content" id="conversationContent"></div></article></section>
+  <section class="conversation-modal" id="inboxSetupModal" hidden>
+    <form class="conversation-dialog inbox-setup-dialog" id="inboxSetupForm">
+      <header><h2>收件匣連線設定</h2><button class="ghost" id="closeInboxSetup" type="button">關閉</button></header>
+      <div class="inbox-setup-body">
+        <p class="inbox-setup-note">設定只會儲存在這台裝置的瀏覽器。尚未設定時，收件匣不會自動跳出輸入視窗。</p>
+        <label>Cloudflare Worker 網址<input id="inboxWorkerUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://example.workers.dev" required></label>
+        <label>收件匣存取碼<input id="inboxAccessKey" type="password" autocomplete="off" placeholder="INBOX_API_TOKEN" required></label>
+        <p class="inbox-setup-error" id="inboxSetupError" hidden></p>
+      </div>
+      <div class="inbox-setup-actions"><button class="secondary" id="cancelInboxSetup" type="button">取消</button><button class="primary-button" type="submit">儲存並連線</button></div>
+    </form>
+  </section>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-  <script src="../assets/firebase-init.js"></script><script src="../assets/app.js?v=20260806-mobile-category2"></script><script src="https://js.puter.com/v2/"></script><script src="../assets/inbox.js?v=20260729-uploadfix1"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/app.js?v=20260809-mobile-cards1"></script><script src="https://js.puter.com/v2/"></script><script src="../assets/inbox.js?v=20260809-settings-modal1"></script>
 </body></html>

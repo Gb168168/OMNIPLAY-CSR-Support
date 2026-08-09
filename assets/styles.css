@@ -2762,6 +2762,109 @@ textarea,
   .designer-field-row { grid-template-columns: 1fr; }
 }
 
+/* Phone list cards: list pages no longer require a 590-1050px horizontal table. */
+@media (max-width: 560px) {
+  .mobile-card-table,
+  .mobile-card-table tbody,
+  .mobile-card-table tr,
+  .mobile-card-table td {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  .mobile-card-table {
+    min-width: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .mobile-card-table thead {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+  }
+
+  .mobile-card-table tbody {
+    display: grid !important;
+    gap: 12px !important;
+    padding: 2px !important;
+  }
+
+  .mobile-card-table tbody tr {
+    overflow: hidden !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    background: var(--surface) !important;
+    box-shadow: 0 5px 16px rgba(15, 23, 42, .07) !important;
+  }
+
+  .mobile-card-table tbody td {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: minmax(76px, 34%) minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 10px !important;
+    min-height: 42px !important;
+    padding: 10px 12px !important;
+    border: 0 !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent) !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .mobile-card-table tbody td:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .mobile-card-table tbody td::before {
+    content: attr(data-mobile-label);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.5;
+  }
+
+  .mobile-card-table .marker-cell,
+  .mobile-card-table .icon-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .mobile-card-table .marker-cell::before,
+  .mobile-card-table .icon-actions::before {
+    margin-right: auto;
+  }
+
+  .mobile-card-table .inbox-actions,
+  .mobile-card-table .table-actions {
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .mobile-card-table .inbox-actions button,
+  .mobile-card-table .table-actions button {
+    width: 100% !important;
+    min-height: 40px !important;
+  }
+
+  .ragic-table-wrap:has(.mobile-card-table),
+  .table-wrap:has(.mobile-card-table),
+  .staff-table-wrap:has(.mobile-card-table) {
+    overflow-x: hidden !important;
+    padding: 4px 8px 12px !important;
+  }
+}
+
 /* ===== 2026-08 手機操作模式 =====
    手機只保留一列頁首；完整導覽收進可開合抽屜，避免整個桌面導覽被縮成小字。 */
 .mobile-current-page { display: none; }
@@ -7349,6 +7452,75 @@ body .app-shell[data-auth-protected].is-hidden {
   }
 }
 
+/* 2026-08-09 mobile usability pass: make wide data surfaces discoverable and tappable. */
+@media (max-width: 768px) {
+  .ragic-table-wrap,
+  .table-wrap,
+  .staff-table-wrap,
+  .leave-table-wrap,
+  .ragic-subtable,
+  .calendar-wrap {
+    position: relative;
+    scrollbar-width: auto !important;
+    scrollbar-color: color-mix(in srgb, var(--primary) 55%, transparent) transparent;
+    overscroll-behavior-inline: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  .ragic-table-wrap::-webkit-scrollbar,
+  .table-wrap::-webkit-scrollbar,
+  .staff-table-wrap::-webkit-scrollbar,
+  .leave-table-wrap::-webkit-scrollbar,
+  .ragic-subtable::-webkit-scrollbar,
+  .calendar-wrap::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .ragic-table-wrap::-webkit-scrollbar-thumb,
+  .table-wrap::-webkit-scrollbar-thumb,
+  .staff-table-wrap::-webkit-scrollbar-thumb,
+  .leave-table-wrap::-webkit-scrollbar-thumb,
+  .ragic-subtable::-webkit-scrollbar-thumb,
+  .calendar-wrap::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary) 55%, transparent);
+  }
+
+  .ragic-table > thead > tr > th:first-child,
+  .ragic-table > tbody > tr > td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface);
+    box-shadow: 1px 0 0 var(--border);
+  }
+
+  .ragic-table > thead > tr > th:first-child {
+    z-index: 3;
+  }
+
+  .ragic-table button,
+  .ragic-subtable button,
+  .calendar-day button,
+  .calendar-event {
+    min-height: 36px;
+    touch-action: manipulation;
+  }
+
+  .calendar-grid.is-month-view .calendar-event {
+    min-height: 24px !important;
+    padding: 4px 3px !important;
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  .calendar-grid.is-month-view .calendar-day {
+    min-height: 132px !important;
+    height: 132px !important;
+    max-height: 132px !important;
+  }
+}
+
 
 /* ===== 2026-08-06 手機目前分類快速功能列 =====
    目前分類的所有分頁固定顯示於標題列下方，可水平滑動切換。 */
@@ -7422,7 +7594,153 @@ body .app-shell[data-auth-protected].is-hidden {
   }
 
   body .app-shell:has(.mobile-quick-nav) > .main,
-  body .app-shell:has(.mobile-quick-nav) > .main-content {
+body .app-shell:has(.mobile-quick-nav) > .main-content {
     min-height: calc(100dvh - 102px) !important;
+  }
+}
+
+/* Keep phone card-list rules last so legacy table width rules cannot restore horizontal tables. */
+@media (max-width: 560px) {
+  body table.mobile-card-table,
+  body table.mobile-card-table tbody,
+  body table.mobile-card-table tbody tr,
+  body table.mobile-card-table tbody td {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  body table.mobile-card-table {
+    display: block !important;
+    table-layout: auto !important;
+  }
+
+  body table.mobile-card-table thead {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 0 10px !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    clip: auto !important;
+    clip-path: none !important;
+    scrollbar-width: thin;
+  }
+
+  body table.mobile-card-table thead tr {
+    display: flex !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    gap: 6px !important;
+    padding: 2px !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  body table.mobile-card-table thead th {
+    position: relative !important;
+    display: flex !important;
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    width: auto !important;
+    min-width: 92px !important;
+    max-width: 180px !important;
+    min-height: 38px !important;
+    padding: 7px 9px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 9px !important;
+    background: var(--surface) !important;
+    font-size: 12px !important;
+  }
+
+  body table.mobile-card-table thead th:first-child {
+    display: none !important;
+  }
+
+  body table.mobile-card-table tbody {
+    display: grid !important;
+  }
+
+  body table.mobile-card-table tbody tr {
+    display: block !important;
+  }
+
+  body table.mobile-card-table tbody td {
+    position: static !important;
+    display: grid !important;
+    white-space: normal !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: none !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+    padding: 8px !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-day {
+    display: grid !important;
+    grid-template-columns: 50px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 74px !important;
+    max-height: none !important;
+    padding: 8px 10px !important;
+    gap: 9px !important;
+    text-align: left !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-date {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-date strong {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-date small,
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-empty {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .day-events {
+    display: grid !important;
+    min-width: 0 !important;
+    gap: 5px !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .calendar-event {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 27px !important;
+    padding: 5px 7px !important;
+    font-size: 12px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-more {
+    display: grid;
+    place-items: center;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
   }
 }
