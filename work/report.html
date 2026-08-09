@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>提報｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260809-mobile-cards2" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260810-form-usability1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -58,7 +58,7 @@
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260809-mobile-cards1"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260805-reminder-view2"></script>
+  <script src="../assets/ragic-table.js?v=20260810-confirm-modal1"></script>
   <script>
     const reportTrackingMode = new URLSearchParams(window.location.search).get('tracking') === 'open' || sessionStorage.getItem('reportTrackingFilter') === 'open';
     sessionStorage.removeItem('reportTrackingFilter');
@@ -88,12 +88,13 @@
         { key: 'field_1783793551894_qk3ol', label: '圖片', type: 'image', formRow: 4, formCol: 4, formColSpan: 2, formRowSpan: 2 },
         { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 1, formColSpan: 3, formRowSpan: 2 },
         { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 6, formCol: 4 },
-        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 6, formCol: 5 }
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 6, formCol: 5 },
+        { key: 'issue', label: '問題描述', type: 'textarea', rows: 4, formRow: 7, formCol: 1, formColSpan: 5 }
       ],
       subtable: {
         key: 'field_1783793415787_ht9q7',
         label: '子表格',
-        formRow: 7,
+        formRow: 8,
         formCol: 1,
         formColSpan: 5,
         columnsPerRow: 4,
@@ -105,9 +106,9 @@
         ]
       },
       formLayout: {
-        version: '20260719-1',
+        version: '20260810-report-issue1',
         columns: 5,
-        rows: 7,
+        rows: 8,
         fields: {
           date: { row: 1, col: 1 },
           reporter: { row: 1, col: 2 },
@@ -127,10 +128,11 @@
           field_1783889767182_tuy8x: { row: 6, col: 1, colSpan: 3 },
           reminder_at: { row: 6, col: 4 },
           reminder_enabled: { row: 6, col: 5 },
-          field_1783793415787_ht9q7: { row: 7, col: 1, colSpan: 5 }
+          issue: { row: 7, col: 1, colSpan: 5 },
+          field_1783793415787_ht9q7: { row: 8, col: 1, colSpan: 5 }
         }
       },
-      listColumns: ['date', 'reporter', 'category', 'subject', 'content', 'status']
+      listColumns: ['date', 'reporter', 'category', 'subject', 'content', 'issue', 'status']
     });
   </script>
 </body>

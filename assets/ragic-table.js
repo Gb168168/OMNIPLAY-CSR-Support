@@ -22,6 +22,48 @@ const reminderRecordValue = (record = {}, field = {}) => {
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
 
 const RAGIC_STATE = { records: [], filtered: [], currentId: null, formMode: 'view', editDirty: false, sortKey: '', sortDir: 'asc', filters: {}, openMenuKey: '', page: 1, pageSize: 50, config: null, schema: null, unsubscribeRecords: null, collection: null, schemaDoc: null };
+
+const showRagicNotice = (message, { tone = 'success', duration = 2800 } = {}) => {
+  let notice = document.querySelector('#ragicPageNotice');
+  if (!notice) {
+    notice = document.createElement('div');
+    notice.id = 'ragicPageNotice';
+    notice.className = 'ragic-page-notice';
+    notice.setAttribute('role', 'status');
+    notice.setAttribute('aria-live', 'polite');
+    document.body.appendChild(notice);
+  }
+  window.clearTimeout(notice._hideTimer);
+  notice.className = `ragic-page-notice is-${tone} is-visible`;
+  notice.textContent = String(message || '操作完成');
+  notice._hideTimer = window.setTimeout(() => notice.classList.remove('is-visible'), duration);
+};
+
+const confirmRagicAction = ({ title = '確認操作', message = '', confirmText = '確定', danger = false } = {}) => new Promise((resolve) => {
+  const modal = document.createElement('div');
+  modal.className = 'ragic-confirm-backdrop';
+  modal.innerHTML = `<section class="ragic-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="ragicConfirmTitle">
+    <h2 id="ragicConfirmTitle">${escapeHtml(title)}</h2>
+    <p>${escapeHtml(message)}</p>
+    <div class="ragic-confirm-actions">
+      <button class="secondary" type="button" data-confirm-cancel>取消</button>
+      <button class="${danger ? 'btn-danger' : 'primary'}" type="button" data-confirm-accept>${escapeHtml(confirmText)}</button>
+    </div>
+  </section>`;
+  const finish = (accepted) => {
+    modal.remove();
+    resolve(accepted);
+  };
+  modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => finish(false));
+  modal.querySelector('[data-confirm-accept]').addEventListener('click', () => finish(true));
+  modal.addEventListener('click', (event) => { if (event.target === modal) finish(false); });
+  modal.addEventListener('keydown', (event) => { if (event.key === 'Escape') finish(false); });
+  document.body.appendChild(modal);
+  modal.querySelector('[data-confirm-cancel]').focus();
+});
+
+window.showRagicNotice = showRagicNotice;
+window.confirmRagicAction = confirmRagicAction;
 window.getCurrentRagicRecordId = () => RAGIC_STATE.currentId || '';
 
 const hasUnsavedRagicChanges = () => RAGIC_STATE.formMode === 'edit' && RAGIC_STATE.editDirty;
@@ -3485,7 +3527,9 @@ const waitForPermissions = async () => {
 };
 
 const applyRagicPermissionUi = () => {
-  document.querySelector('#newRecordButton')?.toggleAttribute('hidden', !canUse('edit'));
+  const newRecordButton = document.querySelector('#newRecordButton');
+  newRecordButton?.toggleAttribute('hidden', !canUse('edit'));
+  if (newRecordButton) newRecordButton.disabled = !canUse('edit') || newRecordButton.dataset.schemaReady !== 'true';
   const saveButton = document.querySelector('button[form="ragicForm"][type="submit"]');
   if (saveButton) {
     saveButton.hidden = !canUse('edit');
@@ -3701,6 +3745,11 @@ const initRagicPage = async (config) => {
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = Array.isArray(config.trackingStatuses) && config.trackingStatuses.length ? `目前篩選：${config.trackingStatuses.join('／')}` : `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
   const newRecordButton = document.querySelector('#newRecordButton');
+  if (newRecordButton) {
+    newRecordButton.dataset.schemaReady = 'false';
+    newRecordButton.disabled = true;
+    newRecordButton.textContent = '載入欄位中…';
+  }
   const designButton = document.querySelector('#designTableButton');
   if (topbarActions && canUse('design')) {
     const button = designButton || document.createElement('button');
@@ -4013,7 +4062,26 @@ const addDesignerPairFields = (pairType) => {
       openImagePreview(viewImage.currentSrc || viewImage.src, viewImage.alt || '圖片', sources, Math.max(0, images.indexOf(viewImage)));
     }
   });
-  document.querySelector('#deleteButton').addEventListener('click', async () => { if (!canUse('delete')) return alert('您沒有刪除權限'); if (!RAGIC_STATE.currentId || !confirm('確定刪除此筆資料？\n資料將不再存在🚫')) return; await collection.doc(RAGIC_STATE.currentId).delete(); document.querySelector('#backToListButton').click(); });
+  document.querySelector('#deleteButton').addEventListener('click', async () => {
+    if (!canUse('delete')) return showRagicNotice('您沒有刪除權限', { tone: 'error' });
+    if (!RAGIC_STATE.currentId) return;
+    const accepted = await confirmRagicAction({
+      title: '確定刪除此筆資料？',
+      message: '刪除後資料將不再存在，且無法復原。',
+      confirmText: '永久刪除',
+      danger: true
+    });
+    if (!accepted) return;
+    const deletingId = RAGIC_STATE.currentId;
+    try {
+      await collection.doc(deletingId).delete();
+      document.querySelector('#backToListButton').click();
+      showRagicNotice('資料已刪除');
+    } catch (error) {
+      console.error(error);
+      showRagicNotice(error.message || '刪除失敗，請稍後再試。', { tone: 'error', duration: 4500 });
+    }
+  });
   const ragicForm = document.querySelector('#ragicForm');
   if (isLogNewModule()) ragicForm.noValidate = true;
   ragicForm.addEventListener('submit', async (event) => {
@@ -4065,7 +4133,7 @@ const addDesignerPairFields = (pairType) => {
       document.querySelector('#backToListButton').click();
     } catch (error) {
       console.error(error);
-      alert(error.message || '儲存失敗，請稍後再試。');
+      showRagicNotice(error.message || '儲存失敗，請稍後再試。', { tone: 'error', duration: 4500 });
     } finally {
       if (saveButton) { saveButton.disabled = false; saveButton.textContent = originalText; }
     }
@@ -4090,7 +4158,13 @@ const addDesignerPairFields = (pairType) => {
   });
   document.querySelector('#ragicTableBody').addEventListener('click', (event) => { const thumbnail = event.target.closest('.ragic-thumbnail'); if (thumbnail) { event.preventDefault(); event.stopPropagation(); openImagePreview(thumbnail.src, thumbnail.alt || '圖片'); return; } const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (button) { event.preventDefault(); event.stopPropagation(); const id = button.dataset.docId; if (button.dataset.iconAction === 'fire') window.toggleFire(id); if (button.dataset.iconAction === 'pin') window.togglePin(id); return; } });
   document.querySelector('#ragicTableBody').addEventListener('keydown', (event) => { if (!['Enter', ' '].includes(event.key)) return; const link = event.target.closest('a'); if (link) { event.stopPropagation(); return; } const button = event.target.closest('[data-icon-action]'); if (!button) return; event.preventDefault(); button.click(); });
-  if (!collection || !schemaDoc) { RAGIC_STATE.schema = makeDefaultSchema(config); renderHeader(); applyRagicPermissionUi(); return; }
+  if (!collection || !schemaDoc) {
+    RAGIC_STATE.schema = makeDefaultSchema(config);
+    renderHeader();
+    if (newRecordButton) { newRecordButton.dataset.schemaReady = 'true'; newRecordButton.textContent = '+ 新增'; }
+    applyRagicPermissionUi();
+    return;
+  }
   schemaDoc.onSnapshot(async (doc) => {
   if (!doc.exists) {
     const defaultSchema = makeDefaultSchema(config);
@@ -4119,6 +4193,7 @@ const addDesignerPairFields = (pairType) => {
   }
 
     renderHeader();
+  if (newRecordButton) { newRecordButton.dataset.schemaReady = 'true'; newRecordButton.textContent = '+ 新增'; }
   applyRagicPermissionUi();
   applyFilters();
 });
