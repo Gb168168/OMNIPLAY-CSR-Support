@@ -1,5 +1,5 @@
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/OMNIPLAY-CSR-Support/sw.js?v=20260805-reminder-view2', { updateViaCache: 'none' });
+  navigator.serviceWorker.register('/OMNIPLAY-CSR-Support/sw.js?v=20260809-mobile-cards1', { updateViaCache: 'none' });
 }
 
 // 所有客服系統頁面都載入共用提醒監聽器。
@@ -574,6 +574,36 @@ loginForm?.addEventListener('submit', async (event) => {
 document.addEventListener('click', (event) => {
   if (event.target.closest('#logoutButton')) logout();
 });
+
+// Convert list tables to phone-friendly cards while keeping desktop tables unchanged.
+const MOBILE_CARD_TABLE_SELECTOR = [
+  '#ragicListView .ragic-table',
+  '#meetingListView table',
+  '.staff-panel table',
+  '.inbox-shell table'
+].join(',');
+let mobileTableLabelFrame = 0;
+const applyMobileTableLabels = () => {
+  mobileTableLabelFrame = 0;
+  document.querySelectorAll(MOBILE_CARD_TABLE_SELECTOR).forEach((table) => {
+    table.classList.add('mobile-card-table');
+    const labels = [...table.querySelectorAll('thead th')].map((header) =>
+      String(header.querySelector('.col-label')?.textContent || header.textContent || '').replace(/[▼↑↓]/g, '').trim()
+    );
+    table.querySelectorAll('tbody tr').forEach((row) => {
+      [...row.children].forEach((cell, index) => {
+        if (cell.tagName === 'TD') cell.dataset.mobileLabel = labels[index] || `欄位 ${index + 1}`;
+      });
+    });
+  });
+};
+const scheduleMobileTableLabels = () => {
+  if (mobileTableLabelFrame) return;
+  mobileTableLabelFrame = requestAnimationFrame(applyMobileTableLabels);
+};
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleMobileTableLabels, { once: true });
+else scheduleMobileTableLabels();
+new MutationObserver(scheduleMobileTableLabels).observe(document.body, { childList: true, subtree: true });
 
 renderThemeToggle();
 setAppVisibility();

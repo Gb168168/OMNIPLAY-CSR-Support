@@ -711,9 +711,11 @@ const getDayCountBackground = (items = []) => {
 const renderCalendar = () => {
   if (!calendarEl) return;
   const today = new Date();
+  const mobileMonthAgenda = viewMode === 'month' && window.matchMedia('(max-width: 560px)').matches;
   calendarEl.classList.toggle('is-year-view', viewMode === 'year');
   calendarEl.classList.toggle('is-month-view', viewMode === 'month');
   calendarEl.classList.toggle('is-week-view', viewMode === 'week');
+  calendarEl.classList.toggle('is-mobile-month-agenda', mobileMonthAgenda);
   const { start, end } = getVisibleRange();
   const schedulesByDay = getScheduleOccurrencesByDay(start, end);
   const days = [];
@@ -736,6 +738,22 @@ const renderCalendar = () => {
     }).join('');
     return;
   }
+
+  if (mobileMonthAgenda) {
+    calendarEl.innerHTML = days
+      .filter((day) => day.getMonth() === currentDate.getMonth())
+      .map((day) => {
+        const key = toDateKey(day);
+        const items = (schedulesByDay[key] || []).sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
+        const count = items.length > 2 ? `<span class="mobile-agenda-more">＋${items.length - 2}</span>` : '';
+        const events = items.slice(0, 2).map((item) => `<span class="calendar-event ${item.hasOccurred ? '' : 'is-repeat'}" data-id="${escapeHtml(item.id)}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('');
+        return `<button class="calendar-day mobile-agenda-day weekday-${day.getDay()} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}" data-item-count="${items.length}">
+          <span class="mobile-agenda-date"><strong>${day.getDate()}</strong><small>週${weekdays[day.getDay()]}</small></span>
+          <span class="day-events">${events || '<span class="mobile-agenda-empty">沒有排程</span>'}</span>${count}
+        </button>`;
+      }).join('');
+    return;
+  }
   
   const header = weekdays.map((day, index) => `<div class="calendar-weekday weekday-${index}">${day}</div>`).join('');
   const cells = days.map((day) => {
@@ -754,6 +772,12 @@ const renderCalendar = () => {
   }).join('');
   calendarEl.innerHTML = header + cells;
 };
+
+let scheduleResizeFrame = 0;
+window.addEventListener('resize', () => {
+  cancelAnimationFrame(scheduleResizeFrame);
+  scheduleResizeFrame = requestAnimationFrame(renderCalendar);
+});
 
 const subscribeLeave = () => {
   unsubscribeLeave?.();
