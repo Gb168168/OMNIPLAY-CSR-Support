@@ -7831,3 +7831,13 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     transform: none !important;
   }
 }
+
+/* PROD 告警的舊排版曾留下空白列；單列欄位需完整容納標籤與內容。 */
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field:not(.ragic-view-field-textarea):not(.ragic-view-field-image):not(.ragic-view-field-file) {
+  min-height: 84px !important;
+  overflow: visible !important;
+}
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field .ragic-view-value {
+  min-height: 26px;
+  overflow: visible;
+}

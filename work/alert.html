@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PROD告警紀錄｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260810-form-usability1" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260810-alert-layout1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="../assets/icon-192.png" />
 </head>
-<body>
+<body class="alert-page">
   <section class="app-shell" aria-label="客服系統主畫面">
     <aside id="sidebar"></aside>
     <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
@@ -58,11 +58,13 @@
   <script src="../assets/firebase-init.js"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260809-mobile-cards1"></script>
-  <script src="../assets/ragic-table.js?v=20260810-safe-image-data1"></script>
+  <script src="../assets/ragic-table.js?v=20260810-alert-layout1"></script>
   <script>
     initRagicPage({
       title: 'PROD告警紀錄',
       collection: 'alert',
+      compactEmptyRows: true,
+      formRowHeight: 84,
       fields: [
         { key: 'date', label: '告警日期', type: 'date', defaultToday: true },
         { key: 'time', label: '告警時間', type: 'time' },
