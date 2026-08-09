@@ -7841,3 +7841,12 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   min-height: 26px;
   overflow: visible;
 }
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field .ragic-view-label {
+  font-size: 14px !important;
+  line-height: 1.4;
+}
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field .ragic-view-value,
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field .field-value {
+  font-size: 16px !important;
+  line-height: 1.55;
+}
