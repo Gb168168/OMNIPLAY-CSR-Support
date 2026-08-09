@@ -7833,11 +7833,10 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
-/* ===== 2026-08-10 導覽列安全置中與水平滑動 =====
-   放得下時置中；內容超寬時 safe center 會退回靠左，避免首尾被裁切。 */
+/* ===== 2026-08-10 導覽列跨 Safari 置中與水平滑動 =====
+   自動邊距讓內容放得下時置中，超寬時退回靠左並保留完整滑動範圍。 */
 @media (min-width: 769px) {
-  .sidebar.top-navigation .top-nav-primary-links,
-  .sidebar.top-navigation .top-nav-secondary {
+  .sidebar.top-navigation .top-nav-primary-links {
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -7847,26 +7846,45 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     -webkit-overflow-scrolling: touch;
   }
 
-  .sidebar.top-navigation .top-nav-primary-links,
+  .sidebar.top-navigation .top-nav-secondary {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar.top-navigation .top-nav-primary-links {
+    justify-content: center !important;
+  }
+
   .sidebar.top-navigation .top-nav-submenu {
-    justify-content: safe center !important;
+    justify-content: flex-start !important;
     box-sizing: border-box;
     width: max-content;
     min-width: 100%;
-    padding-inline: max(12px, env(safe-area-inset-left)) max(28px, env(safe-area-inset-right)) !important;
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) !important;
     overflow: visible !important;
   }
 
-  .sidebar.top-navigation .top-nav-primary-links::after,
-  .sidebar.top-navigation .top-nav-submenu::after {
-    content: '';
-    flex: 0 0 max(12px, env(safe-area-inset-right));
+  .sidebar.top-navigation .top-nav-submenu > :first-child {
+    margin-left: auto !important;
+  }
+
+  .sidebar.top-navigation .top-nav-submenu > :last-child {
+    margin-right: auto !important;
   }
 }
 
 @media (max-width: 768px) {
   body .sidebar.top-navigation .mobile-quick-nav {
-    justify-content: safe center !important;
+    justify-content: flex-start !important;
     box-sizing: border-box !important;
     padding-left: max(8px, env(safe-area-inset-left)) !important;
     padding-right: max(24px, env(safe-area-inset-right)) !important;
@@ -7874,9 +7892,12 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     overscroll-behavior-inline: contain;
   }
 
-  body .sidebar.top-navigation .mobile-quick-nav::after {
-    content: '';
-    flex: 0 0 max(12px, env(safe-area-inset-right));
+  body .sidebar.top-navigation .mobile-quick-nav > :first-child {
+    margin-left: auto !important;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav > :last-child {
+    margin-right: auto !important;
   }
 }
 
