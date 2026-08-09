@@ -8119,3 +8119,32 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     min-height: 88px !important;
   }
 }
+
+@media (min-width: 769px) {
+  #ragicForm .dense-ragic-grid > .dense-form-subtable:has(tbody > .subtable-auto-blank-row:only-child) {
+    max-height: 140px !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  #ragicForm .dense-ragic-grid > .dense-field-pair {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: none !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  #ragicForm .dense-field-pair > .dense-form-field {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
