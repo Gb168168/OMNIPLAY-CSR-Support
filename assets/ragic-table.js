@@ -212,7 +212,21 @@ const COLLECTION_MAP = { workHandover: 'handover', workLogs: 'log', workReports:
 const SCHEMA_MAP = { handover: 'handover_schema', log: 'log_schema', report: 'report_schema', tracking: 'tracking_schema', alert: 'alert_schema', meeting: 'meeting_schema', knowledge: 'knowledge_schema', ai_database: 'ai_database_schema' };
 
 const normalizeKey = (text, fallback = 'field') => String(text || fallback).trim().replace(/[^\w\u4e00-\u9fa5]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase() || `${fallback}_${Date.now()}`;
-const valueToText = (value) => Array.isArray(value) ? value.join('、') : (value?.toDate ? formatLocalDateTime(value.toDate()) : (value?.name && value?.data ? `${value.name} (${formatFileSize(value.size)})` : (value ?? '')));
+const isImageDataUrl = (value) => typeof value === 'string' && /^data:image\/[a-z0-9.+-]+;base64,/i.test(value.trim());
+const imageDataSources = (value) => {
+  if (isImageDataUrl(value)) return [value.trim()];
+  if (isImageDataUrl(value?.data)) return [value.data.trim()];
+  if (Array.isArray(value)) return value.flatMap((item) => imageDataSources(item));
+  return [];
+};
+const valueToText = (value) => {
+  if (isImageDataUrl(value) || isImageDataUrl(value?.data)) return value?.name ? `圖片：${value.name}` : '圖片';
+  if (Array.isArray(value)) return value.map((item) => String(valueToText(item))).filter(Boolean).join('、');
+  if (value?.toDate) return formatLocalDateTime(value.toDate());
+  if (value?.name && value?.data) return `${value.name} (${formatFileSize(value.size)})`;
+  if (value && typeof value === 'object') return Object.values(value).map((item) => String(valueToText(item))).filter(Boolean).join(' / ');
+  return value ?? '';
+};
 const formatLocalDateTime = (date = new Date()) => date.toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
 const currentDateTimeInputValue = (date = new Date()) => {
   const pad = (value) => String(value).padStart(2, '0');
@@ -1965,6 +1979,10 @@ const createTitleOnlyField = (field = {}, record = {}) => {
 const currentFilteredIndex = () => RAGIC_STATE.filtered.findIndex((item) => item.id === RAGIC_STATE.currentId);
 const currentRecord = () => RAGIC_STATE.records.find((item) => item.id === RAGIC_STATE.currentId) || RAGIC_STATE.filtered.find((item) => item.id === RAGIC_STATE.currentId) || null;
 const renderDisplayValue = (field, value) => {
+  const embeddedImages = imageDataSources(value);
+  if (embeddedImages.length) {
+    return `<div class="ragic-view-images">${embeddedImages.map((src, index) => `<img class="ragic-view-image" src="${escapeHtml(src)}" alt="${escapeHtml(field?.label || '圖片')} ${index + 1}" title="點擊放大檢視">`).join('')}</div>`;
+  }
   if (field?.type === 'image') {
     const images = normalizeImageArray(value);
     if (!images.length) return '<span class="ragic-view-empty">—</span>';
@@ -2336,8 +2354,10 @@ const renderTrackingRecordText = (value) => {
 
 const renderCell = (record, field) => {
   const value = recordListFieldValue(record, field);
+  const embeddedImages = imageDataSources(value);
+  if (embeddedImages.length) return renderFileCell(embeddedImages, field?.label || '圖片');
   if (field?.listParentKey) {
-    return `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(String(value ?? ''))}</span>`;
+    return `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(String(valueToText(value)))}</span>`;
   }
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
