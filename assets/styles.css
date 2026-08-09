@@ -7836,6 +7836,14 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 /* ===== 2026-08-10 導覽列跨 Safari 置中與水平滑動 =====
    自動邊距讓內容放得下時置中，超寬時退回靠左並保留完整滑動範圍。 */
 @media (min-width: 769px) {
+  .sidebar.top-navigation {
+    grid-template-rows: 52px 42px auto !important;
+  }
+
+  .sidebar.top-navigation .menu {
+    grid-template-rows: 52px 42px !important;
+  }
+
   .sidebar.top-navigation .top-nav-primary-links {
     width: 100%;
     max-width: 100%;
@@ -7848,9 +7856,11 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 
   .sidebar.top-navigation .top-nav-secondary {
     position: absolute;
+    top: 52px;
     right: 0;
-    bottom: 0;
+    bottom: auto;
     left: 0;
+    height: 42px;
     width: 100%;
     max-width: 100%;
     min-width: 0;
