@@ -58,12 +58,13 @@
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260811-handover-layout2"></script>
+  <script src="../assets/ragic-table.js?v=20260811-handover-layout3"></script>
   <script>
     initRagicPage({
       title: '交接',
       collection: 'workHandover',
       enforceConfigFields: true,
+      forceConfigFormLayout: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
         { key: 'shift', label: '班別', type: 'select', options: ['早班', '晚班'], formRow: 1, formCol: 2 },
@@ -85,7 +86,7 @@
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 }
       ],
       formLayout: {
-        version: 'handover-view-v5',
+        version: 'handover-view-v6',
         columns: 12,
         rows: 5,
         fields: {
