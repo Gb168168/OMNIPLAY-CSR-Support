@@ -7964,7 +7964,8 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 @media (min-width: 769px) {
   #ragicListView .ragic-table {
     width: max-content !important;
-    min-width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
     table-layout: auto !important;
   }
 
