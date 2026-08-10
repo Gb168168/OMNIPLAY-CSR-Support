@@ -8339,3 +8339,42 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     grid-column: var(--form-col, auto) / span var(--form-colspan, 1) !important;
   }
 }
+
+
+/* List designer visibility and full-width controls */
+#ragicDesignerModal {
+  inset: 0 !important;
+  z-index: 10000 !important;
+  place-items: center !important;
+}
+#ragicDesignerModal .ragic-modal-card {
+  max-height: calc(100dvh - 16px) !important;
+}
+#ragicDesignerModal .ragic-form-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  min-height: 58px;
+  background: var(--surface, #fff);
+}
+#ragicDesignerModal .designer-header-actions {
+  margin-left: auto;
+}
+#ragicDesignerModal .designer-list-full {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d8e0ef;
+  border-radius: 8px;
+  background: #fff;
+  color: #172033;
+  font-weight: 700;
+  white-space: nowrap;
+}
+#ragicDesignerModal .designer-list-full input {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+}
