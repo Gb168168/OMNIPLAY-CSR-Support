@@ -360,6 +360,7 @@ const setInitialSetupVisibility = (showSetup) => {
 
 const checkInitialSetupRequired = async () => {
   if (!isIndexPage || isLoggedIn() || !setupForm) return;
+  if (window.CSR_API_BASE) { setInitialSetupVisibility(false); return; } // API 模式:帳號由後端管理,無首次設定流程
 
   const staffCollection = window.omniplayDb?.collection('staff');
   if (!staffCollection) {
@@ -438,6 +439,7 @@ const renderSidebarUser = () => {
 const logout = () => {
   clearTimeout(idleTimer);
   Object.values(SESSION_KEYS).forEach((key) => sessionStorage.removeItem(key));
+  localStorage.removeItem('csr_token');
   window.location.href = loginPath;
 };
 
@@ -530,11 +532,38 @@ loginForm?.addEventListener('submit', async (event) => {
   const staffCollection = window.omniplayDb?.collection('staff');
 
   if (!account || !password) return showLoginMessage('請輸入帳號與密碼');
-  if (!staffCollection) return showLoginMessage('Firebase 尚未完成初始化，請稍後再試');
+  if (!window.CSR_API_BASE && !staffCollection) return showLoginMessage('Firebase 尚未完成初始化，請稍後再試');
 
   const submitButton = loginForm.querySelector('button[type="submit"]');
   submitButton.disabled = true;
   submitButton.textContent = '登入中...';
+
+  // API 模式:帳密驗證交給後端(取代前端讀 staff 明文比對)
+  if (window.CSR_API_BASE) {
+    try {
+      const result = await window.csrApiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ account, password }) });
+      if (!result || result.__notFound || !result.token || !result.staff) {
+        showLoginMessage('帳號或密碼錯誤');
+        return;
+      }
+      localStorage.setItem('csr_token', result.token);
+      sessionStorage.setItem(SESSION_KEYS.id, result.staff.id || '');
+      sessionStorage.setItem(SESSION_KEYS.code, result.staff.code || '');
+      sessionStorage.setItem(SESSION_KEYS.name, result.staff.name || '');
+      sessionStorage.setItem(SESSION_KEYS.account, result.staff.account || '');
+      await loadCurrentPermissions();
+      setAppVisibility();
+      renderSidebarUser();
+      resetIdleTimer();
+    } catch (error) {
+      console.error('登入失敗：', error);
+      showLoginMessage(error?.status === 403 ? '帳號已停用，請聯繫管理員' : '帳號或密碼錯誤');
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = '登入';
+    }
+    return;
+  }
 
   try {
     const snapshot = await staffCollection.where('account', '==', account).limit(1).get();
