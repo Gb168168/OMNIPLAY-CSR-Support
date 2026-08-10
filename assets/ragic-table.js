@@ -2904,7 +2904,7 @@ const renderHeader = () => {
   const thead = headerRow?.closest('thead');
   const table = headerRow?.closest('table');
   if (table) {
-    table.style.tableLayout = 'auto';
+    table.style.tableLayout = 'fixed';
     const listWidth = normalizeListWidth(RAGIC_STATE.schema?.listWidth);
     table.style.setProperty('width', `${listWidth}px`, 'important');
     table.style.setProperty('min-width', `${listWidth}px`, 'important');
@@ -3026,6 +3026,7 @@ const updateDesignerPreview = () => {
   const rows = [0, 1, 2].map((rowIndex) => `<tr>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
   preview.innerHTML = `<table class="ragic-table">${colgroup ? `<colgroup>${colgroup}</colgroup>` : ''}<thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
   const previewTable = preview.querySelector('.ragic-table');
+  if (previewTable) previewTable.style.tableLayout = 'fixed';
   const listWidth = normalizeListWidth(modal.querySelector('#listWidthInput')?.value || RAGIC_STATE.schema?.listWidth);
   previewTable?.style.setProperty('width', `${listWidth}px`, 'important');
   previewTable?.style.setProperty('min-width', `${listWidth}px`, 'important');
