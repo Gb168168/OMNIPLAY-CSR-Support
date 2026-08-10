@@ -990,17 +990,20 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   if (!table) return;
   table.querySelector('colgroup')?.remove();
   const colgroup = document.createElement('colgroup');
+  const totalWidth = normalizeListWidth(RAGIC_STATE.schema?.listWidth);
+  const markerWidth = Math.min(50, totalWidth);
+  const weights = fields.map((field) => fieldColumnWidth(field) || DEFAULT_FIELD_WIDTHS[field.type] || DEFAULT_LIST_COLUMN_WIDTH);
+  const totalWeight = weights.reduce((sum, width) => sum + width, 0) || 1;
+  const availableWidth = Math.max(0, totalWidth - markerWidth);
   const markerCol = document.createElement('col');
-  markerCol.style.setProperty('min-width', '50px', 'important');
-  markerCol.style.setProperty('width', '50px');
+  markerCol.style.setProperty('min-width', '0', 'important');
+  markerCol.style.setProperty('width', `${markerWidth}px`);
   colgroup.appendChild(markerCol);
-  fields.forEach((field) => {
+  fields.forEach((field, index) => {
     const col = document.createElement('col');
-    const width = fieldColumnWidth(field);
-    if (width) {
-      col.style.setProperty('min-width', `${width}px`, 'important');
-      col.style.setProperty('width', `${width}px`);
-    }
+    const width = availableWidth * (weights[index] / totalWeight);
+    col.style.setProperty('min-width', '0', 'important');
+    col.style.setProperty('width', `${width}px`);
     colgroup.appendChild(col);
   });
   table.style.removeProperty('--ragic-table-width');
@@ -2920,9 +2923,6 @@ const renderHeader = () => {
     return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
   [...headerRow.children].forEach((cell, index) => cell.style.setProperty('min-width', index === 0 ? '50px' : '0px', 'important'));
-  listFields().forEach((field) => {
-    applyColumnWidth(headerRow.querySelector(`[data-menu="${CSS.escape(field.key)}"]`)?.closest('th'), fieldColumnWidth(field));
-  });
   attachColumnResizers(headerRow);
   if (thead) thead.querySelectorAll('tr:not(#ragicHeaderRow)').forEach((row) => row.remove());
   updateColumnMenuStates();
