@@ -2,6 +2,11 @@
 const LOG_FORM_LAYOUT = { columns: 6, rows: 4, columnGap: 12, rowGap: 10, fieldHeight: 64, textareaHeight: 178 };
 const LOG_SUBTABLE_COLUMN_RATIOS = [2, 1, 2, 1, 2, 1];
 const LOG_LIST_WIDTHS = { issue: 700, note: 260, image: 90, file: 90, serial: 110, date: 150 };
+const DEFAULT_LIST_WIDTH = 1000;
+const normalizeListWidth = (value) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.min(20000, Math.max(320, parsed)) : DEFAULT_LIST_WIDTH;
+};
 const LOG_FIELD_LAYOUT_BY_LABEL = {
   '發生時間': { row: 1, col: 1 }, '接洽人員': { row: 1, col: 2 }, '客戶': { row: 1, col: 3 }, '分類': { row: 1, col: 4 }, '狀態': { row: 1, col: 5 }, '編號': { row: 1, col: 6 },
   '完成時間': { row: 2, col: 1 }, '完成人員': { row: 2, col: 2 }, '更新日期': { row: 2, col: 3 }, '圖片': { row: 2, col: 4 }, '檔案': { row: 2, col: 5 }, '提報連結': { row: 2, col: 6 },
@@ -713,13 +718,18 @@ const normalizeField = (field = {}, fallback = 'field', usedKeys = new Set()) =>
 };
 const normalizeSchema = (schema = {}) => {
   const fields = schema.fields || [];
+  const listVisibility = schema.listVisibility && typeof schema.listVisibility === 'object'
+    ? schema.listVisibility
+    : Object.fromEntries(fields.filter((field) => field?.key).map((field) => [field.key, field.listVisible !== false]));
 
   return {
     fields: normalizeFields(fields, 'field'),
     formLayout: normalizeDesignerFormLayout(
       schema.formLayout,
       fields
-    )
+    ),
+    listWidth: normalizeListWidth(schema.listWidth),
+    listVisibility
   };
 };
 const fixDuplicateKeys = (fields = []) => {
@@ -749,7 +759,8 @@ const listFields = () => {
   const allFields = getFields();
   const defaultFields = allFields.filter((field) => field.type !== 'subtable');
   const configuredColumns = RAGIC_STATE.config?.listColumns;
-  if (!Array.isArray(configuredColumns) || !configuredColumns.length) return defaultFields;
+  const visible = (field) => RAGIC_STATE.schema?.listVisibility?.[field.key] !== false;
+  if (!Array.isArray(configuredColumns) || !configuredColumns.length) return defaultFields.filter(visible);
   return configuredColumns
     .map((column) => {
       const target = String(column || '').trim();
@@ -762,7 +773,8 @@ const listFields = () => {
       const subfield = parent?.fields?.find((item) => String(item.label || '').trim() === target);
       return parent && subfield ? virtualListSubfield(parent, subfield) : directField;
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter(visible);
 };
 const listColumns = () => listFields().map((field) => field.key);
 const fieldByKey = (key) => getFields().find((field) => field.key === key) || listFields().find((field) => field.key === key);
@@ -2893,6 +2905,10 @@ const renderHeader = () => {
   const table = headerRow?.closest('table');
   if (table) {
     table.style.tableLayout = 'auto';
+    const listWidth = normalizeListWidth(RAGIC_STATE.schema?.listWidth);
+    table.style.setProperty('width', `${listWidth}px`, 'important');
+    table.style.setProperty('min-width', `${listWidth}px`, 'important');
+    table.style.setProperty('max-width', `${listWidth}px`, 'important');
     applyRagicColumnGroup(table);
   }
   document.querySelector('#ragicFilterRow')?.remove();
@@ -2997,7 +3013,7 @@ const updateDesignerPreview = () => {
   const body = modal?.querySelector('.designer-body');
   const preview = modal?.querySelector('#designerPreviewTable');
   if (!body || !preview) return;
-  const fields = readDesigner(body).filter((field) => field.type !== 'subtable');
+  const fields = readDesigner(body).filter((field) => field.type !== 'subtable' && field.listVisible !== false);
   if (!fields.length) {
     preview.innerHTML = '<div class="designer-preview-empty">尚未建立欄位，請新增欄位以預覽表格。</div>';
     return;
@@ -3010,6 +3026,10 @@ const updateDesignerPreview = () => {
   const rows = [0, 1, 2].map((rowIndex) => `<tr>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
   preview.innerHTML = `<table class="ragic-table">${colgroup ? `<colgroup>${colgroup}</colgroup>` : ''}<thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
   const previewTable = preview.querySelector('.ragic-table');
+  const listWidth = normalizeListWidth(modal.querySelector('#listWidthInput')?.value || RAGIC_STATE.schema?.listWidth);
+  previewTable?.style.setProperty('width', `${listWidth}px`, 'important');
+  previewTable?.style.setProperty('min-width', `${listWidth}px`, 'important');
+  previewTable?.style.setProperty('max-width', `${listWidth}px`, 'important');
   fields.forEach((field, index) => {
     const width = fieldColumnWidth(field);
     applyColumnWidth(previewTable?.querySelector(`thead th:nth-child(${index + 1})`), width);
@@ -3122,6 +3142,11 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
   row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-form-layout" aria-label="表單排版"><label><span>列</span><input data-role="form-row" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formRow) ?? '')}"></label><label><span>欄</span><input data-role="form-col" type="number" min="1" max="4" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formCol, { max: 4 }) ?? '')}"></label><label><span>跨欄</span><input data-role="form-colspan" type="number" min="1" max="4" step="1" inputmode="numeric" value="${escapeHtml(normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 }))}"></label></div><input data-role="default" type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-role="help" type="hidden" value="${escapeHtml(field.help || '')}"><input data-role="readonly" type="hidden" value="${field.readonly ? '1' : ''}"><input data-role="hidden" type="hidden" value="${field.hidden ? '1' : ''}"><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
+  const listVisibleInput = document.createElement('input');
+  listVisibleInput.type = 'hidden';
+  listVisibleInput.dataset.role = 'list-visible';
+  listVisibleInput.value = field.listVisible === false ? '0' : '1';
+  row.appendChild(listVisibleInput);
   const sub = row.querySelector('.designer-subfields');
   const subList = row.querySelector('.designer-subfield-list');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
@@ -3162,7 +3187,8 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
     defaultValue: row.querySelector('[data-role="default"]')?.value || '',
     help: row.querySelector('[data-role="help"]')?.value || '',
     readonly: row.querySelector('[data-role="readonly"]')?.value === '1',
-    hidden: row.querySelector('[data-role="hidden"]')?.value === '1'
+    hidden: row.querySelector('[data-role="hidden"]')?.value === '1',
+    listVisible: row.querySelector('[data-role="list-visible"]')?.value !== '0'
   };
   if (row.dataset.linkedHandover === '1') field.linkedHandover = true;
   const formRow = normalizeFormLayoutNumber(row.querySelector('[data-role="form-row"]')?.value);
@@ -3256,6 +3282,7 @@ const renderLayoutDesigner = () => {
   const panel = modal?.querySelector('#layoutDesignerPanel');
   const body = modal?.querySelector('.designer-body');
   if (!panel || !body) return;
+  const pendingListWidth = normalizeListWidth(panel.querySelector('#listWidthInput')?.value || RAGIC_STATE.schema?.listWidth);
   const fields = readDesigner(body);
   const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
   const fixedLogLayout = false;
@@ -3303,6 +3330,7 @@ const pairFieldTypeButtons = FIELD_PAIR_TYPES.map((type) => `
 const fieldTypeButtons =
   normalFieldTypeButtons + pairFieldTypeButtons;
   panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列） 欄框設置131x48</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, 131px);grid-template-rows:repeat(${layout.rows}, 48px);">${gridLines.join('')}${placedFields}</div></div></main><aside class="layout-side-panel"><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings layout-settings-popover" hidden></aside></aside></div></div>`;
+  panel.querySelector('.layout-toolbar-controls')?.insertAdjacentHTML('afterbegin', `<label>列表寬度：<input id="listWidthInput" type="number" min="320" max="20000" step="10" inputmode="numeric" value="${pendingListWidth}"><span>px</span></label>`);
 };
 const updateDesignerFieldByKey = (fieldKey, patcher) => {
   const escapedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\\"');
@@ -3332,6 +3360,7 @@ const openLayoutFieldSettings = (fieldKey) => {
   if (!panel) return;
   const options = optionList(field).join('\n');
   panel.innerHTML = `<div class="layout-settings-head"><h3>欄位屬性設定</h3><div class="layout-settings-head-actions"><button class="primary" data-confirm-settings type="button">確認並儲存</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button><button class="secondary" data-close-layout-settings type="button">關閉</button></div></div><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><textarea data-option-list data-option rows="7" placeholder="每行一個選項">${escapeHtml(options)}</textarea></div><input data-setting-default type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-setting-help type="hidden" value="${escapeHtml(field.help || '')}"><input data-layout-row type="hidden" value="${escapeHtml(item.row || 1)}"><input data-layout-col type="hidden" value="${escapeHtml(item.col || 1)}"><input data-layout-rowspan type="hidden" value="${escapeHtml(item.rowSpan || 1)}"><input data-layout-colspan type="hidden" value="${escapeHtml(item.colSpan || 1)}"><input data-layout-width type="hidden" value="${escapeHtml(item.width || field.formWidth || '')}"><input data-layout-height type="hidden" value="${escapeHtml(layoutHeightValue(item, field))}"><input data-setting-required type="hidden" value="${field.required ? '1' : ''}"><input data-setting-readonly type="hidden" value="${field.readonly ? '1' : ''}"><input data-setting-hidden type="hidden" value="${field.hidden ? '1' : ''}">${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}`;
+  panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<label class="designer-list-visible"><input data-setting-list-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}> 顯示在列表</label>`);
   panel.hidden = false;
   panel.dataset.fieldKey = fieldKey;
   const subfieldList = panel.querySelector('[data-setting-subfields]');
@@ -3640,10 +3669,11 @@ const openDesigner = async () => {
     body.innerHTML = '';
 
     const fields = getFields();
+    const listVisibility = RAGIC_STATE.schema?.listVisibility || {};
 
     fields.forEach((field) => {
       try {
-        body.appendChild(fieldDesigner(field));
+        body.appendChild(fieldDesigner({ ...field, listVisible: listVisibility[field.key] !== false }));
       } catch (fieldError) {
         console.error('建立設計欄位失敗：', field, fieldError);
       }
@@ -3856,6 +3886,8 @@ const initRagicPage = async (config) => {
 
   try {
     const fields = readDesigner(designerBody);
+    const listWidth = normalizeListWidth(document.querySelector('#listWidthInput')?.value || RAGIC_STATE.schema?.listWidth);
+    const listVisibility = Object.fromEntries(fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]));
 
     /*
      * 直接取得目前設計器最新排版，
@@ -3868,7 +3900,9 @@ const initRagicPage = async (config) => {
 
     const nextSchema = normalizeSchema({
       fields,
-      formLayout
+      formLayout,
+      listWidth,
+      listVisibility
     });
 
     RAGIC_STATE.schema = {
@@ -3880,6 +3914,8 @@ const initRagicPage = async (config) => {
       {
         fields: RAGIC_STATE.schema.fields,
         formLayout: RAGIC_STATE.schema.formLayout,
+        listWidth: RAGIC_STATE.schema.listWidth,
+        listVisibility: RAGIC_STATE.schema.listVisibility,
         updatedAt: RAGIC_STATE.schema.updatedAt
       },
       { merge: true }
@@ -4102,6 +4138,9 @@ const addDesignerPairFields = (pairType) => {
         ? '1'
         : '';
 
+    row.querySelector('[data-role="list-visible"]').value =
+      panel.querySelector('[data-setting-list-visible]')?.checked ? '1' : '0';
+
     row.dataset.linkedHandover =
       panel.querySelector('[data-setting-linked-handover]')?.checked
         ? '1'
@@ -4166,6 +4205,7 @@ const addDesignerPairFields = (pairType) => {
   document.querySelector('#ragicDesignerModal')?.addEventListener('input', (event) => {
     if (event.target?.matches('[data-role="width"], [data-layout-width]')) syncSubtableWidthFromEvent(event.target);
     if (event.target?.matches('[data-layout-width], [data-layout-colspan], [data-layout-col]')) refreshLayoutWidthHint(event.target.closest('#layoutFieldSettingsPanel'));
+    if (event.target?.matches('#listWidthInput')) updateDesignerPreview();
   });
   document.querySelector('#layoutDesignerPanel')?.addEventListener('click', async (event) => {
     if (!event.target.closest('.btn-save-layout')) return;
