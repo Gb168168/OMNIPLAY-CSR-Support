@@ -2910,7 +2910,6 @@ const renderHeader = () => {
     table.style.setProperty('min-width', `${listWidth}px`, 'important');
     table.style.setProperty('max-width', `${listWidth}px`, 'important');
     applyRagicColumnGroup(table);
-    [...headerRow.children].forEach((cell, index) => cell.style.setProperty('min-width', index === 0 ? '50px' : '0px', 'important'));
   }
   document.querySelector('#ragicFilterRow')?.remove();
   headerRow.innerHTML = `<th class="icon-actions-head col-marker">標記</th>` + listFields().map((field) => {
@@ -2920,6 +2919,7 @@ const renderHeader = () => {
     const style = columnWidthStyle(width);
     return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
+  [...headerRow.children].forEach((cell, index) => cell.style.setProperty('min-width', index === 0 ? '50px' : '0px', 'important'));
   listFields().forEach((field) => {
     applyColumnWidth(headerRow.querySelector(`[data-menu="${CSS.escape(field.key)}"]`)?.closest('th'), fieldColumnWidth(field));
   });
