@@ -2910,6 +2910,7 @@ const renderHeader = () => {
     table.style.setProperty('min-width', `${listWidth}px`, 'important');
     table.style.setProperty('max-width', `${listWidth}px`, 'important');
     applyRagicColumnGroup(table);
+    [...headerRow.children].forEach((cell, index) => cell.style.setProperty('min-width', index === 0 ? '50px' : '0px', 'important'));
   }
   document.querySelector('#ragicFilterRow')?.remove();
   headerRow.innerHTML = `<th class="icon-actions-head col-marker">標記</th>` + listFields().map((field) => {
