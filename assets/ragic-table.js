@@ -77,7 +77,7 @@ const clearRagicDirtyState = () => { RAGIC_STATE.editDirty = false; };
 if (!document.querySelector('#ragicColumnMenuRuntimeStyles')) {
   const style = document.createElement('style');
   style.id = 'ragicColumnMenuRuntimeStyles';
-  style.textContent = '.ragic-table{table-layout:fixed!important}.ragic-table th,.ragic-table td{min-width:0!important}.ragic-table th.col-menu-cell{overflow:visible!important}.col-menu-dropdown[hidden]{display:none!important}.col-menu-dropdown:not([hidden]){display:block!important;z-index:10000!important}' +
+  style.textContent = '.ragic-table{table-layout:fixed!important}.ragic-table th,.ragic-table td{min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important}.ragic-table th.col-menu-cell{overflow:visible!important}.col-menu-dropdown[hidden]{display:none!important}.col-menu-dropdown:not([hidden]){display:block!important;z-index:10000!important}' +
     '.ragic-field-pair-toggle{display:flex!important;align-items:center!important;gap:12px!important;min-height:48px!important;padding:0 14px!important;box-sizing:border-box!important}' +
     '.ragic-field-pair-toggle>span{order:2!important;margin:0!important;white-space:nowrap!important;font-weight:600!important}' +
     '.ragic-field-pair-toggle>input[type=checkbox]{order:1!important;width:20px!important;height:20px!important;min-width:20px!important;max-width:20px!important;min-height:20px!important;max-height:20px!important;margin:0!important;appearance:auto!important}' +
