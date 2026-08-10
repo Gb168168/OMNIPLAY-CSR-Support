@@ -1044,13 +1044,20 @@ const applySignedInRosterShift = async ({ force = false } = {}) => {
 const normalizeColumnText = (value = '') => String(value || '').replace(/\s+/g, '').toLowerCase();
 const ragicColumnClass = (field = {}) => {
   const text = normalizeColumnText(`${field.key || ''}${field.label || ''}`);
+  const type = String(field.type || '').trim().toLowerCase();
   if (/(date|日期|時間)/.test(text)) return 'col-date';
   if (/(shift|班別)/.test(text)) return 'col-shift';
   if (/(dept|department|部門)/.test(text)) return 'col-dept';
   if (/(category|分類)/.test(text)) return 'col-category';
   if (/(status|狀態)/.test(text)) return 'col-status';
-  if (/(content|handover|事項|交接事項|內容|description|說明)/.test(text)) return 'col-content';
-  return 'col-content';
+  if (type === 'checkbox' || type === 'boolean' || /(啟用|是否|提報$)/.test(text)) return 'col-boolean';
+  if (/(contact|owner|publisher|finisher|creator|reporter|staff|接洽者|完成者|完成人員|負責人|處理人員|發佈者|建立者|提報者|人員)/.test(text)) return 'col-person';
+  if (type === 'number' || type === 'serial' || /(serial|編號|分數|級數)/.test(text)) return 'col-number';
+  if (type === 'select' || type === 'multiselect') return 'col-option';
+  if (type === 'image' || type === 'file' || /(圖片|檔案|附件)/.test(text)) return 'col-media';
+  if (type === 'link' || /(link|連結)/.test(text)) return 'col-link';
+  if (type === 'textarea' || /(content|handover|事項|交接事項|內容|description|說明|問題|備註|紀錄|結果|回覆)/.test(text)) return 'col-content';
+  return 'col-auto';
 };
 const cellTooltipText = (record, field) => {
   const value = recordListFieldValue(record, field);
