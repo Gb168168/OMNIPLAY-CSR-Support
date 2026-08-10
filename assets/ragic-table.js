@@ -1088,10 +1088,13 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
   const configuredVersion = String(config.formLayout?.version || '');
   const savedVersion = String(savedLayout?.version || '');
   const useConfiguredPreset = Boolean(configuredVersion && configuredVersion !== savedVersion);
+  const forceConfiguredLayout = config.forceConfigFormLayout === true;
   return {
     ...schema,
     fields: defaultConfigFields(config),
-    formLayout: useConfiguredPreset ? config.formLayout : (hasSavedPositions ? savedLayout : config.formLayout)
+    formLayout: forceConfiguredLayout || useConfiguredPreset
+      ? config.formLayout
+      : (hasSavedPositions ? savedLayout : config.formLayout)
   };
 };
 
