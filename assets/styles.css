@@ -8331,6 +8331,9 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 
 /* Handover uses its explicit five-row layout in desktop view mode. */
 @media (min-width: 769px) {
+  body.handover-page #ragicForm .compact-view-grid {
+    grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+  }
   body.handover-page #ragicForm .compact-view-grid > .ragic-view-field {
     grid-row: var(--form-row, auto) / span var(--form-rowspan, 1) !important;
     grid-column: var(--form-col, auto) / span var(--form-colspan, 1) !important;
