@@ -1415,6 +1415,13 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
 .ragic-table .col-status { min-width: 80px; }
 .ragic-table .col-content { min-width: 180px; }
 .ragic-table .col-textarea { min-width: 300px; }
+.ragic-table .col-person { min-width: 92px; }
+.ragic-table .col-boolean { min-width: 72px; }
+.ragic-table .col-number { min-width: 76px; }
+.ragic-table .col-media { min-width: 82px; }
+.ragic-table .col-link { min-width: 140px; }
+.ragic-table .col-option { min-width: 88px; }
+.ragic-table .col-auto { min-width: 92px; }
 .ragic-table td.col-content {
     overflow: visible;
     text-overflow: unset;
@@ -8000,6 +8007,50 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     white-space: nowrap !important;
     overflow-wrap: normal !important;
     word-break: normal !important;
+  }
+
+  /* 短欄位依內容緊密排列；長內容完整保留並換行，不再把後續欄位推散。 */
+  #ragicListView .ragic-table th.col-person,
+  #ragicListView .ragic-table td.col-person {
+    width: 1% !important;
+    min-width: 92px !important;
+  }
+
+  #ragicListView .ragic-table th.col-boolean,
+  #ragicListView .ragic-table td.col-boolean {
+    width: 1% !important;
+    min-width: 72px !important;
+    text-align: center;
+  }
+
+  #ragicListView .ragic-table th.col-number,
+  #ragicListView .ragic-table td.col-number,
+  #ragicListView .ragic-table th.col-media,
+  #ragicListView .ragic-table td.col-media {
+    width: 1% !important;
+    min-width: 76px !important;
+  }
+
+  #ragicListView .ragic-table th.col-option,
+  #ragicListView .ragic-table td.col-option,
+  #ragicListView .ragic-table th.col-auto,
+  #ragicListView .ragic-table td.col-auto {
+    width: 1% !important;
+    min-width: 88px !important;
+  }
+
+  #ragicListView .ragic-table th.col-content,
+  #ragicListView .ragic-table td.col-content {
+    min-width: 180px !important;
+    max-width: 520px !important;
+  }
+
+  #ragicListView .ragic-table td.col-content,
+  #ragicListView .ragic-table td.col-content a,
+  #ragicListView .ragic-table td.col-content span {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
   }
 }
 
