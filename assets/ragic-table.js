@@ -2147,9 +2147,11 @@ const renderViewForm = (form, record = {}) => {
     }
     applyFormLayout(item, field);
     if (usesDenseFormLayout()) applyDenseFormLayout(item, field);
-    item.style.setProperty('--form-row', 'auto');
-    item.style.setProperty('--form-col', 'auto');
-    item.style.setProperty('--form-rowspan', '1');
+    if (usesDenseFormLayout()) {
+      item.style.setProperty('--form-row', 'auto');
+      item.style.setProperty('--form-col', 'auto');
+      item.style.setProperty('--form-rowspan', '1');
+    }
     const hasValue = Array.isArray(fieldValue)
       ? fieldValue.some((entry) => entry && Object.values(entry).some(Boolean))
       : ![undefined, null, ''].includes(fieldValue);
