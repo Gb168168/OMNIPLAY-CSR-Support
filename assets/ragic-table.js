@@ -996,13 +996,15 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   const totalWeight = weights.reduce((sum, width) => sum + width, 0) || 1;
   const availableWidth = Math.max(0, totalWidth - markerWidth);
   const markerCol = document.createElement('col');
-  markerCol.style.setProperty('min-width', '0', 'important');
+  markerCol.style.setProperty('min-width', `${markerWidth}px`, 'important');
   markerCol.style.setProperty('width', `${markerWidth}px`);
   colgroup.appendChild(markerCol);
   fields.forEach((field, index) => {
     const col = document.createElement('col');
-    const width = availableWidth * (weights[index] / totalWeight);
-    col.style.setProperty('min-width', '0', 'important');
+    const proportionalWidth = availableWidth * (weights[index] / totalWeight);
+    const minimumWidth = ['textarea', 'richtext'].includes(field.type) ? 160 : 72;
+    const width = Math.max(minimumWidth, proportionalWidth);
+    col.style.setProperty('min-width', `${minimumWidth}px`, 'important');
     col.style.setProperty('width', `${width}px`);
     colgroup.appendChild(col);
   });
@@ -3945,6 +3947,7 @@ const initRagicPage = async (config) => {
   
   document.querySelector('#ragicTitle').textContent = config.title; document.querySelector('#ragicSubtitle').textContent = Array.isArray(config.trackingStatuses) && config.trackingStatuses.length ? `目前篩選：${config.trackingStatuses.join('／')}` : `${config.title}列表、動態表單與表格設計維護`;
   const topbarActions = ensureTopbarActions();
+  const listToolbar = document.querySelector('#ragicListView .ragic-toolbar');
   const newRecordButton = document.querySelector('#newRecordButton');
   if (newRecordButton) {
     newRecordButton.dataset.schemaReady = 'false';
@@ -3952,16 +3955,18 @@ const initRagicPage = async (config) => {
     newRecordButton.textContent = '載入欄位中…';
   }
   const designButton = document.querySelector('#designTableButton');
-  if (topbarActions && canUse('design')) {
+  const designHost = listToolbar || topbarActions;
+  if (designHost && canUse('design')) {
     const button = designButton || document.createElement('button');
-    const userPill = topbarActions.querySelector('.user-pill');
+    const userPill = topbarActions?.querySelector('.user-pill');
     button.className = 'secondary';
     button.id = 'designTableButton';
     button.type = 'button';
     button.textContent = '⚙️ 設計表格';
     button.hidden = false;
     button.disabled = false;
-    if (!button.parentElement) topbarActions.insertBefore(button, userPill || null);
+    if (listToolbar && button.parentElement !== listToolbar) listToolbar.insertBefore(button, newRecordButton || null);
+    else if (!button.parentElement) topbarActions?.insertBefore(button, userPill || null);
   } else {
     designButton?.remove();
   }
