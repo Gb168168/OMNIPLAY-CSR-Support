@@ -627,6 +627,7 @@ const applyDenseFormLayout = (element, field = {}) => {
   element.style.setProperty('--dense-span', String(layout.span));
   return element;
 };
+const usesDenseFormLayout = () => !document.body.classList.contains('handover-page');
 const applyDenseSubtableLayout = (section) => {
   if (!section) return section;
   section.classList.add('dense-form-subtable');
@@ -1433,7 +1434,7 @@ const createField = (field, value = '') => {
   }
   wrap.innerHTML = `<span>${field.label}${field.required ? ' *' : ''}</span>`;
   applyFormLayout(wrap, field);
-  applyDenseFormLayout(wrap, field);
+  if (usesDenseFormLayout()) applyDenseFormLayout(wrap, field);
   const control = createControl(field, value);
   if (isReminderEnabledField(field)) {
     control.checked = true;
@@ -2130,7 +2131,7 @@ const renderSubtableView = (field, rows = []) => {
 const renderViewForm = (form, record = {}) => {
   const fixedLogLayout = false;
   const grid = document.createElement('div');
-  grid.className = 'ragic-form-grid ragic-view-grid compact-view-grid dense-ragic-grid';
+  grid.className = `ragic-form-grid ragic-view-grid compact-view-grid${usesDenseFormLayout() ? ' dense-ragic-grid' : ''}`;
   applyFormGridLayout(grid);
   getFields().filter((field) => {
     if (field.type === 'subtable') return false;
@@ -2145,7 +2146,7 @@ const renderViewForm = (form, record = {}) => {
       item.classList.add('is-tracking-placeholder-field');
     }
     applyFormLayout(item, field);
-    applyDenseFormLayout(item, field);
+    if (usesDenseFormLayout()) applyDenseFormLayout(item, field);
     item.style.setProperty('--form-row', 'auto');
     item.style.setProperty('--form-col', 'auto');
     item.style.setProperty('--form-rowspan', '1');
@@ -2158,7 +2159,7 @@ const renderViewForm = (form, record = {}) => {
     grid.appendChild(item);
   });
   if (!fixedLogLayout) titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
-  groupDenseFieldPairs(grid);
+  if (usesDenseFormLayout()) groupDenseFieldPairs(grid);
   form.appendChild(grid);
   
   getFields().filter((field) => field.type === 'subtable').forEach((field) => {
@@ -2398,10 +2399,10 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
   if (mode === 'view' && record.id) {
     renderViewForm(form, record);
   } else {
-    const grid = document.createElement('div'); grid.className = 'ragic-form-grid dense-ragic-grid'; applyFormGridLayout(grid);
+    const grid = document.createElement('div'); grid.className = `ragic-form-grid${usesDenseFormLayout() ? ' dense-ragic-grid' : ''}`; applyFormGridLayout(grid);
     getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key])));
     titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
-    groupDenseFieldPairs(grid);
+    if (usesDenseFormLayout()) groupDenseFieldPairs(grid);
     form.appendChild(grid);
     getFields().filter((field) => field.type === 'subtable').forEach((field) => {
      const section = document.createElement('section');
