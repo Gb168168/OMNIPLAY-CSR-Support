@@ -6528,6 +6528,32 @@ body:has(.sidebar-toggle-btn.is-visible)
 
 
 /* Handover view: readable cards and compact empty attachments */
+.handover-page .ragic-form-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: stretch;
+  align-content: start;
+}
+.handover-page .ragic-form-grid .form-field input,
+.handover-page .ragic-form-grid .form-field select {
+  max-width: none;
+}
+.handover-page .ragic-form-grid .ragic-field-image,
+.handover-page .ragic-form-grid .ragic-field-file,
+.handover-page .ragic-form-grid .ragic-field-image .image-upload-area,
+.handover-page .ragic-form-grid .ragic-field-file .image-upload-area {
+  height: 110px !important;
+  min-height: 110px !important;
+}
+.handover-page .ragic-form-grid .ragic-field-checkbox {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.handover-page .ragic-form-grid .ragic-field-checkbox input {
+  width: 20px;
+  min-height: 20px;
+}
+
 .game-change-log-card {
   width: min(720px, calc(100vw - 32px));
   max-height: min(760px, calc(100vh - 64px));
@@ -6582,31 +6608,6 @@ body:has(.sidebar-toggle-btn.is-visible)
 }
 
 /* Handover view: readable cards and compact empty attachments */
-.handover-page .ragic-form-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: stretch;
-  align-content: start;
-}
-.handover-page .ragic-form-grid .form-field input,
-.handover-page .ragic-form-grid .form-field select {
-  max-width: none;
-}
-.handover-page .ragic-form-grid .ragic-field-image,
-.handover-page .ragic-form-grid .ragic-field-file,
-.handover-page .ragic-form-grid .ragic-field-image .image-upload-area,
-.handover-page .ragic-form-grid .ragic-field-file .image-upload-area {
-  height: 110px !important;
-  min-height: 110px !important;
-}
-.handover-page .ragic-form-grid .ragic-field-checkbox {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-.handover-page .ragic-form-grid .ragic-field-checkbox input {
-  width: 20px;
-  min-height: 20px;
-}
 .handover-page .ragic-view-grid {
   grid-auto-rows: minmax(78px, auto);
   align-items: stretch;
@@ -6647,17 +6648,11 @@ body:has(.sidebar-toggle-btn.is-visible)
   line-height: 1.5;
 }
 @media (max-width: 900px) {
-  .handover-page .ragic-form-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .handover-page .ragic-view-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 560px) {
-  .handover-page .ragic-form-grid {
-    grid-template-columns: 1fr;
-  }
   .handover-page .ragic-view-grid {
     grid-template-columns: 1fr;
   }
@@ -7598,3 +7593,738 @@ body .app-shell[data-auth-protected].is-hidden {
     box-shadow: 1px 0 0 var(--border);
   }
 
+  .ragic-table > thead > tr > th:first-child {
+    z-index: 3;
+  }
+
+  .ragic-table button,
+  .ragic-subtable button,
+  .calendar-day button,
+  .calendar-event {
+    min-height: 36px;
+    touch-action: manipulation;
+  }
+
+  .calendar-grid.is-month-view .calendar-event {
+    min-height: 24px !important;
+    padding: 4px 3px !important;
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  .calendar-grid.is-month-view .calendar-day {
+    min-height: 132px !important;
+    height: 132px !important;
+    max-height: 132px !important;
+  }
+}
+
+
+/* ===== 2026-08-06 手機目前分類快速功能列 =====
+   目前分類的所有分頁固定顯示於標題列下方，可水平滑動切換。 */
+.mobile-quick-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body .sidebar.top-navigation:has(.mobile-quick-nav) {
+    height: 102px !important;
+    min-height: 102px !important;
+    max-height: 102px !important;
+    flex-direction: column !important;
+  }
+
+  body .sidebar.top-navigation .sidebar-header {
+    flex: 0 0 56px !important;
+    min-height: 56px !important;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav {
+    display: flex !important;
+    flex: 0 0 46px !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 46px !important;
+    padding: 4px 8px 6px !important;
+    gap: 5px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    background: var(--sidebar) !important;
+    border-top: 1px solid var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav .sidebar-sub-item {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    min-height: 34px !important;
+    padding: 6px 9px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav .sidebar-sub-item.is-active {
+    color: var(--primary) !important;
+    background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+    box-shadow: inset 0 -2px 0 var(--primary) !important;
+  }
+
+  body .sidebar.top-navigation:has(.mobile-quick-nav) .menu {
+    top: 102px !important;
+    height: calc(100dvh - 102px) !important;
+  }
+
+  body .sidebar.top-navigation:has(.mobile-quick-nav) + .sidebar-overlay.is-visible,
+  body:has(.sidebar.top-navigation .mobile-quick-nav) .sidebar-overlay.is-visible {
+    inset: 102px 0 0 !important;
+  }
+
+  body .app-shell:has(.mobile-quick-nav) > .main,
+body .app-shell:has(.mobile-quick-nav) > .main-content {
+    min-height: calc(100dvh - 102px) !important;
+  }
+}
+
+/* Keep phone card-list rules last so legacy table width rules cannot restore horizontal tables. */
+@media (max-width: 560px) {
+  body table.mobile-card-table,
+  body table.mobile-card-table tbody,
+  body table.mobile-card-table tbody tr,
+  body table.mobile-card-table tbody td {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  body table.mobile-card-table {
+    display: block !important;
+    table-layout: auto !important;
+  }
+
+  body table.mobile-card-table thead {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 0 10px !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    clip: auto !important;
+    clip-path: none !important;
+    scrollbar-width: thin;
+  }
+
+  body table.mobile-card-table thead tr {
+    display: flex !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    gap: 6px !important;
+    padding: 2px !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  body table.mobile-card-table thead th {
+    position: relative !important;
+    display: flex !important;
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    width: auto !important;
+    min-width: 92px !important;
+    max-width: 180px !important;
+    min-height: 38px !important;
+    padding: 7px 9px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 9px !important;
+    background: var(--surface) !important;
+    font-size: 12px !important;
+  }
+
+  body table.mobile-card-table thead th:first-child {
+    display: none !important;
+  }
+
+  body table.mobile-card-table tbody {
+    display: grid !important;
+  }
+
+  body table.mobile-card-table tbody tr {
+    display: block !important;
+  }
+
+  body table.mobile-card-table tbody td {
+    position: static !important;
+    display: grid !important;
+    white-space: normal !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: none !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+    padding: 8px !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-day {
+    display: grid !important;
+    grid-template-columns: 50px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 74px !important;
+    max-height: none !important;
+    padding: 8px 10px !important;
+    gap: 9px !important;
+    text-align: left !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-date {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-date strong {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-date small,
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-empty {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .day-events {
+    display: grid !important;
+    min-width: 0 !important;
+    gap: 5px !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .calendar-event {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 27px !important;
+    padding: 5px 7px !important;
+    font-size: 12px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .calendar-grid.is-mobile-month-agenda .mobile-agenda-more {
+    display: grid;
+    place-items: center;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+  }
+}
+
+/* 2026-08-10：表單與觸控尺寸的最終覆寫，避免舊版手機規則蓋回 13px／20px。 */
+#ragicForm input,
+#ragicForm select,
+#ragicForm textarea,
+#ragicForm button {
+  font-size: 15px !important;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  #ragicForm .subtable-row-delete {
+    left: 22px !important;
+    top: 22px !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+    line-height: 42px !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ===== 2026-08-10 導覽列跨 Safari 置中與水平滑動 =====
+   自動邊距讓內容放得下時置中，超寬時退回靠左並保留完整滑動範圍。 */
+@media (min-width: 769px) {
+  .sidebar.top-navigation {
+    grid-template-rows: 52px 42px auto !important;
+    height: auto !important;
+    min-height: 94px !important;
+    max-height: none !important;
+  }
+
+  .sidebar.top-navigation .menu {
+    display: contents !important;
+  }
+
+  .sidebar.top-navigation .top-nav-primary-links {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar.top-navigation .top-nav-secondary {
+    position: static !important;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar.top-navigation .top-nav-primary-links {
+    justify-content: center !important;
+  }
+
+  .sidebar.top-navigation .top-nav-submenu {
+    justify-content: flex-start !important;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) !important;
+    overflow: visible !important;
+  }
+
+  .sidebar.top-navigation .top-nav-submenu > :first-child {
+    margin-left: auto !important;
+  }
+
+  .sidebar.top-navigation .top-nav-submenu > :last-child {
+    margin-right: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  body .sidebar.top-navigation .mobile-quick-nav {
+    justify-content: flex-start !important;
+    box-sizing: border-box !important;
+    padding-left: max(8px, env(safe-area-inset-left)) !important;
+    padding-right: max(24px, env(safe-area-inset-right)) !important;
+    scroll-padding-inline: 12px 28px;
+    overscroll-behavior-inline: contain;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav > :first-child {
+    margin-left: auto !important;
+  }
+
+  body .sidebar.top-navigation .mobile-quick-nav > :last-child {
+    margin-right: auto !important;
+  }
+}
+
+/* iPhone「要求桌面網站」與平板寬度：第三排保留在正常 Grid 流程中，
+   由內容自然撐開導覽高度，絕不浮在頁面內容上方。 */
+@media (min-width: 769px) and (max-width: 1200px) {
+  .sidebar.top-navigation .sidebar-footer {
+    position: static !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+    display: flex !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 36px !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 4px 12px !important;
+    overflow: visible !important;
+    background: var(--sidebar) !important;
+    border-top: 1px solid var(--border) !important;
+  }
+}
+
+/* PROD 告警的舊排版曾留下空白列；單列欄位需完整容納標籤與內容。 */
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field:not(.ragic-view-field-textarea):not(.ragic-view-field-image):not(.ragic-view-field-file) {
+  min-height: 84px !important;
+  overflow: visible !important;
+}
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field .ragic-view-value {
+  min-height: 26px;
+  overflow: visible;
+}
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field .ragic-view-label {
+  font-size: 14px !important;
+  line-height: 1.4;
+}
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field .ragic-view-value,
+.alert-page #ragicForm .ragic-view-grid > .ragic-view-field .field-value {
+  font-size: 16px !important;
+  line-height: 1.55;
+}
+
+/* 2026-08-10：桌面列表依標題與內容自動決定欄寬，呈現緊湊的資料表。 */
+@media (min-width: 769px) {
+  #ragicListView .ragic-table {
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    table-layout: auto !important;
+  }
+
+  #ragicListView .ragic-table th,
+  #ragicListView .ragic-table td {
+    max-width: none;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  #ragicListView .ragic-table th:first-child,
+  #ragicListView .ragic-table td:first-child {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: none;
+  }
+
+  #ragicListView .ragic-table td.col-content,
+  #ragicListView .ragic-table td.col-content a,
+  #ragicListView .ragic-table td.col-content span {
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  #ragicListView .ragic-table th.col-menu-cell {
+    min-width: max-content !important;
+  }
+
+  #ragicListView .ragic-table th.col-menu-cell .col-label {
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  #ragicListView .ragic-table td span {
+    max-width: none !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  /* 短欄位依內容緊密排列；長內容完整保留並換行，不再把後續欄位推散。 */
+  #ragicListView .ragic-table th.col-person,
+  #ragicListView .ragic-table td.col-person {
+    width: 1% !important;
+    min-width: 92px !important;
+  }
+
+  #ragicListView .ragic-table th.col-boolean,
+  #ragicListView .ragic-table td.col-boolean {
+    width: 1% !important;
+    min-width: 72px !important;
+    text-align: center;
+  }
+
+  #ragicListView .ragic-table th.col-number,
+  #ragicListView .ragic-table td.col-number,
+  #ragicListView .ragic-table th.col-media,
+  #ragicListView .ragic-table td.col-media {
+    width: 1% !important;
+    min-width: 76px !important;
+  }
+
+  #ragicListView .ragic-table th.col-option,
+  #ragicListView .ragic-table td.col-option,
+  #ragicListView .ragic-table th.col-auto,
+  #ragicListView .ragic-table td.col-auto {
+    width: 1% !important;
+    min-width: 88px !important;
+  }
+
+  #ragicListView .ragic-table th.col-content,
+  #ragicListView .ragic-table td.col-content {
+    min-width: 180px !important;
+    max-width: 520px !important;
+  }
+
+  #ragicListView .ragic-table td.col-content,
+  #ragicListView .ragic-table td.col-content a,
+  #ragicListView .ragic-table td.col-content span {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+}
+
+/* Desktop 高資訊密度表單：只調整排版，不影響資料與事件邏輯。 */
+@media (min-width: 769px) {
+  #ragicForm .dense-ragic-grid {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    grid-auto-flow: row dense !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field {
+    order: var(--dense-order, 25);
+    grid-column: auto / span var(--dense-span, 3) !important;
+    grid-row: auto !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 54px !important;
+    padding: 8px 10px !important;
+    align-self: stretch !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field > span:first-child,
+  #ragicForm .dense-ragic-grid > .dense-form-field > .ragic-view-label {
+    margin-bottom: 4px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field input,
+  #ragicForm .dense-ragic-grid > .dense-form-field select {
+    min-height: 34px !important;
+    padding: 6px 8px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-media {
+    min-height: 88px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative {
+    min-height: 132px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative textarea,
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative .ragic-view-value,
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative .field-value {
+    min-height: 88px !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #ragicForm .dense-ragic-grid > [data-field-label="圖片"] {
+    order: 50 !important;
+    grid-column: 1 / span 6 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > [data-field-label="檔案"] {
+    order: 50 !important;
+    grid-column: 7 / span 6 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > [data-field-label="問題描述"] {
+    order: 60 !important;
+    grid-column: 1 / span 7 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > [data-field-label="備註"] {
+    order: 60 !important;
+    grid-column: 8 / span 5 !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-subtable {
+    order: 100 !important;
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    align-self: start !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-subtable:has(.ragic-view-empty) {
+    height: auto !important;
+    max-height: 96px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .ragic-field-pair-toggle,
+  #ragicForm .dense-ragic-grid > .ragic-view-field-pair-toggle {
+    min-height: 54px !important;
+    padding: 8px 10px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-field-pair {
+    order: var(--dense-order) !important;
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #ragicForm .dense-field-pair > .dense-form-field {
+    grid-row: 1 !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    padding: 8px 10px !important;
+    align-self: stretch !important;
+  }
+
+  #ragicForm .dense-field-pair-media > [data-field-label="圖片"] {
+    grid-column: 1 / span 6 !important;
+    min-height: 88px !important;
+  }
+
+  #ragicForm .dense-field-pair-media > [data-field-label="檔案"] {
+    grid-column: 7 / span 6 !important;
+    min-height: 88px !important;
+  }
+
+  #ragicForm .dense-field-pair-narrative > [data-field-label="問題描述"] {
+    grid-column: 1 / span 7 !important;
+    min-height: 132px !important;
+  }
+
+  #ragicForm .dense-field-pair-narrative > [data-field-label="備註"] {
+    grid-column: 8 / span 5 !important;
+    min-height: 132px !important;
+  }
+
+  #ragicForm .dense-field-pair-narrative .ragic-view-value,
+  #ragicForm .dense-field-pair-narrative .field-value,
+  #ragicForm .dense-field-pair-narrative textarea {
+    min-height: 88px !important;
+    max-height: none !important;
+  }
+}
+
+/* 桌面檢視模式：保留欄位寬度配置，但移除設計器留下的固定列高與空白列。 */
+@media (min-width: 769px) {
+  #ragicForm .compact-view-grid {
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    grid-auto-flow: row dense;
+    align-items: start !important;
+  }
+
+  #ragicForm .compact-view-grid > .ragic-view-field,
+  #ragicForm .compact-view-grid > .ragic-view-subtable-section {
+    grid-row: auto !important;
+    height: auto !important;
+    min-height: 58px !important;
+    align-self: stretch !important;
+  }
+
+  #ragicForm .compact-view-grid > .ragic-view-field .ragic-view-label {
+    margin-bottom: 4px;
+  }
+
+  #ragicForm .compact-view-grid > .ragic-view-field .ragic-view-value,
+  #ragicForm .compact-view-grid > .ragic-view-field .field-value {
+    height: auto !important;
+    min-height: 20px !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #ragicForm .compact-view-grid > .ragic-view-field-textarea:not(.is-empty-view-field) {
+    min-height: 82px !important;
+  }
+
+  #ragicForm .compact-view-grid > .ragic-view-field-image:not(.is-empty-view-field) {
+    min-height: 120px !important;
+  }
+
+  #ragicForm .compact-view-grid > .is-empty-view-field {
+    min-height: 58px !important;
+  }
+
+  #ragicForm .compact-view-grid .ragic-view-image {
+    max-height: 180px;
+  }
+
+  .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-image,
+  .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-file,
+  .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-image.is-empty-view-field,
+  .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-file.is-empty-view-field {
+    height: auto !important;
+    min-height: 58px !important;
+  }
+
+  #ragicForm .compact-view-grid > .ragic-view-subtable-section {
+    max-height: clamp(220px, calc(100dvh - 600px), 360px) !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+
+  #ragicForm .compact-view-grid > .ragic-view-subtable-section .ragic-subtable-head {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--surface);
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative {
+    min-height: 132px !important;
+  }
+
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative .ragic-view-value,
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative .field-value,
+  #ragicForm .dense-ragic-grid > .dense-form-field-narrative textarea {
+    min-height: 88px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  #ragicForm .dense-ragic-grid > .dense-form-subtable:has(tbody > .subtable-auto-blank-row:only-child) {
+    max-height: 140px !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  #ragicForm .dense-ragic-grid > .dense-field-pair {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: none !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  #ragicForm .dense-field-pair > .dense-form-field {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
