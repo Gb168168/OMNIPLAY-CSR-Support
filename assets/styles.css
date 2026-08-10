@@ -6528,6 +6528,32 @@ body:has(.sidebar-toggle-btn.is-visible)
 
 
 /* Handover view: readable cards and compact empty attachments */
+.handover-page .ragic-form-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: stretch;
+  align-content: start;
+}
+.handover-page .ragic-form-grid .form-field input,
+.handover-page .ragic-form-grid .form-field select {
+  max-width: none;
+}
+.handover-page .ragic-form-grid .ragic-field-image,
+.handover-page .ragic-form-grid .ragic-field-file,
+.handover-page .ragic-form-grid .ragic-field-image .image-upload-area,
+.handover-page .ragic-form-grid .ragic-field-file .image-upload-area {
+  height: 110px !important;
+  min-height: 110px !important;
+}
+.handover-page .ragic-form-grid .ragic-field-checkbox {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.handover-page .ragic-form-grid .ragic-field-checkbox input {
+  width: 20px;
+  min-height: 20px;
+}
+
 .game-change-log-card {
   width: min(720px, calc(100vw - 32px));
   max-height: min(760px, calc(100vh - 64px));
