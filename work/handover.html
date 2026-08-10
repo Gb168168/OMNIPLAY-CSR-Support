@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>交接｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260810-list-density2" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260811-handover-grid1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -84,27 +84,27 @@
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 }
       ],
       formLayout: {
-        version: 'handover-view-v3',
-        columns: 4,
+        version: 'handover-view-v4',
+        columns: 6,
         rows: 5,
         fields: {
           date: { row: 1, col: 1 },
           shift: { row: 1, col: 2 },
           department: { row: 1, col: 3 },
           category: { row: 1, col: 4 },
-          status: { row: 2, col: 1 },
-          publisher: { row: 2, col: 2 },
-          finisher: { row: 2, col: 3 },
-          completed_at: { row: 2, col: 4 },
-          serial: { row: 3, col: 1 },
-          link: { row: 3, col: 2 },
-          updated_time: { row: 3, col: 3 },
-          reminder_at: { row: 3, col: 4 },
-          reminder_enabled: { row: 4, col: 4 },
-          item: { row: 5, col: 1, colSpan: 2, height: 176 },
-          note: { row: 5, col: 3, colSpan: 2, height: 176 },
-          image: { row: 6, col: 1, colSpan: 2, height: 96 },
-          attachment: { row: 6, col: 3, colSpan: 2, height: 96 }
+          status: { row: 1, col: 5 },
+          serial: { row: 1, col: 6 },
+          publisher: { row: 2, col: 1 },
+          finisher: { row: 2, col: 2 },
+          completed_at: { row: 2, col: 3 },
+          updated_time: { row: 2, col: 4 },
+          reminder_at: { row: 2, col: 5 },
+          reminder_enabled: { row: 2, col: 6 },
+          link: { row: 3, col: 1, colSpan: 6 },
+          item: { row: 4, col: 1, colSpan: 3, height: 176 },
+          note: { row: 4, col: 4, colSpan: 3, height: 176 },
+          image: { row: 5, col: 1, colSpan: 3, height: 110 },
+          attachment: { row: 5, col: 4, colSpan: 3, height: 110 }
         }
       },
       listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'completed_at', 'image', 'attachment', 'updated_time', 'serial']
