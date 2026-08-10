@@ -23,7 +23,10 @@
   'use strict';
 
   const DEFAULT_API_BASE = ''; // ← 正式切換時填公司 API 網址;空字串 = 維持 Firebase
-  const base = (localStorage.getItem('csrApiBase') || window.CSR_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '');
+  // localStorage 開關只認 localhost(FRIDAY 8/10:防同 origin 其他專案 XSS 把 API 位址指到攻擊者伺服器)
+  const stored = localStorage.getItem('csrApiBase') || '';
+  const storedIsLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(stored);
+  const base = ((storedIsLocal ? stored : '') || window.CSR_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '');
   window.CSR_API_BASE = base;
   if (!base) return; // 開關沒撥:不做任何事
 
@@ -37,9 +40,10 @@
   ]);
 
   const realDb = window.omniplayDb; // Firebase 原本的 Firestore(未路由的 collection 繼續用)
-  const POLL_INTERVAL = 15000;      // onSnapshot 以輪詢模擬的間隔(毫秒)
+  const POLL_INTERVAL = Number(window.CSR_POLL_INTERVAL) || 15000; // onSnapshot 輪詢間隔(毫秒)
 
-  const authToken = () => localStorage.getItem('csr_token') || '';
+  // token 存 sessionStorage:跟登入 session 同生命週期,也縮小 XSS 竊取後的存活時間(FRIDAY 8/10)
+  const authToken = () => sessionStorage.getItem('csr_token') || '';
 
   async function apiFetch(path, options = {}) {
     const headers = { 'Content-Type': 'application/json' };
@@ -74,6 +78,11 @@
     if (isServerTimestamp(value)) return { __serverTimestamp: true };
     if (value instanceof Date) return value.toISOString();
     if (value && typeof value.toDate === 'function') return value.toDate().toISOString(); // Firestore Timestamp
+    // 其他 FieldValue 哨兵(arrayUnion/increment/delete)墊片不支援,直接擋下以免序列化成垃圾寫進資料庫
+    // (FRIDAY 8/10;目前只有排班 schedule 在用這些,而 schedule 不得路由 — 它還用到 batch/runTransaction)
+    if (value && typeof value === 'object' && value._methodName && !isServerTimestamp(value)) {
+      throw new Error('墊片不支援的 FieldValue:' + value._methodName + '(此 collection 不應路由到 API)');
+    }
     if (Array.isArray(value)) return value.map(encodeValue);
     if (value && typeof value === 'object' && value.constructor === Object) {
       const out = {};
@@ -91,12 +100,33 @@
     exists: data != null,
     data: () => data == null ? undefined : deepCopy(data)
   });
-  const makeQuerySnapshot = (rows) => {
+  const makeQuerySnapshot = (rows, changes) => {
     const docs = rows.map((row) => {
       const { id, ...fields } = row;
       return makeDocSnapshot(id, fields);
     });
-    return { empty: docs.length === 0, size: docs.length, docs, forEach: (fn) => docs.forEach(fn) };
+    // docChanges:預設(一次性 get)視為全部新增;onSnapshot 輪詢時由呼叫端傳入真正的差異
+    const changeList = changes || docs.map((doc) => ({ type: 'added', doc }));
+    return { empty: docs.length === 0, size: docs.length, docs, forEach: (fn) => docs.forEach(fn), docChanges: () => changeList };
+  };
+  // 比對前後兩次輪詢,算出 Firestore 語意的 docChanges(added/modified/removed)
+  const diffDocs = (prevMap, docs) => {
+    const changes = [];
+    const nextMap = new Map();
+    for (const doc of docs) {
+      const serialized = JSON.stringify(doc.data());
+      nextMap.set(doc.id, serialized);
+      if (!prevMap) { changes.push({ type: 'added', doc }); continue; }
+      const previous = prevMap.get(doc.id);
+      if (previous === undefined) changes.push({ type: 'added', doc });
+      else if (previous !== serialized) changes.push({ type: 'modified', doc });
+    }
+    if (prevMap) {
+      for (const [id, serialized] of prevMap) {
+        if (!nextMap.has(id)) changes.push({ type: 'removed', doc: makeDocSnapshot(id, JSON.parse(serialized)) });
+      }
+    }
+    return { changes, nextMap };
   };
 
   // ---- client-side 查詢(資料量小,抓回來後在前端過濾/排序)----
@@ -178,8 +208,15 @@
       return makeDocSnapshot(this.id, fields);
     },
     async set(data, options) {
-      const method = options && options.merge ? 'PATCH' : 'PUT';
-      await apiFetch(`/api/csr/${this._collection}/${encodeURIComponent(this.id)}`, { method, body: JSON.stringify(encodeData(data)) });
+      const path = `/api/csr/${this._collection}/${encodeURIComponent(this.id)}`;
+      const body = JSON.stringify(encodeData(data));
+      if (options && options.merge) {
+        const result = await apiFetch(path, { method: 'PATCH', body });
+        // Firestore 的 set(merge) 是 upsert:文件不存在時要改用 PUT 建立,不能靜默吞掉(FRIDAY 8/10)
+        if (result && result.__notFound) await apiFetch(path, { method: 'PUT', body });
+        return;
+      }
+      await apiFetch(path, { method: 'PUT', body });
     },
     async update(data) {
       const result = await apiFetch(`/api/csr/${this._collection}/${encodeURIComponent(this.id)}`, { method: 'PATCH', body: JSON.stringify(encodeData(data)) });
@@ -212,9 +249,15 @@
       return makeQuerySnapshot(applyQuery(list, this._filters, this._orders, this._limit));
     },
     onSnapshot(onNext, onError) {
+      let prevMap = null; // id -> 序列化資料,供 docChanges 差異比對
       return startPolling(async () => {
-        const snapshot = await this.get();
-        return { payload: snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })), snapshot };
+        const rows = await apiFetch(`/api/csr/${this._collection}`);
+        const list = applyQuery(Array.isArray(rows) ? rows : [], this._filters, this._orders, this._limit);
+        const baseSnapshot = makeQuerySnapshot(list);
+        const { changes, nextMap } = diffDocs(prevMap, baseSnapshot.docs);
+        prevMap = nextMap;
+        const snapshot = makeQuerySnapshot(list, changes);
+        return { payload: list, snapshot };
       }, onNext, onError);
     }
   };

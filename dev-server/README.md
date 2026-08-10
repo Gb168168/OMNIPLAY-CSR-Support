@@ -42,6 +42,14 @@
 5. **欄位不定**:拖拉表單設計器會動態長出欄位(key 如 `field_178xxxx`),後端**不要**用固定 schema 擋,照存照回即可(建議 JSON 欄位存法)。
 6. **權限**:`permissions/{staffId}` 內容為 `{pages: {handover: {view, edit, delete, design}, ...}}`;帳號 `OMNIPLAY` 為管理員(前端自帶此判斷,正式版建議改由後端回傳角色)。
 
+## ⛔ 正式後端的硬性要求(FRIDAY 審查 2026-08-10;dev-server 為求簡單未實作,正式版必做)
+
+1. **必須 HTTPS**:前端在 GitHub Pages(https),瀏覽器強制封鎖 https 頁面對 http API 的請求(mixed content)— HTTP 直連根本不通。建議 Cloudflare Tunnel 或反代 + 憑證。
+2. **登入防暴力破解**:`/api/auth/login` 驗的是 MyERP 全公司帳密,必須做「每 IP + 每帳號」限速與失敗鎖定(例:同帳號 5 次失敗鎖 15 分鐘),否則等於把公司帳號密碼掛公網給人猜,且 bcrypt 驗證吃 CPU、登入洪水=DoS。
+3. **token 要過期**(建議 ≤12 小時)並提供 `POST /api/auth/logout` 撤銷;前端登出已會呼叫(沒有此端點也不會壞,但 token 會活到過期)。
+4. **`staff` 永不回傳 `password` 欄位**(登入已走 MyERP,此欄位應整個不存在);`staff`/`permissions` 的寫入要限管理員身分,後端強制檢查,不能只靠前端藏按鈕。
+5. **列表要輕量**:`GET /api/csr/:collection` 應剝除 base64 圖片/附件等重欄位(改回傳 `{attachment: {size, name}}` 之類的佔位,詳細另拉單筆),並支援 `?updatedSince=<ISO>` 增量查詢 — 前端每 15 秒輪詢全量,不做這條 NAS 頻寬會被打爆。
+
 ## 本地試跑
 
 ```

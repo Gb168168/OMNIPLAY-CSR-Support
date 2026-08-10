@@ -439,7 +439,7 @@ const renderSidebarUser = () => {
 const logout = () => {
   clearTimeout(idleTimer);
   Object.values(SESSION_KEYS).forEach((key) => sessionStorage.removeItem(key));
-  localStorage.removeItem('csr_token');
+  sessionStorage.removeItem('csr_token');
   window.location.href = loginPath;
 };
 
@@ -546,7 +546,7 @@ loginForm?.addEventListener('submit', async (event) => {
         showLoginMessage('帳號或密碼錯誤');
         return;
       }
-      localStorage.setItem('csr_token', result.token);
+      sessionStorage.setItem('csr_token', result.token);
       sessionStorage.setItem(SESSION_KEYS.id, result.staff.id || '');
       sessionStorage.setItem(SESSION_KEYS.code, result.staff.code || '');
       sessionStorage.setItem(SESSION_KEYS.name, result.staff.name || '');
