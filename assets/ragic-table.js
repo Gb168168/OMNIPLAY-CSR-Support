@@ -956,6 +956,8 @@ const attachColumnResizers = (headerRow) => {
     th.querySelector('.col-resizer')?.remove();
     const resizer = document.createElement('div');
     resizer.className = 'col-resizer';
+    resizer.title = '左右拖曳調整列表欄寬，放開後自動儲存';
+    resizer.setAttribute('aria-label', `調整${fieldByKey(th.dataset.fieldKey)?.label || '此欄位'}的列表欄寬`);
     th.appendChild(resizer);
     let startX = 0;
     let startWidth = 0;
