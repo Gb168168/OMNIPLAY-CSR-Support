@@ -3089,12 +3089,30 @@ const designerPreviewValue = (field = {}, rowIndex = 0) => {
   if (field.type === 'reminderEnabled' || field.type === 'reportEnabled') return '☐';
   return samples[rowIndex] || samples[0];
 };
+const designerColumnLetter = (index = 0) => {
+  let value = Number(index) + 1;
+  let label = '';
+  while (value > 0) {
+    value -= 1;
+    label = String.fromCharCode(65 + (value % 26)) + label;
+    value = Math.floor(value / 26);
+  }
+  return label;
+};
 const updateDesignerPreview = () => {
   const modal = document.querySelector('#ragicDesignerModal');
   const body = modal?.querySelector('.designer-body');
   const preview = modal?.querySelector('#designerPreviewTable');
+  const hiddenFields = modal?.querySelector('#designerHiddenListFields');
   if (!body || !preview) return;
-  const fields = readDesigner(body).filter((field) => field.type !== 'subtable' && field.listVisible !== false);
+  const allFields = readDesigner(body).filter((field) => field.type !== 'subtable');
+  const fields = allFields.filter((field) => field.listVisible !== false);
+  if (hiddenFields) {
+    const hidden = allFields.filter((field) => field.listVisible === false);
+    hiddenFields.innerHTML = hidden.length
+      ? hidden.map((field) => `<button type="button" data-show-list-field="${escapeHtml(field.key)}">＋ ${escapeHtml(field.label || field.key)}</button>`).join('')
+      : '<span>全部欄位都顯示在列表</span>';
+  }
   if (!fields.length) {
     preview.innerHTML = '<div class="designer-preview-empty">尚未建立欄位，請新增欄位以預覽表格。</div>';
     return;
@@ -3103,9 +3121,10 @@ const updateDesignerPreview = () => {
     const width = fieldColumnWidth(field);
     return `<col${width ? ` style="min-width: ${width}px !important; width: ${width}px;"` : ''}>`;
   }).join('');
-  const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}">${escapeHtml(field.label || field.key)}</th>`).join('');
-  const rows = [0, 1, 2].map((rowIndex) => `<tr>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
-  preview.innerHTML = `<table class="ragic-table">${colgroup ? `<colgroup>${colgroup}</colgroup>` : ''}<thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+  const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}" draggable="true" data-list-field-key="${escapeHtml(field.key)}"><span class="designer-list-drag" title="拖曳調整欄位順序">⠿</span><strong>${escapeHtml(field.label || field.key)}</strong><button class="designer-list-field-settings" type="button" data-list-field-settings="${escapeHtml(field.key)}" title="欄位設定">⚙️</button><span class="designer-list-col-resizer" data-list-resize="${escapeHtml(field.key)}" title="拖曳調整欄寬"></span></th>`).join('');
+  const columnLetters = fields.map((_, index) => `<th>${designerColumnLetter(index)}</th>`).join('');
+  const rows = [0, 1, 2].map((rowIndex) => `<tr><th class="designer-sheet-row-number">${rowIndex + 1}</th>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
+  preview.innerHTML = `<table class="ragic-table"><colgroup><col class="designer-sheet-index-col">${colgroup}</colgroup><thead><tr class="designer-sheet-column-letters"><th></th>${columnLetters}</tr><tr><th class="designer-sheet-corner">#</th>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
   const previewTable = preview.querySelector('.ragic-table');
   if (previewTable) previewTable.style.tableLayout = 'fixed';
   previewTable?.style.setProperty('width', '100%', 'important');
@@ -3113,9 +3132,26 @@ const updateDesignerPreview = () => {
   previewTable?.style.setProperty('max-width', 'none', 'important');
   fields.forEach((field, index) => {
     const width = fieldColumnWidth(field);
-    applyColumnWidth(previewTable?.querySelector(`thead th:nth-child(${index + 1})`), width);
-    previewTable?.querySelectorAll(`tbody td:nth-child(${index + 1})`).forEach((cell) => applyColumnWidth(cell, width));
+    applyColumnWidth(previewTable?.querySelector(`thead tr:not(.designer-sheet-column-letters) th:nth-child(${index + 2})`), width);
+    applyColumnWidth(previewTable?.querySelector(`thead .designer-sheet-column-letters th:nth-child(${index + 2})`), width);
+    previewTable?.querySelectorAll(`tbody td:nth-child(${index + 2})`).forEach((cell) => applyColumnWidth(cell, width));
   });
+};
+
+const designerRowByKey = (fieldKey) => {
+  const escapedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/"/g, '\\"');
+  return document.querySelector(`#ragicDesignerModal .designer-body > .designer-field[data-field-key="${escapedKey}"], #ragicDesignerModal .designer-body > .designer-field[data-key="${escapedKey}"]`);
+};
+
+const openListFieldSettings = (fieldKey) => {
+  const row = designerRowByKey(fieldKey);
+  const panel = document.querySelector('#designerListFieldPanel');
+  if (!row || !panel) return;
+  const field = readDesigner(row.parentElement).find((item) => item.key === fieldKey);
+  if (!field) return;
+  panel.dataset.fieldKey = fieldKey;
+  panel.innerHTML = `<div class="designer-list-panel-head"><div><small>列表欄位</small><h3>${escapeHtml(field.label || field.key)}</h3></div><button type="button" data-close-list-settings>×</button></div><label><span>欄位名稱</span><input data-list-setting-label value="${escapeHtml(field.label || '')}"></label><label><span>顯示在列表</span><input data-list-setting-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}></label><label><span>列表欄寬</span><div class="designer-list-width-input"><input data-list-setting-width type="number" min="40" max="2000" step="10" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}" placeholder="自動"><em>px</em></div></label><p>列表設定不會改變單筆畫面的欄位位置。</p><button class="primary" type="button" data-apply-list-settings>套用設定</button>`;
+  panel.hidden = false;
 };
 
 
@@ -3763,8 +3799,11 @@ const openDesigner = async () => {
     body.hidden = true;
 
     if (layoutPanel) {
-      layoutPanel.hidden = false;
+      layoutPanel.hidden = true;
     }
+
+    modal.querySelectorAll('[data-designer-tab]').forEach((tab) => tab.classList.toggle('active', tab.dataset.designerTab === 'list'));
+    modal.querySelectorAll('[data-designer-panel]').forEach((designerPanel) => { designerPanel.hidden = designerPanel.dataset.designerPanel !== 'list'; });
 
     renderLayoutDesigner();
     updateDesignerPreview();
@@ -4041,7 +4080,7 @@ const initRagicPage = async (config) => {
     designButton?.remove();
   }
   if (!document.querySelector('#ragicDesignerModal')) {
-  document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><h2>設計表格</h2><div class="designer-header-actions"><button class="primary" id="saveSchemaButton" type="button">儲存</button><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div></div><div class="designer-body" hidden></div><div id="layoutDesignerPanel"></div></div></div>');
+  document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicDesignerModal" hidden><div class="ragic-modal-card"><div class="ragic-form-toolbar"><div><h2>設計表格</h2><p>列表與單筆畫面分開設計</p></div><div class="designer-header-actions"><button class="primary" id="saveSchemaButton" type="button">儲存</button><button class="ghost" id="closeDesignerButton" type="button">關閉</button></div></div><div class="ragic-designer-tabs" role="tablist"><button class="active" data-designer-tab="list" type="button">▦ 列表設計</button><button data-designer-tab="form" type="button">▤ 單筆畫面設計</button></div><div class="designer-body" hidden></div><section class="ragic-list-designer" data-designer-panel="list"><aside class="ragic-list-designer-sidebar"><h3>列表設定</h3><p>點選欄位標題設定顯示與欄寬。</p><div id="designerListFieldPanel" hidden></div><section class="designer-hidden-fields"><h4>未顯示在列表</h4><div id="designerHiddenListFields"></div></section></aside><main class="ragic-list-designer-canvas"><div class="ragic-sheet-title"><strong>資料列表</strong><span>拖曳標題可排序；拖曳欄位右側邊界可調整寬度</span></div><div class="designer-preview-scroll"><div id="designerPreviewTable"></div></div></main></section><div id="layoutDesignerPanel" data-designer-panel="form" hidden></div></div></div>');
   }
   if (!document.querySelector('#ragicImageModal')) {
     document.querySelector('body').insertAdjacentHTML('beforeend', '<div class="ragic-modal" id="ragicImageModal" hidden><div class="ragic-modal-card ragic-image-modal-card"><div class="ragic-form-toolbar"><h2>圖片</h2><div class="ragic-image-counter" id="ragicImageCounter">1 / 1</div><div class="ragic-image-tools"><button class="ghost" data-image-zoom="out" type="button" aria-label="縮小">−</button><span id="ragicImageZoom">100%</span><button class="ghost" data-image-zoom="in" type="button" aria-label="放大">＋</button><button class="ghost" data-image-reset type="button">原始比例</button><a class="ghost" id="ragicImageOriginal" target="_blank" rel="noopener">開啟圖片</a><button class="ghost" data-image-fullscreen type="button">全螢幕</button></div><button class="ghost" id="closeImageModalButton" type="button">關閉</button></div><div class="ragic-image-stage"><button class="ragic-image-nav ragic-image-prev" data-image-step="-1" type="button" aria-label="上一張">‹</button><img alt="圖片預覽" draggable="false"><button class="ragic-image-nav ragic-image-next" data-image-step="1" type="button" aria-label="下一張">›</button></div></div></div>');
@@ -4093,9 +4132,99 @@ const initRagicPage = async (config) => {
     const mode = tab.dataset.designerTab;
     document.querySelectorAll('#ragicDesignerModal [data-designer-tab]').forEach((item) => item.classList.toggle('active', item === tab));
     document.querySelectorAll('#ragicDesignerModal [data-designer-panel]').forEach((panel) => { panel.hidden = panel.dataset.designerPanel !== mode; });
-    document.querySelector('#addFieldButton')?.toggleAttribute('hidden', mode !== 'fields');
-    if (mode === 'layout') renderLayoutDesigner();
+    if (mode === 'form') renderLayoutDesigner();
+    if (mode === 'list') updateDesignerPreview();
   });
+  document.querySelector('#ragicDesignerModal')?.addEventListener('click', (event) => {
+    const settingsButton = event.target.closest('[data-list-field-settings]');
+    const header = event.target.closest('th[data-list-field-key]');
+    if (settingsButton || (header && !event.target.closest('[data-list-resize]'))) {
+      openListFieldSettings(settingsButton?.dataset.listFieldSettings || header.dataset.listFieldKey);
+      return;
+    }
+    const showButton = event.target.closest('[data-show-list-field]');
+    if (showButton) {
+      const row = designerRowByKey(showButton.dataset.showListField);
+      if (row) row.querySelector('[data-role="list-visible"]').value = '1';
+      updateDesignerPreview();
+      openListFieldSettings(showButton.dataset.showListField);
+      return;
+    }
+    if (event.target.closest('[data-close-list-settings]')) {
+      document.querySelector('#designerListFieldPanel').hidden = true;
+      return;
+    }
+    if (event.target.closest('[data-apply-list-settings]')) {
+      const panel = event.target.closest('#designerListFieldPanel');
+      const row = designerRowByKey(panel?.dataset.fieldKey);
+      if (!panel || !row) return;
+      row.querySelector('[data-role="label"]').value = panel.querySelector('[data-list-setting-label]').value.trim() || '未命名欄位';
+      row.querySelector('[data-role="list-visible"]').value = panel.querySelector('[data-list-setting-visible]').checked ? '1' : '0';
+      row.querySelector('[data-role="width"]').value = panel.querySelector('[data-list-setting-width]').value;
+      updateDesignerPreview();
+      if (row.querySelector('[data-role="list-visible"]').value === '0') panel.hidden = true;
+    }
+  });
+  {
+    const modal = document.querySelector('#ragicDesignerModal');
+    let draggedListFieldKey = '';
+    modal?.addEventListener('dragstart', (event) => {
+      const header = event.target.closest('th[data-list-field-key]');
+      if (!header || event.target.closest('[data-list-resize], button')) return;
+      draggedListFieldKey = header.dataset.listFieldKey;
+      event.dataTransfer.setData('text/plain', draggedListFieldKey);
+      header.classList.add('is-dragging');
+    });
+    modal?.addEventListener('dragover', (event) => {
+      const header = event.target.closest('th[data-list-field-key]');
+      if (!header || !draggedListFieldKey) return;
+      event.preventDefault();
+      modal.querySelectorAll('th.is-list-drop-target').forEach((item) => item.classList.remove('is-list-drop-target'));
+      header.classList.add('is-list-drop-target');
+    });
+    modal?.addEventListener('drop', (event) => {
+      const header = event.target.closest('th[data-list-field-key]');
+      const body = modal.querySelector('.designer-body');
+      const sourceRow = designerRowByKey(draggedListFieldKey);
+      const targetRow = designerRowByKey(header?.dataset.listFieldKey);
+      if (!header || !body || !sourceRow || !targetRow || sourceRow === targetRow) return;
+      event.preventDefault();
+      body.insertBefore(sourceRow, targetRow);
+      updateDesignerPreview();
+    });
+    modal?.addEventListener('dragend', () => {
+      draggedListFieldKey = '';
+      modal.querySelectorAll('th.is-dragging, th.is-list-drop-target').forEach((item) => item.classList.remove('is-dragging', 'is-list-drop-target'));
+    });
+    modal?.addEventListener('pointerdown', (event) => {
+      const handle = event.target.closest('[data-list-resize]');
+      if (!handle) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const fieldKey = handle.dataset.listResize;
+      const row = designerRowByKey(fieldKey);
+      const widthInput = row?.querySelector('[data-role="width"]');
+      const header = handle.closest('th');
+      if (!row || !widthInput || !header) return;
+      const startX = event.clientX;
+      const startWidth = header.getBoundingClientRect().width;
+      const move = (moveEvent) => {
+        const width = Math.max(40, Math.min(2000, Math.round(startWidth + moveEvent.clientX - startX)));
+        widthInput.value = width;
+        header.style.width = `${width}px`;
+        header.style.minWidth = `${width}px`;
+        header.style.maxWidth = `${width}px`;
+      };
+      const up = () => {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        updateDesignerPreview();
+        openListFieldSettings(fieldKey);
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up, { once: true });
+    });
+  }
   attachLayoutDesignerEvents(document.querySelector('#layoutDesignerPanel'));
   
 
