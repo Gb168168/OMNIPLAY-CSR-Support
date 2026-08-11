@@ -3805,9 +3805,15 @@ const openDesigner = async () => {
 
     const fields = getFields();
     const listVisibility = RAGIC_STATE.schema?.listVisibility || {};
-    const currentListKeys = new Set(listFields().map((field) => field.key));
+    const currentListFields = listFields();
+    const currentListKeys = new Set(currentListFields.map((field) => field.key));
+    const fieldMap = new Map(fields.map((field) => [field.key, field]));
+    const orderedFields = [
+      ...currentListFields.map((field) => fieldMap.get(field.key)).filter(Boolean),
+      ...fields.filter((field) => !currentListKeys.has(field.key))
+    ];
 
-    fields.forEach((field) => {
+    orderedFields.forEach((field) => {
       try {
         body.appendChild(fieldDesigner({
           ...field,
