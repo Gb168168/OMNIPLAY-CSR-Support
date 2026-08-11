@@ -8510,3 +8510,20 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   width: 4px;
   background: #2563eb;
 }
+
+
+/* Invisible list column resize boundary */
+#ragicListView .ragic-table .col-resizer,
+#ragicListView .ragic-table .col-resizer:hover,
+#ragicListView .ragic-table .col-resizer.is-dragging {
+  right: -6px;
+  width: 12px;
+  background: transparent !important;
+  opacity: 1 !important;
+}
+#ragicListView .ragic-table .col-resizer::after,
+#ragicListView .ragic-table th:hover .col-resizer::after,
+#ragicListView .ragic-table .col-resizer:hover::after,
+#ragicListView .ragic-table .col-resizer.is-dragging::after {
+  display: none !important;
+}
