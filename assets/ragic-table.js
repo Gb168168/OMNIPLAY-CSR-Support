@@ -1055,6 +1055,7 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   markerCol.style.setProperty('min-width', `${markerWidth}px`, 'important');
   markerCol.style.setProperty('width', `${markerWidth}px`);
   colgroup.appendChild(markerCol);
+  let resolvedColumnsWidth = 0;
   fields.forEach((field, index) => {
     const col = document.createElement('col');
     const columnClass = columnClasses[index];
@@ -1070,9 +1071,17 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
       : Math.max(minimumWidth, widths[index] + (flexibleSet.has(index) ? extraPerFlexibleColumn : 0));
     col.style.setProperty('min-width', `${minimumWidth}px`, 'important');
     col.style.setProperty('width', `${Math.round(width)}px`);
+    resolvedColumnsWidth += Math.round(width);
     colgroup.appendChild(col);
   });
-  table.style.removeProperty('--ragic-table-width');
+  // Keep saved pixel widths exact. A fixed 100% table compresses every
+  // column when their requested widths exceed the viewport; growing the table
+  // to the resolved total lets the existing wrapper scroll horizontally.
+  const resolvedTableWidth = Math.max(totalWidth, markerWidth + resolvedColumnsWidth);
+  table.style.setProperty('width', `${Math.round(resolvedTableWidth)}px`, 'important');
+  table.style.setProperty('min-width', '100%', 'important');
+  table.style.setProperty('max-width', 'none', 'important');
+  table.style.setProperty('--ragic-table-width', `${Math.round(resolvedTableWidth)}px`);
   table.insertBefore(colgroup, table.firstChild);
 };
 
@@ -2771,8 +2780,11 @@ const renderTable = () => {
       const style = columnWidthStyle(width);
       return `<td class="${columnClass}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${typeAttr}${style}${title}>${renderCell(record, field)}</td>`;
     }).join('');
-    [...tr.children].forEach((cell) => {
-      cell.style.setProperty('min-width', '0', 'important');
+    [...tr.children].forEach((cell, index) => {
+      const field = index > 0 ? fields[index - 1] : null;
+      const manualWidth = fieldColumnWidth(field);
+      cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
+      if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
       const isDateColumn = cell.classList.contains('col-date');
       cell.style.setProperty('white-space', isDateColumn ? 'nowrap' : 'normal', 'important');
       cell.style.setProperty('overflow-wrap', isDateColumn ? 'normal' : 'anywhere', 'important');
@@ -3004,7 +3016,10 @@ const renderHeader = () => {
     return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
   [...headerRow.children].forEach((cell, index) => {
-    cell.style.setProperty('min-width', index === 0 ? '50px' : '0px', 'important');
+    const field = index > 0 ? listFields()[index - 1] : null;
+    const manualWidth = fieldColumnWidth(field);
+    cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
+    if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
     const isDateColumn = cell.classList.contains('col-date');
     cell.style.setProperty('white-space', isDateColumn ? 'nowrap' : 'normal', 'important');
     cell.style.setProperty('overflow-wrap', isDateColumn ? 'normal' : 'anywhere', 'important');
