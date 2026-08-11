@@ -3805,9 +3805,25 @@ const openDesigner = async () => {
 
     const fields = getFields();
     const listVisibility = RAGIC_STATE.schema?.listVisibility || {};
-    const currentListKeys = new Set(listFields().map((field) => field.key));
+    // Mirror the list that is actually visible on screen. The header may
+    // still use the page's configured listColumns while an asynchronously
+    // loaded schema contains an older listOrder; calling listFields() again
+    // would make the designer disagree with the displayed list.
+    const renderedListKeys = [...document.querySelectorAll('#ragicHeaderRow th[data-field-key]')]
+      .map((cell) => String(cell.dataset.fieldKey || '').trim())
+      .filter(Boolean);
+    const currentListFields = listFields();
+    const currentListKeyOrder = renderedListKeys.length
+      ? renderedListKeys
+      : currentListFields.map((field) => field.key);
+    const currentListKeys = new Set(currentListKeyOrder);
+    const fieldMap = new Map(fields.map((field) => [field.key, field]));
+    const orderedFields = [
+      ...currentListKeyOrder.map((key) => fieldMap.get(key)).filter(Boolean),
+      ...fields.filter((field) => !currentListKeys.has(field.key))
+    ];
 
-    fields.forEach((field) => {
+    orderedFields.forEach((field) => {
       try {
         body.appendChild(fieldDesigner({
           ...field,
