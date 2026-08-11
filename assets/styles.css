@@ -8527,3 +8527,20 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 #ragicListView .ragic-table .col-resizer.is-dragging::after {
   display: none !important;
 }
+
+
+/* Working invisible resize hit area */
+#ragicListView .ragic-table th .col-resizer {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 14px !important;
+  height: auto !important;
+  z-index: 30 !important;
+  display: block !important;
+  pointer-events: auto !important;
+  touch-action: none;
+  cursor: col-resize !important;
+  background: transparent !important;
+}
