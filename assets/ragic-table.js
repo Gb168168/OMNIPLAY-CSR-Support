@@ -998,19 +998,21 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
     ? Math.max(configuredWidth, table.parentElement?.clientWidth || 0)
     : configuredWidth;
   const markerWidth = Math.min(50, totalWidth);
-  const weights = fields.map((field) => fieldColumnWidth(field) || DEFAULT_FIELD_WIDTHS[field.type] || DEFAULT_LIST_COLUMN_WIDTH);
-  const totalWeight = weights.reduce((sum, width) => sum + width, 0) || 1;
-  const availableWidth = Math.max(0, totalWidth - markerWidth);
+  const widths = fields.map((field) => fieldColumnWidth(field) || DEFAULT_FIELD_WIDTHS[field.type] || DEFAULT_LIST_COLUMN_WIDTH);
+  const manualTotal = fields.reduce((sum, field, index) => sum + (field.manualWidth ? widths[index] : 0), 0);
+  const autoWeight = fields.reduce((sum, field, index) => sum + (field.manualWidth ? 0 : widths[index]), 0) || 1;
+  const availableForAuto = Math.max(0, totalWidth - markerWidth - manualTotal);
   const markerCol = document.createElement('col');
   markerCol.style.setProperty('min-width', `${markerWidth}px`, 'important');
   markerCol.style.setProperty('width', `${markerWidth}px`);
   colgroup.appendChild(markerCol);
   fields.forEach((field, index) => {
     const col = document.createElement('col');
-    const proportionalWidth = availableWidth * (weights[index] / totalWeight);
     const minimumWidth = ['textarea', 'richtext'].includes(field.type) ? 160 : 72;
-    const width = Math.max(minimumWidth, proportionalWidth);
-    col.style.setProperty('min-width', `${minimumWidth}px`, 'important');
+    const width = field.manualWidth
+      ? Math.max(MIN_COLUMN_WIDTH, widths[index])
+      : Math.max(minimumWidth, availableForAuto * (widths[index] / autoWeight));
+    col.style.setProperty('min-width', `${field.manualWidth ? MIN_COLUMN_WIDTH : minimumWidth}px`, 'important');
     col.style.setProperty('width', `${width}px`);
     colgroup.appendChild(col);
   });
