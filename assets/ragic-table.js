@@ -632,7 +632,10 @@ const applyDenseFormLayout = (element, field = {}) => {
   element.style.setProperty('--dense-span', String(layout.span));
   return element;
 };
-const usesDenseFormLayout = () => !document.body.classList.contains('handover-page');
+// 日誌 NEW 的檢視與編輯必須忠實使用設計表格儲存的 formLayout。
+const usesDenseFormLayout = () =>
+  !document.body.classList.contains('handover-page') &&
+  !isLogNewModule();
 const applyDenseSubtableLayout = (section) => {
   if (!section) return section;
   section.classList.add('dense-form-subtable');
@@ -2266,11 +2269,13 @@ const renderViewForm = (form, record = {}) => {
       section.classList.add('is-tracking-detail-subtable');
     }
     if (!fixedLogLayout) applyFormLayout(section, field);
-    applyDenseSubtableLayout(section);
-    section.style.setProperty('--form-row', 'auto');
-    section.style.setProperty('--form-col', 'auto');
-    section.style.setProperty('--form-rowspan', '1');
-    if (window.matchMedia('(min-width: 769px)').matches) {
+    if (usesDenseFormLayout()) {
+      applyDenseSubtableLayout(section);
+      section.style.setProperty('--form-row', 'auto');
+      section.style.setProperty('--form-col', 'auto');
+      section.style.setProperty('--form-rowspan', '1');
+    }
+    if (usesDenseFormLayout() && window.matchMedia('(min-width: 769px)').matches) {
       const viewportHeight = Math.max(220, Math.min(360, window.innerHeight - 600));
       section.style.setProperty('height', 'auto', 'important');
       section.style.setProperty('min-height', '0px', 'important');
@@ -2508,7 +2513,7 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
       section.classList.add('is-tracking-detail-subtable');
     }
       if (!fixedLogLayout) applyFormLayout(section, field);
-      applyDenseSubtableLayout(section);
+      if (usesDenseFormLayout()) applyDenseSubtableLayout(section);
       section.dataset.subtable = field.key;
       section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
       const body = section.querySelector('tbody');
