@@ -3214,12 +3214,14 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
 const readDesigner = (container) => [...container.children].filter((el) => el.classList.contains('designer-field')).map((row) => {
   const label = row.querySelector('[data-role="label"]').value.trim() || '未命名欄位';
   const type = row.querySelector('[data-role="type"]').value;
+  const width = normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value);
   const field = {
     key: shouldRegenerateFieldKey(row.dataset.key) ? generateFieldKey() : row.dataset.key,
     label,
     type,
     required: Boolean(row.querySelector('[data-role="required"]')?.checked),
-    width: normalizeFieldWidth(row.querySelector('[data-role="width"]')?.value),
+    width,
+    manualWidth: Boolean(width),
     options: (row.querySelector('[data-role="options"]')?.value || '').split('\n').map((v) => v.trim()).filter(Boolean),
     defaultValue: row.querySelector('[data-role="default"]')?.value || '',
     help: row.querySelector('[data-role="help"]')?.value || '',
@@ -3567,7 +3569,6 @@ const attachLayoutDesignerEvents = (panel) => {
   const beginLayoutResize = (event) => {
     const handle = event.target.closest('[data-resize]');
     if (!handle || layoutResizeActive) return;
-    layoutResizeActive = true;
     event.preventDefault();
     event.stopPropagation();
     const fieldKey = handle.closest('[data-field-key]')?.dataset.fieldKey;
@@ -3575,6 +3576,7 @@ const attachLayoutDesignerEvents = (panel) => {
     const startLayout = currentDesignerLayout();
     const start = { ...startLayout.fields[fieldKey] };
     if (!fieldKey || !grid || !start.row) return;
+    layoutResizeActive = true;
     const startX = event.clientX;
     const startY = event.clientY;
     const type = handle.dataset.resize;
