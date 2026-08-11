@@ -733,7 +733,10 @@ const normalizeSchema = (schema = {}) => {
     ),
     listWidth: normalizeListWidth(schema.listWidth),
     listWidthFull: schema.listWidthFull === true,
-    listVisibility
+    listVisibility,
+    listOrder: Array.isArray(schema.listOrder)
+      ? schema.listOrder.map((key) => String(key || '').trim()).filter(Boolean)
+      : []
   };
 };
 const fixDuplicateKeys = (fields = []) => {
@@ -762,7 +765,10 @@ const virtualListSubfield = (parent, subfield) => ({
 const listFields = () => {
   const allFields = getFields();
   const defaultFields = allFields.filter((field) => field.type !== 'subtable');
-  const configuredColumns = RAGIC_STATE.config?.listColumns;
+  const savedOrder = RAGIC_STATE.schema?.listOrder;
+  const configuredColumns = Array.isArray(savedOrder) && savedOrder.length
+    ? savedOrder
+    : RAGIC_STATE.config?.listColumns;
   const visible = (field) => RAGIC_STATE.schema?.listVisibility?.[field.key] !== false;
   if (!Array.isArray(configuredColumns) || !configuredColumns.length) return defaultFields.filter(visible);
   return configuredColumns
@@ -3799,10 +3805,14 @@ const openDesigner = async () => {
 
     const fields = getFields();
     const listVisibility = RAGIC_STATE.schema?.listVisibility || {};
+    const currentListKeys = new Set(listFields().map((field) => field.key));
 
     fields.forEach((field) => {
       try {
-        body.appendChild(fieldDesigner({ ...field, listVisible: listVisibility[field.key] !== false }));
+        body.appendChild(fieldDesigner({
+          ...field,
+          listVisible: currentListKeys.has(field.key) && listVisibility[field.key] !== false
+        }));
       } catch (fieldError) {
         console.error('建立設計欄位失敗：', field, fieldError);
       }
@@ -4019,6 +4029,9 @@ const initRagicPage = async (config) => {
   try {
     const fields = readDesigner(designerBody);
     const listVisibility = Object.fromEntries(fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]));
+    const listOrder = fields
+      .filter((field) => field.key && field.type !== 'subtable' && field.listVisible !== false)
+      .map((field) => field.key);
 
     /*
      * 直接取得目前設計器最新排版，
@@ -4032,7 +4045,8 @@ const initRagicPage = async (config) => {
     const nextSchema = normalizeSchema({
       fields,
       formLayout,
-      listVisibility
+      listVisibility,
+      listOrder
     });
 
     RAGIC_STATE.schema = {
@@ -4047,6 +4061,7 @@ const initRagicPage = async (config) => {
         listWidth: RAGIC_STATE.schema.listWidth,
         listWidthFull: RAGIC_STATE.schema.listWidthFull,
         listVisibility: RAGIC_STATE.schema.listVisibility,
+        listOrder: RAGIC_STATE.schema.listOrder,
         updatedAt: RAGIC_STATE.schema.updatedAt
       },
       { merge: true }
