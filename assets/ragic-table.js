@@ -1008,9 +1008,8 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   if (!table) return;
   table.querySelector('colgroup')?.remove();
   const colgroup = document.createElement('colgroup');
-  const configuredWidth = normalizeListWidth(RAGIC_STATE.schema?.listWidth);
-  // 列表至少撐滿容器；設定的 px 寬度仍作為可水平捲動的最小寬度。
-  const totalWidth = Math.max(configuredWidth, table.parentElement?.clientWidth || 0);
+  // 整張列表固定自動滿版；個別欄寬仍由欄位屬性設定控制。
+  const totalWidth = Math.max(DEFAULT_LIST_WIDTH, table.parentElement?.clientWidth || 0);
   const markerWidth = Math.min(50, totalWidth);
   const columnClasses = fields.map((field) => ragicColumnClass(field));
   const compactAutoWidth = (field, columnClass) => {
@@ -2980,11 +2979,8 @@ const renderHeader = () => {
   const table = headerRow?.closest('table');
   if (table) {
     table.style.tableLayout = 'fixed';
-    const listWidth = normalizeListWidth(RAGIC_STATE.schema?.listWidth);
-    const listWidthFull = RAGIC_STATE.schema?.listWidthFull === true;
-    const renderedListWidth = listWidthFull ? '100%' : `max(100%, ${listWidth}px)`;
-    table.style.setProperty('width', renderedListWidth, 'important');
-    table.style.setProperty('min-width', renderedListWidth, 'important');
+    table.style.setProperty('width', '100%', 'important');
+    table.style.setProperty('min-width', '100%', 'important');
     table.style.setProperty('max-width', 'none', 'important');
     applyRagicColumnGroup(table);
   }
@@ -3107,11 +3103,8 @@ const updateDesignerPreview = () => {
   preview.innerHTML = `<table class="ragic-table">${colgroup ? `<colgroup>${colgroup}</colgroup>` : ''}<thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
   const previewTable = preview.querySelector('.ragic-table');
   if (previewTable) previewTable.style.tableLayout = 'fixed';
-  const listWidth = normalizeListWidth(modal.querySelector('#listWidthInput')?.value || RAGIC_STATE.schema?.listWidth);
-  const listWidthFull = modal.querySelector('#listWidthFullInput')?.checked === true;
-  const previewWidth = listWidthFull ? '100%' : `max(100%, ${listWidth}px)`;
-  previewTable?.style.setProperty('width', previewWidth, 'important');
-  previewTable?.style.setProperty('min-width', previewWidth, 'important');
+  previewTable?.style.setProperty('width', '100%', 'important');
+  previewTable?.style.setProperty('min-width', '100%', 'important');
   previewTable?.style.setProperty('max-width', 'none', 'important');
   fields.forEach((field, index) => {
     const width = fieldColumnWidth(field);
@@ -3367,8 +3360,6 @@ const renderLayoutDesigner = () => {
   const panel = modal?.querySelector('#layoutDesignerPanel');
   const body = modal?.querySelector('.designer-body');
   if (!panel || !body) return;
-  const pendingListWidth = normalizeListWidth(panel.querySelector('#listWidthInput')?.value || RAGIC_STATE.schema?.listWidth);
-  const pendingListWidthFull = panel.querySelector('#listWidthFullInput')?.checked ?? (RAGIC_STATE.schema?.listWidthFull === true);
   const fields = readDesigner(body);
   const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
   const fixedLogLayout = false;
@@ -3416,7 +3407,6 @@ const pairFieldTypeButtons = FIELD_PAIR_TYPES.map((type) => `
 const fieldTypeButtons =
   normalFieldTypeButtons + pairFieldTypeButtons;
   panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列） 欄框設置131x48</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, 131px);grid-template-rows:repeat(${layout.rows}, 48px);">${gridLines.join('')}${placedFields}</div></div></main><aside class="layout-side-panel"><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings layout-settings-popover" hidden></aside></aside></div></div>`;
-  panel.querySelector('.layout-toolbar-controls')?.insertAdjacentHTML('afterbegin', `<label>列表寬度：<input id="listWidthInput" type="number" min="320" max="20000" step="10" inputmode="numeric" value="${pendingListWidth}" ${pendingListWidthFull ? 'disabled' : ''}><span>px</span></label><label class="designer-list-full"><input id="listWidthFullInput" type="checkbox" ${pendingListWidthFull ? 'checked' : ''}> 自動全滿</label>`);
 };
 const updateDesignerFieldByKey = (fieldKey, patcher) => {
   const escapedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\\"');
@@ -3972,8 +3962,6 @@ const initRagicPage = async (config) => {
 
   try {
     const fields = readDesigner(designerBody);
-    const listWidth = normalizeListWidth(document.querySelector('#listWidthInput')?.value || RAGIC_STATE.schema?.listWidth);
-    const listWidthFull = document.querySelector('#listWidthFullInput')?.checked === true;
     const listVisibility = Object.fromEntries(fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]));
 
     /*
@@ -3988,8 +3976,6 @@ const initRagicPage = async (config) => {
     const nextSchema = normalizeSchema({
       fields,
       formLayout,
-      listWidth,
-      listWidthFull,
       listVisibility
     });
 
@@ -4298,11 +4284,6 @@ const addDesignerPairFields = (pairType) => {
   document.querySelector('#ragicDesignerModal')?.addEventListener('input', (event) => {
     if (event.target?.matches('[data-role="width"], [data-layout-width]')) syncSubtableWidthFromEvent(event.target);
     if (event.target?.matches('[data-layout-width], [data-layout-colspan], [data-layout-col]')) refreshLayoutWidthHint(event.target.closest('#layoutFieldSettingsPanel'));
-    if (event.target?.matches('#listWidthInput, #listWidthFullInput')) {
-      const widthInput = document.querySelector('#listWidthInput');
-      if (widthInput) widthInput.disabled = document.querySelector('#listWidthFullInput')?.checked === true;
-      updateDesignerPreview();
-    }
   });
   document.querySelector('#layoutDesignerPanel')?.addEventListener('click', async (event) => {
     if (!event.target.closest('.btn-save-layout')) return;
