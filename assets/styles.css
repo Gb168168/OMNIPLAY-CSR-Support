@@ -8479,3 +8479,34 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     gap: 3px;
   }
 }
+
+
+/* Direct list column resizing */
+#ragicListView .ragic-table th {
+  position: relative;
+}
+#ragicListView .ragic-table .col-resizer {
+  right: -5px;
+  width: 11px;
+  background: transparent;
+  opacity: 1;
+  cursor: col-resize;
+}
+#ragicListView .ragic-table .col-resizer::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: 2px;
+  border-radius: 999px;
+  background: #bfdbfe;
+  transition: width .12s ease, left .12s ease, background .12s ease;
+}
+#ragicListView .ragic-table th:hover .col-resizer::after,
+#ragicListView .ragic-table .col-resizer:hover::after,
+#ragicListView .ragic-table .col-resizer.is-dragging::after {
+  left: 4px;
+  width: 4px;
+  background: #2563eb;
+}
