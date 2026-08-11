@@ -3379,7 +3379,7 @@ const openLayoutFieldSettings = (fieldKey) => {
   if (!panel) return;
   const options = optionList(field).join('\n');
   panel.innerHTML = `<div class="layout-settings-head"><h3>欄位屬性設定</h3><div class="layout-settings-head-actions"><button class="primary" data-confirm-settings type="button">確認並儲存</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button><button class="secondary" data-close-layout-settings type="button">關閉</button></div></div><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><textarea data-option-list data-option rows="7" placeholder="每行一個選項">${escapeHtml(options)}</textarea></div><input data-setting-default type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-setting-help type="hidden" value="${escapeHtml(field.help || '')}"><input data-layout-row type="hidden" value="${escapeHtml(item.row || 1)}"><input data-layout-col type="hidden" value="${escapeHtml(item.col || 1)}"><input data-layout-rowspan type="hidden" value="${escapeHtml(item.rowSpan || 1)}"><input data-layout-colspan type="hidden" value="${escapeHtml(item.colSpan || 1)}"><input data-layout-width type="hidden" value="${escapeHtml(item.width || field.formWidth || '')}"><input data-layout-height type="hidden" value="${escapeHtml(layoutHeightValue(item, field))}"><input data-setting-required type="hidden" value="${field.required ? '1' : ''}"><input data-setting-readonly type="hidden" value="${field.readonly ? '1' : ''}"><input data-setting-hidden type="hidden" value="${field.hidden ? '1' : ''}">${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}`;
-  panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<label class="designer-list-visible"><input data-setting-list-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}> 顯示在列表</label>`);
+  panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<section class="designer-list-settings"><div class="designer-list-settings-head"><strong>列表顯示設定</strong><span>只影響列表，欄位仍會保留在表單中</span></div><label class="designer-list-visible"><span>顯示在列表</span><input data-setting-list-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}><i aria-hidden="true"></i></label><label class="designer-list-width"><span>列表欄寬</span><div><input data-setting-list-width type="number" min="40" max="2000" step="10" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><em>px</em></div></label></section>`);
   panel.hidden = false;
   panel.dataset.fieldKey = fieldKey;
   const subfieldList = panel.querySelector('[data-setting-subfields]');
@@ -4142,8 +4142,9 @@ const addDesignerPairFields = (pairType) => {
       panel.querySelector('[data-setting-required]')?.value === '1' ||
       false;
 
+    // 列表欄寬與表單排版寬度分開儲存。
     row.querySelector('[data-role="width"]').value =
-      panel.querySelector('[data-layout-width]')?.value || '';
+      panel.querySelector('[data-setting-list-width]')?.value || '';
 
     row.querySelector('[data-role="default"]').value =
       panel.querySelector('[data-setting-default]')?.value || '';
