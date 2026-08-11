@@ -8378,3 +8378,104 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   min-height: 0;
   margin: 0;
 }
+
+
+/* Compact per-field list settings */
+#ragicDesignerModal .designer-list-settings {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+#ragicDesignerModal .designer-list-settings-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: #172033;
+}
+#ragicDesignerModal .designer-list-settings-head span {
+  color: #64748b;
+  font-size: 12px;
+}
+#ragicDesignerModal .designer-list-visible,
+#ragicDesignerModal .designer-list-width {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #dbe4f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #172033;
+  font-weight: 700;
+}
+#ragicDesignerModal .designer-list-visible {
+  position: relative;
+}
+#ragicDesignerModal .designer-list-visible input {
+  position: absolute;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  opacity: 0;
+}
+#ragicDesignerModal .designer-list-visible i {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 42px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background .16s ease;
+}
+#ragicDesignerModal .designer-list-visible i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .28);
+  transition: transform .16s ease;
+}
+#ragicDesignerModal .designer-list-visible input:checked + i {
+  background: #3b82f6;
+}
+#ragicDesignerModal .designer-list-visible input:checked + i::after {
+  transform: translateX(18px);
+}
+#ragicDesignerModal .designer-list-width > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+#ragicDesignerModal .designer-list-width input {
+  width: 110px;
+  min-height: 36px;
+  padding: 6px 9px;
+  text-align: right;
+}
+#ragicDesignerModal .designer-list-width em {
+  color: #64748b;
+  font-style: normal;
+}
+@media (max-width: 700px) {
+  #ragicDesignerModal .designer-list-settings {
+    grid-template-columns: 1fr;
+  }
+  #ragicDesignerModal .designer-list-settings-head {
+    grid-column: 1;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
