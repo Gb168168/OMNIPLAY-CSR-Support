@@ -8504,24 +8504,39 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 #ragicDesignerModal .ragic-list-designer .designer-preview-scroll {
   max-height: none;
   padding: 16px 18px 40px;
-  overflow: visible;
+  overflow: auto;
 }
 #ragicDesignerModal .ragic-list-designer .ragic-table {
-  width: 100% !important;
-  min-width: max-content !important;
+  min-width: max-content;
   border-collapse: collapse;
   background: rgba(255,255,255,.98);
 }
 #ragicDesignerModal .ragic-list-designer .ragic-table th {
-  position: relative;
-  height: 44px;
-  padding: 8px 32px 8px 28px;
+  position: relative !important;
+  top: auto !important;
+  z-index: 2;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 8px 34px 8px 28px !important;
   border: 1px solid #cbd5e1;
-  background: #3b6df6;
-  color: #fff;
+  background: #3b6df6 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  text-align: left;
+  vertical-align: middle;
   white-space: nowrap;
   cursor: grab;
   user-select: none;
+}
+#ragicDesignerModal .ragic-list-designer .designer-list-field-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 #ragicDesignerModal .ragic-list-designer .ragic-table .designer-sheet-index-col {
   width: 44px !important;
@@ -8531,23 +8546,26 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 #ragicDesignerModal .ragic-list-designer .designer-sheet-column-letters th,
 #ragicDesignerModal .ragic-list-designer .designer-sheet-corner,
 #ragicDesignerModal .ragic-list-designer .designer-sheet-row-number {
+  position: relative !important;
+  top: auto !important;
   width: 44px;
   min-width: 44px;
   max-width: 44px;
   height: 27px;
   padding: 3px 6px;
   border: 1px solid #cbd5e1;
-  background: #f1f5f9;
-  color: #64748b;
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  box-shadow: none !important;
   text-align: center;
   font-size: 11px;
   font-weight: 700;
   cursor: default;
 }
 #ragicDesignerModal .ragic-list-designer .designer-sheet-column-letters th:not(:first-child) {
-  width: auto;
-  min-width: 0;
-  max-width: none;
+  height: 27px !important;
+  min-height: 27px !important;
+  padding: 3px 6px !important;
 }
 #ragicDesignerModal .ragic-list-designer .designer-sheet-row-number {
   height: 38px;
@@ -8558,6 +8576,9 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   border: 1px solid #e2e8f0;
   color: #334155;
   background: rgba(255,255,255,.94);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 #ragicDesignerModal .designer-list-drag {
   position: absolute;
@@ -8575,6 +8596,8 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   border: 0;
   background: transparent;
   color: #fff;
+  font-size: 15px;
+  line-height: 1;
 }
 #ragicDesignerModal .designer-list-col-resizer {
   position: absolute;
