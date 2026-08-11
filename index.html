@@ -70,6 +70,61 @@
   </style>
 </head>
 <body>
+  <section class="login-view" id="loginView" aria-label="登入畫面" hidden>
+    <form class="login-card" id="loginForm">
+      <div class="login-brand">
+        <span class="logo-mark">OP</span>
+        <div>
+          <h1>OMNIPLAY 客服系統</h1>
+          <p>請登入以進入主控台</p>
+        </div>
+      </div>
+      <label>
+        <span>帳號</span>
+        <input id="account" name="account" type="text" autocomplete="off" inputmode="latin" pattern="[A-Za-z0-9]*" autocapitalize="none" spellcheck="false" lang="en" placeholder="請輸入帳號（僅限英文及數字）" required />
+      </label>
+      <label>
+        <span>密碼</span>
+        <input id="loginPassword" name="password" type="password" autocomplete="current-password" inputmode="latin" pattern="[A-Za-z0-9]*" autocapitalize="none" spellcheck="false" lang="en" required />
+      </label>
+      <p class="form-message" id="loginMessage" hidden></p>
+      <button class="primary-button" type="submit">登入</button>
+    </form>
+
+    <form class="login-card setup-card is-hidden" id="setupForm" aria-label="建立管理員帳號">
+      <div class="login-brand">
+        <span class="logo-mark">OP</span>
+        <div>
+          <h1>建立管理員帳號</h1>
+          <p>首次設定：staff 尚無資料，請建立第一個管理員帳號。</p>
+        </div>
+      </div>
+      <label>
+        <span>人員編號</span>
+        <input id="setupCode" name="code" type="text" autocomplete="off" inputmode="latin" pattern="[A-Za-z0-9]*" autocapitalize="none" spellcheck="false" lang="en" required />
+      </label>
+      <label>
+        <span>姓名</span>
+        <input id="setupName" name="name" type="text" autocomplete="name" required />
+      </label>
+      <label>
+        <span>帳號</span>
+        <input id="setupAccount" name="account" type="text" autocomplete="username" inputmode="latin" pattern="[A-Za-z0-9]*" autocapitalize="none" spellcheck="false" lang="en" required />
+      </label>
+      <label>
+        <span>密碼</span>
+        <input id="setupPassword" name="password" type="password" autocomplete="new-password" inputmode="latin" pattern="[A-Za-z0-9]*" autocapitalize="none" spellcheck="false" lang="en" required />
+      </label>
+      <p class="form-message" id="setupMessage" hidden></p>
+      <button class="primary-button" type="submit">建立第一個帳號</button>
+    </form>
+  </section>
+  <script>
+    const legacyLoginView = document.getElementById('loginView');
+    if (location.hostname === 'gb168168.github.io') legacyLoginView.hidden = false;
+    else legacyLoginView.remove();
+  </script>
+
   <section class="app-shell is-hidden" data-auth-protected hidden aria-label="客服系統主畫面">
     <aside id="sidebar"></aside>
     <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
@@ -132,6 +187,21 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
   <script src="assets/firebase-init.js"></script><script src="assets/api.js?v=20260811-batch-ref"></script>
+  <script>
+    const accountInput = document.getElementById('account');
+    if (accountInput) {
+      accountInput.addEventListener('compositionstart', function() {
+        this.composing = true;
+      });
+      accountInput.addEventListener('compositionend', function() {
+        this.composing = false;
+        this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+      });
+      accountInput.addEventListener('input', function() {
+        if (!this.composing) this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+      });
+    }
+  </script>
   <script src="assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="assets/app.js?v=20260810-backend-switch2"></script>
   <script src="assets/dashboard.js?v=20260806-authgate1"></script>
