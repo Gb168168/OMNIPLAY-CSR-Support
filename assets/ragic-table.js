@@ -3099,6 +3099,17 @@ const designerColumnLetter = (index = 0) => {
   }
   return label;
 };
+const designerPreviewColumnWidth = (field = {}) => {
+  const savedWidth = fieldColumnWidth(field);
+  if (savedWidth) return Math.max(80, savedWidth);
+  if (field.type === 'textarea') return 320;
+  if (field.type === 'link') return 220;
+  if (['date', 'datetime', 'createdDate', 'updatedDate'].includes(field.type)) return 170;
+  if (['image', 'file'].includes(field.type)) return 130;
+  if (['reminderEnabled', 'reportEnabled'].includes(field.type)) return 100;
+  if (['select', 'multiselect', 'person'].includes(field.type)) return 150;
+  return 140;
+};
 const updateDesignerPreview = () => {
   const modal = document.querySelector('#ragicDesignerModal');
   const body = modal?.querySelector('.designer-body');
@@ -3118,20 +3129,21 @@ const updateDesignerPreview = () => {
     return;
   }
   const colgroup = fields.map((field) => {
-    const width = fieldColumnWidth(field);
-    return `<col${width ? ` style="min-width: ${width}px !important; width: ${width}px;"` : ''}>`;
+    const width = designerPreviewColumnWidth(field);
+    return `<col style="min-width: ${width}px !important; width: ${width}px;">`;
   }).join('');
-  const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}" draggable="true" data-list-field-key="${escapeHtml(field.key)}"><span class="designer-list-drag" title="拖曳調整欄位順序">⠿</span><strong>${escapeHtml(field.label || field.key)}</strong><button class="designer-list-field-settings" type="button" data-list-field-settings="${escapeHtml(field.key)}" title="欄位設定">⚙️</button><span class="designer-list-col-resizer" data-list-resize="${escapeHtml(field.key)}" title="拖曳調整欄寬"></span></th>`).join('');
+  const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}" draggable="true" data-list-field-key="${escapeHtml(field.key)}"><span class="designer-list-drag" title="拖曳調整欄位順序">⠿</span><strong class="designer-list-field-label">${escapeHtml(field.label || field.key)}</strong><button class="designer-list-field-settings" type="button" data-list-field-settings="${escapeHtml(field.key)}" title="欄位設定">⚙</button><span class="designer-list-col-resizer" data-list-resize="${escapeHtml(field.key)}" title="拖曳調整欄寬"></span></th>`).join('');
   const columnLetters = fields.map((_, index) => `<th>${designerColumnLetter(index)}</th>`).join('');
   const rows = [0, 1, 2].map((rowIndex) => `<tr><th class="designer-sheet-row-number">${rowIndex + 1}</th>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
   preview.innerHTML = `<table class="ragic-table"><colgroup><col class="designer-sheet-index-col">${colgroup}</colgroup><thead><tr class="designer-sheet-column-letters"><th></th>${columnLetters}</tr><tr><th class="designer-sheet-corner">#</th>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
   const previewTable = preview.querySelector('.ragic-table');
   if (previewTable) previewTable.style.tableLayout = 'fixed';
-  previewTable?.style.setProperty('width', '100%', 'important');
-  previewTable?.style.setProperty('min-width', '100%', 'important');
+  const previewWidth = fields.reduce((sum, field) => sum + designerPreviewColumnWidth(field), 44);
+  previewTable?.style.setProperty('width', `${previewWidth}px`, 'important');
+  previewTable?.style.setProperty('min-width', `${previewWidth}px`, 'important');
   previewTable?.style.setProperty('max-width', 'none', 'important');
   fields.forEach((field, index) => {
-    const width = fieldColumnWidth(field);
+    const width = designerPreviewColumnWidth(field);
     applyColumnWidth(previewTable?.querySelector(`thead tr:not(.designer-sheet-column-letters) th:nth-child(${index + 2})`), width);
     applyColumnWidth(previewTable?.querySelector(`thead .designer-sheet-column-letters th:nth-child(${index + 2})`), width);
     previewTable?.querySelectorAll(`tbody td:nth-child(${index + 2})`).forEach((cell) => applyColumnWidth(cell, width));
