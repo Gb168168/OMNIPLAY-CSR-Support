@@ -1009,9 +1009,8 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   table.querySelector('colgroup')?.remove();
   const colgroup = document.createElement('colgroup');
   const configuredWidth = normalizeListWidth(RAGIC_STATE.schema?.listWidth);
-  const totalWidth = RAGIC_STATE.schema?.listWidthFull === true
-    ? Math.max(configuredWidth, table.parentElement?.clientWidth || 0)
-    : configuredWidth;
+  // 列表至少撐滿容器；設定的 px 寬度仍作為可水平捲動的最小寬度。
+  const totalWidth = Math.max(configuredWidth, table.parentElement?.clientWidth || 0);
   const markerWidth = Math.min(50, totalWidth);
   const widths = fields.map((field) => fieldColumnWidth(field) || DEFAULT_FIELD_WIDTHS[field.type] || DEFAULT_LIST_COLUMN_WIDTH);
   const manualTotal = fields.reduce((sum, field, index) => sum + (field.manualWidth ? widths[index] : 0), 0);
@@ -1023,7 +1022,12 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   colgroup.appendChild(markerCol);
   fields.forEach((field, index) => {
     const col = document.createElement('col');
-    const minimumWidth = ['textarea', 'richtext'].includes(field.type) ? 160 : 72;
+    const columnClass = ragicColumnClass(field);
+    const minimumWidth = columnClass === 'col-date'
+      ? 150
+      : ['textarea', 'richtext'].includes(field.type)
+        ? 160
+        : 72;
     const width = field.manualWidth
       ? Math.max(MIN_COLUMN_WIDTH, widths[index])
       : Math.max(minimumWidth, availableForAuto * (widths[index] / autoWeight));
@@ -1144,7 +1148,12 @@ const makeDefaultSchema = (config) => applyFormLayoutOverrides(normalizeSchema({
 }), config);
 
 const createMultiSelectControl = (field, value = '', subfield = false) => {
-  const selected = Array.isArray(value) ? value : String(value || '').split(/[、,]/).map((item) => item.trim()).filter(Boolean);
+  const selected = Array.isArray(value) ? value.map(String) : String(value || '').split(/[、,]/).map((item) => item.trim()).filter(Boolean);
+  // 容忍歷史值：只補進目前這筆控制項，不修改 schema 的正式選項清單。
+  const baseOptions = [...optionList(field)];
+  selected.forEach((item) => {
+    if (item && !baseOptions.includes(item)) baseOptions.push(item);
+  });
   const wrapper = document.createElement('div');
   wrapper.className = 'multi-select ragic-multi-select';
   const select = document.createElement('select');
@@ -1152,7 +1161,7 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
   select.hidden = true;
   select.name = subfield ? '' : field.key;
   if (subfield) select.dataset.subfield = field.key;
-  optionList(field).forEach((option) => {
+  baseOptions.forEach((option) => {
     const opt = document.createElement('option');
     opt.value = option;
     opt.textContent = option;
@@ -1167,7 +1176,7 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
   dropdown.className = 'multi-select-dropdown';
   dropdown.setAttribute('role', 'listbox');
   dropdown.setAttribute('aria-multiselectable', 'true');
-  optionList(field).forEach((option) => {
+  baseOptions.forEach((option) => {
     const label = document.createElement('label');
     label.setAttribute('role', 'option');
     label.setAttribute('aria-selected', String(selected.includes(option)));
@@ -1280,6 +1289,12 @@ const createControl = (field, value = '', subfield = false) => {
       !selectOptions.includes(loginName)
     ) {
       selectOptions.unshift(loginName);
+    }
+
+    // 容忍歷史值：舊資料不在目前選項時，仍顯示並保留原值。
+    const currentValue = value == null ? '' : String(value);
+    if (currentValue && !selectOptions.includes(currentValue)) {
+      selectOptions.push(currentValue);
     }
 
     selectOptions.forEach((option) => {
@@ -2719,8 +2734,9 @@ const renderTable = () => {
     }).join('');
     [...tr.children].forEach((cell) => {
       cell.style.setProperty('min-width', '0', 'important');
-      cell.style.setProperty('white-space', 'normal', 'important');
-      cell.style.setProperty('overflow-wrap', 'anywhere', 'important');
+      const isDateColumn = cell.classList.contains('col-date');
+      cell.style.setProperty('white-space', isDateColumn ? 'nowrap' : 'normal', 'important');
+      cell.style.setProperty('overflow-wrap', isDateColumn ? 'normal' : 'anywhere', 'important');
     });
     let rowClickTimer = null;
     tr.addEventListener('click', (event) => {
@@ -2937,10 +2953,10 @@ const renderHeader = () => {
     table.style.tableLayout = 'fixed';
     const listWidth = normalizeListWidth(RAGIC_STATE.schema?.listWidth);
     const listWidthFull = RAGIC_STATE.schema?.listWidthFull === true;
-    const renderedListWidth = listWidthFull ? '100%' : `${listWidth}px`;
+    const renderedListWidth = listWidthFull ? '100%' : `max(100%, ${listWidth}px)`;
     table.style.setProperty('width', renderedListWidth, 'important');
     table.style.setProperty('min-width', renderedListWidth, 'important');
-    table.style.setProperty('max-width', renderedListWidth, 'important');
+    table.style.setProperty('max-width', 'none', 'important');
     applyRagicColumnGroup(table);
   }
   document.querySelector('#ragicFilterRow')?.remove();
@@ -2953,8 +2969,9 @@ const renderHeader = () => {
   }).join('');
   [...headerRow.children].forEach((cell, index) => {
     cell.style.setProperty('min-width', index === 0 ? '50px' : '0px', 'important');
-    cell.style.setProperty('white-space', 'normal', 'important');
-    cell.style.setProperty('overflow-wrap', 'anywhere', 'important');
+    const isDateColumn = cell.classList.contains('col-date');
+    cell.style.setProperty('white-space', isDateColumn ? 'nowrap' : 'normal', 'important');
+    cell.style.setProperty('overflow-wrap', isDateColumn ? 'normal' : 'anywhere', 'important');
   });
   attachColumnResizers(headerRow);
   if (thead) thead.querySelectorAll('tr:not(#ragicHeaderRow)').forEach((row) => row.remove());
@@ -3063,10 +3080,10 @@ const updateDesignerPreview = () => {
   if (previewTable) previewTable.style.tableLayout = 'fixed';
   const listWidth = normalizeListWidth(modal.querySelector('#listWidthInput')?.value || RAGIC_STATE.schema?.listWidth);
   const listWidthFull = modal.querySelector('#listWidthFullInput')?.checked === true;
-  const previewWidth = listWidthFull ? '100%' : `${listWidth}px`;
+  const previewWidth = listWidthFull ? '100%' : `max(100%, ${listWidth}px)`;
   previewTable?.style.setProperty('width', previewWidth, 'important');
   previewTable?.style.setProperty('min-width', previewWidth, 'important');
-  previewTable?.style.setProperty('max-width', previewWidth, 'important');
+  previewTable?.style.setProperty('max-width', 'none', 'important');
   fields.forEach((field, index) => {
     const width = fieldColumnWidth(field);
     applyColumnWidth(previewTable?.querySelector(`thead th:nth-child(${index + 1})`), width);
