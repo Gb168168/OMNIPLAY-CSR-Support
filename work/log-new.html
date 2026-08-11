@@ -1110,6 +1110,15 @@
     .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-file.is-empty-view-field {
       min-height: 58px !important;
     }
+    @media (min-width: 769px) {
+      .log-new-page #ragicForm .compact-view-grid {
+        grid-auto-flow: row !important;
+      }
+      .log-new-page #ragicForm .compact-view-grid > .ragic-view-field {
+        grid-row: var(--form-row, auto) / span var(--form-rowspan, 1) !important;
+        grid-column: var(--form-col, auto) / span var(--form-colspan, 1) !important;
+      }
+    }
     .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
       margin: 16px 0 0 !important;
       padding-top: 12px;
