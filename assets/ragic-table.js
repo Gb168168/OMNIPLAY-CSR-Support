@@ -1012,27 +1012,56 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   // 列表至少撐滿容器；設定的 px 寬度仍作為可水平捲動的最小寬度。
   const totalWidth = Math.max(configuredWidth, table.parentElement?.clientWidth || 0);
   const markerWidth = Math.min(50, totalWidth);
-  const widths = fields.map((field) => fieldColumnWidth(field) || DEFAULT_FIELD_WIDTHS[field.type] || DEFAULT_LIST_COLUMN_WIDTH);
-  const manualTotal = fields.reduce((sum, field, index) => sum + (field.manualWidth ? widths[index] : 0), 0);
-  const autoWeight = fields.reduce((sum, field, index) => sum + (field.manualWidth ? 0 : widths[index]), 0) || 1;
-  const availableForAuto = Math.max(0, totalWidth - markerWidth - manualTotal);
+  const columnClasses = fields.map((field) => ragicColumnClass(field));
+  const compactAutoWidth = (field, columnClass) => {
+    if (columnClass === 'col-date') return 175;
+    if (columnClass === 'col-shift') return 80;
+    if (columnClass === 'col-dept') return 110;
+    if (columnClass === 'col-category') return 105;
+    if (columnClass === 'col-status') return 95;
+    if (columnClass === 'col-boolean') return 80;
+    if (columnClass === 'col-person') return 100;
+    if (columnClass === 'col-number') return 90;
+    if (columnClass === 'col-option') return 125;
+    if (columnClass === 'col-media') return 90;
+    if (columnClass === 'col-link') return 160;
+    if (columnClass === 'col-content') return 360;
+    return Math.min(160, DEFAULT_FIELD_WIDTHS[field.type] || 130);
+  };
+  const widths = fields.map((field, index) =>
+    fieldColumnWidth(field) || compactAutoWidth(field, columnClasses[index])
+  );
+  const manualTotal = fields.reduce((sum, field, index) =>
+    sum + (field.manualWidth ? widths[index] : 0), 0
+  );
+  const automaticIndexes = fields
+    .map((field, index) => field.manualWidth ? -1 : index)
+    .filter((index) => index >= 0);
+  const automaticBaseTotal = automaticIndexes.reduce((sum, index) => sum + widths[index], 0);
+  const extraSpace = Math.max(0, totalWidth - markerWidth - manualTotal - automaticBaseTotal);
+  const contentIndexes = automaticIndexes.filter((index) => columnClasses[index] === 'col-content');
+  const flexibleIndexes = contentIndexes.length ? contentIndexes : automaticIndexes;
+  const extraPerFlexibleColumn = flexibleIndexes.length ? extraSpace / flexibleIndexes.length : 0;
+  const flexibleSet = new Set(flexibleIndexes);
   const markerCol = document.createElement('col');
   markerCol.style.setProperty('min-width', `${markerWidth}px`, 'important');
   markerCol.style.setProperty('width', `${markerWidth}px`);
   colgroup.appendChild(markerCol);
   fields.forEach((field, index) => {
     const col = document.createElement('col');
-    const columnClass = ragicColumnClass(field);
-    const minimumWidth = columnClass === 'col-date'
-      ? 150
-      : ['textarea', 'richtext'].includes(field.type)
-        ? 160
-        : 72;
+    const columnClass = columnClasses[index];
+    const minimumWidth = field.manualWidth
+      ? MIN_COLUMN_WIDTH
+      : columnClass === 'col-date'
+        ? 150
+        : columnClass === 'col-content'
+          ? 220
+          : 72;
     const width = field.manualWidth
       ? Math.max(MIN_COLUMN_WIDTH, widths[index])
-      : Math.max(minimumWidth, availableForAuto * (widths[index] / autoWeight));
-    col.style.setProperty('min-width', `${field.manualWidth ? MIN_COLUMN_WIDTH : minimumWidth}px`, 'important');
-    col.style.setProperty('width', `${width}px`);
+      : Math.max(minimumWidth, widths[index] + (flexibleSet.has(index) ? extraPerFlexibleColumn : 0));
+    col.style.setProperty('min-width', `${minimumWidth}px`, 'important');
+    col.style.setProperty('width', `${Math.round(width)}px`);
     colgroup.appendChild(col);
   });
   table.style.removeProperty('--ragic-table-width');
