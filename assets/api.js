@@ -95,22 +95,25 @@
 
   // ---- 快照物件(相容 Firestore snapshot 介面)----
   const deepCopy = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
-  const makeDocSnapshot = (id, data) => ({
+  // [2026-08-11 fix-batch-ref] snapshot doc 補 .ref:log-new 的批次整理拿 doc.ref 丟給
+  // batch.update(),之前 ref=undefined → Firebase SDK 內部 `'_delegate' in undefined` 炸掉
+  const makeDocSnapshot = (id, data, collectionName) => ({
     id,
+    ref: collectionName ? new RestDocRef(collectionName, id) : undefined,
     exists: data != null,
     data: () => data == null ? undefined : deepCopy(data)
   });
-  const makeQuerySnapshot = (rows, changes) => {
+  const makeQuerySnapshot = (rows, changes, collectionName) => {
     const docs = rows.map((row) => {
       const { id, ...fields } = row;
-      return makeDocSnapshot(id, fields);
+      return makeDocSnapshot(id, fields, collectionName);
     });
     // docChanges:預設(一次性 get)視為全部新增;onSnapshot 輪詢時由呼叫端傳入真正的差異
     const changeList = changes || docs.map((doc) => ({ type: 'added', doc }));
     return { empty: docs.length === 0, size: docs.length, docs, forEach: (fn) => docs.forEach(fn), docChanges: () => changeList };
   };
   // 比對前後兩次輪詢,算出 Firestore 語意的 docChanges(added/modified/removed)
-  const diffDocs = (prevMap, docs) => {
+  const diffDocs = (prevMap, docs, collectionName) => {
     const changes = [];
     const nextMap = new Map();
     for (const doc of docs) {
@@ -123,7 +126,7 @@
     }
     if (prevMap) {
       for (const [id, serialized] of prevMap) {
-        if (!nextMap.has(id)) changes.push({ type: 'removed', doc: makeDocSnapshot(id, JSON.parse(serialized)) });
+        if (!nextMap.has(id)) changes.push({ type: 'removed', doc: makeDocSnapshot(id, JSON.parse(serialized), collectionName) });
       }
     }
     return { changes, nextMap };
@@ -203,9 +206,9 @@
     get path() { return this._collection + '/' + this.id; },
     async get() {
       const data = await apiFetch(`/api/csr/${this._collection}/${encodeURIComponent(this.id)}`);
-      if (data && data.__notFound) return makeDocSnapshot(this.id, null);
+      if (data && data.__notFound) return makeDocSnapshot(this.id, null, this._collection);
       const { id, ...fields } = data || {};
-      return makeDocSnapshot(this.id, fields);
+      return makeDocSnapshot(this.id, fields, this._collection);
     },
     async set(data, options) {
       const path = `/api/csr/${this._collection}/${encodeURIComponent(this.id)}`;
@@ -246,17 +249,17 @@
     async get() {
       const rows = await apiFetch(`/api/csr/${this._collection}`);
       const list = Array.isArray(rows) ? rows : [];
-      return makeQuerySnapshot(applyQuery(list, this._filters, this._orders, this._limit));
+      return makeQuerySnapshot(applyQuery(list, this._filters, this._orders, this._limit), null, this._collection);
     },
     onSnapshot(onNext, onError) {
       let prevMap = null; // id -> 序列化資料,供 docChanges 差異比對
       return startPolling(async () => {
         const rows = await apiFetch(`/api/csr/${this._collection}`);
         const list = applyQuery(Array.isArray(rows) ? rows : [], this._filters, this._orders, this._limit);
-        const baseSnapshot = makeQuerySnapshot(list);
-        const { changes, nextMap } = diffDocs(prevMap, baseSnapshot.docs);
+        const baseSnapshot = makeQuerySnapshot(list, null, this._collection);
+        const { changes, nextMap } = diffDocs(prevMap, baseSnapshot.docs, this._collection);
         prevMap = nextMap;
-        const snapshot = makeQuerySnapshot(list, changes);
+        const snapshot = makeQuerySnapshot(list, changes, this._collection);
         return { payload: list, snapshot };
       }, onNext, onError);
     }
@@ -275,8 +278,29 @@
   // ---- 混合資料庫:路由表內走 REST,其餘照走 Firebase ----
   window.omniplayDb = {
     collection: (name) => ROUTED.has(name) ? new RestCollectionRef(name) : realDb?.collection(name),
-    // 交易/批次目前只有排班(schedule,未路由)在用,直接轉交 Firebase
-    batch: () => realDb?.batch(),
+    // [2026-08-11 fix-batch-ref] batch 改雙世界:路由 ref(RestDocRef)逐筆走 API(非原子,
+    // 逐筆 PATCH/PUT/DELETE),Firebase ref 照走原生 batch。之前直通 realDb.batch() 的坑:
+    // log-new 批次整理拿路由 doc 的 ref 進來,一旦成功會把 NAS 資料寫回 Firebase = 資料分裂。
+    batch: () => {
+      const restOps = [];
+      let realBatch = null;
+      const realOf = () => (realBatch = realBatch || realDb?.batch());
+      const guard = (ref, method) => {
+        if (!ref) throw new Error('batch.' + method + ' 收到空 ref(墊片:請確認 doc.ref 來源)');
+        return ref instanceof RestDocRef;
+      };
+      return {
+        set(ref, data, options) { if (guard(ref, 'set')) restOps.push(() => ref.set(data, options)); else realOf().set(ref, data, options); return this; },
+        update(ref, data) { if (guard(ref, 'update')) restOps.push(() => ref.update(data)); else realOf().update(ref, data); return this; },
+        delete(ref) { if (guard(ref, 'delete')) restOps.push(() => ref.delete()); else realOf().delete(ref); return this; },
+        async commit() {
+          if (this._committed) throw new Error('batch 已 commit 過,不可重複送出'); // FRIDAY 8/11:防 restOps 重送
+          this._committed = true;
+          for (const op of restOps) await op(); // REST 側逐筆送出,失敗即中斷(不保證原子性)
+          if (realBatch) await realBatch.commit();
+        }
+      };
+    },
     runTransaction: (fn) => realDb?.runTransaction(fn)
   };
   window.csrApiFetch = apiFetch; // 給 app.js 登入用
