@@ -1085,6 +1085,72 @@
       max-height: 118px !important;
     }
 
+    /* 日誌 NEW 檢視模式：扁平化欄位，避免卡片與子表格層層套框。 */
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field {
+      padding: 10px 12px !important;
+      border: 0 !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field .ragic-view-label {
+      color: #64748b !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-textarea .ragic-view-value,
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-textarea .field-value {
+      padding: 4px 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-image.is-empty-view-field,
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-file.is-empty-view-field {
+      min-height: 58px !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
+      margin: 16px 0 0 !important;
+      padding-top: 12px;
+      border: 0 !important;
+      border-top: 1px solid #dbe5f1 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] > .ragic-subtable-head {
+      padding: 0 4px 12px !important;
+      border: 0 !important;
+      background: transparent !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] tbody > tr {
+      gap: 0 18px;
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield {
+      padding: 12px 4px !important;
+      border: 0 !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="summary"] {
+      border: 0 !important;
+      border-bottom: 1px solid #bfdbfe !important;
+      background: linear-gradient(90deg, #eff6ff 0%, rgba(239, 246, 255, 0) 100%) !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield::before {
+      margin-bottom: 6px;
+      color: #64748b;
+      font-size: 12px;
+    }
+
 
     /* 日誌 NEW 列表：問題描述完整保留表單換行，依實際行數撐高。 */
     .log-new-page #ragicListView .ragic-table th[data-field-key="issue"],
