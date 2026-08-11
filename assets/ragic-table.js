@@ -956,35 +956,50 @@ const attachColumnResizers = (headerRow) => {
     th.querySelector('.col-resizer')?.remove();
     const resizer = document.createElement('div');
     resizer.className = 'col-resizer';
-    resizer.title = '左右拖曳調整列表欄寬，放開後自動儲存';
+    resizer.title = '按住滑鼠左鍵，左右拖曳調整欄寬';
     resizer.setAttribute('aria-label', `調整${fieldByKey(th.dataset.fieldKey)?.label || '此欄位'}的列表欄寬`);
     th.appendChild(resizer);
-    let startX = 0;
-    let startWidth = 0;
-    resizer.addEventListener('mousedown', (event) => {
+
+    resizer.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
-      startX = event.pageX;
-      startWidth = th.offsetWidth;
+
+      const startX = event.clientX;
+      const startWidth = th.getBoundingClientRect().width;
+      let latestWidth = Math.max(MIN_COLUMN_WIDTH, Math.round(startWidth));
+      const previousTableLayout = table.style.tableLayout;
+
+      table.style.tableLayout = 'fixed';
       resizer.classList.add('is-dragging');
       document.body.classList.add('is-col-resizing');
-      const onMouseMove = (moveEvent) => {
-        setColumnWidth(table, th, startWidth + (moveEvent.pageX - startX));
+      resizer.setPointerCapture?.(event.pointerId);
+
+      const onPointerMove = (moveEvent) => {
+        latestWidth = Math.max(MIN_COLUMN_WIDTH, Math.round(startWidth + (moveEvent.clientX - startX)));
+        setColumnWidth(table, th, latestWidth);
       };
-      const onMouseUp = async () => {
+
+      const finishResize = async (upEvent) => {
+        resizer.removeEventListener('pointermove', onPointerMove);
+        resizer.removeEventListener('pointerup', finishResize);
+        resizer.removeEventListener('pointercancel', finishResize);
+        resizer.releasePointerCapture?.(upEvent.pointerId);
         resizer.classList.remove('is-dragging');
         document.body.classList.remove('is-col-resizing');
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
+        table.style.tableLayout = previousTableLayout;
+
         const field = getFields().find((item) => item.key === th.dataset.fieldKey);
         if (field) {
-          field.width = Math.max(MIN_COLUMN_WIDTH, Math.round(th.offsetWidth));
+          field.width = latestWidth;
           field.manualWidth = true;
           await saveSchema();
         }
       };
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
+
+      resizer.addEventListener('pointermove', onPointerMove);
+      resizer.addEventListener('pointerup', finishResize);
+      resizer.addEventListener('pointercancel', finishResize);
     });
   });
 };
