@@ -733,7 +733,10 @@ const normalizeSchema = (schema = {}) => {
     ),
     listWidth: normalizeListWidth(schema.listWidth),
     listWidthFull: schema.listWidthFull === true,
-    listVisibility
+    listVisibility,
+    listOrder: Array.isArray(schema.listOrder)
+      ? schema.listOrder.map((key) => String(key || '').trim()).filter(Boolean)
+      : []
   };
 };
 const fixDuplicateKeys = (fields = []) => {
@@ -762,7 +765,10 @@ const virtualListSubfield = (parent, subfield) => ({
 const listFields = () => {
   const allFields = getFields();
   const defaultFields = allFields.filter((field) => field.type !== 'subtable');
-  const configuredColumns = RAGIC_STATE.config?.listColumns;
+  const savedOrder = RAGIC_STATE.schema?.listOrder;
+  const configuredColumns = Array.isArray(savedOrder) && savedOrder.length
+    ? savedOrder
+    : RAGIC_STATE.config?.listColumns;
   const visible = (field) => RAGIC_STATE.schema?.listVisibility?.[field.key] !== false;
   if (!Array.isArray(configuredColumns) || !configuredColumns.length) return defaultFields.filter(visible);
   return configuredColumns
@@ -3132,7 +3138,7 @@ const updateDesignerPreview = () => {
     const width = designerPreviewColumnWidth(field);
     return `<col style="min-width: ${width}px !important; width: ${width}px;">`;
   }).join('');
-  const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}" draggable="true" data-list-field-key="${escapeHtml(field.key)}"><span class="designer-list-drag" title="拖曳調整欄位順序">⠿</span><strong class="designer-list-field-label">${escapeHtml(field.label || field.key)}</strong><button class="designer-list-field-settings" type="button" data-list-field-settings="${escapeHtml(field.key)}" title="欄位設定">⚙</button><span class="designer-list-col-resizer" data-list-resize="${escapeHtml(field.key)}" title="拖曳調整欄寬"></span></th>`).join('');
+  const headers = fields.map((field) => `<th class="${ragicColumnClass(field)}" data-list-field-key="${escapeHtml(field.key)}"><span class="designer-list-drag" draggable="true" title="拖曳調整欄位順序">⠿</span><strong class="designer-list-field-label">${escapeHtml(field.label || field.key)}</strong><button class="designer-list-field-settings" type="button" data-list-field-settings="${escapeHtml(field.key)}" title="欄位設定">⚙</button><span class="designer-list-col-resizer" data-list-resize="${escapeHtml(field.key)}" title="拖曳調整欄寬"></span></th>`).join('');
   const columnLetters = fields.map((_, index) => `<th>${designerColumnLetter(index)}</th>`).join('');
   const rows = [0, 1, 2].map((rowIndex) => `<tr><th class="designer-sheet-row-number">${rowIndex + 1}</th>${fields.map((field) => `<td class="${ragicColumnClass(field)}">${escapeHtml(designerPreviewValue(field, rowIndex))}</td>`).join('')}</tr>`).join('');
   preview.innerHTML = `<table class="ragic-table"><colgroup><col class="designer-sheet-index-col">${colgroup}</colgroup><thead><tr class="designer-sheet-column-letters"><th></th>${columnLetters}</tr><tr><th class="designer-sheet-corner">#</th>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
@@ -3799,10 +3805,14 @@ const openDesigner = async () => {
 
     const fields = getFields();
     const listVisibility = RAGIC_STATE.schema?.listVisibility || {};
+    const currentListKeys = new Set(listFields().map((field) => field.key));
 
     fields.forEach((field) => {
       try {
-        body.appendChild(fieldDesigner({ ...field, listVisible: listVisibility[field.key] !== false }));
+        body.appendChild(fieldDesigner({
+          ...field,
+          listVisible: currentListKeys.has(field.key) && listVisibility[field.key] !== false
+        }));
       } catch (fieldError) {
         console.error('建立設計欄位失敗：', field, fieldError);
       }
@@ -4019,6 +4029,9 @@ const initRagicPage = async (config) => {
   try {
     const fields = readDesigner(designerBody);
     const listVisibility = Object.fromEntries(fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]));
+    const listOrder = fields
+      .filter((field) => field.key && field.type !== 'subtable' && field.listVisible !== false)
+      .map((field) => field.key);
 
     /*
      * 直接取得目前設計器最新排版，
@@ -4032,7 +4045,8 @@ const initRagicPage = async (config) => {
     const nextSchema = normalizeSchema({
       fields,
       formLayout,
-      listVisibility
+      listVisibility,
+      listOrder
     });
 
     RAGIC_STATE.schema = {
@@ -4047,6 +4061,7 @@ const initRagicPage = async (config) => {
         listWidth: RAGIC_STATE.schema.listWidth,
         listWidthFull: RAGIC_STATE.schema.listWidthFull,
         listVisibility: RAGIC_STATE.schema.listVisibility,
+        listOrder: RAGIC_STATE.schema.listOrder,
         updatedAt: RAGIC_STATE.schema.updatedAt
       },
       { merge: true }
@@ -4181,8 +4196,9 @@ const initRagicPage = async (config) => {
     const modal = document.querySelector('#ragicDesignerModal');
     let draggedListFieldKey = '';
     modal?.addEventListener('dragstart', (event) => {
-      const header = event.target.closest('th[data-list-field-key]');
-      if (!header || event.target.closest('[data-list-resize], button')) return;
+      const dragHandle = event.target.closest('.designer-list-drag');
+      const header = dragHandle?.closest('th[data-list-field-key]');
+      if (!header) return;
       draggedListFieldKey = header.dataset.listFieldKey;
       event.dataTransfer.setData('text/plain', draggedListFieldKey);
       header.classList.add('is-dragging');
@@ -4208,9 +4224,10 @@ const initRagicPage = async (config) => {
       draggedListFieldKey = '';
       modal.querySelectorAll('th.is-dragging, th.is-list-drop-target').forEach((item) => item.classList.remove('is-dragging', 'is-list-drop-target'));
     });
-    modal?.addEventListener('pointerdown', (event) => {
+    const beginListColumnResize = (event, moveEventName, upEventName) => {
       const handle = event.target.closest('[data-list-resize]');
       if (!handle) return;
+      if (typeof event.button === 'number' && event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
       const fieldKey = handle.dataset.listResize;
@@ -4218,23 +4235,38 @@ const initRagicPage = async (config) => {
       const widthInput = row?.querySelector('[data-role="width"]');
       const header = handle.closest('th');
       if (!row || !widthInput || !header) return;
+      const table = header.closest('table');
+      const column = table?.querySelector(`colgroup col:nth-child(${header.cellIndex + 1})`);
       const startX = event.clientX;
       const startWidth = header.getBoundingClientRect().width;
+      const startTableWidth = table?.getBoundingClientRect().width || 0;
       const move = (moveEvent) => {
         const width = Math.max(40, Math.min(2000, Math.round(startWidth + moveEvent.clientX - startX)));
         widthInput.value = width;
-        header.style.width = `${width}px`;
-        header.style.minWidth = `${width}px`;
-        header.style.maxWidth = `${width}px`;
+        [column, header].filter(Boolean).forEach((element) => {
+          element.style.width = `${width}px`;
+          element.style.minWidth = `${width}px`;
+          element.style.maxWidth = `${width}px`;
+        });
+        if (table) {
+          const tableWidth = Math.max(44 + width, startTableWidth + width - startWidth);
+          table.style.setProperty('width', `${tableWidth}px`, 'important');
+          table.style.setProperty('min-width', `${tableWidth}px`, 'important');
+        }
       };
       const up = () => {
-        document.removeEventListener('pointermove', move);
-        document.removeEventListener('pointerup', up);
+        document.removeEventListener(moveEventName, move);
+        document.removeEventListener(upEventName, up);
         updateDesignerPreview();
         openListFieldSettings(fieldKey);
       };
-      document.addEventListener('pointermove', move);
-      document.addEventListener('pointerup', up, { once: true });
+      document.addEventListener(moveEventName, move);
+      document.addEventListener(upEventName, up, { once: true });
+    };
+    modal?.addEventListener('mousedown', (event) => beginListColumnResize(event, 'mousemove', 'mouseup'));
+    modal?.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse') return;
+      beginListColumnResize(event, 'pointermove', 'pointerup');
     });
   }
   attachLayoutDesignerEvents(document.querySelector('#layoutDesignerPanel'));
