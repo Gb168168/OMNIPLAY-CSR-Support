@@ -89,16 +89,29 @@ const setStatus = (message, type = 'info') => {
 };
 
 const normalizeStaff = (doc) => ({ id: doc.id, ...doc.data() });
-const fixedStaffOrder = ['中魁', '佳臻', '晴心', '澄希', '茗雅'];
-const fixedStaffOrderMap = fixedStaffOrder.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
+const leaveStaffNames = ['余中魁', '宋佳臻', '鄭晴心', '郭澄希', '熊茗雅'];
+const leaveStaffAliases = {
+  '余中魁': '余中魁', '中魁': '余中魁',
+  '宋佳臻': '宋佳臻', '佳臻': '宋佳臻',
+  '鄭晴心': '鄭晴心', '晴心': '鄭晴心',
+  '郭澄希': '郭澄希', '澄希': '郭澄希',
+  '熊茗雅': '熊茗雅', '茗雅': '熊茗雅'
+};
+const canonicalLeaveStaffName = (name = '') => leaveStaffAliases[String(name).trim()] || String(name).trim();
+const fixedStaffOrderMap = leaveStaffNames.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
 const activeStaff = (staff) => (staff.status || '啟用') === '啟用';
 const isSystemAdminStaff = (staff) => ['id', 'code', 'name'].some((field) => String(staff[field] || '').trim().toUpperCase() === 'OMNIPLAY');
 const visibleLeaveStaff = (staff) => activeStaff(staff) && !isSystemAdminStaff(staff) && staff.leaveVisible !== false;
-const getStaffSortOrder = (staff) => Number(staff.sortOrder ?? fixedStaffOrderMap[staff.name] ?? 999);
+const getStaffSortOrder = (staff) => Number(fixedStaffOrderMap[canonicalLeaveStaffName(staff.name)] ?? staff.sortOrder ?? 999);
+const externalPersonFor = (name) => {
+  const canonicalName = canonicalLeaveStaffName(name);
+  const matchedName = Object.keys(externalLeaveData || {}).find((candidate) => canonicalLeaveStaffName(candidate) === canonicalName);
+  return matchedName ? externalLeaveData[matchedName] : null;
+};
 const normalizeShift = (value) => value === '晚班' ? '晚' : value === '早班' ? '早' : value;
 const shiftDocId = (staffId, date = currentMonth) => `${staffId}_${monthKey(date)}`;
 const previousMonthOf = (date) => new Date(date.getFullYear(), date.getMonth() - 1, 1);
-const getStaffShift = (staff) => normalizeShift(externalLeaveData?.[staff.name]?.shift || leaveData.shifts?.[staff.id] || '早');
+const getStaffShift = (staff) => normalizeShift(externalPersonFor(staff.name)?.shift || leaveData.shifts?.[staff.id] || '早');
 const sortStaffForLeave = (items) => [...items].sort((a, b) => {
   const shiftCompare = (getStaffShift(a) === '晚' ? 1 : 0) - (getStaffShift(b) === '晚' ? 1 : 0);
   if (shiftCompare) return shiftCompare;
@@ -114,11 +127,11 @@ const getHolidayName = (day) => {
 
 const fixedPhoneAssignments = {
   '2026-08': {
-    '佳臻': [4, 6, 12, 17, 29],
-    '茗雅': [5, 13, 16, 18, 22, 23]
+    '宋佳臻': [4, 6, 12, 17, 29],
+    '熊茗雅': [5, 13, 16, 18, 22, 23]
   }
 };
-const externalRecordFor = (name, day) => externalLeaveData?.[name]?.days?.[dayKey(day)] || {};
+const externalRecordFor = (name, day) => externalPersonFor(name)?.days?.[dayKey(day)] || {};
 const isWorkingRecord = (record) => !record?.type && !record?.label && (!Array.isArray(record?.specials) || record.specials.length === 0);
 const isWorkingForFlexible = (record) => {
   if (isWorkingRecord(record)) return true;
@@ -128,36 +141,40 @@ const isWorkingForFlexible = (record) => {
   return Number.isFinite(hours) && hours > 0 && hours < 8;
 };
 const phoneDutyPartners = {
-  '佳臻': '茗雅',
-  '茗雅': '佳臻',
-  '晴心': '澄希',
-  '澄希': '晴心'
+  '宋佳臻': '熊茗雅',
+  '熊茗雅': '宋佳臻',
+  '鄭晴心': '郭澄希',
+  '郭澄希': '鄭晴心'
 };
 const canPairForPhone = (name, day) => {
+  name = canonicalLeaveStaffName(name);
   const partner = phoneDutyPartners[name];
   return Boolean(partner) &&
     isWorkingRecord(externalRecordFor(name, day)) &&
     isWorkingRecord(externalRecordFor(partner, day));
 };
 const hasExternalPhoneDuty = (name, day) => {
+  name = canonicalLeaveStaffName(name);
   const targetMonth = monthKey(currentMonth);
   const fixedDays = fixedPhoneAssignments[targetMonth]?.[name];
   if (Array.isArray(fixedDays)) {
     return fixedDays.includes(day) && canPairForPhone(name, day);
   }
-  if (!['晴心', '澄希'].includes(name)) return false;
+  if (!['鄭晴心', '郭澄希'].includes(name)) return false;
   const eligibleDays = Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((candidateDay) =>
-    isWorkingRecord(externalRecordFor('晴心', candidateDay)) &&
-    isWorkingRecord(externalRecordFor('澄希', candidateDay))
+    isWorkingRecord(externalRecordFor('鄭晴心', candidateDay)) &&
+    isWorkingRecord(externalRecordFor('郭澄希', candidateDay))
   );
   const dutyIndex = eligibleDays.indexOf(day);
-  return dutyIndex >= 0 && (dutyIndex % 2 === 0 ? name === '晴心' : name === '澄希');
+  return dutyIndex >= 0 && (dutyIndex % 2 === 0 ? name === '鄭晴心' : name === '郭澄希');
 };
 const savedRecordFor = (name, day) => {
-  const staff = staffList.find((item) => item.name === name);
+  const canonicalName = canonicalLeaveStaffName(name);
+  const staff = staffList.find((item) => canonicalLeaveStaffName(item.name) === canonicalName);
   return staff ? leaveData.records?.[`${staff.id}_${dayKey(day)}`] || {} : {};
 };
 const hasPhoneDuty = (name, day) => {
+  name = canonicalLeaveStaffName(name);
   const override = savedRecordFor(name, day).phoneOverride;
   if (typeof override === 'boolean') return override && Boolean(phoneDutyPartners[name]);
   return canPairForPhone(name, day) && hasExternalPhoneDuty(name, day);
@@ -165,7 +182,7 @@ const hasPhoneDuty = (name, day) => {
 
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
   if (mode === 'phone') return hasPhoneDuty(staff.name, day);
-  const partner = phoneDutyPartners[staff.name];
+  const partner = phoneDutyPartners[canonicalLeaveStaffName(staff.name)];
   if (!partner || !isWorkingForFlexible(externalRecordFor(staff.name, day))) return false;
   if (!hasPhoneDuty(partner, day)) return false;
   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
@@ -173,10 +190,10 @@ const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(current
 });
 const renderSummaryGroup = (shift, mode) => {
   const rows = staffList
-    .filter((staff) => getStaffShift(staff) === shift && staff.name !== '中魁')
+    .filter((staff) => getStaffShift(staff) === shift && canonicalLeaveStaffName(staff.name) !== '余中魁')
     .map((staff) => {
       const days = summaryDaysFor(staff, mode);
-      return `<li><strong>${escapeHtml(staff.name)}：</strong>${days.length ? days.join('、') : '—'}</li>`;
+      return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}</li>`;
     }).join('');
   return `<div class="leave-summary-shift"><strong>${shift === '早' ? '早班' : '晚班'}：</strong><ul>${rows}</ul></div>`;
 };
@@ -187,7 +204,7 @@ const renderMonthlySummaries = () => {
 
 const getRecord = (staffId, day) => {
   const staff = staffList.find((item) => item.id === staffId);
-  const externalPerson = staff ? externalLeaveData?.[staff.name] : null;
+  const externalPerson = staff ? externalPersonFor(staff.name) : null;
   if (externalPerson) {
     const externalRecord = externalPerson.days?.[dayKey(day)] || {};
     const specials = Array.isArray(externalRecord.specials) ? [...externalRecord.specials] : [];
@@ -291,7 +308,7 @@ const renderBody = () => {
     const cells = Array.from({ length: totalDays }, (_, index) => renderDayCell(staff, index + 1)).join('');
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
       <th class="sticky-col name-col" scope="row">
-        <span>${escapeHtml(staff.name || staff.code || '未命名')} / ${escapeHtml(getShift(staff))}</span>
+        <span>${escapeHtml(canonicalLeaveStaffName(staff.name) || staff.code || '未命名')} / ${escapeHtml(getShift(staff))}</span>
         <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}</small>
       </th>${cells}</tr>`;
   }).join('');
@@ -308,7 +325,7 @@ const renderDayCell = (staff, day) => {
   const leaveLabel = record.label ? `<span class="external-leave-label">${escapeHtml(record.label)}</span>` : '';
   const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : '🎰').join('');
   return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
-    <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(staff.name)} ${day} 號休假狀態"${editableAttribute()}>${marker}${leaveLabel}<span class="special-icons">${specials}</span></button>
+    <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(canonicalLeaveStaffName(staff.name))} ${day} 號休假狀態"${editableAttribute()}>${marker}${leaveLabel}<span class="special-icons">${specials}</span></button>
   </td>`;
 };
 
@@ -411,17 +428,18 @@ const toggleSpecial = (staffId, day, specialType) => {
   const key = `${staffId}_${dayKey(day)}`;
   leaveData.records ||= {};
   const staff = staffList.find((item) => item.id === staffId);
-  if (specialType === 'phone' && staff && externalLeaveData?.[staff.name]) {
+  if (specialType === 'phone' && staff && externalPersonFor(staff.name)) {
     const currentlyAssigned = hasPhoneDuty(staff.name, numericDay);
-    if (!currentlyAssigned && !phoneDutyPartners[staff.name]) {
+    const canonicalName = canonicalLeaveStaffName(staff.name);
+    if (!currentlyAssigned && !phoneDutyPartners[canonicalName]) {
       alert('此人員不在 📱 值公務機的配對名單中。');
       return;
     }
     const savedRecord = leaveData.records[key] || {};
     leaveData.records[key] = { ...savedRecord, phoneOverride: !currentlyAssigned };
     if (!currentlyAssigned) {
-      const partnerName = phoneDutyPartners[staff.name];
-      const partnerStaff = staffList.find((item) => item.name === partnerName);
+      const partnerName = phoneDutyPartners[canonicalName];
+      const partnerStaff = staffList.find((item) => canonicalLeaveStaffName(item.name) === partnerName);
       if (partnerStaff) {
         const partnerKey = `${partnerStaff.id}_${dayKey(day)}`;
         const partnerRecord = leaveData.records[partnerKey] || {};
