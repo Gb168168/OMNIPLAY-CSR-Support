@@ -4193,6 +4193,28 @@ const initRagicPage = async (config) => {
     if (mode === 'form') renderLayoutDesigner();
     if (mode === 'list') updateDesignerPreview();
   });
+  const setDesignerListFieldWidth = (fieldKey, rawWidth, refreshPreview = true) => {
+    const row = designerRowByKey(fieldKey);
+    const widthInput = row?.querySelector('[data-role="width"]');
+    if (!row || !widthInput) return null;
+    const parsedWidth = normalizeFieldWidth(rawWidth);
+    const width = parsedWidth ? Math.max(40, Math.min(2000, parsedWidth)) : null;
+    widthInput.value = width ?? '';
+    const panel = document.querySelector('#designerListFieldPanel');
+    if (panel?.dataset.fieldKey === fieldKey) {
+      const panelWidthInput = panel.querySelector('[data-list-setting-width]');
+      if (panelWidthInput && panelWidthInput !== document.activeElement) panelWidthInput.value = width ?? '';
+    }
+    if (refreshPreview) updateDesignerPreview();
+    return width;
+  };
+  document.querySelector('#ragicDesignerModal')?.addEventListener('input', (event) => {
+    const widthInput = event.target.closest('[data-list-setting-width]');
+    if (!widthInput) return;
+    const panel = widthInput.closest('#designerListFieldPanel');
+    if (!panel?.dataset.fieldKey) return;
+    setDesignerListFieldWidth(panel.dataset.fieldKey, widthInput.value);
+  });
   document.querySelector('#ragicDesignerModal')?.addEventListener('click', (event) => {
     const settingsButton = event.target.closest('[data-list-field-settings]');
     const header = event.target.closest('th[data-list-field-key]');
@@ -4218,7 +4240,7 @@ const initRagicPage = async (config) => {
       if (!panel || !row) return;
       row.querySelector('[data-role="label"]').value = panel.querySelector('[data-list-setting-label]').value.trim() || '未命名欄位';
       row.querySelector('[data-role="list-visible"]').value = panel.querySelector('[data-list-setting-visible]').checked ? '1' : '0';
-      row.querySelector('[data-role="width"]').value = panel.querySelector('[data-list-setting-width]').value;
+      setDesignerListFieldWidth(panel.dataset.fieldKey, panel.querySelector('[data-list-setting-width]').value, false);
       updateDesignerPreview();
       if (row.querySelector('[data-role="list-visible"]').value === '0') panel.hidden = true;
     }
@@ -4255,7 +4277,7 @@ const initRagicPage = async (config) => {
       draggedListFieldKey = '';
       modal.querySelectorAll('th.is-dragging, th.is-list-drop-target').forEach((item) => item.classList.remove('is-dragging', 'is-list-drop-target'));
     });
-    const beginListColumnResize = (event, moveEventName, upEventName) => {
+    const beginListColumnResize = (event) => {
       const handle = event.target.closest('[data-list-resize]');
       if (!handle) return;
       if (typeof event.button === 'number' && event.button !== 0) return;
@@ -4263,42 +4285,52 @@ const initRagicPage = async (config) => {
       event.stopPropagation();
       const fieldKey = handle.dataset.listResize;
       const row = designerRowByKey(fieldKey);
-      const widthInput = row?.querySelector('[data-role="width"]');
       const header = handle.closest('th');
-      if (!row || !widthInput || !header) return;
+      if (!row || !header) return;
       const table = header.closest('table');
-      const column = table?.querySelector(`colgroup col:nth-child(${header.cellIndex + 1})`);
+      const columnIndex = header.cellIndex;
+      const column = table?.querySelector(`colgroup col:nth-child(${columnIndex + 1})`);
       const startX = event.clientX;
       const startWidth = header.getBoundingClientRect().width;
       const startTableWidth = table?.getBoundingClientRect().width || 0;
+      let currentWidth = Math.round(startWidth);
+      const resizeElements = [
+        column,
+        ...Array.from(table?.rows || []).map((tableRow) => tableRow.cells[columnIndex])
+      ].filter(Boolean);
+      handle.setPointerCapture?.(event.pointerId);
+      document.body.classList.add('is-resizing-list-column');
       const move = (moveEvent) => {
-        const width = Math.max(40, Math.min(2000, Math.round(startWidth + moveEvent.clientX - startX)));
-        widthInput.value = width;
-        [column, header].filter(Boolean).forEach((element) => {
-          element.style.width = `${width}px`;
-          element.style.minWidth = `${width}px`;
-          element.style.maxWidth = `${width}px`;
+        if (moveEvent.pointerId !== event.pointerId) return;
+        moveEvent.preventDefault();
+        currentWidth = Math.max(40, Math.min(2000, Math.round(startWidth + moveEvent.clientX - startX)));
+        setDesignerListFieldWidth(fieldKey, currentWidth, false);
+        resizeElements.forEach((element) => {
+          element.style.width = `${currentWidth}px`;
+          element.style.minWidth = `${currentWidth}px`;
+          element.style.maxWidth = `${currentWidth}px`;
         });
         if (table) {
-          const tableWidth = Math.max(44 + width, startTableWidth + width - startWidth);
+          const tableWidth = Math.max(44 + currentWidth, startTableWidth + currentWidth - startWidth);
           table.style.setProperty('width', `${tableWidth}px`, 'important');
           table.style.setProperty('min-width', `${tableWidth}px`, 'important');
         }
       };
-      const up = () => {
-        document.removeEventListener(moveEventName, move);
-        document.removeEventListener(upEventName, up);
-        updateDesignerPreview();
+      const finish = (finishEvent) => {
+        if (finishEvent.pointerId !== event.pointerId) return;
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', finish);
+        document.removeEventListener('pointercancel', finish);
+        document.body.classList.remove('is-resizing-list-column');
+        handle.releasePointerCapture?.(event.pointerId);
+        setDesignerListFieldWidth(fieldKey, currentWidth);
         openListFieldSettings(fieldKey);
       };
-      document.addEventListener(moveEventName, move);
-      document.addEventListener(upEventName, up, { once: true });
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', finish);
+      document.addEventListener('pointercancel', finish);
     };
-    modal?.addEventListener('mousedown', (event) => beginListColumnResize(event, 'mousemove', 'mouseup'));
-    modal?.addEventListener('pointerdown', (event) => {
-      if (event.pointerType === 'mouse') return;
-      beginListColumnResize(event, 'pointermove', 'pointerup');
-    });
+    modal?.addEventListener('pointerdown', beginListColumnResize);
   }
   attachLayoutDesignerEvents(document.querySelector('#layoutDesignerPanel'));
   
