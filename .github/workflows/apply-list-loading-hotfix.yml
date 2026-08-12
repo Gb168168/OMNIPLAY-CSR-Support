@@ -1,0 +1,38 @@
+name: Apply list loading hotfix
+
+on:
+  push:
+    branches:
+      - fix/log-new-list-loading-hotfix
+
+permissions:
+  contents: write
+
+jobs:
+  apply-patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify and apply patch
+        run: |
+          git apply --check .github/fix-list-loading-after-width.patch
+          git apply .github/fix-list-loading-after-width.patch
+
+      - name: Syntax and whitespace checks
+        run: |
+          node --check assets/ragic-table.js
+          git diff --check
+          test "$(grep -RIl 'ragic-table.js?v=20260812-ragic-list-loading-hotfix' resource/ai-database.html resource/knowledge.html service/kpi.html work/alert.html work/handover.html work/log-new.html work/log.html work/report.html work/tracking.html | wc -l)" -eq 9
+
+      - name: Commit hotfix and remove temporary files
+        run: |
+          rm -f .github/fix-list-loading-after-width.patch .github/workflows/apply-list-loading-hotfix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- assets/ragic-table.js resource/ai-database.html resource/knowledge.html service/kpi.html work/alert.html work/handover.html work/log-new.html work/log.html work/report.html work/tracking.html .github/fix-list-loading-after-width.patch .github/workflows/apply-list-loading-hotfix.yml
+          git commit -m "修正日誌 NEW 列表載入"
+          git push origin HEAD:fix/log-new-list-loading-hotfix
