@@ -101,7 +101,10 @@ const canonicalLeaveStaffName = (name = '') => leaveStaffAliases[String(name).tr
 const fixedStaffOrderMap = leaveStaffNames.reduce((map, name, index) => ({ ...map, [name]: index + 1 }), {});
 const activeStaff = (staff) => (staff.status || '啟用') === '啟用';
 const isSystemAdminStaff = (staff) => ['id', 'code', 'name'].some((field) => String(staff[field] || '').trim().toUpperCase() === 'OMNIPLAY');
-const visibleLeaveStaff = (staff) => activeStaff(staff) && !isSystemAdminStaff(staff) && staff.leaveVisible !== false;
+const visibleLeaveStaff = (staff) => activeStaff(staff) &&
+  !isSystemAdminStaff(staff) &&
+  staff.leaveVisible !== false &&
+  leaveStaffNames.includes(canonicalLeaveStaffName(staff.name));
 const getStaffSortOrder = (staff) => Number(fixedStaffOrderMap[canonicalLeaveStaffName(staff.name)] ?? staff.sortOrder ?? 999);
 const externalPersonFor = (name) => {
   const canonicalName = canonicalLeaveStaffName(name);
@@ -250,7 +253,9 @@ const loadExternalLeave = async () => {
     }
     if (!payload) throw lastError || new Error('假表來源皆無回應');
     if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
-    externalLeaveData = payload.people || {};
+    externalLeaveData = Object.fromEntries(Object.entries(payload.people || {}).filter(([name]) =>
+      leaveStaffNames.includes(canonicalLeaveStaffName(name))
+    ));
     const maxDays = Number(payload.maxDays);
     externalMaxDays = Number.isFinite(maxDays) && maxDays >= 0 ? maxDays : null;
     staffList = sortStaffForLeave(staffList);
