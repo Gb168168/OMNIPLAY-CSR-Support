@@ -54,7 +54,9 @@
   const tagList=(items)=>`<div class="library-tags">${items.length?items.map((x)=>`<span class="library-tag">${escapeHtml(x)}</span>`).join(''):'—'}</div>`;
 
   function render(){ renderGames(); renderGroups(); renderClients(); renderDocuments(); renderHistory(); renderSyncStatus(); }
-  function renderSyncStatus(){ const button=$('#syncMasterButton'),badge=$('#syncStatusBadge'); if(!button)return; const runs=state.syncJobs.filter(job=>job.type==='GOOGLE_SHEETS_GAME_MASTER_RUN'); const latest=[...runs].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0]; button.title=latest?`最近同步：${latest.status||'requested'} ${latest.updatedAt||latest.createdAt||''}`:'從 Game List_Online / GameList 立即同步'; button.disabled=latest?.status==='processing'; button.textContent=latest?.status==='processing'?'同步中…':'立即同步'; startSyncCountdown(latest,badge); ensureAutoSyncSchedule(); }
+  function syncSchedule(){ return state.syncJobs.find(job=>job.id===googleSheets.scheduleId); }
+  function gameListFeedUrl(){ return String(syncSchedule()?.feedUrl||'').trim(); }
+  function renderSyncStatus(){ const button=$('#syncMasterButton'),badge=$('#syncStatusBadge'); if(!button)return; const runs=state.syncJobs.filter(job=>job.type==='GOOGLE_SHEETS_GAME_MASTER_RUN'); const latest=[...runs].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0]; const configured=Boolean(gameListFeedUrl()); button.title=configured?(latest?`最近同步：${latest.status||'requested'} ${latest.updatedAt||latest.createdAt||''}`:'從 Game List_Online / GameList 立即同步'):'尚未設定 Game List Apps Script 同步服務'; button.disabled=latest?.status==='processing'; button.textContent=latest?.status==='processing'?'同步中…':configured?'立即同步':'設定同步服務'; if(!configured&&badge){badge.classList.add('is-error');badge.textContent='尚未設定 Apps Script 同步服務';}else startSyncCountdown(latest,badge); ensureAutoSyncSchedule(); }
   function startSyncCountdown(latest,badge){ if(!badge)return; clearInterval(syncCountdownTimer); const tick=()=>{badge.classList.toggle('is-syncing',latest?.status==='processing');badge.classList.toggle('is-error',latest?.status==='failed');if(latest?.status==='processing'){badge.textContent='Google Sheets 同步中…';return;}if(latest?.status==='failed'){badge.textContent=`同步失敗；下次重試 ${formatCountdown(nextSyncSeconds(latest))}`;return;}badge.textContent=`下次自動同步 ${formatCountdown(nextSyncSeconds(latest))}`;};tick();syncCountdownTimer=setInterval(tick,1000);}
   function nextSyncSeconds(latest){ const base=Date.parse(latest?.completedAt||latest?.updatedAt||latest?.createdAt||now()); const interval=googleSheets.intervalMinutes*60; const elapsed=Math.max(0,Math.floor((Date.now()-base)/1000)); return Math.max(0,interval-(elapsed%interval)); }
   function formatCountdown(seconds){ const minutes=Math.floor(seconds/60);const remain=seconds%60;return `${String(minutes).padStart(2,'0')}:${String(remain).padStart(2,'0')}`; }
@@ -66,10 +68,12 @@
       if(!existing?.enabled||existing?.intervalMinutes!==googleSheets.intervalMinutes){
         await collections.syncJobs.doc(googleSheets.scheduleId).set({type:'GOOGLE_SHEETS_GAME_MASTER_SCHEDULE',enabled:true,intervalMinutes:googleSheets.intervalMinutes,spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,customerTemplate:{spreadsheetId:googleSheets.customerTemplateSpreadsheetId,sheetName:googleSheets.customerTemplateSheetName,mode:'columns_only'},upsertKey:'GAME ID',missingRowPolicy:'keep_and_flag',updatedBy:actor(),updatedAt:now()},{merge:true});
       }
-      clearInterval(autoSyncTimer);
-      autoSyncTimer=setInterval(()=>syncGoogleMaster('auto').catch((error)=>console.error('Google Sheets 自動同步失敗',error)),googleSheets.intervalMinutes*60*1000);
-      const completed=state.syncJobs.some(job=>job.type==='GOOGLE_SHEETS_GAME_MASTER_RUN'&&job.status==='completed');
-      if(!completed&&state.games.length===0) syncGoogleMaster('auto').catch((error)=>console.error('Google Sheets 初次同步失敗',error));
+      if(gameListFeedUrl()){
+        clearInterval(autoSyncTimer);
+        autoSyncTimer=setInterval(()=>syncGoogleMaster('auto').catch((error)=>console.error('Google Sheets 自動同步失敗',error)),googleSheets.intervalMinutes*60*1000);
+        const completed=state.syncJobs.some(job=>job.type==='GOOGLE_SHEETS_GAME_MASTER_RUN'&&job.status==='completed');
+        if(!completed&&state.games.length===0) syncGoogleMaster('auto').catch((error)=>console.error('Google Sheets 初次同步失敗',error));
+      }
     }catch(error){autoScheduleEnsured=false;console.error('建立 Google Sheets 自動同步排程失敗',error);}
   }
   function renderGames(){
@@ -108,22 +112,6 @@
 
   function previewClient(client){ state.previewClientId=client.id; const rows=effectiveGames(client); $('#previewTitle').textContent=`${client.name}｜Preview OMNIPLAY Game`; $('#previewHead').innerHTML=`<tr>${customerColumns.map(([,h])=>`<th>${escapeHtml(h).replace(/\n/g,'<br>')}</th>`).join('')}<th>Source（內部）</th></tr>`; $('#previewBody').innerHTML=rows.map(({game,source})=>`<tr>${customerColumns.map(([key])=>`<td>${escapeHtml(game[key]??'')}</td>`).join('')}<td class="source-cell">${escapeHtml(source)}</td></tr>`).join('')||`<tr><td colspan="${customerColumns.length+1}" class="library-empty">此客戶目前沒有遊戲。</td></tr>`; $('#previewModal').hidden=false; }
   function exportClient(client){ if(!window.XLSX)return alert('Excel 元件尚未載入。'); const rows=effectiveGames(client).map(({game})=>Object.fromEntries(customerColumns.map(([key,label])=>[label,game[key]??'']))); const sheet=XLSX.utils.json_to_sheet(rows,{header:customerColumns.map(([,label])=>label)}); sheet['!cols']=customerColumns.map(([key])=>({wch:['nameZh','nameEn','customerNote'].includes(key)?24:16})); const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,sheet,'OP Game'); XLSX.writeFile(book,`${client.name} OMNIPLAY Game.xlsx`); logChange('EXPORT_CLIENT_GAME_LIST',`Client ${client.name}`,null,{gameCount:rows.length},[client]).catch(console.error); }
-  function parseCsv(text){
-    const rows=[];let row=[],cell='',quoted=false;
-    for(let index=0;index<text.length;index+=1){
-      const char=text[index],next=text[index+1];
-      if(char==='"'&&quoted&&next==='"'){cell+='"';index+=1;continue;}
-      if(char==='"'){quoted=!quoted;continue;}
-      if(char===','&&!quoted){row.push(cell);cell='';continue;}
-      if((char==='\n'||char==='\r')&&!quoted){
-        if(char==='\r'&&next==='\n')index+=1;
-        row.push(cell);rows.push(row);row=[];cell='';continue;
-      }
-      cell+=char;
-    }
-    if(cell||row.length){row.push(cell);rows.push(row);}
-    return rows;
-  }
   function numberOrText(value){ const text=String(value??'').trim(); if(!text)return ''; const normalized=text.replace(/,/g,''); return /^-?\d+(\.\d+)?$/.test(normalized)?Number(normalized):text; }
   function sheetRowToGame(row){
     return {
@@ -135,28 +123,30 @@
       totalJackpotRtp:numberOrText(row[17]),baseRtp:numberOrText(row[18]),totalPayout:numberOrText(row[19])
     };
   }
-  async function fetchGoogleMasterRows(){
-    const base=`https://docs.google.com/spreadsheets/d/${googleSheets.masterSpreadsheetId}`;
-    const urls=[
-      `${base}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(googleSheets.masterSheetName)}&_=${Date.now()}`,
-      `${base}/export?format=csv&gid=1764877025&_=${Date.now()}`
-    ];
-    let lastError=null;
-    for(const url of urls){
-      try{
-        const response=await fetch(url,{cache:'no-store',credentials:'omit'});
-        if(!response.ok)throw new Error(`Google Sheet 回應錯誤（${response.status}）`);
-        const text=await response.text();
-        if(/^\s*</.test(text))throw new Error('取得的是登入頁而不是試算表資料');
-        const rows=parseCsv(text).filter((row)=>{
-          const gameId=String(row[1]??'').trim();
-          return gameId&&gameId.toUpperCase()!=='GAME ID'&&gameId!=='';
-        });
-        if(rows.length)return rows;
-        throw new Error('找不到 GAME ID 資料列');
-      }catch(error){lastError=error;}
+  async function configureGameListFeed(){
+    const current=gameListFeedUrl();
+    const input=window.prompt('請貼上 Game List_Online Apps Script Web App 的 /exec 網址',current);
+    if(input===null)return false;
+    const feedUrl=String(input).trim();
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:\?.*)?$/.test(feedUrl)){
+      alert('網址格式不正確，必須是 https://script.google.com/macros/s/.../exec');
+      return false;
     }
-    throw new Error(`無法讀取 Google Sheet（${lastError?.message||'連線失敗'}）；請確認試算表已設為「知道連結的任何人都可查看」。`);
+    await collections.syncJobs.doc(googleSheets.scheduleId).set({type:'GOOGLE_SHEETS_GAME_MASTER_SCHEDULE',enabled:true,intervalMinutes:googleSheets.intervalMinutes,spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,feedUrl,updatedBy:actor(),updatedAt:now()},{merge:true});
+    return true;
+  }
+  async function fetchGoogleMasterRows(){
+    const feedUrl=gameListFeedUrl();
+    if(!feedUrl)throw new Error('尚未設定 Game List Apps Script 同步服務。');
+    let response;
+    try{response=await fetch(`${feedUrl}${feedUrl.includes('?')?'&':'?'}_=${Date.now()}`,{method:'GET',cache:'no-store'});}
+    catch(error){throw new Error(`Apps Script 同步服務無法連線（${error?.message||'Failed to fetch'}）`);}
+    if(!response.ok)throw new Error(`Apps Script 同步服務回應 ${response.status}`);
+    const payload=await response.json().catch(()=>null);
+    if(!payload?.success||!Array.isArray(payload.rows))throw new Error(payload?.error||'Apps Script 回傳格式錯誤');
+    const rows=payload.rows.filter((row)=>String(row?.[1]??'').trim());
+    if(!rows.length)throw new Error('GameList 第 3 列起沒有可同步的 GAME ID。');
+    return rows;
   }
   async function syncGoogleMaster(reason='manual'){
     if(!canEdit()){if(reason==='manual')alert('你沒有同步藏經閣的權限。');return;}
@@ -189,7 +179,7 @@
   }
 
   document.addEventListener('click',(event)=>{ const tab=event.target.closest('[data-tab]'); if(tab){document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('is-active',x===tab));document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('is-active',x.dataset.panel===tab.dataset.tab));return;} if(event.target.closest('[data-close-modal]')){closeModals();return;} const button=event.target.closest('[data-action]'); if(!button)return; const id=button.dataset.id; ({'edit-game':()=>editGame(gameById(id)),'game-groups':()=>editGameGroups(gameById(id)),'edit-group':()=>editGroup(groupById(id)),'edit-client':()=>editClient(clientById(id)),'preview-client':()=>previewClient(clientById(id))}[button.dataset.action]||(()=>{}))(); });
-  $('#newGroupButton').onclick=()=>editGroup(); $('#newClientButton').onclick=()=>editClient(); $('#newDocumentButton').onclick=editDocument; $('#gameSearch').oninput=renderGames; $('#gameStatusFilter').onchange=renderGames; $('#syncMasterButton').onclick=()=>syncGoogleMaster('manual').catch(err=>console.error('立即同步失敗',err)); $('#cancelImpactButton').onclick=closeModals; $('#confirmImpactButton').onclick=async()=>{const save=state.pendingSave;if(save){state.pendingSave=null;await save();}}; $('#exportClientButton').onclick=()=>{const client=clientById(state.previewClientId);if(client)exportClient(client);};
+  $('#newGroupButton').onclick=()=>editGroup(); $('#newClientButton').onclick=()=>editClient(); $('#newDocumentButton').onclick=editDocument; $('#gameSearch').oninput=renderGames; $('#gameStatusFilter').onchange=renderGames; $('#syncMasterButton').onclick=async()=>{try{if(!gameListFeedUrl()&&!(await configureGameListFeed()))return;await syncGoogleMaster('manual');}catch(err){console.error('立即同步失敗',err);}}; $('#cancelImpactButton').onclick=closeModals; $('#confirmImpactButton').onclick=async()=>{const save=state.pendingSave;if(save){state.pendingSave=null;await save();}}; $('#exportClientButton').onclick=()=>{const client=clientById(state.previewClientId);if(client)exportClient(client);};
   document.querySelectorAll('.library-modal').forEach((modal)=>modal.addEventListener('click',(e)=>{if(e.target===modal)closeModals();}));
   window.permissionReady?.then(()=>{ if(!canEdit()) document.querySelectorAll('#newGroupButton,#newClientButton,#newDocumentButton,#syncMasterButton').forEach(b=>b.hidden=true); });
   Object.keys(collections).forEach(subscribe);
