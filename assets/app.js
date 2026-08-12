@@ -93,11 +93,6 @@ sidebarCollapsedToggle.setAttribute('aria-label', '展開左側功能表');
 if (sidebar) document.body.appendChild(sidebarCollapsedToggle);
 const appShell = document.querySelector('.app-shell');
 const loginView = document.querySelector('#loginView');
-const loginForm = document.querySelector('#loginForm');
-const loginMessage = document.querySelector('#loginMessage');
-const setupForm = document.querySelector('#setupForm');
-const setupMessage = document.querySelector('#setupMessage');
-const englishAlphanumericInputs = document.querySelectorAll('#account, #loginPassword, #setupCode, #setupAccount, #setupPassword');
 
 
 const THEME_STORAGE_KEY = 'omniplayTheme';
@@ -190,7 +185,7 @@ const toggleSidebar = () => {
 
 const enhanceSidebarNavigation = () => {
   if (!sidebar) return;
-  sidebar.querySelectorAll('.home-link, .sidebar-sub-item, .logout-button').forEach((item) => {
+  sidebar.querySelectorAll('.home-link, .sidebar-sub-item').forEach((item) => {
     const label = item.querySelector('.label') || item.querySelector('.sidebar-text');
     const tooltipText = (label?.textContent || item.textContent || '').trim();
     if (tooltipText) {
@@ -262,67 +257,6 @@ const loadCurrentPermissions = async () => { sessionStorage.removeItem(SESSION_K
 window.loadCurrentPermissions = loadCurrentPermissions;
 window.permissionReady = loadCurrentPermissions();
 
-const showLoginMessage = (message) => {
-  if (!loginMessage) return;
-  loginMessage.textContent = message;
-  loginMessage.hidden = !message;
-};
-
-const showSetupMessage = (message, type = '') => {
-  if (!setupMessage) return;
-  setupMessage.textContent = message;
-  setupMessage.hidden = !message;
-  setupMessage.dataset.type = type;
-};
-
-const sanitizeEnglishAlphanumericInput = (input) => {
-  if (input.dataset.composing === 'true') return;
-  const sanitizedValue = input.value.replace(/[^A-Za-z0-9]/g, '');
-  if (input.value === sanitizedValue) return;
-
-  const cursorPosition = input.selectionStart || sanitizedValue.length;
-  const removedBeforeCursor = input.value.slice(0, cursorPosition).length - input.value.slice(0, cursorPosition).replace(/[^A-Za-z0-9]/g, '').length;
-  input.value = sanitizedValue;
-  input.setSelectionRange?.(Math.max(cursorPosition - removedBeforeCursor, 0), Math.max(cursorPosition - removedBeforeCursor, 0));
-};
-
-englishAlphanumericInputs.forEach((input) => {
-  input.addEventListener('compositionstart', () => { input.dataset.composing = 'true'; });
-  input.addEventListener('compositionend', () => { input.dataset.composing = 'false'; sanitizeEnglishAlphanumericInput(input); });
-  input.addEventListener('input', () => sanitizeEnglishAlphanumericInput(input));
-  input.addEventListener('paste', () => requestAnimationFrame(() => sanitizeEnglishAlphanumericInput(input)));
-});
-
-const setInitialSetupVisibility = (showSetup) => {
-  if (!isIndexPage || isLoggedIn()) return;
-  loginForm?.classList.toggle('is-hidden', showSetup);
-  setupForm?.classList.toggle('is-hidden', !showSetup);
-};
-
-const checkInitialSetupRequired = async () => {
-  if (!isIndexPage || isLoggedIn() || !setupForm) return;
-  if (window.CSR_API_BASE) { setInitialSetupVisibility(false); return; } // API 模式:帳號由後端管理,無首次設定流程
-
-  const staffCollection = window.omniplayDb?.collection('staff');
-  if (!staffCollection) {
-    setInitialSetupVisibility(false);
-    showLoginMessage('Firebase 尚未完成初始化，請稍後再試');
-    return;
-  }
-
-  try {
-    const snapshot = await staffCollection.limit(1).get();
-    setInitialSetupVisibility(snapshot.empty);
-    if (snapshot.empty) {
-      showSetupMessage('偵測到尚未建立任何人員資料，請先建立管理員帳號。', 'info');
-    }
-  } catch (error) {
-    console.error('首次設定檢查失敗：', error);
-    setInitialSetupVisibility(false);
-    showLoginMessage('無法檢查首次設定狀態，請稍後再試');
-  }
-};
-
 const setAppVisibility = () => { if (appShell) { appShell.hidden = false; appShell.removeAttribute('aria-hidden'); appShell.classList.remove('is-hidden'); } loginView?.remove(); };
 
 
@@ -335,37 +269,15 @@ const makeThemeToggleButton = () => {
   return button;
 };
 
-const renderThemeToggle = () => {
-  const loginCard = document.querySelector('.login-card');
-  if (loginCard && !loginCard.querySelector('[data-theme-toggle]')) loginCard.appendChild(makeThemeToggleButton());
-  applyTheme(getStoredTheme());
-};
+const renderThemeToggle = () => { applyTheme(getStoredTheme()); };
 
 const renderSidebarUser = () => {
-  if (!sidebar || !isLoggedIn()) return;
-  const currentStaff = getCurrentStaff();
-  let footer = sidebar.querySelector('#sidebarUserFooter');
-  if (!footer) {
-    footer = document.createElement('div');
-    footer.id = 'sidebarUserFooter';
-    footer.className = 'sidebar-footer';
-    footer.innerHTML = `
-      <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
-        <div class="sidebar-user-row">
-        <div class="sidebar-user-info"><span class="sidebar-user-label label">登入者</span><strong class="sidebar-user-name label"></strong></div>
-        <button class="logout-button" id="logoutButton" type="button"><span class="icon">⎋</span><span class="label">登出</span></button>
-      </div>
-    `;
-    sidebar.appendChild(footer);
-  }
-  const sidebarThemeToggle = footer.querySelector('[data-theme-toggle]');
+  if (!sidebar) return;
+  const footer = sidebar.querySelector('#sidebarUserFooter');
+  const sidebarThemeToggle = footer?.querySelector('[data-theme-toggle]');
   if (sidebarThemeToggle) sidebarThemeToggle.onclick = toggleTheme;
-  const nameElement = footer.querySelector('.sidebar-user-name');
-  if (nameElement) nameElement.textContent = currentStaff.name;
   enhanceSidebarNavigation();
 };
-
-const logout = () => {};
 
 enhanceSidebarNavigation();
 
@@ -427,8 +339,6 @@ new MutationObserver(scheduleMobileTableLabels).observe(document.body, { childLi
 renderThemeToggle();
 setAppVisibility();
 window.permissionReady?.then(() => { renderSidebarUser(); });
-checkInitialSetupRequired();
-
 // 手機版／加入主畫面的 PWA：從頁面頂端下拉並放開即可重新整理。
 const setupPullToRefresh = () => {
   const mobilePointer = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches;
