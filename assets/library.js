@@ -56,7 +56,7 @@
   function render(){ renderGames(); renderGroups(); renderClients(); renderDocuments(); renderHistory(); renderSyncStatus(); }
   function syncSchedule(){ return state.syncJobs.find(job=>job.id===googleSheets.scheduleId); }
   function gameListFeedUrl(){ return String(syncSchedule()?.feedUrl||'').trim(); }
-  function renderSyncStatus(){ const button=$('#syncMasterButton'),badge=$('#syncStatusBadge'); if(!button)return; const runs=state.syncJobs.filter(job=>job.type==='GOOGLE_SHEETS_GAME_MASTER_RUN'); const latest=[...runs].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0]; const configured=Boolean(gameListFeedUrl()); button.title=configured?(latest?`最近同步：${latest.status||'requested'} ${latest.updatedAt||latest.createdAt||''}`:'從 Game List_Online / GameList 立即同步'):'尚未設定 Game List Apps Script 同步服務'; button.disabled=latest?.status==='processing'; button.textContent=latest?.status==='processing'?'同步中…':configured?'立即同步':'設定同步服務'; if(!configured&&badge){badge.classList.add('is-error');badge.textContent='尚未設定 Apps Script 同步服務';}else startSyncCountdown(latest,badge); ensureAutoSyncSchedule(); }
+  function renderSyncStatus(){ const button=$('#syncMasterButton'),badge=$('#syncStatusBadge'); if(!button)return; const runs=state.syncJobs.filter(job=>job.type==='GOOGLE_SHEETS_GAME_MASTER_RUN'); const latest=[...runs].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0]; const configured=Boolean(gameListFeedUrl()); button.title=configured?(latest?`最近同步：${latest.status||'requested'} ${latest.updatedAt||latest.createdAt||''}`:'從 Game List_Online / GameList 立即同步'):'同步服務尚待系統管理員完成部署'; button.disabled=latest?.status==='processing'; button.textContent=latest?.status==='processing'?'同步中…':'立即同步'; if(!configured&&badge){badge.classList.add('is-error');badge.textContent='同步服務尚未完成部署';}else startSyncCountdown(latest,badge); ensureAutoSyncSchedule(); }
   function startSyncCountdown(latest,badge){ if(!badge)return; clearInterval(syncCountdownTimer); const tick=()=>{badge.classList.toggle('is-syncing',latest?.status==='processing');badge.classList.toggle('is-error',latest?.status==='failed');if(latest?.status==='processing'){badge.textContent='Google Sheets 同步中…';return;}if(latest?.status==='failed'){badge.textContent=`同步失敗；下次重試 ${formatCountdown(nextSyncSeconds(latest))}`;return;}badge.textContent=`下次自動同步 ${formatCountdown(nextSyncSeconds(latest))}`;};tick();syncCountdownTimer=setInterval(tick,1000);}
   function nextSyncSeconds(latest){ const base=Date.parse(latest?.completedAt||latest?.updatedAt||latest?.createdAt||now()); const interval=googleSheets.intervalMinutes*60; const elapsed=Math.max(0,Math.floor((Date.now()-base)/1000)); return Math.max(0,interval-(elapsed%interval)); }
   function formatCountdown(seconds){ const minutes=Math.floor(seconds/60);const remain=seconds%60;return `${String(minutes).padStart(2,'0')}:${String(remain).padStart(2,'0')}`; }
@@ -123,18 +123,6 @@
       totalJackpotRtp:numberOrText(row[17]),baseRtp:numberOrText(row[18]),totalPayout:numberOrText(row[19])
     };
   }
-  async function configureGameListFeed(){
-    const current=gameListFeedUrl();
-    const input=window.prompt('請貼上 Game List_Online Apps Script Web App 的 /exec 網址',current);
-    if(input===null)return false;
-    const feedUrl=String(input).trim();
-    if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:\?.*)?$/.test(feedUrl)){
-      alert('網址格式不正確，必須是 https://script.google.com/macros/s/.../exec');
-      return false;
-    }
-    await collections.syncJobs.doc(googleSheets.scheduleId).set({type:'GOOGLE_SHEETS_GAME_MASTER_SCHEDULE',enabled:true,intervalMinutes:googleSheets.intervalMinutes,spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,feedUrl,updatedBy:actor(),updatedAt:now()},{merge:true});
-    return true;
-  }
   async function fetchGoogleMasterRows(){
     const feedUrl=gameListFeedUrl();
     if(!feedUrl)throw new Error('尚未設定 Game List Apps Script 同步服務。');
@@ -179,7 +167,7 @@
   }
 
   document.addEventListener('click',(event)=>{ const tab=event.target.closest('[data-tab]'); if(tab){document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('is-active',x===tab));document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('is-active',x.dataset.panel===tab.dataset.tab));return;} if(event.target.closest('[data-close-modal]')){closeModals();return;} const button=event.target.closest('[data-action]'); if(!button)return; const id=button.dataset.id; ({'edit-game':()=>editGame(gameById(id)),'game-groups':()=>editGameGroups(gameById(id)),'edit-group':()=>editGroup(groupById(id)),'edit-client':()=>editClient(clientById(id)),'preview-client':()=>previewClient(clientById(id))}[button.dataset.action]||(()=>{}))(); });
-  $('#newGroupButton').onclick=()=>editGroup(); $('#newClientButton').onclick=()=>editClient(); $('#newDocumentButton').onclick=editDocument; $('#gameSearch').oninput=renderGames; $('#gameStatusFilter').onchange=renderGames; $('#syncMasterButton').onclick=async()=>{try{if(!gameListFeedUrl()&&!(await configureGameListFeed()))return;await syncGoogleMaster('manual');}catch(err){console.error('立即同步失敗',err);}}; $('#cancelImpactButton').onclick=closeModals; $('#confirmImpactButton').onclick=async()=>{const save=state.pendingSave;if(save){state.pendingSave=null;await save();}}; $('#exportClientButton').onclick=()=>{const client=clientById(state.previewClientId);if(client)exportClient(client);};
+  $('#newGroupButton').onclick=()=>editGroup(); $('#newClientButton').onclick=()=>editClient(); $('#newDocumentButton').onclick=editDocument; $('#gameSearch').oninput=renderGames; $('#gameStatusFilter').onchange=renderGames; $('#syncMasterButton').onclick=async()=>{try{if(!gameListFeedUrl()){alert('同步服務尚未完成部署，請由系統管理員設定 Apps Script 服務網址。');return;}await syncGoogleMaster('manual');}catch(err){console.error('立即同步失敗',err);}}; $('#cancelImpactButton').onclick=closeModals; $('#confirmImpactButton').onclick=async()=>{const save=state.pendingSave;if(save){state.pendingSave=null;await save();}}; $('#exportClientButton').onclick=()=>{const client=clientById(state.previewClientId);if(client)exportClient(client);};
   document.querySelectorAll('.library-modal').forEach((modal)=>modal.addEventListener('click',(e)=>{if(e.target===modal)closeModals();}));
   window.permissionReady?.then(()=>{ if(!canEdit()) document.querySelectorAll('#newGroupButton,#newClientButton,#newDocumentButton,#syncMasterButton').forEach(b=>b.hidden=true); });
   Object.keys(collections).forEach(subscribe);
