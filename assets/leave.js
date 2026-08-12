@@ -193,7 +193,7 @@ const renderSummaryGroup = (shift, mode) => {
     .filter((staff) => getStaffShift(staff) === shift && canonicalLeaveStaffName(staff.name) !== '余中魁')
     .map((staff) => {
       const days = summaryDaysFor(staff, mode);
-      return `<li><strong>${escapeHtml(staff.name)}：</strong>${days.length ? days.join('、') : '—'}</li>`;
+      return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}</li>`;
     }).join('');
   return `<div class="leave-summary-shift"><strong>${shift === '早' ? '早班' : '晚班'}：</strong><ul>${rows}</ul></div>`;
 };
@@ -308,7 +308,7 @@ const renderBody = () => {
     const cells = Array.from({ length: totalDays }, (_, index) => renderDayCell(staff, index + 1)).join('');
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
       <th class="sticky-col name-col" scope="row">
-        <span>${escapeHtml(staff.name || staff.code || '未命名')} / ${escapeHtml(getShift(staff))}</span>
+        <span>${escapeHtml(canonicalLeaveStaffName(staff.name) || staff.code || '未命名')} / ${escapeHtml(getShift(staff))}</span>
         <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}</small>
       </th>${cells}</tr>`;
   }).join('');
@@ -325,7 +325,7 @@ const renderDayCell = (staff, day) => {
   const leaveLabel = record.label ? `<span class="external-leave-label">${escapeHtml(record.label)}</span>` : '';
   const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : '🎰').join('');
   return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
-    <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(staff.name)} ${day} 號休假狀態"${editableAttribute()}>${marker}${leaveLabel}<span class="special-icons">${specials}</span></button>
+    <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(canonicalLeaveStaffName(staff.name))} ${day} 號休假狀態"${editableAttribute()}>${marker}${leaveLabel}<span class="special-icons">${specials}</span></button>
   </td>`;
 };
 
