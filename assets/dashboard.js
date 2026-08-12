@@ -387,7 +387,7 @@ const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
   return {
     icon: '📅',
     time: allDay ? '全天' : `${pad2(item.occurrenceAt.getHours())}:${pad2(item.occurrenceAt.getMinutes())}`,
-    type: '排程',
+    type: '排程表',
     href: withRecordLink('service/schedule.html', item.id),
     title: item.title || '未命名事項',
     scheduleLabel: item.labelName || item.eventType || '排程',
@@ -432,12 +432,17 @@ const reminderItems = (
 };
 
 const todoSectionDefinitions = [
-  { key: 'home', label: '🏠首頁', types: ['排程'] },
-  { key: 'service', label: '👥客服內部', types: ['對接追蹤', '交接'] },
-  { key: 'work', label: '🗂️作業管理', types: ['日誌 NEW', '提報'] },
-  { key: 'meeting', label: '🗂️會議歷程', types: ['會議'] },
+  { key: 'service', label: '👥客服內部', types: ['排程表'] },
+  { key: 'work', label: '🗂️作業管理', types: ['日誌', '日誌 NEW', '收件匣', '交接', '提報', '對接追蹤', 'PROD告警紀錄'] },
+  { key: 'library', label: '📜藏經閣', types: ['藏經閣'] },
+  { key: 'meeting', label: '📁會議歷程', types: ['會議紀錄'] },
   { key: 'database', label: '🧠資料庫', types: ['知識庫', 'AI 資料庫'] }
 ];
+const todoTypeLabels = {
+  '排程表': '📅排程表', '日誌': '📒日誌', '日誌 NEW': '✨日誌 NEW', '收件匣': '📥收件匣',
+  '交接': '🤝交接', '提報': '📣提報', '對接追蹤': '🔎對接追蹤', 'PROD告警紀錄': '🚨PROD告警紀錄',
+  '藏經閣': '📜藏經閣', '會議紀錄': '📝會議紀錄', '知識庫': '📚知識庫', 'AI 資料庫': '🤖AI 資料庫'
+};
 const todoSectionByKey = (key) => todoSectionDefinitions.find((section) => section.key === key);
 
 const renderTodoFilters = (items) => {
@@ -456,10 +461,8 @@ const renderTodoFilters = (items) => {
   const sectionButtons = todoSectionDefinitions.map((section) => ({
     ...section,
     count: items.filter((item) => section.types.includes(item.type)).length
-  })).filter((section) => section.count > 0);
-  const createdCount = items.filter((item) => item.isCreated).length;
-  const updatedCount = items.filter((item) => item.isUpdated).length;
-  const validSections = ['all', ...sectionButtons.map((section) => section.key), ...(createdCount ? ['created'] : []), ...(updatedCount ? ['updated'] : [])];
+  }));
+  const validSections = ['all', ...sectionButtons.map((section) => section.key)];
   if (!validSections.includes(dashboardState.selectedTodoSection)) {
     dashboardState.selectedTodoSection = 'all';
     dashboardState.selectedTodoType = 'all';
@@ -467,9 +470,7 @@ const renderTodoFilters = (items) => {
 
   const buttons = [
     { key: 'all', label: '全部', count: items.length },
-    ...sectionButtons,
-    ...(createdCount ? [{ key: 'created', label: '建立', count: createdCount }] : []),
-    ...(updatedCount ? [{ key: 'updated', label: '更新', count: updatedCount }] : [])
+    ...sectionButtons
   ];
   container.innerHTML = buttons.map((button) => `
       <button
@@ -501,8 +502,9 @@ const renderTodoEventFilters = (items) => {
   }
   const typeButtons = section.types.map((type) => ({
     type,
+    label: todoTypeLabels[type] || type,
     count: items.filter((item) => item.type === type).length
-  })).filter((button) => button.count > 0);
+  }));
   if (!typeButtons.length) {
     container.hidden = true;
     container.innerHTML = '';
@@ -517,7 +519,7 @@ const renderTodoEventFilters = (items) => {
       <button
         class="todo-filter-btn ${dashboardState.selectedTodoType === button.type ? 'active' : ''}"
         data-todo-type="${escapeDashboardHtml(button.type)}">
-        ${escapeDashboardHtml(button.type)} (${button.count})
+        ${escapeDashboardHtml(button.label)} (${button.count})
       </button>
     `).join('');
   container.querySelectorAll('button').forEach(button => {
@@ -563,8 +565,8 @@ const renderTodoList = () => {
       detailsFormatter: trackingTodoDetails
     }),
     ...shiftRecordItems(dashboardState.meetings, {
-      type: '會議',
-      icon: '💬',
+      type: '會議紀錄',
+      icon: '📝',
       href: 'meeting/meeting.html',
       fallback: '會議紀錄'
     }),
@@ -603,9 +605,6 @@ const renderTodoList = () => {
   if (selectedSection) {
     filteredItems = filteredItems.filter((item) => selectedSection.types.includes(item.type));
   }
-  if (dashboardState.selectedTodoSection === 'created') filteredItems = filteredItems.filter((item) => item.isCreated);
-  if (dashboardState.selectedTodoSection === 'updated') filteredItems = filteredItems.filter((item) => item.isUpdated);
-
   // 第二層：所選區域內的分頁
   if (selectedSection && dashboardState.selectedTodoType !== 'all') {
     filteredItems = filteredItems.filter((item) => item.type === dashboardState.selectedTodoType);
