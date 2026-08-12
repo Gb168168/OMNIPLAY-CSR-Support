@@ -19,6 +19,8 @@
   };
   let autoScheduleEnsured = false;
   let syncCountdownTimer = null;
+  let autoSyncTimer = null;
+  let syncInFlight = false;
 
   const customerColumns = [
     ['gameId','Game ID'],['nameZh','中文遊戲名稱\nGame Name\n(Mandarin)'],['nameEn','英文遊戲名稱\nGame Name\n(English)'],['status','狀態\nGame Status'],['releaseDate','上線日期\nRelease Date'],['pagcorApproval','是否取得Pagcor驗證\nPagcor Approval'],['freeSpin','是否支援\nFree Spin'],['gameVersion','Game Version'],['manufacturer','Manufacturer'],['denomination','Denomination'],['gameType','Game Type'],['lines','No. of Lines'],['betMin','Bet (PHP)\nMinimum'],['betMax','Bet (PHP)\nMaximum'],['maxPrize','Max Prize\n(PHP)'],['maxPrizeMultiplier','Max Prize\nMultiplier'],['jackpotGroup','Progressive\nJackpot Group'],['jackpotMin','Jackpot Range\nMin (PHP)'],['jackpotMax','Jackpot Range\nMax (PHP)'],['jackpotReserve','Jackpot RTP %\nReserve %'],['jackpotIncrement','Jackpot RTP %\nIncrement %'],['totalJackpotRtp','Total Jackpot\nRTP %'],['baseRtp','Base Game\nRTP %'],['totalPayout','Total Payout %\n(Theoretical)']
@@ -56,7 +58,20 @@
   function startSyncCountdown(latest,badge){ if(!badge)return; clearInterval(syncCountdownTimer); const tick=()=>{badge.classList.toggle('is-syncing',latest?.status==='processing');badge.classList.toggle('is-error',latest?.status==='failed');if(latest?.status==='processing'){badge.textContent='Google Sheets 同步中…';return;}if(latest?.status==='failed'){badge.textContent=`同步失敗；下次重試 ${formatCountdown(nextSyncSeconds(latest))}`;return;}badge.textContent=`下次自動同步 ${formatCountdown(nextSyncSeconds(latest))}`;};tick();syncCountdownTimer=setInterval(tick,1000);}
   function nextSyncSeconds(latest){ const base=Date.parse(latest?.completedAt||latest?.updatedAt||latest?.createdAt||now()); const interval=googleSheets.intervalMinutes*60; const elapsed=Math.max(0,Math.floor((Date.now()-base)/1000)); return Math.max(0,interval-(elapsed%interval)); }
   function formatCountdown(seconds){ const minutes=Math.floor(seconds/60);const remain=seconds%60;return `${String(minutes).padStart(2,'0')}:${String(remain).padStart(2,'0')}`; }
-  async function ensureAutoSyncSchedule(){ if(autoScheduleEnsured||!canEdit()||!collections.syncJobs)return; const existing=state.syncJobs.find(job=>job.id===googleSheets.scheduleId); if(existing?.enabled&&existing?.intervalMinutes===googleSheets.intervalMinutes){autoScheduleEnsured=true;return;} autoScheduleEnsured=true; try{await collections.syncJobs.doc(googleSheets.scheduleId).set({type:'GOOGLE_SHEETS_GAME_MASTER_SCHEDULE',enabled:true,intervalMinutes:googleSheets.intervalMinutes,spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,customerTemplate:{spreadsheetId:googleSheets.customerTemplateSpreadsheetId,sheetName:googleSheets.customerTemplateSheetName,mode:'columns_only'},upsertKey:'GAME ID',missingRowPolicy:'keep_and_flag',updatedBy:actor(),updatedAt:now()},{merge:true});}catch(error){autoScheduleEnsured=false;console.error('建立 Google Sheets 自動同步排程失敗',error);} }
+  async function ensureAutoSyncSchedule(){
+    if(autoScheduleEnsured||!canEdit()||!collections.syncJobs)return;
+    autoScheduleEnsured=true;
+    try{
+      const existing=state.syncJobs.find(job=>job.id===googleSheets.scheduleId);
+      if(!existing?.enabled||existing?.intervalMinutes!==googleSheets.intervalMinutes){
+        await collections.syncJobs.doc(googleSheets.scheduleId).set({type:'GOOGLE_SHEETS_GAME_MASTER_SCHEDULE',enabled:true,intervalMinutes:googleSheets.intervalMinutes,spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,customerTemplate:{spreadsheetId:googleSheets.customerTemplateSpreadsheetId,sheetName:googleSheets.customerTemplateSheetName,mode:'columns_only'},upsertKey:'GAME ID',missingRowPolicy:'keep_and_flag',updatedBy:actor(),updatedAt:now()},{merge:true});
+      }
+      clearInterval(autoSyncTimer);
+      autoSyncTimer=setInterval(()=>syncGoogleMaster('auto').catch((error)=>console.error('Google Sheets 自動同步失敗',error)),googleSheets.intervalMinutes*60*1000);
+      const completed=state.syncJobs.some(job=>job.type==='GOOGLE_SHEETS_GAME_MASTER_RUN'&&job.status==='completed');
+      if(!completed&&state.games.length===0) syncGoogleMaster('auto').catch((error)=>console.error('Google Sheets 初次同步失敗',error));
+    }catch(error){autoScheduleEnsured=false;console.error('建立 Google Sheets 自動同步排程失敗',error);}
+  }
   function renderGames(){
     const body=$('#gameTableBody'); if(!body)return;
     const query=$('#gameSearch')?.value.trim().toLowerCase()||''; const status=$('#gameStatusFilter')?.value||'';
@@ -93,10 +108,88 @@
 
   function previewClient(client){ state.previewClientId=client.id; const rows=effectiveGames(client); $('#previewTitle').textContent=`${client.name}｜Preview OMNIPLAY Game`; $('#previewHead').innerHTML=`<tr>${customerColumns.map(([,h])=>`<th>${escapeHtml(h).replace(/\n/g,'<br>')}</th>`).join('')}<th>Source（內部）</th></tr>`; $('#previewBody').innerHTML=rows.map(({game,source})=>`<tr>${customerColumns.map(([key])=>`<td>${escapeHtml(game[key]??'')}</td>`).join('')}<td class="source-cell">${escapeHtml(source)}</td></tr>`).join('')||`<tr><td colspan="${customerColumns.length+1}" class="library-empty">此客戶目前沒有遊戲。</td></tr>`; $('#previewModal').hidden=false; }
   function exportClient(client){ if(!window.XLSX)return alert('Excel 元件尚未載入。'); const rows=effectiveGames(client).map(({game})=>Object.fromEntries(customerColumns.map(([key,label])=>[label,game[key]??'']))); const sheet=XLSX.utils.json_to_sheet(rows,{header:customerColumns.map(([,label])=>label)}); sheet['!cols']=customerColumns.map(([key])=>({wch:['nameZh','nameEn','customerNote'].includes(key)?24:16})); const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,sheet,'OP Game'); XLSX.writeFile(book,`${client.name} OMNIPLAY Game.xlsx`); logChange('EXPORT_CLIENT_GAME_LIST',`Client ${client.name}`,null,{gameCount:rows.length},[client]).catch(console.error); }
-  async function syncGoogleMaster(){ if(!canEdit())return alert('你沒有同步藏經閣的權限。'); const id=uid('sync'); await collections.syncJobs.doc(id).set({type:'GOOGLE_SHEETS_GAME_MASTER_RUN',status:'requested',reason:'manual',spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,customerTemplate:{spreadsheetId:googleSheets.customerTemplateSpreadsheetId,sheetName:googleSheets.customerTemplateSheetName,mode:'columns_only'},upsertKey:'GAME ID',missingRowPolicy:'keep_and_flag',requestedBy:actor(),createdAt:now(),updatedAt:now()}); await logChange('REQUEST_GOOGLE_SHEETS_SYNC','Game List_Online',null,{spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,mode:'manual'},[]); alert('已送出立即同步要求；平時系統會每 5 分鐘自動同步。'); }
+  function parseCsv(text){
+    const rows=[];let row=[],cell='',quoted=false;
+    for(let index=0;index<text.length;index+=1){
+      const char=text[index],next=text[index+1];
+      if(char==='"'&&quoted&&next==='"'){cell+='"';index+=1;continue;}
+      if(char==='"'){quoted=!quoted;continue;}
+      if(char===','&&!quoted){row.push(cell);cell='';continue;}
+      if((char==='\n'||char==='\r')&&!quoted){
+        if(char==='\r'&&next==='\n')index+=1;
+        row.push(cell);rows.push(row);row=[];cell='';continue;
+      }
+      cell+=char;
+    }
+    if(cell||row.length){row.push(cell);rows.push(row);}
+    return rows;
+  }
+  function numberOrText(value){ const text=String(value??'').trim(); if(!text)return ''; const normalized=text.replace(/,/g,''); return /^-?\d+(\.\d+)?$/.test(normalized)?Number(normalized):text; }
+  function sheetRowToGame(row){
+    return {
+      gameId:String(row[1]??'').trim(),gameVersion:String(row[2]??'').trim(),nameEn:String(row[3]??'').trim(),
+      manufacturer:String(row[4]??'').trim(),denomination:String(row[5]??'').trim(),gameType:String(row[6]??'').trim(),
+      lines:String(row[7]??'').trim(),betMin:numberOrText(row[8]),betMax:numberOrText(row[9]),maxPrize:numberOrText(row[10]),
+      maxPrizeMultiplier:numberOrText(row[11]),jackpotGroup:String(row[12]??'').trim(),jackpotMin:String(row[13]??'').trim(),
+      jackpotMax:String(row[14]??'').trim(),jackpotReserve:String(row[15]??'').trim(),jackpotIncrement:String(row[16]??'').trim(),
+      totalJackpotRtp:numberOrText(row[17]),baseRtp:numberOrText(row[18]),totalPayout:numberOrText(row[19])
+    };
+  }
+  async function fetchGoogleMasterRows(){
+    const base=`https://docs.google.com/spreadsheets/d/${googleSheets.masterSpreadsheetId}`;
+    const urls=[
+      `${base}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(googleSheets.masterSheetName)}&_=${Date.now()}`,
+      `${base}/export?format=csv&gid=1764877025&_=${Date.now()}`
+    ];
+    let lastError=null;
+    for(const url of urls){
+      try{
+        const response=await fetch(url,{cache:'no-store',credentials:'omit'});
+        if(!response.ok)throw new Error(`Google Sheet 回應錯誤（${response.status}）`);
+        const text=await response.text();
+        if(/^\s*</.test(text))throw new Error('取得的是登入頁而不是試算表資料');
+        const rows=parseCsv(text).filter((row)=>{
+          const gameId=String(row[1]??'').trim();
+          return gameId&&gameId.toUpperCase()!=='GAME ID'&&gameId!=='';
+        });
+        if(rows.length)return rows;
+        throw new Error('找不到 GAME ID 資料列');
+      }catch(error){lastError=error;}
+    }
+    throw new Error(`無法讀取 Google Sheet（${lastError?.message||'連線失敗'}）；請確認試算表已設為「知道連結的任何人都可查看」。`);
+  }
+  async function syncGoogleMaster(reason='manual'){
+    if(!canEdit()){if(reason==='manual')alert('你沒有同步藏經閣的權限。');return;}
+    if(syncInFlight)return;
+    syncInFlight=true;
+    const id=uid('sync'),job=collections.syncJobs.doc(id),startedAt=now();
+    try{
+      await job.set({type:'GOOGLE_SHEETS_GAME_MASTER_RUN',status:'processing',reason,spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,customerTemplate:{spreadsheetId:googleSheets.customerTemplateSpreadsheetId,sheetName:googleSheets.customerTemplateSheetName,mode:'columns_only'},upsertKey:'GAME ID',missingRowPolicy:'keep_and_flag',requestedBy:actor(),createdAt:startedAt,updatedAt:startedAt});
+      const rows=await fetchGoogleMasterRows();
+      let imported=0;
+      for(let offset=0;offset<rows.length;offset+=40){
+        const chunk=rows.slice(offset,offset+40);
+        await Promise.all(chunk.map(async(row)=>{
+          const game=sheetRowToGame(row);
+          const docId=`game_${game.gameId.replace(/[^A-Za-z0-9_-]/g,'_')}`;
+          await collections.games.doc(docId).set({...game,source:'Google Sheets',sourceSpreadsheetId:googleSheets.masterSpreadsheetId,sourceSheetName:googleSheets.masterSheetName,syncedAt:now(),updatedAt:now(),updatedBy:actor()},{merge:true});
+          imported+=1;
+        }));
+      }
+      const completedAt=now();
+      await job.set({status:'completed',importedRows:imported,completedAt,updatedAt:completedAt},{merge:true});
+      await logChange('GOOGLE_SHEETS_SYNC_COMPLETED','Game List_Online',null,{spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,mode:reason,importedRows:imported},[]);
+      if(reason==='manual')alert(`同步完成，共匯入 ${imported} 款遊戲。`);
+    }catch(error){
+      const failedAt=now();
+      await job.set({status:'failed',error:String(error?.message||error),updatedAt:failedAt,completedAt:failedAt},{merge:true}).catch(()=>{});
+      if(reason==='manual')alert(`同步失敗：${error?.message||'未知錯誤'}`);
+      throw error;
+    }finally{syncInFlight=false;}
+  }
 
   document.addEventListener('click',(event)=>{ const tab=event.target.closest('[data-tab]'); if(tab){document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('is-active',x===tab));document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('is-active',x.dataset.panel===tab.dataset.tab));return;} if(event.target.closest('[data-close-modal]')){closeModals();return;} const button=event.target.closest('[data-action]'); if(!button)return; const id=button.dataset.id; ({'edit-game':()=>editGame(gameById(id)),'game-groups':()=>editGameGroups(gameById(id)),'edit-group':()=>editGroup(groupById(id)),'edit-client':()=>editClient(clientById(id)),'preview-client':()=>previewClient(clientById(id))}[button.dataset.action]||(()=>{}))(); });
-  $('#newGroupButton').onclick=()=>editGroup(); $('#newClientButton').onclick=()=>editClient(); $('#newDocumentButton').onclick=editDocument; $('#gameSearch').oninput=renderGames; $('#gameStatusFilter').onchange=renderGames; $('#syncMasterButton').onclick=()=>syncGoogleMaster().catch(err=>{console.error(err);alert('無法送出同步要求，請確認後端同步服務已開通。');}); $('#cancelImpactButton').onclick=closeModals; $('#confirmImpactButton').onclick=async()=>{const save=state.pendingSave;if(save){state.pendingSave=null;await save();}}; $('#exportClientButton').onclick=()=>{const client=clientById(state.previewClientId);if(client)exportClient(client);};
+  $('#newGroupButton').onclick=()=>editGroup(); $('#newClientButton').onclick=()=>editClient(); $('#newDocumentButton').onclick=editDocument; $('#gameSearch').oninput=renderGames; $('#gameStatusFilter').onchange=renderGames; $('#syncMasterButton').onclick=()=>syncGoogleMaster('manual').catch(err=>console.error('立即同步失敗',err)); $('#cancelImpactButton').onclick=closeModals; $('#confirmImpactButton').onclick=async()=>{const save=state.pendingSave;if(save){state.pendingSave=null;await save();}}; $('#exportClientButton').onclick=()=>{const client=clientById(state.previewClientId);if(client)exportClient(client);};
   document.querySelectorAll('.library-modal').forEach((modal)=>modal.addEventListener('click',(e)=>{if(e.target===modal)closeModals();}));
   window.permissionReady?.then(()=>{ if(!canEdit()) document.querySelectorAll('#newGroupButton,#newClientButton,#newDocumentButton,#syncMasterButton').forEach(b=>b.hidden=true); });
   Object.keys(collections).forEach(subscribe);
