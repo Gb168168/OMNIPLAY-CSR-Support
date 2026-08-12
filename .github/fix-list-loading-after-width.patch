@@ -1,0 +1,163 @@
+From 5d2337068f63961449ef1a2be7a2b1ef1a0f94c8 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Tue, 11 Aug 2026 20:07:36 -0400
+Subject: [PATCH] =?UTF-8?q?=E4=BF=AE=E6=AD=A3=E5=88=97=E8=A1=A8=E5=8D=A1?=
+ =?UTF-8?q?=E5=9C=A8=E8=BC=89=E5=85=A5=E6=AC=84=E4=BD=8D?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ assets/ragic-table.js     | 4 ++--
+ resource/ai-database.html | 2 +-
+ resource/knowledge.html   | 2 +-
+ service/kpi.html          | 2 +-
+ work/alert.html           | 2 +-
+ work/handover.html        | 2 +-
+ work/log-new.html         | 2 +-
+ work/log.html             | 2 +-
+ work/report.html          | 2 +-
+ work/tracking.html        | 2 +-
+ 10 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/assets/ragic-table.js b/assets/ragic-table.js
+index 751be48..57148c8 100644
+--- a/assets/ragic-table.js
++++ b/assets/ragic-table.js
+@@ -2782,7 +2782,7 @@ const renderTable = () => {
+     }).join('');
+     [...tr.children].forEach((cell, index) => {
+       const field = index > 0 ? fields[index - 1] : null;
+-      const manualWidth = fieldColumnWidth(field);
++      const manualWidth = field ? fieldColumnWidth(field) : null;
+       cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
+       if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
+       const isDateColumn = cell.classList.contains('col-date');
+@@ -3017,7 +3017,7 @@ const renderHeader = () => {
+   }).join('');
+   [...headerRow.children].forEach((cell, index) => {
+     const field = index > 0 ? listFields()[index - 1] : null;
+-    const manualWidth = fieldColumnWidth(field);
++    const manualWidth = field ? fieldColumnWidth(field) : null;
+     cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
+     if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
+     const isDateColumn = cell.classList.contains('col-date');
+diff --git a/resource/ai-database.html b/resource/ai-database.html
+index 54c5e3b..1575c59 100644
+--- a/resource/ai-database.html
++++ b/resource/ai-database.html
+@@ -58,7 +58,7 @@
+   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script>
+     initRagicPage({
+       title: 'AI 資料庫',
+diff --git a/resource/knowledge.html b/resource/knowledge.html
+index 4f53060..8fb7477 100644
+--- a/resource/knowledge.html
++++ b/resource/knowledge.html
+@@ -58,7 +58,7 @@
+   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script>
+     initRagicPage({
+       title: '知識庫',
+diff --git a/service/kpi.html b/service/kpi.html
+index fd2cbdb..8238fff 100644
+--- a/service/kpi.html
++++ b/service/kpi.html
+@@ -55,7 +55,7 @@
+   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script>
+     initRagicPage({
+       title: 'KPI',
+diff --git a/work/alert.html b/work/alert.html
+index a98683d..dc3ec9a 100644
+--- a/work/alert.html
++++ b/work/alert.html
+@@ -58,7 +58,7 @@
+   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script>
+     initRagicPage({
+       title: 'PROD告警紀錄',
+diff --git a/work/handover.html b/work/handover.html
+index f22d131..171796d 100644
+--- a/work/handover.html
++++ b/work/handover.html
+@@ -58,7 +58,7 @@
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script>
+     initRagicPage({
+       title: '交接',
+diff --git a/work/log-new.html b/work/log-new.html
+index d1673e1..7c80459 100644
+--- a/work/log-new.html
++++ b/work/log-new.html
+@@ -1372,7 +1372,7 @@
+   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="https://js.puter.com/v2/"></script>
+   <script>
+diff --git a/work/log.html b/work/log.html
+index ad92e09..bab78f1 100644
+--- a/work/log.html
++++ b/work/log.html
+@@ -211,7 +211,7 @@
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script>
+     initRagicPage({
+       title: '日誌',
+diff --git a/work/report.html b/work/report.html
+index 1023433..847ef1e 100644
+--- a/work/report.html
++++ b/work/report.html
+@@ -58,7 +58,7 @@
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script>
+     const reportTrackingMode = new URLSearchParams(window.location.search).get('tracking') === 'open' || sessionStorage.getItem('reportTrackingFilter') === 'open';
+     sessionStorage.removeItem('reportTrackingFilter');
+diff --git a/work/tracking.html b/work/tracking.html
+index ba36eaa..0a13781 100644
+--- a/work/tracking.html
++++ b/work/tracking.html
+@@ -58,7 +58,7 @@
+   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
+-  <script src="../assets/ragic-table.js?v=20260812-ragic-saved-column-width"></script>
++  <script src="../assets/ragic-table.js?v=20260812-ragic-list-loading-hotfix"></script>
+   <script>
+     initRagicPage({
+       title: '對接追蹤',
+-- 
+2.51.1
