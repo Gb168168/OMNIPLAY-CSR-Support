@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260810-list-density2" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260813-schedule-countdown1" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -42,7 +42,10 @@
             <button class="secondary-button" id="nextSchedulePeriod" type="button">下個月 &gt;</button>
           </div>
           <div class="schedule-heading-actions">
-            <button class="secondary-button" id="syncGameScheduleButton" type="button" hidden>🔄 同步遊戲排程</button>
+            <div class="schedule-sync-controls" id="scheduleSyncControls" hidden>
+              <button class="secondary-button" id="syncGameScheduleButton" type="button">🔄 同步遊戲排程</button>
+              <span class="schedule-sync-countdown" id="scheduleSyncCountdown" aria-live="polite">下次自動同步 05:00</span>
+            </div>
             <button class="secondary-button" id="gameChangeLogButton" type="button">📝 試算表變更</button>
             <div class="view-switch" aria-label="檢視切換">
               <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
@@ -190,6 +193,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
-  <script src="../assets/schedule.js?v=20260809-mobile-agenda1"></script>
+  <script src="../assets/schedule.js?v=20260813-sync-countdown1"></script>
 </body>
 </html>

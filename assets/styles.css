@@ -993,6 +993,40 @@ tr.is-over-quota .name-col { color: var(--warning-text); }
   gap: 8px;
 }
 
+.schedule-sync-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-sync-controls[hidden] { display: none; }
+
+.schedule-sync-countdown {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid rgba(59, 130, 246, .28);
+  border-radius: 999px;
+  background: rgba(59, 130, 246, .1);
+  color: #bfdbfe;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.schedule-sync-countdown.is-syncing {
+  border-color: rgba(245, 158, 11, .35);
+  background: rgba(245, 158, 11, .12);
+  color: #fde68a;
+}
+
+.schedule-sync-countdown.is-error {
+  border-color: rgba(248, 113, 113, .4);
+  background: rgba(248, 113, 113, .12);
+  color: #fecaca;
+}
+
 .schedule-period-picker-wrap { position: relative; }
 .schedule-heading-actions {
   justify-content: flex-end;

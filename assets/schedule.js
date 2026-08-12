@@ -32,6 +32,8 @@ const yearSelect = document.querySelector('#scheduleYearSelect');
 const monthPicker = document.querySelector('#scheduleMonthPicker');
 const labelFilterSelect = document.querySelector('#scheduleLabelFilter');
 const syncGameScheduleButton = document.querySelector('#syncGameScheduleButton');
+const scheduleSyncControls = document.querySelector('#scheduleSyncControls');
+const scheduleSyncCountdown = document.querySelector('#scheduleSyncCountdown');
 const gameChangeLogButton = document.querySelector('#gameChangeLogButton');
 const gameChangeLogModalEl = document.querySelector('#gameChangeLogModal');
 const gameChangeLogListEl = document.querySelector('#gameChangeLogList');
@@ -145,6 +147,10 @@ let activeLabelFilter = '';
 let scheduleDataLoaded = false;
 let gameScheduleSyncing = false;
 let gameScheduleAutoTimer = null;
+let gameScheduleCountdownTimer = null;
+let gameScheduleNextSyncAt = null;
+let gameScheduleLastFailed = false;
+const GAME_SCHEDULE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 const storedSchedulePermission = () => window.getPagePermission?.('schedule') || { view: false, edit: false, delete: false, design: false };
 let canEditSchedule = Boolean(window.isOmniplayAdmin?.());
@@ -158,6 +164,7 @@ const syncSchedulePermission = async () => {
   document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
   document.querySelector('#saveScheduleButton')?.toggleAttribute('disabled', !canEditSchedule);
   syncGameScheduleButton?.toggleAttribute('hidden', !canEditSchedule);
+  scheduleSyncControls?.toggleAttribute('hidden', !canEditSchedule);
   if (deleteButton) deleteButton.hidden = !canDeleteSchedule || !editingId;
   formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
   startAutomaticGameScheduleSync();
@@ -383,9 +390,37 @@ const collectGameScheduleChanges = (feedGames = []) => {
   return changes.slice(0, 200);
 };
 
+const formatGameScheduleCountdown = (milliseconds) => {
+  const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+};
+
+const renderGameScheduleCountdown = () => {
+  if (!scheduleSyncCountdown || !canEditSchedule) return;
+  scheduleSyncCountdown.classList.toggle('is-syncing', gameScheduleSyncing);
+  scheduleSyncCountdown.classList.toggle('is-error', gameScheduleLastFailed);
+  if (gameScheduleSyncing) {
+    scheduleSyncCountdown.textContent = 'Google Sheets 同步中…';
+    return;
+  }
+  const remaining = Math.max(0, (gameScheduleNextSyncAt || Date.now() + GAME_SCHEDULE_SYNC_INTERVAL_MS) - Date.now());
+  scheduleSyncCountdown.textContent = gameScheduleLastFailed
+    ? `同步失敗；下次重試 ${formatGameScheduleCountdown(remaining)}`
+    : `下次自動同步 ${formatGameScheduleCountdown(remaining)}`;
+};
+
+const startGameScheduleCountdown = (delay = GAME_SCHEDULE_SYNC_INTERVAL_MS) => {
+  gameScheduleNextSyncAt = Date.now() + delay;
+  window.clearInterval(gameScheduleCountdownTimer);
+  renderGameScheduleCountdown();
+  gameScheduleCountdownTimer = window.setInterval(renderGameScheduleCountdown, 1000);
+};
+
 const syncGameSchedules = async () => {
   if (!canEditSchedule || !scheduleCollection || !scheduleLabelCollection || gameScheduleSyncing) return;
   gameScheduleSyncing = true;
+  renderGameScheduleCountdown();
   syncGameScheduleButton?.setAttribute('disabled', '');
   if (syncGameScheduleButton) syncGameScheduleButton.textContent = '同步中…';
   setStatus('正在同步 Google 遊戲排程…', 'info');
@@ -494,21 +529,25 @@ const syncGameSchedules = async () => {
     for (const confirmedRow of confirmedRows) {
       await createUatSchedules(confirmedRow, actor);
     }
+    gameScheduleLastFailed = false;
     setStatus(`遊戲排程同步完成：已更新 ${rows.length} 筆排程，記錄 ${changes.length} 項變更。`, 'success');
   } catch (error) {
+    gameScheduleLastFailed = true;
     console.error('同步遊戲排程失敗：', error);
     setStatus(`同步遊戲排程失敗：${error.message || error}`, 'error');
   } finally {
     gameScheduleSyncing = false;
     syncGameScheduleButton?.removeAttribute('disabled');
     if (syncGameScheduleButton) syncGameScheduleButton.textContent = '🔄 同步遊戲排程';
+    startGameScheduleCountdown();
   }
 };
 
 const startAutomaticGameScheduleSync = () => {
   if (!scheduleDataLoaded || !canEditSchedule || gameScheduleAutoTimer) return;
+  startGameScheduleCountdown(800);
   window.setTimeout(() => syncGameSchedules(), 800);
-  gameScheduleAutoTimer = window.setInterval(() => syncGameSchedules(), 5 * 60 * 1000);
+  gameScheduleAutoTimer = window.setInterval(() => syncGameSchedules(), GAME_SCHEDULE_SYNC_INTERVAL_MS);
 };
 
 const formatGameChangeTime = (value) => {
@@ -1058,6 +1097,7 @@ scheduleHelpModalEl?.addEventListener('click', (event) => {
 
 window.addEventListener('beforeunload', () => {
   if (gameScheduleAutoTimer) window.clearInterval(gameScheduleAutoTimer);
+  if (gameScheduleCountdownTimer) window.clearInterval(gameScheduleCountdownTimer);
 });
 
 document.querySelector('#closeDayAgendaModal')?.addEventListener('click', closeDayAgenda);
