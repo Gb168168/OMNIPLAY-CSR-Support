@@ -16,8 +16,9 @@
     <main class="main">
       <header class="topbar library-hero">
         <div><h1>藏經閣</h1><p>Game List Master、群組與客戶版本集中管理。</p></div>
-        <div class="topbar-actions"><span class="library-sync-badge library-tag" id="syncStatusBadge">下次同步 05:00</span><button class="secondary" id="syncMasterButton" type="button">立即同步</button><button class="primary" id="newRecordButton" type="button">＋ 新增遊戲</button></div>
+        
       </header>
+      <div class="library-sync-bar" aria-label="Google Sheets 同步狀態"><button class="secondary" id="syncMasterButton" type="button">立即同步</button><span class="library-sync-badge library-tag" id="syncStatusBadge">下次自動同步 05:00</span></div>
 
       <nav class="library-tabs" aria-label="藏經閣功能">
         <button class="is-active" data-tab="games">Game List_Online</button><button data-tab="groups">Groups</button><button data-tab="clients">Clients</button><button data-tab="documents">Documents</button><button data-tab="history">Change Log</button>
