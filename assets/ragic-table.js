@@ -1179,9 +1179,24 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
   const savedVersion = String(savedLayout?.version || '');
   const useConfiguredPreset = Boolean(configuredVersion && configuredVersion !== savedVersion);
   const forceConfiguredLayout = config.forceConfigFormLayout === true;
+  const configuredFields = defaultConfigFields(config);
+  const savedFields = Array.isArray(schema.fields) ? schema.fields : [];
+  const configuredByKey = new Map(configuredFields.map((field) => [String(field?.key || ''), field]));
+  const savedKeys = new Set(savedFields.map((field) => String(field?.key || '')));
+  const mergedFields = savedFields.length
+    ? [
+        ...savedFields.map((field) => ({
+          ...(configuredByKey.get(String(field?.key || '')) || {}),
+          ...field
+        })),
+        ...configuredFields.filter((field) => !savedKeys.has(String(field?.key || '')))
+      ]
+    : configuredFields;
   return {
     ...schema,
-    fields: defaultConfigFields(config),
+    // 已儲存的欄位設計（包含 width/manualWidth/listVisible/order）為主要來源；
+    // config 僅補上尚未存在的新欄位，不能覆蓋使用者剛儲存的列表設定。
+    fields: mergedFields,
     formLayout: forceConfiguredLayout || useConfiguredPreset
       ? config.formLayout
       : (hasSavedPositions ? savedLayout : config.formLayout)
