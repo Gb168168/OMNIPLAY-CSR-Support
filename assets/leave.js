@@ -105,6 +105,12 @@ const visibleLeaveStaff = (staff) => activeStaff(staff) &&
   !isSystemAdminStaff(staff) &&
   staff.leaveVisible !== false &&
   leaveStaffNames.includes(canonicalLeaveStaffName(staff.name));
+const fixedLeaveStaffList = (items = []) => leaveStaffNames.map((name) => {
+  const matched = items.find((staff) => canonicalLeaveStaffName(staff.name) === name);
+  return matched
+    ? { ...matched, name }
+    : { id: `external_leave_${name}`, name, status: '啟用', leaveVisible: true, externalOnly: true };
+});
 const getStaffSortOrder = (staff) => Number(fixedStaffOrderMap[canonicalLeaveStaffName(staff.name)] ?? staff.sortOrder ?? 999);
 const externalPersonFor = (name) => {
   const canonicalName = canonicalLeaveStaffName(name);
@@ -532,7 +538,7 @@ if (!leaveDb) {
   setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
 } else {
   unsubscribeStaff = leaveStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-    staffList = sortStaffForLeave(snapshot.docs.map(normalizeStaff).filter(visibleLeaveStaff));
+    staffList = sortStaffForLeave(fixedLeaveStaffList(snapshot.docs.map(normalizeStaff).filter(visibleLeaveStaff)));
     render();
     loadMonthlyShifts();
   }, (error) => {
