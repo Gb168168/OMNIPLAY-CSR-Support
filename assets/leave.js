@@ -117,6 +117,16 @@ const externalPersonFor = (name) => {
   const matchedName = Object.keys(externalLeaveData || {}).find((candidate) => canonicalLeaveStaffName(candidate) === canonicalName);
   return matchedName ? externalLeaveData[matchedName] : null;
 };
+const normalizeExternalDayRecord = (record = {}) => {
+  const rawLabel = String(record.label || record.mark || record.symbol || '').trim();
+  const specials = new Set(Array.isArray(record.specials) ? record.specials : []);
+  if (rawLabel === '★' || rawLabel === '☆' || ['star', 'event', 'company_activity'].includes(rawLabel.toLowerCase())) specials.add('event');
+  return { ...record, label: ['★', '☆'].includes(rawLabel) ? '' : rawLabel, specials: [...specials] };
+};
+const normalizeExternalPerson = (person = {}) => ({
+  ...person,
+  days: Object.fromEntries(Object.entries(person.days || {}).map(([day, record]) => [day, normalizeExternalDayRecord(record)]))
+});
 const normalizeShift = (value) => value === '晚班' ? '晚' : value === '早班' ? '早' : value;
 const shiftDocId = (staffId, date = currentMonth) => `${staffId}_${monthKey(date)}`;
 const previousMonthOf = (date) => new Date(date.getFullYear(), date.getMonth() - 1, 1);
@@ -259,9 +269,10 @@ const loadExternalLeave = async () => {
     }
     if (!payload) throw lastError || new Error('假表來源皆無回應');
     if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
-    externalLeaveData = Object.fromEntries(Object.entries(payload.people || {}).filter(([name]) =>
-      leaveStaffNames.includes(canonicalLeaveStaffName(name))
-    ));
+    externalLeaveData = Object.fromEntries(Object.entries(payload.people || {})
+      .filter(([name]) => leaveStaffNames.includes(canonicalLeaveStaffName(name)))
+      .map(([name, person]) => [name, normalizeExternalPerson(person)])
+    );
     const maxDays = Number(payload.maxDays);
     externalMaxDays = Number.isFinite(maxDays) && maxDays >= 0 ? maxDays : null;
     staffList = sortStaffForLeave(staffList);
