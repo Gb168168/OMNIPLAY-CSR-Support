@@ -3183,7 +3183,7 @@ const openListFieldSettings = (fieldKey) => {
   const field = readDesigner(row.parentElement).find((item) => item.key === fieldKey);
   if (!field) return;
   panel.dataset.fieldKey = fieldKey;
-  panel.innerHTML = `<div class="designer-list-panel-head"><div><small>列表欄位</small><h3>${escapeHtml(field.label || field.key)}</h3></div><button type="button" data-close-list-settings>×</button></div><label><span>欄位名稱</span><input data-list-setting-label value="${escapeHtml(field.label || '')}"></label><label><span>顯示在列表</span><input data-list-setting-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}></label><label><span>列表欄寬</span><div class="designer-list-width-input"><input data-list-setting-width type="number" min="40" max="2000" step="10" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}" placeholder="自動"><em>px</em></div></label><p>列表設定不會改變單筆畫面的欄位位置。</p><button class="primary" type="button" data-apply-list-settings>套用設定</button>`;
+  panel.innerHTML = `<div class="designer-list-panel-head"><div><small>列表欄位</small><h3>${escapeHtml(field.label || field.key)}</h3></div><button type="button" data-close-list-settings>×</button></div><label><span>欄位名稱</span><input data-list-setting-label value="${escapeHtml(field.label || '')}"></label><label><span>顯示在列表</span><input data-list-setting-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}></label><label><span>列表欄寬</span><div class="designer-list-width-input"><input data-list-setting-width type="number" min="40" max="2000" step="10" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}" placeholder="自動"><em>px</em></div></label><p>列表設定不會改變單筆畫面的欄位位置。</p><button class="primary" type="button" data-apply-list-settings>套用並儲存</button>`;
   panel.hidden = false;
 };
 
@@ -4215,7 +4215,7 @@ const initRagicPage = async (config) => {
     if (!panel?.dataset.fieldKey) return;
     setDesignerListFieldWidth(panel.dataset.fieldKey, widthInput.value);
   });
-  document.querySelector('#ragicDesignerModal')?.addEventListener('click', (event) => {
+  document.querySelector('#ragicDesignerModal')?.addEventListener('click', async (event) => {
     const settingsButton = event.target.closest('[data-list-field-settings]');
     const header = event.target.closest('th[data-list-field-key]');
     if (settingsButton || (header && !event.target.closest('[data-list-resize]'))) {
@@ -4234,15 +4234,26 @@ const initRagicPage = async (config) => {
       document.querySelector('#designerListFieldPanel').hidden = true;
       return;
     }
-    if (event.target.closest('[data-apply-list-settings]')) {
-      const panel = event.target.closest('#designerListFieldPanel');
+    const applyButton = event.target.closest('[data-apply-list-settings]');
+    if (applyButton) {
+      const panel = applyButton.closest('#designerListFieldPanel');
       const row = designerRowByKey(panel?.dataset.fieldKey);
-      if (!panel || !row) return;
+      if (!panel || !row || applyButton.disabled) return;
       row.querySelector('[data-role="label"]').value = panel.querySelector('[data-list-setting-label]').value.trim() || '未命名欄位';
       row.querySelector('[data-role="list-visible"]').value = panel.querySelector('[data-list-setting-visible]').checked ? '1' : '0';
       setDesignerListFieldWidth(panel.dataset.fieldKey, panel.querySelector('[data-list-setting-width]').value, false);
       updateDesignerPreview();
-      if (row.querySelector('[data-role="list-visible"]').value === '0') panel.hidden = true;
+      applyButton.disabled = true;
+      applyButton.textContent = '儲存中…';
+      const saved = await saveDesignerSchema();
+      applyButton.disabled = false;
+      applyButton.textContent = saved ? '已套用並儲存 ✓' : '套用並儲存';
+      if (saved) {
+        window.setTimeout(() => {
+          if (applyButton.isConnected) applyButton.textContent = '套用並儲存';
+        }, 1600);
+      }
+      if (saved && row.querySelector('[data-role="list-visible"]').value === '0') panel.hidden = true;
     }
   });
   {
