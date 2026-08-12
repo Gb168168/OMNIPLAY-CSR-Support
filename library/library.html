@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>藏經閣｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css?v=20260813-library1" />
+  <link rel="stylesheet" href="../assets/library.css?v=20260813-library1" />
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <meta name="theme-color" content="#3B82F6" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+</head>
+<body class="library-page">
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside><div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+    <main class="main">
+      <header class="topbar library-hero">
+        <div><h1>藏經閣</h1><p>Game List Master、群組與客戶版本集中管理。</p></div>
+        <div class="topbar-actions"><span class="library-sync-badge library-tag" id="syncStatusBadge">下次同步 05:00</span><button class="secondary" id="syncMasterButton" type="button">立即同步</button><button class="primary" id="newRecordButton" type="button">＋ 新增遊戲</button></div>
+      </header>
+
+      <nav class="library-tabs" aria-label="藏經閣功能">
+        <button class="is-active" data-tab="games">Game List_Online</button><button data-tab="groups">Groups</button><button data-tab="clients">Clients</button><button data-tab="documents">Documents</button><button data-tab="history">Change Log</button>
+      </nav>
+
+      <section class="library-panel is-active" data-panel="games">
+        <div class="library-toolbar"><div><h2>Game List_Online</h2><p>內部 Game Master；客戶版本由規則自動產生。</p></div><div class="library-filters"><input id="gameSearch" type="search" placeholder="搜尋 Game ID／名稱"><select id="gameStatusFilter"><option value="">所有狀態</option><option>已上線 Released</option><option>未上線 Unreleased</option><option>下架 Delisted</option></select></div></div>
+        <div class="library-table-wrap"><table class="library-table"><thead><tr><th>Game ID</th><th>英文名稱</th><th>中文名稱</th><th>狀態</th><th>Version</th><th>Groups</th><th>影響 Clients</th><th>Internal Note</th><th>操作</th></tr></thead><tbody id="gameTableBody"></tbody></table></div>
+      </section>
+
+      <section class="library-panel" data-panel="groups"><div class="library-toolbar"><div><h2>Groups</h2><p>Game ↔ Group ↔ Client 共用關聯資料。</p></div><button class="primary" id="newGroupButton" type="button">＋ 新增群組</button></div><div class="library-card-grid" id="groupGrid"></div></section>
+      <section class="library-panel" data-panel="clients"><div class="library-toolbar"><div><h2>Clients</h2><p>多群組合併並套用單一客戶 Include／Exclude。</p></div><button class="primary" id="newClientButton" type="button">＋ 新增客戶</button></div><div class="library-card-grid" id="clientGrid"></div></section>
+      <section class="library-panel" data-panel="documents"><div class="library-toolbar"><div><h2>Documents</h2><p>Game Asset、Description、BMM Reports、RNG Certificate 文件索引。</p></div><button class="primary" id="newDocumentButton" type="button">＋ 新增文件</button></div><div class="library-table-wrap"><table class="library-table"><thead><tr><th>類型</th><th>名稱</th><th>Game ID</th><th>連結</th><th>備註</th><th>更新時間</th></tr></thead><tbody id="documentTableBody"></tbody></table></div></section>
+      <section class="library-panel" data-panel="history"><div class="library-toolbar"><div><h2>Change Log</h2><p>操作者、前後差異與受影響客戶完整追蹤。</p></div></div><div class="library-table-wrap"><table class="library-table"><thead><tr><th>時間</th><th>操作者</th><th>Action</th><th>Game／Group</th><th>修改前</th><th>修改後</th><th>影響 Clients</th></tr></thead><tbody id="historyTableBody"></tbody></table></div></section>
+    </main>
+  </section>
+
+  <div class="library-modal" id="editorModal" hidden><div class="library-modal-card"><div class="library-modal-head"><h2 id="editorTitle">編輯</h2><button class="ghost" data-close-modal type="button">關閉</button></div><form id="editorForm"></form><div class="library-modal-actions"><button class="secondary" data-close-modal type="button">取消</button><button class="primary" form="editorForm" type="submit">儲存</button></div></div></div>
+  <div class="library-modal" id="impactModal" hidden><div class="library-modal-card library-impact-card"><div class="library-modal-head"><h2>確認影響範圍</h2></div><p id="impactSummary"></p><ul id="impactClientList"></ul><p id="impactDescription"></p><div class="library-modal-actions"><button class="secondary" id="cancelImpactButton" type="button">取消</button><button class="primary" id="confirmImpactButton" type="button">確認儲存</button></div></div></div>
+  <div class="library-modal" id="previewModal" hidden><div class="library-modal-card library-preview-card"><div class="library-modal-head"><div><h2 id="previewTitle">Preview OMNIPLAY Game</h2><p>Source 僅供內部預覽，不會輸出。</p></div><button class="ghost" data-close-modal type="button">關閉</button></div><div class="library-table-wrap"><table class="library-table library-preview-table"><thead id="previewHead"></thead><tbody id="previewBody"></tbody></table></div><div class="library-modal-actions"><button class="primary" id="exportClientButton" type="button">Export OMNIPLAY Game</button></div></div></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script><script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script><script src="../assets/app.js?v=20260813-library1"></script><script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script src="../assets/library.js?v=20260813-library1"></script>
+</body></html>
