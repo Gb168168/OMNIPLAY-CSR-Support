@@ -15,7 +15,8 @@
   const googleSheets = {
     masterSpreadsheetId: '1PzOvGUv5PWpx-1uLwg9gLOnMWPqH9ThuepaBv7Pu9lI', masterSheetName: 'GameList',
     customerTemplateSpreadsheetId: '1BHyeVxQzsLHHeVFqo4iSdqYlTEteznYMgufbPw1sbtQ', customerTemplateSheetName: 'OP Game',
-    scheduleId: 'google_sheets_game_master_schedule', intervalMinutes: 5
+    scheduleId: 'google_sheets_game_master_schedule', intervalMinutes: 5,
+    feedUrl: 'https://script.google.com/macros/s/AKfycbw2saSKReX6c4juxILFzSofZPCZzvtui8NimeCrKJnm2gIfdONnHyybMGsZyeRnlvmW/exec'
   };
   let autoScheduleEnsured = false;
   let syncCountdownTimer = null;
@@ -55,7 +56,7 @@
 
   function render(){ renderGames(); renderGroups(); renderClients(); renderDocuments(); renderHistory(); renderSyncStatus(); }
   function syncSchedule(){ return state.syncJobs.find(job=>job.id===googleSheets.scheduleId); }
-  function gameListFeedUrl(){ return String(syncSchedule()?.feedUrl||'').trim(); }
+  function gameListFeedUrl(){ return String(syncSchedule()?.feedUrl||googleSheets.feedUrl||'').trim(); }
   function renderSyncStatus(){ const button=$('#syncMasterButton'),badge=$('#syncStatusBadge'); if(!button)return; const runs=state.syncJobs.filter(job=>job.type==='GOOGLE_SHEETS_GAME_MASTER_RUN'); const latest=[...runs].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0]; const configured=Boolean(gameListFeedUrl()); button.title=configured?(latest?`最近同步：${latest.status||'requested'} ${latest.updatedAt||latest.createdAt||''}`:'從 Game List_Online / GameList 立即同步'):'同步服務尚待系統管理員完成部署'; button.disabled=latest?.status==='processing'; button.textContent=latest?.status==='processing'?'同步中…':'立即同步'; if(!configured&&badge){badge.classList.add('is-error');badge.textContent='同步服務尚未完成部署';}else startSyncCountdown(latest,badge); ensureAutoSyncSchedule(); }
   function startSyncCountdown(latest,badge){ if(!badge)return; clearInterval(syncCountdownTimer); const tick=()=>{badge.classList.toggle('is-syncing',latest?.status==='processing');badge.classList.toggle('is-error',latest?.status==='failed');if(latest?.status==='processing'){badge.textContent='Google Sheets 同步中…';return;}if(latest?.status==='failed'){badge.textContent=`同步失敗；下次重試 ${formatCountdown(nextSyncSeconds(latest))}`;return;}badge.textContent=`下次自動同步 ${formatCountdown(nextSyncSeconds(latest))}`;};tick();syncCountdownTimer=setInterval(tick,1000);}
   function nextSyncSeconds(latest){ const base=Date.parse(latest?.completedAt||latest?.updatedAt||latest?.createdAt||now()); const interval=googleSheets.intervalMinutes*60; const elapsed=Math.max(0,Math.floor((Date.now()-base)/1000)); return Math.max(0,interval-(elapsed%interval)); }
@@ -66,7 +67,7 @@
     try{
       const existing=state.syncJobs.find(job=>job.id===googleSheets.scheduleId);
       if(!existing?.enabled||existing?.intervalMinutes!==googleSheets.intervalMinutes){
-        await collections.syncJobs.doc(googleSheets.scheduleId).set({type:'GOOGLE_SHEETS_GAME_MASTER_SCHEDULE',enabled:true,intervalMinutes:googleSheets.intervalMinutes,spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,customerTemplate:{spreadsheetId:googleSheets.customerTemplateSpreadsheetId,sheetName:googleSheets.customerTemplateSheetName,mode:'columns_only'},upsertKey:'GAME ID',missingRowPolicy:'keep_and_flag',updatedBy:actor(),updatedAt:now()},{merge:true});
+        await collections.syncJobs.doc(googleSheets.scheduleId).set({type:'GOOGLE_SHEETS_GAME_MASTER_SCHEDULE',enabled:true,intervalMinutes:googleSheets.intervalMinutes,spreadsheetId:googleSheets.masterSpreadsheetId,sheetName:googleSheets.masterSheetName,feedUrl:googleSheets.feedUrl,customerTemplate:{spreadsheetId:googleSheets.customerTemplateSpreadsheetId,sheetName:googleSheets.customerTemplateSheetName,mode:'columns_only'},upsertKey:'GAME ID',missingRowPolicy:'keep_and_flag',updatedBy:actor(),updatedAt:now()},{merge:true});
       }
       if(gameListFeedUrl()){
         clearInterval(autoSyncTimer);
