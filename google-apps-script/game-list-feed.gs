@@ -12,7 +12,7 @@ const GAME_LIST_SHEET_NAME = 'GameList';
 const GAME_LIST_START_ROW = 3;
 const GAME_LIST_COLUMN_COUNT = 20;
 
-function doGet() {
+function doGet(e) {
   try {
     const spreadsheet = SpreadsheetApp.openById(GAME_LIST_SPREADSHEET_ID);
     const sheet = spreadsheet.getSheetByName(GAME_LIST_SHEET_NAME);
@@ -40,17 +40,23 @@ function doGet() {
       syncedAt: new Date().toISOString(),
       rowCount: rows.length,
       rows: rows
-    });
+    }, e);
   } catch (error) {
     return jsonOutput_({
       success: false,
       error: String(error && error.message ? error.message : error),
       syncedAt: new Date().toISOString()
-    });
+    }, e);
   }
 }
 
-function jsonOutput_(payload) {
+function jsonOutput_(payload, event) {
+  const callback = String(event && event.parameter && event.parameter.callback || '').trim();
+  if (callback && /^[A-Za-z_$][0-9A-Za-z_$]*$/.test(callback)) {
+    return ContentService
+      .createTextOutput(callback + '(' + JSON.stringify(payload) + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService
     .createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON);

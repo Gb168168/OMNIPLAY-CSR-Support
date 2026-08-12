@@ -124,14 +124,23 @@
       totalJackpotRtp:numberOrText(row[17]),baseRtp:numberOrText(row[18]),totalPayout:numberOrText(row[19])
     };
   }
+  function loadAppsScriptJsonp(feedUrl){
+    return new Promise((resolve,reject)=>{
+      const callbackName=`__omniplayGameListSync_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const script=document.createElement('script');
+      const cleanup=()=>{clearTimeout(timer);script.remove();delete window[callbackName];};
+      const timer=setTimeout(()=>{cleanup();reject(new Error('Apps Script 同步服務逾時，請確認已部署支援 JSONP 的最新版本。'));},20000);
+      window[callbackName]=(payload)=>{cleanup();resolve(payload);};
+      script.onerror=()=>{cleanup();reject(new Error('Apps Script 同步服務無法載入，請確認已重新部署最新版本。'));};
+      const separator=feedUrl.includes('?')?'&':'?';
+      script.src=`${feedUrl}${separator}callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
+      document.head.appendChild(script);
+    });
+  }
   async function fetchGoogleMasterRows(){
     const feedUrl=gameListFeedUrl();
     if(!feedUrl)throw new Error('尚未設定 Game List Apps Script 同步服務。');
-    let response;
-    try{response=await fetch(`${feedUrl}${feedUrl.includes('?')?'&':'?'}_=${Date.now()}`,{method:'GET',cache:'no-store'});}
-    catch(error){throw new Error(`Apps Script 同步服務無法連線（${error?.message||'Failed to fetch'}）`);}
-    if(!response.ok)throw new Error(`Apps Script 同步服務回應 ${response.status}`);
-    const payload=await response.json().catch(()=>null);
+    const payload=await loadAppsScriptJsonp(feedUrl);
     if(!payload?.success||!Array.isArray(payload.rows))throw new Error(payload?.error||'Apps Script 回傳格式錯誤');
     const rows=payload.rows.filter((row)=>String(row?.[1]??'').trim());
     if(!rows.length)throw new Error('GameList 第 3 列起沒有可同步的 GAME ID。');
