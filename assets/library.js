@@ -136,15 +136,27 @@
     };
   }
   async function fetchGoogleMasterRows(){
-    const url=`https://docs.google.com/spreadsheets/d/${googleSheets.masterSpreadsheetId}/export?format=csv&gid=1764877025&_=${Date.now()}`;
-    let response;
-    try{response=await fetch(url,{cache:'no-store',credentials:'omit'});}catch(error){throw new Error('無法讀取 Google Sheet；請確認試算表已設為「知道連結的任何人都可查看」。');}
-    if(!response.ok)throw new Error(`Google Sheet 回應錯誤（${response.status}）`);
-    const text=await response.text();
-    if(/^\s*</.test(text))throw new Error('Google Sheet 尚未開放連結檢視，系統取得的是登入頁而不是資料。');
-    const rows=parseCsv(text).slice(2).filter((row)=>String(row[1]??'').trim());
-    if(!rows.length)throw new Error('GameList 第 3 列起沒有可同步的 GAME ID。');
-    return rows;
+    const base=`https://docs.google.com/spreadsheets/d/${googleSheets.masterSpreadsheetId}`;
+    const urls=[
+      `${base}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(googleSheets.masterSheetName)}&_=${Date.now()}`,
+      `${base}/export?format=csv&gid=1764877025&_=${Date.now()}`
+    ];
+    let lastError=null;
+    for(const url of urls){
+      try{
+        const response=await fetch(url,{cache:'no-store',credentials:'omit'});
+        if(!response.ok)throw new Error(`Google Sheet 回應錯誤（${response.status}）`);
+        const text=await response.text();
+        if(/^\s*</.test(text))throw new Error('取得的是登入頁而不是試算表資料');
+        const rows=parseCsv(text).filter((row)=>{
+          const gameId=String(row[1]??'').trim();
+          return gameId&&gameId.toUpperCase()!=='GAME ID'&&gameId!=='';
+        });
+        if(rows.length)return rows;
+        throw new Error('找不到 GAME ID 資料列');
+      }catch(error){lastError=error;}
+    }
+    throw new Error(`無法讀取 Google Sheet（${lastError?.message||'連線失敗'}）；請確認試算表已設為「知道連結的任何人都可查看」。`);
   }
   async function syncGoogleMaster(reason='manual'){
     if(!canEdit()){if(reason==='manual')alert('你沒有同步藏經閣的權限。');return;}
