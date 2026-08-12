@@ -2782,7 +2782,7 @@ const renderTable = () => {
     }).join('');
     [...tr.children].forEach((cell, index) => {
       const field = index > 0 ? fields[index - 1] : null;
-      const manualWidth = fieldColumnWidth(field);
+      const manualWidth = field ? fieldColumnWidth(field) : null;
       cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
       if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
       const isDateColumn = cell.classList.contains('col-date');
@@ -3017,7 +3017,7 @@ const renderHeader = () => {
   }).join('');
   [...headerRow.children].forEach((cell, index) => {
     const field = index > 0 ? listFields()[index - 1] : null;
-    const manualWidth = fieldColumnWidth(field);
+    const manualWidth = field ? fieldColumnWidth(field) : null;
     cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
     if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
     const isDateColumn = cell.classList.contains('col-date');
