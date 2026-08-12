@@ -210,10 +210,28 @@ const leaveCount = (staffId) => Array.from({ length: daysInMonth(currentMonth) }
 const loadExternalLeave = async () => {
   const token = ++externalLeaveLoadToken;
   const targetMonth = monthKey(currentMonth);
+  // 2026-08-12 假表資料源切換(中魁拍板):優先走公司後端代理 /api/ext/leave(上游=尚堉假表
+  // 61.216.37.15:8080,輸出合約與舊 worker 逐格一致);失敗時 fallback 舊 Cloudflare worker,
+  // 讓 GitHub Pages 部署與後端故障時行為不變。
+  const apiBase = (window.CSR_API_BASE || '').replace(/\/+$/, '');
+  const sources = [
+    `${apiBase}/api/ext/leave?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`,
+    `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`
+  ];
   try {
-    const response = await fetch(`https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
+    let payload = null;
+    let lastError = null;
+    for (const url of sources) {
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        payload = await response.json();
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (!payload) throw lastError || new Error('假表來源皆無回應');
     if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
     externalLeaveData = payload.people || {};
     const maxDays = Number(payload.maxDays);
