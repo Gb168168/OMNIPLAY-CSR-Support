@@ -17,7 +17,6 @@ const sidebarPath = (path) => isIndexPage ? path : `../${path}`;
 const sidebarItems = [
   { label: '首頁', icon: '🏠', href: 'index.html', className: 'home-link' },
   { title: '客服內部', icon: '👥', id: 'serviceGroupTitle', items: [
-    { label: '人員管理', icon: '👤', href: 'service/staff.html' },
     { label: '休假表', icon: '🌴', href: 'service/leave.html' },
     { label: '排程表', icon: '📅', href: 'service/schedule.html' },
     { label: 'KPI', icon: '📊', href: 'service/kpi.html' }
@@ -79,10 +78,6 @@ const renderSidebar = () => {
     </nav>
     <div class="sidebar-footer" id="sidebarUserFooter">
       <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
-      <div class="sidebar-user-row">
-        <div class="sidebar-user-info"><span class="sidebar-user-label label">登入者</span><strong class="sidebar-user-name label"></strong></div>
-        <button class="logout-button" id="logoutButton" type="button"><span class="icon">⎋</span><span class="label">登出</span></button>
-      </div>
     </div>
   `;
 };
@@ -98,18 +93,12 @@ sidebarCollapsedToggle.setAttribute('aria-label', '展開左側功能表');
 if (sidebar) document.body.appendChild(sidebarCollapsedToggle);
 const appShell = document.querySelector('.app-shell');
 const loginView = document.querySelector('#loginView');
-const loginForm = document.querySelector('#loginForm');
-const loginMessage = document.querySelector('#loginMessage');
-const setupForm = document.querySelector('#setupForm');
-const setupMessage = document.querySelector('#setupMessage');
-const englishAlphanumericInputs = document.querySelectorAll('#account, #loginPassword, #setupCode, #setupAccount, #setupPassword');
 
 
 const THEME_STORAGE_KEY = 'omniplayTheme';
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'omniplaySidebarCollapsed';
 const getStoredTheme = () => localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
 const MENU_ICON_MAP = {
-  '人員管理': '👤',
   '休假表': '🌴',
   '排程表': '📅',
   'KPI': '📊',
@@ -196,7 +185,7 @@ const toggleSidebar = () => {
 
 const enhanceSidebarNavigation = () => {
   if (!sidebar) return;
-  sidebar.querySelectorAll('.home-link, .sidebar-sub-item, .logout-button').forEach((item) => {
+  sidebar.querySelectorAll('.home-link, .sidebar-sub-item').forEach((item) => {
     const label = item.querySelector('.label') || item.querySelector('.sidebar-text');
     const tooltipText = (label?.textContent || item.textContent || '').trim();
     if (tooltipText) {
@@ -218,40 +207,14 @@ const SESSION_KEYS = {
 
 const loginPath = isIndexPage ? 'index.html' : '../index.html';
 
-const getCurrentStaff = () => ({
-  id: sessionStorage.getItem(SESSION_KEYS.id),
-  code: sessionStorage.getItem(SESSION_KEYS.code),
-  name: sessionStorage.getItem(SESSION_KEYS.name),
-  account: sessionStorage.getItem(SESSION_KEYS.account)
-});
+const getCurrentStaff = () => ({ id: 'system', code: 'SYSTEM', name: 'System', account: 'SYSTEM' });
+const isLoggedIn = () => true;
+if (!sessionStorage.getItem(SESSION_KEYS.name)) sessionStorage.setItem(SESSION_KEYS.name, 'System');
 
-const isLoggedIn = () => Boolean(getCurrentStaff().code && getCurrentStaff().name);
-
-// 閒置自動登出
-let idleTimer = null;
-const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 分鐘
-
-function resetIdleTimer() {
-  clearTimeout(idleTimer);
-  if (!isLoggedIn()) return;
-
-  idleTimer = setTimeout(() => {
-    alert('已閒置超過 30 分鐘，系統將自動登出。');
-    logout();
-  }, IDLE_TIMEOUT);
-}
-
-['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach((event) => {
-  document.addEventListener(event, resetIdleTimer);
-});
-const isOmniplayAdmin = () => {
-  const staff = getCurrentStaff();
-  return [staff.account, staff.code, staff.name].some((value) => String(value || '').toUpperCase() === 'OMNIPLAY');
-};
+const isOmniplayAdmin = () => true;
 
 const PAGE_KEYS = {
   'index.html': 'home',
-  'staff.html': 'staff',
   'leave.html': 'leave',
   'schedule.html': 'schedule',
   'kpi.html': 'kpi',
@@ -275,12 +238,7 @@ const makeDefaultPermissions = () => ({ pages: Object.fromEntries([...new Set(Ob
 const getStoredPermissions = () => {
   try { return JSON.parse(sessionStorage.getItem(SESSION_KEYS.permissions) || '{}'); } catch { return {}; }
 };
-const getPagePermission = (page = currentPageKey()) => {
-  if (isOmniplayAdmin()) return { ...FULL_PERMISSION };
-  const pages = getStoredPermissions().pages;
-  if (!pages) return { ...EMPTY_PERMISSION };
-  return { ...FULL_PERMISSION, ...(pages[page] || {}) };
-};
+const getPagePermission = () => ({ ...FULL_PERMISSION });
 const canUse = (pageOrAction, maybeAction) => {
   const page = maybeAction ? pageOrAction : currentPageKey();
   const action = maybeAction || pageOrAction;
@@ -288,118 +246,18 @@ const canUse = (pageOrAction, maybeAction) => {
 };
 
 
-const applyPermissionUi = () => {
-  if (!isLoggedIn()) return;
-  const permissions = getStoredPermissions();
-  const restrict = !isOmniplayAdmin() && permissions.pages;
-  document.querySelectorAll('.menu a[href]').forEach((link) => {
-    const page = PAGE_KEYS[link.getAttribute('href').split('/').pop()];
-    if (page && restrict && !getPagePermission(page).view) link.remove();
-  });
-  document.querySelectorAll('.sidebar-group').forEach((group) => {
-    if (!group.querySelector('.sidebar-sub-item')) {
-      const groupId = group.dataset.group;
-      document.querySelector(`.top-nav-category[data-group="${groupId}"]`)?.remove();
-      group.remove();
-    }
-  });
-  if (restrict && !getPagePermission().view && !isIndexPage) window.location.href = loginPath;
-};
+const applyPermissionUi = () => {};
 
 window.getPagePermission = getPagePermission;
 window.canUse = canUse;
 window.isOmniplayAdmin = isOmniplayAdmin;
 
-const loadCurrentPermissions = async () => {
-  if (!isLoggedIn() || isOmniplayAdmin()) { sessionStorage.removeItem(SESSION_KEYS.permissions); applyPermissionUi(); return; }
-  const staffId = getCurrentStaff().id;
-  const permissionsCollection = window.omniplayDb?.collection('permissions');
-  if (!staffId || !permissionsCollection) { applyPermissionUi(); return; }
-  try {
-    const doc = await permissionsCollection.doc(staffId).get();
-    if (doc.exists) sessionStorage.setItem(SESSION_KEYS.permissions, JSON.stringify(doc.data()));
-    else sessionStorage.setItem(SESSION_KEYS.permissions, JSON.stringify(makeDefaultPermissions()));
-  } catch (error) { console.error('讀取權限失敗：', error); }
-  applyPermissionUi();
-};
+const loadCurrentPermissions = async () => { sessionStorage.removeItem(SESSION_KEYS.permissions); };
 
 window.loadCurrentPermissions = loadCurrentPermissions;
 window.permissionReady = loadCurrentPermissions();
 
-const showLoginMessage = (message) => {
-  if (!loginMessage) return;
-  loginMessage.textContent = message;
-  loginMessage.hidden = !message;
-};
-
-const showSetupMessage = (message, type = '') => {
-  if (!setupMessage) return;
-  setupMessage.textContent = message;
-  setupMessage.hidden = !message;
-  setupMessage.dataset.type = type;
-};
-
-const sanitizeEnglishAlphanumericInput = (input) => {
-  if (input.dataset.composing === 'true') return;
-  const sanitizedValue = input.value.replace(/[^A-Za-z0-9]/g, '');
-  if (input.value === sanitizedValue) return;
-
-  const cursorPosition = input.selectionStart || sanitizedValue.length;
-  const removedBeforeCursor = input.value.slice(0, cursorPosition).length - input.value.slice(0, cursorPosition).replace(/[^A-Za-z0-9]/g, '').length;
-  input.value = sanitizedValue;
-  input.setSelectionRange?.(Math.max(cursorPosition - removedBeforeCursor, 0), Math.max(cursorPosition - removedBeforeCursor, 0));
-};
-
-englishAlphanumericInputs.forEach((input) => {
-  input.addEventListener('compositionstart', () => { input.dataset.composing = 'true'; });
-  input.addEventListener('compositionend', () => { input.dataset.composing = 'false'; sanitizeEnglishAlphanumericInput(input); });
-  input.addEventListener('input', () => sanitizeEnglishAlphanumericInput(input));
-  input.addEventListener('paste', () => requestAnimationFrame(() => sanitizeEnglishAlphanumericInput(input)));
-});
-
-const setInitialSetupVisibility = (showSetup) => {
-  if (!isIndexPage || isLoggedIn()) return;
-  loginForm?.classList.toggle('is-hidden', showSetup);
-  setupForm?.classList.toggle('is-hidden', !showSetup);
-};
-
-const checkInitialSetupRequired = async () => {
-  if (!isIndexPage || isLoggedIn() || !setupForm) return;
-  if (window.CSR_API_BASE) { setInitialSetupVisibility(false); return; } // API 模式:帳號由後端管理,無首次設定流程
-
-  const staffCollection = window.omniplayDb?.collection('staff');
-  if (!staffCollection) {
-    setInitialSetupVisibility(false);
-    showLoginMessage('Firebase 尚未完成初始化，請稍後再試');
-    return;
-  }
-
-  try {
-    const snapshot = await staffCollection.limit(1).get();
-    setInitialSetupVisibility(snapshot.empty);
-    if (snapshot.empty) {
-      showSetupMessage('偵測到尚未建立任何人員資料，請先建立管理員帳號。', 'info');
-    }
-  } catch (error) {
-    console.error('首次設定檢查失敗：', error);
-    setInitialSetupVisibility(false);
-    showLoginMessage('無法檢查首次設定狀態，請稍後再試');
-  }
-};
-
-const setAppVisibility = () => {
-  const loggedIn = isLoggedIn();
-  if (isIndexPage) {
-    loginView?.classList.toggle('is-hidden', loggedIn);
-    if (appShell) {
-      appShell.hidden = !loggedIn;
-      appShell.setAttribute('aria-hidden', String(!loggedIn));
-      appShell.classList.toggle('is-hidden', !loggedIn);
-    }
-  } else if (!loggedIn) {
-    window.location.href = loginPath;
-  }
-};
+const setAppVisibility = () => { if (appShell) { appShell.hidden = false; appShell.removeAttribute('aria-hidden'); appShell.classList.remove('is-hidden'); } loginView?.remove(); };
 
 
 const makeThemeToggleButton = () => {
@@ -411,41 +269,14 @@ const makeThemeToggleButton = () => {
   return button;
 };
 
-const renderThemeToggle = () => {
-  const loginCard = document.querySelector('.login-card');
-  if (loginCard && !loginCard.querySelector('[data-theme-toggle]')) loginCard.appendChild(makeThemeToggleButton());
-  applyTheme(getStoredTheme());
-};
+const renderThemeToggle = () => { applyTheme(getStoredTheme()); };
 
 const renderSidebarUser = () => {
-  if (!sidebar || !isLoggedIn()) return;
-  const currentStaff = getCurrentStaff();
-  let footer = sidebar.querySelector('#sidebarUserFooter');
-  if (!footer) {
-    footer = document.createElement('div');
-    footer.id = 'sidebarUserFooter';
-    footer.className = 'sidebar-footer';
-    footer.innerHTML = `
-      <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
-        <div class="sidebar-user-row">
-        <div class="sidebar-user-info"><span class="sidebar-user-label label">登入者</span><strong class="sidebar-user-name label"></strong></div>
-        <button class="logout-button" id="logoutButton" type="button"><span class="icon">⎋</span><span class="label">登出</span></button>
-      </div>
-    `;
-    sidebar.appendChild(footer);
-  }
-  const sidebarThemeToggle = footer.querySelector('[data-theme-toggle]');
+  if (!sidebar) return;
+  const footer = sidebar.querySelector('#sidebarUserFooter');
+  const sidebarThemeToggle = footer?.querySelector('[data-theme-toggle]');
   if (sidebarThemeToggle) sidebarThemeToggle.onclick = toggleTheme;
-  const nameElement = footer.querySelector('.sidebar-user-name');
-  if (nameElement) nameElement.textContent = currentStaff.name;
   enhanceSidebarNavigation();
-};
-
-const logout = () => {
-  clearTimeout(idleTimer);
-  Object.values(SESSION_KEYS).forEach((key) => sessionStorage.removeItem(key));
-  sessionStorage.removeItem('csr_token');
-  window.location.href = loginPath;
 };
 
 enhanceSidebarNavigation();
@@ -474,140 +305,6 @@ window.addEventListener('keydown', (event) => {
   }
 });
   
-setupForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  showSetupMessage('');
-
-  const code = document.querySelector('#setupCode')?.value.trim();
-  const name = document.querySelector('#setupName')?.value.trim();
-  const account = document.querySelector('#setupAccount')?.value.trim();
-  const password = document.querySelector('#setupPassword')?.value.trim();
-  const staffCollection = window.omniplayDb?.collection('staff');
-
-  if (!code || !name || !account || !password) return showSetupMessage('請完整填寫所有欄位');
-  if (!staffCollection) return showSetupMessage('Firebase 尚未完成初始化，請稍後再試');
-
-  const submitButton = setupForm.querySelector('button[type="submit"]');
-  submitButton.disabled = true;
-  submitButton.textContent = '建立中...';
-
-  try {
-    const existingStaff = await staffCollection.limit(1).get();
-    if (!existingStaff.empty) {
-      showSetupMessage('已存在人員資料，請使用正常登入。');
-      setInitialSetupVisibility(false);
-      return;
-    }
-
-    const docRef = await staffCollection.add({
-      code,
-      name,
-      account,
-      password,
-      status: '啟用',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    sessionStorage.setItem(SESSION_KEYS.id, docRef.id);
-    sessionStorage.setItem(SESSION_KEYS.code, code);
-    sessionStorage.setItem(SESSION_KEYS.name, name);
-    sessionStorage.setItem(SESSION_KEYS.account, account);
-    setupForm.reset();
-    setInitialSetupVisibility(false);
-    setAppVisibility();
-    loadCurrentPermissions();
-    renderSidebarUser();
-    resetIdleTimer();
-  } catch (error) {
-    console.error('建立管理員帳號失敗：', error);
-    showSetupMessage('建立失敗，請稍後再試');
-  } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = '建立第一個帳號';
-  }
-});
-
-loginForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  showLoginMessage('');
-
-  const account = document.querySelector('#account')?.value.trim();
-  const password = document.querySelector('#loginPassword')?.value.trim();
-  const staffCollection = window.omniplayDb?.collection('staff');
-
-  if (!account || !password) return showLoginMessage('請輸入帳號與密碼');
-  if (!window.CSR_API_BASE && !staffCollection) return showLoginMessage('Firebase 尚未完成初始化，請稍後再試');
-
-  const submitButton = loginForm.querySelector('button[type="submit"]');
-  submitButton.disabled = true;
-  submitButton.textContent = '登入中...';
-
-  // API 模式:帳密驗證交給後端(取代前端讀 staff 明文比對)
-  if (window.CSR_API_BASE) {
-    try {
-      const result = await window.csrApiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ account, password }) });
-      if (!result || result.__notFound || !result.token || !result.staff) {
-        showLoginMessage('帳號或密碼錯誤');
-        return;
-      }
-      sessionStorage.setItem('csr_token', result.token);
-      sessionStorage.setItem(SESSION_KEYS.id, result.staff.id || '');
-      sessionStorage.setItem(SESSION_KEYS.code, result.staff.code || '');
-      sessionStorage.setItem(SESSION_KEYS.name, result.staff.name || '');
-      sessionStorage.setItem(SESSION_KEYS.account, result.staff.account || '');
-      await loadCurrentPermissions();
-      setAppVisibility();
-      renderSidebarUser();
-      resetIdleTimer();
-    } catch (error) {
-      console.error('登入失敗：', error);
-      showLoginMessage(error?.status === 403 ? '帳號已停用，請聯繫管理員' : '帳號或密碼錯誤');
-    } finally {
-      submitButton.disabled = false;
-      submitButton.textContent = '登入';
-    }
-    return;
-  }
-
-  try {
-    const snapshot = await staffCollection.where('account', '==', account).limit(1).get();
-    if (snapshot.empty) {
-      showLoginMessage('帳號或密碼錯誤');
-      return;
-    }
-
-    const doc = snapshot.docs[0];
-    const staff = doc.data();
-    if (staff.password !== password) {
-      showLoginMessage('帳號或密碼錯誤');
-      return;
-    }
-    if (staff.status === '停用') {
-      showLoginMessage('帳號已停用，請聯繫管理員');
-      return;
-    }
-
-    sessionStorage.setItem(SESSION_KEYS.id, doc.id);
-    sessionStorage.setItem(SESSION_KEYS.code, staff.code || '');
-    sessionStorage.setItem(SESSION_KEYS.name, staff.name || '');
-    sessionStorage.setItem(SESSION_KEYS.account, staff.account || '');
-    await loadCurrentPermissions();
-    setAppVisibility();
-    renderSidebarUser();
-    resetIdleTimer();
-  } catch (error) {
-    console.error('登入失敗：', error);
-    showLoginMessage('帳號或密碼錯誤');
-  } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = '登入';
-  }
-});
-
-document.addEventListener('click', (event) => {
-  if (event.target.closest('#logoutButton')) logout();
-});
 
 // Convert list tables to phone-friendly cards while keeping desktop tables unchanged.
 const MOBILE_CARD_TABLE_SELECTOR = [
@@ -641,14 +338,7 @@ new MutationObserver(scheduleMobileTableLabels).observe(document.body, { childLi
 
 renderThemeToggle();
 setAppVisibility();
-window.permissionReady?.then(() => {
-  renderSidebarUser();
-  if (isLoggedIn()) {
-    resetIdleTimer();
-  }
-});
-checkInitialSetupRequired();
-
+window.permissionReady?.then(() => { renderSidebarUser(); });
 // 手機版／加入主畫面的 PWA：從頁面頂端下拉並放開即可重新整理。
 const setupPullToRefresh = () => {
   const mobilePointer = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches;
