@@ -359,7 +359,6 @@ const renderBody = () => {
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
       <th class="sticky-col name-col" scope="row">
         <span>${escapeHtml(canonicalLeaveStaffName(staff.name) || staff.code || '未命名')} / ${escapeHtml(getShift(staff))}</span>
-        <small class="quota-count ${overQuota ? 'is-warning' : ''}">已休 ${used}</small>
       </th>${cells}</tr>`;
   }).join('');
 
