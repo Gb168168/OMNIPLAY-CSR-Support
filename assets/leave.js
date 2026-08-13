@@ -254,26 +254,39 @@ const loadExternalLeave = async () => {
     { url: `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` }
   ];
   try {
-    let payload = null;
+    const validPayloads = [];
     let lastError = null;
     for (const source of sources) {
       try {
         const response = await fetch(source.url, { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        payload = await response.json();
-        if (payload?.success === false) throw new Error(payload.error || '同步來源回傳失敗');
-        const payloadPeople = payload?.people;
+        const candidate = await response.json();
+        if (candidate?.success === false) throw new Error(candidate.error || '同步來源回傳失敗');
+        const payloadPeople = candidate?.people;
         const hasValidPeople = payloadPeople &&
           typeof payloadPeople === 'object' &&
           !Array.isArray(payloadPeople) &&
           Object.keys(payloadPeople).some((name) => leaveStaffNames.includes(canonicalLeaveStaffName(name)));
-        if (payload?.month !== targetMonth || !hasValidPeople) {
+        if (candidate?.month !== targetMonth || !hasValidPeople) {
           throw new Error('同步來源不是指定月份的休假人員資料');
         }
-        break;
+        validPayloads.push(candidate);
       } catch (error) {
-        payload = null;
         lastError = error;
+      }
+    }
+    let payload = validPayloads[0] || null;
+    if (validPayloads.length > 1) {
+      const primaryMaxDays = Number(validPayloads[0].maxDays);
+      const fallbackMaxDays = Number(validPayloads[1].maxDays);
+      if (Number.isFinite(fallbackMaxDays) &&
+          (!Number.isFinite(primaryMaxDays) || primaryMaxDays !== fallbackMaxDays)) {
+        console.warn('主要休假鏡射的可休天數與備援不一致，改用備援鏡射。', {
+          primaryMaxDays,
+          fallbackMaxDays,
+          month: targetMonth
+        });
+        payload = validPayloads[1];
       }
     }
     if (!payload) throw lastError || new Error('假表來源皆無回應');
