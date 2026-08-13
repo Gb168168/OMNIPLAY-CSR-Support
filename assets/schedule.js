@@ -345,6 +345,26 @@ const normalizeFeedGame = (game = {}) => ({
   expectedOnlineDate: String(game.expectedOnlineDate || '').trim()
 });
 
+const isGameIdLookupFailure = (value) => /查無\s*此?\s*game\s*id|game\s*id\s*(?:not\s*found|不存在)/i.test(String(value || '').trim());
+const getPreviousScheduleGameMap = () => {
+  const games = new Map();
+  scheduleList
+    .filter((item) => item.source === 'google-game-sheet' && item.eventType === 'pm-confirmation')
+    .forEach((item) => getScheduleGames(item).forEach((game) => {
+      const normalized = normalizeFeedGame(game);
+      if (normalized.gameId) games.set(normalized.gameId, normalized);
+    }));
+  return games;
+};
+const preserveNameOnLookupFailure = (game, previousGames) => {
+  const previous = previousGames.get(game.gameId);
+  return {
+    ...game,
+    gameNameZh: isGameIdLookupFailure(game.gameNameZh) ? previous?.gameNameZh || '' : game.gameNameZh,
+    gameNameEn: isGameIdLookupFailure(game.gameNameEn) ? previous?.gameNameEn || '' : game.gameNameEn
+  };
+};
+
 const collectGameScheduleChanges = (feedGames = []) => {
   const previousGames = new Map();
   scheduleList
@@ -429,7 +449,11 @@ const syncGameSchedules = async () => {
     const payload = await loadGameScheduleFeed();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const normalizedFeedGames = payload.games.map(normalizeFeedGame).filter((game) => game.gameId);
+    const previousScheduleGames = getPreviousScheduleGameMap();
+    const normalizedFeedGames = payload.games
+      .map(normalizeFeedGame)
+      .filter((game) => game.gameId)
+      .map((game) => preserveNameOnLookupFailure(game, previousScheduleGames));
     const changes = collectGameScheduleChanges(normalizedFeedGames);
     const games = normalizedFeedGames.filter((game) => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
@@ -575,8 +599,14 @@ const openGameChangeLog = async () => {
       gameChangeLogListEl.innerHTML = '<p class="history-empty">目前沒有偵測到試算表變更。</p>';
       return;
     }
-    gameChangeLogListEl.innerHTML = snapshot.docs.map((doc) => {
-      const change = doc.data();
+    const visibleChanges = snapshot.docs
+      .map((doc) => doc.data())
+      .filter((change) => !isGameIdLookupFailure(change.newValue));
+    if (!visibleChanges.length) {
+      gameChangeLogListEl.innerHTML = '<p class="history-empty">目前沒有有效的試算表變更。</p>';
+      return;
+    }
+    gameChangeLogListEl.innerHTML = visibleChanges.map((change) => {
       const gameTitle = `${change.gameId || '—'}${change.gameName ? `（${change.gameName}）` : ''}`;
       return `<article class="game-change-log-item">
         <div class="game-change-log-heading"><strong>${escapeHtml(gameTitle)}</strong><time>${escapeHtml(formatGameChangeTime(change.changedAt))}</time></div>
