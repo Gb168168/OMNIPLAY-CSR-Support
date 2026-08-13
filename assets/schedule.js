@@ -171,17 +171,49 @@ const syncSchedulePermission = async () => {
 };
 
 
-const loadGameScheduleFeed = async () => {
-  const response = await fetch(`${GAME_SCHEDULE_FEED_URL}?_=${Date.now()}`, {
-    method: 'GET',
-    cache: 'no-store'
-  });
-  if (!response.ok) throw new Error(`同步服務回應 ${response.status}`);
-  const payload = await response.json();
+const loadGameScheduleFeedJsonp = () => new Promise((resolve, reject) => {
+  const callbackName = `__omniplayScheduleSync_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const script = document.createElement('script');
+  const cleanup = () => {
+    window.clearTimeout(timer);
+    script.remove();
+    delete window[callbackName];
+  };
+  const timer = window.setTimeout(() => {
+    cleanup();
+    reject(new Error('同步服務 JSONP 逾時'));
+  }, 20000);
+  window[callbackName] = (payload) => {
+    cleanup();
+    resolve(payload);
+  };
+  script.onerror = () => {
+    cleanup();
+    reject(new Error('同步服務 JSONP 無法載入'));
+  };
+  script.src = `${GAME_SCHEDULE_FEED_URL}?callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
+  document.head.appendChild(script);
+});
+
+const validateGameSchedulePayload = (payload) => {
   if (!payload?.success || !Array.isArray(payload.games)) {
     throw new Error(payload?.error || '回傳格式錯誤');
   }
   return payload;
+};
+
+const loadGameScheduleFeed = async () => {
+  try {
+    const response = await fetch(`${GAME_SCHEDULE_FEED_URL}?_=${Date.now()}`, {
+      method: 'GET',
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error(`同步服務回應 ${response.status}`);
+    return validateGameSchedulePayload(await response.json());
+  } catch (fetchError) {
+    console.warn('Apps Script fetch 失敗，改用 JSONP：', fetchError);
+    return validateGameSchedulePayload(await loadGameScheduleFeedJsonp());
+  }
 };
 
 const parseGameScheduleDate = (value) => {
