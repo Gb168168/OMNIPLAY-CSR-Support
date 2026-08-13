@@ -9,6 +9,7 @@
     .day-agenda-heading-actions { display: flex; align-items: center; gap: 8px; }
     .day-agenda-heading-actions .primary-button { min-height: 38px; padding: 7px 12px; white-space: nowrap; }
 
+    .game-pm-confirmed[hidden] { display: none !important; }
     .schedule-history-changes { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 4px; }
     .schedule-history-changes p { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 7px 8px; border-radius: 8px; background: var(--surface-muted); }
     .schedule-history-changes p b { color: var(--text-secondary); }
@@ -209,6 +210,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
-  <script src="../assets/schedule.js?v=20260814-day-add1"></script>
+  <script src="../assets/schedule.js?v=20260814-pm-visibility1"></script>
 </body>
 </html>

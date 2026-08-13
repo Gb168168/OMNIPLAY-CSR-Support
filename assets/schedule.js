@@ -1010,7 +1010,7 @@ const openModal = (dateKey, scheduleId = null) => {
   repeatIntervalInput.value = item?.repeatInterval || 1;
   toggleRepeatInterval();
   renderHistory(item?.history || []);
-  const isPmConfirmation = item?.eventType === 'pm-confirmation';
+  const isPmConfirmation = item?.source === 'google-game-sheet' && item?.eventType === 'pm-confirmation';
   if (gamePmConfirmedLabel) gamePmConfirmedLabel.hidden = !isPmConfirmation;
   if (gamePmConfirmedInput) {
     gamePmConfirmedInput.checked = Boolean(item?.pmConfirmedAt);
@@ -1231,7 +1231,7 @@ formEl?.addEventListener('submit', async (event) => {
     await saveLabelIfNeeded(labelName, labelColor);
     if (editingId) await scheduleCollection.doc(editingId).update(payload);
     else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    if (editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
+    if (editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
       const createdCount = await createUatSchedules(editingItem, user);
       if (!createdCount) throw new Error('沒有可建立的 UAT 資料待辦。');
       const successMessage = `AM 已確認，已建立／更新 ${createdCount} 筆流程待辦（行銷素材＋UAT 上架公告＋PROD 上架公告）。`;
