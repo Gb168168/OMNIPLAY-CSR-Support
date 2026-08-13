@@ -56,7 +56,7 @@
           <h1>休假表</h1>
           <p>客服團隊休假資訊維護。</p>
         </div>
-        <div class="user-pill">● 已連線 Firebase</div>
+        <div class="user-pill" id="leaveSourceStatus">● 休假資料連動中</div>
       </header>
       <section class="leave-panel" aria-label="休假表">
         <div class="panel-heading leave-heading">
@@ -65,7 +65,7 @@
             <strong id="leaveMonthLabel">—</strong>
             <button class="secondary-button" id="nextLeaveMonth" type="button">下個月 →</button>
             <button class="ghost-button" id="todayLeaveMonth" type="button">本月</button>
-            <label class="global-quota-field" for="globalLeaveQuota">可休：<input id="globalLeaveQuota" data-action="quota" type="number" min="0" max="31" step="1" value="8" aria-label="當月全員可休天數" /></label>
+            <label class="global-quota-field" for="globalLeaveQuota">可休：<input id="globalLeaveQuota" data-action="quota" type="number" min="0" max="31" step="1" value="" aria-label="當月全員可休天數" /></label>
           </div>
           <div class="leave-summary-cards" aria-label="當月排班摘要">
             <section class="leave-summary-card">
@@ -102,6 +102,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
-  <script src="../assets/leave.js?v=20260813-valid-leave-feed"></script>
+  <script src="../assets/leave.js?v=20260814-phone-duty-rules1"></script>
 </body>
 </html>
