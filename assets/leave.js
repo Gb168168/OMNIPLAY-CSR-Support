@@ -111,6 +111,8 @@ const fixedLeaveStaffList = (items = []) => leaveStaffNames.map((name) => {
     ? { ...matched, name }
     : { id: `external_leave_${name}`, name, status: '啟用', leaveVisible: true, externalOnly: true };
 });
+// 休假表固定顯示五人，不等待已移除或無權限的人員管理資料。
+staffList = fixedLeaveStaffList();
 const getStaffSortOrder = (staff) => Number(fixedStaffOrderMap[canonicalLeaveStaffName(staff.name)] ?? staff.sortOrder ?? 999);
 const externalPersonFor = (name) => {
   const canonicalName = canonicalLeaveStaffName(name);
@@ -565,14 +567,20 @@ const updateGlobalQuota = (value) => {
 if (!leaveDb) {
   setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
 } else {
-  unsubscribeStaff = leaveStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-    staffList = sortStaffForLeave(fixedLeaveStaffList(snapshot.docs.map(normalizeStaff).filter(visibleLeaveStaff)));
-    render();
-    loadMonthlyShifts();
-  }, (error) => {
-    console.error('讀取人員資料失敗：', error);
-    setStatus('讀取人員資料失敗，請稍後再試。', 'error');
-  });
+  if (leaveStaffCollection) {
+    unsubscribeStaff = leaveStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+      staffList = sortStaffForLeave(fixedLeaveStaffList(snapshot.docs.map(normalizeStaff).filter(visibleLeaveStaff)));
+      render();
+      loadMonthlyShifts();
+    }, (error) => {
+      // 人員管理已移除或無讀取權限時，仍使用固定五人名單顯示休假表。
+      console.warn('人員資料不可用，休假表改用固定五人名單。', error);
+      staffList = sortStaffForLeave(fixedLeaveStaffList(staffList));
+      render();
+      loadMonthlyShifts();
+    });
+  }
+  render();
   subscribeMonth();
 }
 
