@@ -71,6 +71,7 @@ let unsubscribeStaff = null;
 let unsubscribeLeave = null;
 let activeSpecialMode = null;
 let saveTimer = null;
+let lastSuccessfulLeaveSyncAt = null;
 const storedLeavePermission = () => window.getPagePermission?.('leave') || { view: false, edit: false, delete: false, design: false };
 let canEditLeave = Boolean(window.isOmniplayAdmin?.());
 
@@ -96,6 +97,7 @@ const formatLeaveSyncTime = (value) => new Intl.DateTimeFormat('zh-TW', {
   hour12: false
 }).format(value);
 const setLeaveSyncTime = (date, failed = false) => {
+  if (!failed && date) lastSuccessfulLeaveSyncAt = date;
   if (!leaveSyncTime) return;
   leaveSyncTime.classList.toggle('is-error', failed);
   const label = leaveSyncTime.querySelector('span');
@@ -325,9 +327,7 @@ const loadExternalLeave = async () => {
     externalLeaveData = {};
     externalMaxDays = null;
     console.error('同步外部假表失敗：', error);
-    const previousSyncText = leaveSyncTime?.querySelector('strong')?.textContent;
-    const previousSyncDate = previousSyncText && previousSyncText !== '尚未同步' ? new Date(previousSyncText.replace(/\//g, '-')) : null;
-    setLeaveSyncTime(previousSyncDate && !Number.isNaN(previousSyncDate.getTime()) ? previousSyncDate : null, true);
+    setLeaveSyncTime(lastSuccessfulLeaveSyncAt, true);
     if (leaveSourceStatus) leaveSourceStatus.textContent = '● 公司休假系統連動失敗';
     setStatus('公司休假系統暫時無法同步，未使用預設休假或可休天數。', 'error');
     render();
