@@ -81,6 +81,12 @@ const pad = (value) => String(value).padStart(2, '0');
 const monthKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
 const dayKey = (day) => String(day);
 const dateKey = (date, day) => `${monthKey(date)}-${pad(day)}`;
+const isTodayDay = (day) => {
+  const today = new Date();
+  return currentMonth.getFullYear() === today.getFullYear() &&
+    currentMonth.getMonth() === today.getMonth() &&
+    Number(day) === today.getDate();
+};
 const daysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -379,7 +385,7 @@ const renderHeader = () => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     const weekend = [0, 6].includes(date.getDay());
     const holiday = getHolidayName(day);
-    return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}</small></th>`;
+    return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''} ${isTodayDay(day) ? 'is-today' : ''}" aria-current="${isTodayDay(day) ? 'date' : 'false'}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}</small></th>`;
   }).join('');
   leaveTableHead.innerHTML = `<tr><th class="sticky-col name-col">姓名 / 班別</th>${dayHeaders}</tr>`;
 };
@@ -408,7 +414,7 @@ const renderDayCell = (staff, day) => {
   const marker = record.label ? '' : record.type === 'required' ? '<span class="leave-marker is-required">▲</span>' : record.type === 'leave' ? '<span class="leave-marker">▲</span>' : '';
   const leaveLabel = record.label ? `<span class="external-leave-label">${escapeHtml(record.label)}</span>` : '';
   const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : '🎰').join('');
-  return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
+  return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''} ${isTodayDay(day) ? 'is-today' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
     <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(canonicalLeaveStaffName(staff.name))} ${day} 號休假狀態"${editableAttribute()}>${marker}${leaveLabel}<span class="special-icons">${specials}</span></button>
   </td>`;
 };
