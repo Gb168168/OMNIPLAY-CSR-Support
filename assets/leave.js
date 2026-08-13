@@ -281,8 +281,17 @@ const loadExternalLeave = async () => {
           payload = await response.json();
         }
         if (payload?.success === false) throw new Error(payload.error || '同步來源回傳失敗');
+        const payloadPeople = payload?.people;
+        const hasValidPeople = payloadPeople &&
+          typeof payloadPeople === 'object' &&
+          !Array.isArray(payloadPeople) &&
+          Object.keys(payloadPeople).some((name) => leaveStaffNames.includes(canonicalLeaveStaffName(name)));
+        if (payload?.month !== targetMonth || !hasValidPeople) {
+          throw new Error('同步來源不是指定月份的休假人員資料');
+        }
         break;
       } catch (error) {
+        payload = null;
         lastError = error;
       }
     }
