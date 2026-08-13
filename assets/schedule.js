@@ -1020,14 +1020,22 @@ const openModal = (dateKey, scheduleId = null) => {
   formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
   document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
   document.querySelector('#saveScheduleButton')?.toggleAttribute('disabled', !canEditSchedule);
-  scheduleFormInitialSnapshot = new URLSearchParams(new FormData(formEl)).toString();
+  scheduleFormInitialSnapshot = serializeScheduleForm();
   modalEl.classList.add('is-open');
   modalEl.setAttribute('aria-hidden', 'false');
 };
 
+const serializeScheduleForm = () => JSON.stringify(
+  [...formEl.querySelectorAll('input, textarea, select')].map((control) => ({
+    key: control.name || control.id,
+    type: control.type || control.tagName,
+    value: control.type === 'checkbox' || control.type === 'radio' ? control.checked : control.value
+  }))
+);
+
 const hasUnsavedScheduleChanges = () =>
   modalEl?.classList.contains('is-open') &&
-  scheduleFormInitialSnapshot !== new URLSearchParams(new FormData(formEl)).toString();
+  scheduleFormInitialSnapshot !== serializeScheduleForm();
 
 const closeModal = (force = false) => {
   if (!force && hasUnsavedScheduleChanges() && !window.confirm('尚有未儲存的排程內容，確定要放棄嗎？')) return false;
