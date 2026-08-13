@@ -106,3 +106,50 @@
     clear: both !important;
   }
 }
+
+
+/* Keep sync actions in the 藏經閣 title row and reserve a stable tab row before every panel. */
+.library-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.library-hero .library-sync-bar {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  margin: 0;
+  padding: 8px 10px;
+}
+body.library-page .library-tabs {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 60px;
+  flex: 0 0 60px;
+  align-items: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+body.library-page .library-tabs > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  visibility: visible;
+  opacity: 1;
+}
+body.library-page .library-panel {
+  position: relative;
+  z-index: 1;
+  clear: both;
+}
+@media (max-width: 768px) {
+  .library-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .library-hero .library-sync-bar {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
