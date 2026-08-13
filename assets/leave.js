@@ -243,6 +243,18 @@ const editableAttribute = () => canEditLeave ? '' : ' disabled';
 const getShift = (staff) => getStaffShift(staff);
 const leaveCount = (staffId) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => getRecord(staffId, index + 1)).filter((record) => ['leave', 'required'].includes(record?.type) && !record?.label).length;
 
+const leaveAppsScriptFeedUrl = 'https://script.google.com/macros/s/AKfycbw2saSKReX6c4juxILFzSofZPCZzvtui8NimeCrKJnm2gIfdONnHyybMGsZyeRnlvmW/exec';
+const loadLeaveJsonp = (url) => new Promise((resolve, reject) => {
+  const callbackName = `__omniplayLeaveSync_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const script = document.createElement('script');
+  const cleanup = () => { clearTimeout(timer); script.remove(); delete window[callbackName]; };
+  const timer = setTimeout(() => { cleanup(); reject(new Error('Apps Script 休假表同步逾時')); }, 20000);
+  window[callbackName] = (payload) => { cleanup(); resolve(payload); };
+  script.onerror = () => { cleanup(); reject(new Error('Apps Script 休假表同步無法載入')); };
+  script.src = `${url}${url.includes('?') ? '&' : '?'}callback=${encodeURIComponent(callbackName)}&t=${Date.now()}`;
+  document.head.appendChild(script);
+});
+
 const loadExternalLeave = async () => {
   const token = ++externalLeaveLoadToken;
   const targetMonth = monthKey(currentMonth);
@@ -251,17 +263,22 @@ const loadExternalLeave = async () => {
   // 讓 GitHub Pages 部署與後端故障時行為不變。
   const apiBase = (window.CSR_API_BASE || '').replace(/\/+$/, '');
   const sources = [
-    `${apiBase}/api/ext/leave?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`,
-    `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`
+    { type: 'jsonp', url: `${leaveAppsScriptFeedUrl}?feed=leave&month=${encodeURIComponent(targetMonth)}` },
+    { type: 'fetch', url: `${apiBase}/api/ext/leave?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` },
+    { type: 'fetch', url: `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` }
   ];
   try {
     let payload = null;
     let lastError = null;
-    for (const url of sources) {
+    for (const source of sources) {
       try {
-        const response = await fetch(url, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        payload = await response.json();
+        if (source.type === 'jsonp') payload = await loadLeaveJsonp(source.url);
+        else {
+          const response = await fetch(source.url, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          payload = await response.json();
+        }
+        if (payload?.success === false) throw new Error(payload.error || '同步來源回傳失敗');
         break;
       } catch (error) {
         lastError = error;
