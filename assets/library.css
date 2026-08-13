@@ -69,3 +69,40 @@
     max-width: none;
   }
 }
+
+
+/* Mobile override: reserve the tab row's full height so the active panel cannot cover it. */
+@media (max-width: 768px) {
+  body.library-page .library-tabs {
+    display: flex !important;
+    position: relative !important;
+    z-index: 20 !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    margin: 0 0 12px !important;
+    padding: 0 12px 8px !important;
+    align-items: flex-start !important;
+    flex: 0 0 60px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  body.library-page .library-tabs > button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    flex: 0 0 auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body.library-page .library-panel {
+    position: relative !important;
+    z-index: 1 !important;
+    clear: both !important;
+  }
+}
