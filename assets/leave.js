@@ -12,6 +12,7 @@ const leaveTableBody = document.querySelector('#leaveTableBody');
 const leaveStatus = document.querySelector('#leaveStatus');
 const leaveLegend = document.querySelector('#leaveLegend');
 const leaveSourceStatus = document.querySelector('#leaveSourceStatus');
+const leaveSyncTime = document.querySelector('#leaveSyncTime');
 const globalQuotaInput = document.querySelector('#globalLeaveQuota');
 const phoneDutySummary = document.querySelector('#phoneDutySummary');
 const flexibleLeaveSummary = document.querySelector('#flexibleLeaveSummary');
@@ -70,6 +71,7 @@ let unsubscribeStaff = null;
 let unsubscribeLeave = null;
 let activeSpecialMode = null;
 let saveTimer = null;
+let lastSuccessfulLeaveSyncAt = null;
 const storedLeavePermission = () => window.getPagePermission?.('leave') || { view: false, edit: false, delete: false, design: false };
 let canEditLeave = Boolean(window.isOmniplayAdmin?.());
 
@@ -87,6 +89,21 @@ const setStatus = (message, type = 'info') => {
   leaveStatus.textContent = message;
   leaveStatus.dataset.type = type;
   leaveStatus.hidden = !message || type !== 'error';
+};
+
+const formatLeaveSyncTime = (value) => new Intl.DateTimeFormat('zh-TW', {
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+  hour12: false
+}).format(value);
+const setLeaveSyncTime = (date, failed = false) => {
+  if (!failed && date) lastSuccessfulLeaveSyncAt = date;
+  if (!leaveSyncTime) return;
+  leaveSyncTime.classList.toggle('is-error', failed);
+  const label = leaveSyncTime.querySelector('span');
+  const value = leaveSyncTime.querySelector('strong');
+  if (label) label.textContent = failed ? '同步失敗｜上次成功' : '最後同步時間';
+  if (value && date) value.textContent = formatLeaveSyncTime(date);
 };
 
 const normalizeStaff = (doc) => ({ id: doc.id, ...doc.data() });
@@ -297,6 +314,7 @@ const loadExternalLeave = async () => {
     );
     const maxDays = Number(payload.maxDays);
     externalMaxDays = Number.isFinite(maxDays) && maxDays >= 0 ? maxDays : null;
+    setLeaveSyncTime(new Date(), false);
     if (leaveSourceStatus) {
       leaveSourceStatus.textContent = externalMaxDays === null
         ? '⚠ 已連動休假資料，但缺少可休天數'
@@ -309,6 +327,7 @@ const loadExternalLeave = async () => {
     externalLeaveData = {};
     externalMaxDays = null;
     console.error('同步外部假表失敗：', error);
+    setLeaveSyncTime(lastSuccessfulLeaveSyncAt, true);
     if (leaveSourceStatus) leaveSourceStatus.textContent = '● 公司休假系統連動失敗';
     setStatus('公司休假系統暫時無法同步，未使用預設休假或可休天數。', 'error');
     render();

@@ -8,6 +8,12 @@
   <style>
     .external-leave-label { display: inline-block; margin-left: 0; font-size: 11px; line-height: 1; font-weight: 800; color: var(--text); }
     .leave-table .name-col { left: 0; min-width: 110px; width: 110px; max-width: 110px; }
+    .leave-toolbar-wrap { display: flex; flex-direction: column; gap: 10px; min-width: 350px; }
+    .leave-sync-time { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); color: var(--text-secondary); }
+    .leave-sync-time span { font-size: 13px; font-weight: 700; }
+    .leave-sync-time strong { color: var(--text); font-size: 14px; }
+    .leave-sync-time.is-error { border-color: #fecaca; background: #fef2f2; }
+    .leave-sync-time.is-error span { color: #b91c1c; }
     .leave-summary-cards { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .leave-summary-card { min-width: 0; max-height: 132px; overflow: auto; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
     .leave-summary-card h3 { margin: 0 0 7px; font-size: 17px; line-height: 1.35; }
@@ -60,11 +66,17 @@
       </header>
       <section class="leave-panel" aria-label="休假表">
         <div class="panel-heading leave-heading">
-         <div class="leave-toolbar" aria-label="月份切換與特殊標記">
-            <button class="secondary-button" id="prevLeaveMonth" type="button">← 上個月</button>
-            <strong id="leaveMonthLabel">—</strong>
-            <button class="secondary-button" id="nextLeaveMonth" type="button">下個月 →</button>
-            <button class="ghost-button" id="todayLeaveMonth" type="button">本月</button>
+         <div class="leave-toolbar-wrap">
+           <div class="leave-toolbar" aria-label="月份切換與特殊標記">
+              <button class="secondary-button" id="prevLeaveMonth" type="button">← 上個月</button>
+              <strong id="leaveMonthLabel">—</strong>
+              <button class="secondary-button" id="nextLeaveMonth" type="button">下個月 →</button>
+              <button class="ghost-button" id="todayLeaveMonth" type="button">本月</button>
+            </div>
+            <div class="leave-sync-time" id="leaveSyncTime" aria-live="polite">
+              <span>最後同步時間</span>
+              <strong>尚未同步</strong>
+            </div>
           </div>
           <div class="leave-summary-cards" aria-label="當月排班摘要">
             <section class="leave-summary-card">
@@ -101,6 +113,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
-  <script src="../assets/leave.js?v=20260814-hide-counts1"></script>
+  <script src="../assets/leave.js?v=20260814-sync-time1"></script>
 </body>
 </html>
