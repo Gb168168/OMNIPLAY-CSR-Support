@@ -72,6 +72,8 @@ let unsubscribeLeave = null;
 let activeSpecialMode = null;
 let saveTimer = null;
 let lastSuccessfulLeaveSyncAt = null;
+let nextLeaveSyncAt = Date.now() + 5 * 60 * 1000;
+const LEAVE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 const storedLeavePermission = () => window.getPagePermission?.('leave') || { view: false, edit: false, delete: false, design: false };
 let canEditLeave = Boolean(window.isOmniplayAdmin?.());
 
@@ -96,14 +98,28 @@ const formatLeaveSyncTime = (value) => new Intl.DateTimeFormat('zh-TW', {
   hour: '2-digit', minute: '2-digit', second: '2-digit',
   hour12: false
 }).format(value);
-const setLeaveSyncTime = (date, failed = false) => {
-  if (!failed && date) lastSuccessfulLeaveSyncAt = date;
+const formatLeaveSyncCountdown = (milliseconds) => {
+  const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+};
+let leaveSyncFailed = false;
+const renderLeaveSyncCountdown = () => {
   if (!leaveSyncTime) return;
-  leaveSyncTime.classList.toggle('is-error', failed);
   const label = leaveSyncTime.querySelector('span');
   const value = leaveSyncTime.querySelector('strong');
-  if (label) label.textContent = failed ? '同步失敗｜上次成功' : '最後同步時間';
-  if (value && date) value.textContent = formatLeaveSyncTime(date);
+  const remaining = Math.max(0, nextLeaveSyncAt - Date.now());
+  leaveSyncTime.classList.toggle('is-error', leaveSyncFailed);
+  if (label) label.textContent = leaveSyncFailed ? '同步失敗｜每 5 分鐘自動重試' : '每 5 分鐘自動更新';
+  if (value) value.textContent = `${leaveSyncFailed ? '下次重試' : '下次更新'} ${formatLeaveSyncCountdown(remaining)}`;
+  leaveSyncTime.title = lastSuccessfulLeaveSyncAt
+    ? `最後成功同步：${formatLeaveSyncTime(lastSuccessfulLeaveSyncAt)}`
+    : '尚未成功同步';
+};
+const setLeaveSyncTime = (date, failed = false) => {
+  if (!failed && date) lastSuccessfulLeaveSyncAt = date;
+  leaveSyncFailed = failed;
+  nextLeaveSyncAt = Date.now() + LEAVE_SYNC_INTERVAL_MS;
+  renderLeaveSyncCountdown();
 };
 
 const normalizeStaff = (doc) => ({ id: doc.id, ...doc.data() });
@@ -619,7 +635,9 @@ const syncLeavePermission = async () => {
 };
 syncLeavePermission();
 
-window.setInterval(loadExternalLeave, 60 * 1000);
+window.setInterval(loadExternalLeave, LEAVE_SYNC_INTERVAL_MS);
+window.setInterval(renderLeaveSyncCountdown, 1000);
+renderLeaveSyncCountdown();
 window.addEventListener('focus', loadExternalLeave);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') loadExternalLeave();
