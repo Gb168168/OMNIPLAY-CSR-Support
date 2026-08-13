@@ -14,6 +14,7 @@ const scheduleHelpModalEl = document.querySelector('#scheduleHelpModal');
 const dayAgendaModalEl = document.querySelector('#dayAgendaModal');
 const dayAgendaTitleEl = document.querySelector('#dayAgendaTitle');
 const dayAgendaListEl = document.querySelector('#dayAgendaList');
+const addDayScheduleButton = document.querySelector('#addDayScheduleButton');
 const modalTitleEl = document.querySelector('#scheduleModalTitle');
 const formEl = document.querySelector('#scheduleForm');
 const messageEl = document.querySelector('#scheduleFormMessage');
@@ -923,6 +924,8 @@ const openDayAgenda = (dateKey) => {
   if (!dayAgendaModalEl || !dayAgendaListEl) return;
   const items = getDayScheduleItems(dateKey);
   if (dayAgendaTitleEl) dayAgendaTitleEl.textContent = `${dateKey}｜共 ${items.length} 則排程`;
+  dayAgendaModalEl.dataset.date = dateKey;
+  if (addDayScheduleButton) addDayScheduleButton.hidden = !canEditSchedule;
   dayAgendaListEl.innerHTML = items.length
     ? items.map((item) => {
       const at = parseDateValue(item.reminderAt);
@@ -940,6 +943,12 @@ const closeDayAgenda = () => {
   dayAgendaModalEl?.classList.remove('is-open');
   dayAgendaModalEl?.setAttribute('aria-hidden', 'true');
 };
+addDayScheduleButton?.addEventListener('click', () => {
+  const dateKey = dayAgendaModalEl?.dataset.date;
+  if (!dateKey || !canEditSchedule) return;
+  closeDayAgenda();
+  openModal(dateKey);
+});
 
 const openScheduleFromQuery = () => {
   const id = new URLSearchParams(window.location.search).get('id');
