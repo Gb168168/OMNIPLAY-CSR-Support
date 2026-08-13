@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
   <link rel="stylesheet" href="../assets/styles.css?v=20260813-schedule-countdown1" />
+  <style>
+    .schedule-history-changes { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 4px; }
+    .schedule-history-changes p { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 7px 8px; border-radius: 8px; background: var(--surface-muted); }
+    .schedule-history-changes p b { color: var(--text-secondary); }
+    .schedule-history-changes p span, .schedule-history-changes p strong { overflow-wrap: anywhere; white-space: pre-wrap; }
+    .schedule-history-changes p i { color: var(--text-muted); font-style: normal; }
+    @media (max-width: 640px) {
+      .schedule-history-changes p { grid-template-columns: 1fr; }
+      .schedule-history-changes p i { transform: rotate(90deg); justify-self: start; }
+    }
+  </style>
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -169,7 +180,6 @@
               </select></label>
               <label id="scheduleRepeatIntervalLabel" hidden><span>自訂間隔天數</span><input id="scheduleRepeatInterval" type="number" min="1" step="1" value="1" /></label>
             </div>
-            <label><span>設置人員</span><select id="scheduleStaff" multiple size="6"></select><small>按住 Ctrl / Command 可多選人員。</small></label>
             <section class="schedule-history" aria-label="設置歷程">
               <h3>設置歷程</h3>
               <div id="scheduleHistoryList" class="schedule-history-list"></div>
@@ -193,6 +203,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
-  <script src="../assets/schedule.js?v=20260813-change-direction2"></script>
+  <script src="../assets/schedule.js?v=20260814-detailed-history1"></script>
 </body>
 </html>

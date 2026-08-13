@@ -21,7 +21,6 @@ const deleteButton = document.querySelector('#deleteScheduleButton');
 const colorInput = document.querySelector('#scheduleLabelColor');
 const labelNameInput = document.querySelector('#scheduleLabelName');
 const labelCategorySelect = document.querySelector('#scheduleLabelCategory');
-const staffSelect = document.querySelector('#scheduleStaff');
 const historyListEl = document.querySelector('#scheduleHistoryList');
 const tooltipEl = document.querySelector('#scheduleSpecialTooltip');
 const repeatSelect = document.querySelector('#scheduleRepeat');
@@ -723,11 +722,6 @@ const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) =
   return groups;
 }, {});
 
-const renderStaffOptions = () => {
-  if (!staffSelect) return;
-  staffSelect.innerHTML = staffList.map((staff) => `<option value="${staff.id}">${escapeHtml(staff.name || staff.code || '未命名')}</option>`).join('');
-};
-
 const normalizeLabelName = (name = '') => canonicalScheduleLabelName(name);
 
 const getUniqueLabels = () => {
@@ -787,12 +781,39 @@ const scheduleMatchesActiveLabel = (item) => {
   return item.labelId === activeLabelFilter || item.labelName === selectedName || item.labelName === activeLabelFilter;
 };
 
+const scheduleHistoryFields = [
+  ['title', '標題'],
+  ['content', '內容'],
+  ['reminderAt', '提醒時間'],
+  ['labelName', '標籤名稱'],
+  ['labelColor', '標籤顏色'],
+  ['repeat', '重複提醒'],
+  ['repeatInterval', '自訂間隔天數']
+];
+const historyValue = (key, value) => {
+  if (value == null || value === '') return '（空白）';
+  if (key === 'reminderAt') {
+    const date = parseDateValue(value);
+    return date ? date.toLocaleString('zh-TW', { hour12: false }) : String(value);
+  }
+  const repeatLabels = { none: '不重複', daily: '每天', weekly: '每週', monthly: '每月', custom: '自訂' };
+  if (key === 'repeat') return repeatLabels[value] || String(value);
+  return String(value);
+};
+const buildScheduleChanges = (before, after) => scheduleHistoryFields.flatMap(([key, label]) => {
+  const oldValue = historyValue(key, before?.[key]);
+  const newValue = historyValue(key, after?.[key]);
+  return oldValue === newValue ? [] : [{ field: label, oldValue, newValue }];
+});
 const renderHistory = (history = []) => {
   if (!historyListEl) return;
   historyListEl.innerHTML = history.length
     ? history.slice().reverse().map((entry) => {
       const time = parseDateValue(entry.at);
-      return `<div class="history-item"><span>${escapeHtml(time ? time.toLocaleString('zh-TW', { hour12: false }) : '—')}</span><strong>${escapeHtml(entry.userName || '未記錄')}</strong><em>${escapeHtml(entry.action || '編輯')}</em></div>`;
+      const changes = Array.isArray(entry.changes) && entry.changes.length
+        ? `<div class="schedule-history-changes">${entry.changes.map((change) => `<p><b>${escapeHtml(change.field || '欄位')}</b><span>${escapeHtml(change.oldValue || '（空白）')}</span><i>→</i><strong>${escapeHtml(change.newValue || '（空白）')}</strong></p>`).join('')}</div>`
+        : '<small>舊紀錄未保存修改內容</small>';
+      return `<div class="history-item"><span>${escapeHtml(time ? time.toLocaleString('zh-TW', { hour12: false }) : '—')}</span><strong>${escapeHtml(entry.userName || '未記錄')}</strong><em>${escapeHtml(entry.action || '編輯')}</em>${changes}</div>`;
     }).join('')
     : '<p class="history-empty">尚無歷程</p>';
 };
@@ -959,11 +980,6 @@ const subscribeLabels = () => {
   }, (error) => console.error('讀取標籤失敗：', error));
 };
 
-const selectDefaultStaff = (item) => {
-  const ids = item?.staffIds?.length ? item.staffIds : [currentUser().id].filter(Boolean);
-  [...staffSelect.options].forEach((option) => { option.selected = ids.includes(option.value); });
-};
-
 const openModal = (dateKey, scheduleId = null) => {
   editingId = scheduleId;
   const item = scheduleList.find((entry) => entry.id === scheduleId);
@@ -984,7 +1000,6 @@ const openModal = (dateKey, scheduleId = null) => {
   repeatSelect.value = item?.repeat || 'none';
   repeatIntervalInput.value = item?.repeatInterval || 1;
   toggleRepeatInterval();
-  selectDefaultStaff(item);
   renderHistory(item?.history || []);
   const isPmConfirmation = item?.eventType === 'pm-confirmation';
   if (gamePmConfirmedLabel) gamePmConfirmedLabel.hidden = !isPmConfirmation;
@@ -1178,7 +1193,6 @@ formEl?.addEventListener('submit', async (event) => {
   if (!canEditSchedule) return setMessage('您沒有編輯權限。');
   if (!scheduleCollection) return setMessage('Firebase 尚未完成初始化，無法儲存排程。');
   const reminderAt = new Date(document.querySelector('#scheduleReminderAt').value);
-  const staffIds = [...staffSelect.selectedOptions].map((option) => option.value);
   const user = currentUser();
   const action = editingId ? '編輯' : '新增';
   const labelName = labelNameInput.value.trim();
@@ -1189,19 +1203,25 @@ formEl?.addEventListener('submit', async (event) => {
     date: toDateKey(reminderAt), labelColor, labelName, repeat,
     title: document.querySelector('#scheduleTitle').value.trim(),
     content: document.querySelector('#scheduleContent').value.trim(),
-    reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt), staffIds,
-    staffNames: staffIds.map((id) => staffList.find((staff) => staff.id === id)?.name || '').filter(Boolean),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, deleted: false,
-    history: firebase.firestore.FieldValue.arrayUnion({ action, userId: user.id, userName: user.name, at: firebase.firestore.Timestamp.fromDate(new Date()) })
+    reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, deleted: false
   };
   if (repeat === 'custom') payload.repeatInterval = repeatInterval;
   else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
   if (!payload.title) return setMessage('請輸入標題。');
+  const editingItem = scheduleList.find((entry) => entry.id === editingId);
+  const changes = editingItem ? buildScheduleChanges(editingItem, { ...payload, reminderAt }) : [];
+  payload.history = firebase.firestore.FieldValue.arrayUnion({
+    action,
+    userId: user.id,
+    userName: user.name,
+    at: firebase.firestore.Timestamp.fromDate(new Date()),
+    changes
+  });
   try {
     await saveLabelIfNeeded(labelName, labelColor);
     if (editingId) await scheduleCollection.doc(editingId).update(payload);
     else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    const editingItem = scheduleList.find((entry) => entry.id === editingId);
     if (editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
       const createdCount = await createUatSchedules(editingItem, user);
       if (!createdCount) throw new Error('沒有可建立的 UAT 資料待辦。');
@@ -1223,7 +1243,7 @@ deleteButton?.addEventListener('click', async () => {
 
 if (!scheduleDb) setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
 else {
-  unsubscribeStaff = scheduleStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { staffList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(activeStaff); renderStaffOptions(); }, (error) => console.error('讀取人員資料失敗：', error));
+  unsubscribeStaff = scheduleStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { staffList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(activeStaff); }, (error) => console.error('讀取人員資料失敗：', error));
   subscribeSchedules();
   subscribeLabels();
   subscribeLeave();
