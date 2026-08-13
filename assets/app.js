@@ -55,6 +55,13 @@ const renderSidebar = () => {
     ? sidebarItems[0]
     : activeGroup?.items.find((item) => isActiveSidebarHref(item.href));
   sidebar.className = 'sidebar top-navigation';
+  // ⛔ 死規則(2026-08-13 中魁):「返回 MyERP」導覽鈕不可移除/改名/改成登出;
+  // 任何登入/登出/導覽重構都必須原樣保留(見 AGENTS.md 規則 10)。
+  // goldbricks.synology.me 的 5173 沒對外轉發(2026-08-13 實測死鏈),該域名改指公司固定 IP;其餘照本機 hostname。
+  const myerpPortalHost = /goldbricks\.synology\.me$/i.test(location.hostname) ? '61.216.37.16' : location.hostname;
+  const myerpReturnLink = /github\.io$/i.test(location.hostname)
+    ? ''
+    : `<a class="myerp-return-btn" id="myerpReturnBtn" href="http://${myerpPortalHost}:5173/portal" title="返回 MyERP 首頁"><span class="icon">⏎</span><span class="label">返回 MyERP</span></a>`;
   sidebar.innerHTML = `
     <div class="sidebar-header">
       <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
@@ -68,6 +75,7 @@ const renderSidebar = () => {
       <div class="top-nav-primary-links">
         ${renderSidebarLink(sidebarItems[0])}
         ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}" aria-controls="${group.id}Menu" aria-expanded="false"><span class="icon">${group.icon}</span><span class="label">${group.title}</span><span class="mobile-category-caret" aria-hidden="true">›</span></a>`).join('')}
+        ${myerpReturnLink}
       </div>
       <div class="top-nav-secondary">
         ${sidebarItems.slice(1).map((group) => `<section class="sidebar-group${group === activeGroup ? ' is-current-group' : ''}" data-group="${group.id}" aria-labelledby="${group.id}" id="${group.id}Menu">

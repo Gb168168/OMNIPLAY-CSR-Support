@@ -205,34 +205,21 @@ const normalizeDashboardShift = (value) => {
 };
 
 const dashboardExcludedWorkingNames = new Set(['rondo', '中魁']);
-const dashboardPhonePartners = { '佳臻': '茗雅', '茗雅': '佳臻', '晴心': '澄希', '澄希': '晴心' };
-const dashboardFixedPhoneAssignments = { '2026-08': { '佳臻': [4, 6, 12, 17, 29], '茗雅': [5, 13, 16, 18, 22, 23] } };
 const dashboardExternalRecord = (name, day) => dashboardState.externalLeave?.[name]?.days?.[String(day)] || {};
-const dashboardRecordIsBlank = (record = {}) => !record.type && !record.label && (!Array.isArray(record.specials) || record.specials.length === 0);
+// ⛔ 死規則(2026-08-13 中魁):值公務機只鏡射 /api/ext/leave 的 specials('phone')。
+// 禁止前端寫死排班日期、禁止演算法自行輪排、禁止本地 override 蓋過鏡射(見 AGENTS.md 規則 9)。
+const dashboardHasPhoneDuty = (staff, day) => {
+  const specials = dashboardExternalRecord(String(staff.name || '').trim(), day)?.specials;
+  return Array.isArray(specials) && specials.includes('phone');
+};
 const dashboardRecordIsWorking = (record = {}) => {
-  if (dashboardRecordIsBlank(record)) return true;
-  if (Array.isArray(record.specials) && record.specials.length) return false;
+  // 值機('phone')發生在上班日,判斷是否上班時不視為缺勤標記。
+  const specials = Array.isArray(record.specials) ? record.specials.filter((item) => item !== 'phone') : [];
+  if (!record.type && !record.label && specials.length === 0) return true;
+  if (specials.length) return false;
   const match = String(record.label || '').trim().match(/(\d+(?:\.\d+)?)\s*(?:小時|H|HR)?$/i);
   const hours = Number(match?.[1]);
   return Number.isFinite(hours) && hours > 0 && hours < 8;
-};
-const dashboardSavedLeaveRecord = (staff, day) => dashboardState.leave.records?.[`${staff.id}_${String(day)}`] || {};
-const dashboardCanAutoAssignPhone = (name, day) => {
-  const partner = dashboardPhonePartners[name];
-  return Boolean(partner) && dashboardRecordIsBlank(dashboardExternalRecord(name, day)) && dashboardRecordIsBlank(dashboardExternalRecord(partner, day));
-};
-const dashboardHasPhoneDuty = (staff, day, date) => {
-  const name = String(staff.name || '').trim();
-  const override = dashboardSavedLeaveRecord(staff, day).phoneOverride;
-  if (typeof override === 'boolean') return override && Boolean(dashboardPhonePartners[name]);
-  if (!dashboardCanAutoAssignPhone(name, day)) return false;
-  const fixedDays = dashboardFixedPhoneAssignments[monthKey(date)]?.[name];
-  if (Array.isArray(fixedDays)) return fixedDays.includes(day);
-  if (!['晴心', '澄希'].includes(name)) return false;
-  const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  const eligibleDays = Array.from({ length: totalDays }, (_, index) => index + 1).filter((candidateDay) => dashboardCanAutoAssignPhone('晴心', candidateDay));
-  const dutyIndex = eligibleDays.indexOf(day);
-  return dutyIndex >= 0 && (dutyIndex % 2 === 0 ? name === '晴心' : name === '澄希');
 };
 const updateTodayWorking = () => {
   const today = new Date();
@@ -249,7 +236,7 @@ const updateTodayWorking = () => {
       const name = String(staff.name || staff.code || staff.account || '未命名').trim();
       const externalPerson = dashboardState.externalLeave?.[name];
       if (!externalPerson || !dashboardRecordIsWorking(dashboardExternalRecord(name, todayNumber))) return;
-      const displayName = `${name}${dashboardHasPhoneDuty(staff, todayNumber, today) ? '📱' : ''}`;
+      const displayName = `${name}${dashboardHasPhoneDuty(staff, todayNumber) ? '📱' : ''}`;
       groups[normalizeDashboardShift(externalPerson.shift || staff.shift)].push(displayName);
     });
   const rows = Object.entries(groups).filter(([, names]) => names.length > 0).map(([shift, names]) => `<div class="today-working-row"><span>${shift} - </span>${escapeDashboardHtml(names.join('、'))}</div>`);
@@ -270,20 +257,31 @@ const updateDashboard = () => {
 };
 
 const loadDashboardExternalLeave = async () => {
-const targetMonth = monthKey();
-try {
-  const response = await fetch(`https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const payload = await response.json();
-  if (payload.month !== targetMonth) return;
-  dashboardState.externalLeave = payload.people || {};
-} catch (error) {
-  console.warn('首頁外部假表載入失敗', error);
+  const targetMonth = monthKey();
+  const apiBase = (window.CSR_API_BASE || '').replace(/\/+$/, '');
+  // ⛔ 死規則(2026-08-13 中魁):假表資料源只有兩個——①/api/ext/leave(公司排班鏡射=唯一真相)
+  // ②舊 worker(僅故障備援)。禁止新增其他來源、禁止調換順序(見 AGENTS.md 規則 9)。
+  const sources = [
+    `${apiBase}/api/ext/leave?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`,
+    `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`
+  ];
   dashboardState.externalLeave = {};
-} finally {
+  for (const url of sources) {
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const people = payload?.people;
+      const hasValidPeople = people && typeof people === 'object' && !Array.isArray(people) && Object.keys(people).length > 0;
+      if (payload?.month !== targetMonth || !hasValidPeople) throw new Error('同步來源不是指定月份的休假人員資料');
+      dashboardState.externalLeave = people;
+      break;
+    } catch (error) {
+      console.warn('首頁外部假表載入失敗', error);
+    }
+  }
   dashboardState.externalLeaveLoaded = true;
   updateDashboard();
-}
 };
 
 const updateShiftButtons = () => {

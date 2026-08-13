@@ -89,7 +89,8 @@ const setStatus = (message, type = 'info') => {
 };
 
 const normalizeStaff = (doc) => ({ id: doc.id, ...doc.data() });
-const leaveStaffNames = ['余中魁', '宋佳臻', '鄭晴心', '郭澄希', '熊茗雅'];
+// ⛔ 死規則(2026-08-13 中魁):休假表僅顯示客服四人;排班資料唯一來源=/api/ext/leave 鏡射(見 AGENTS.md 規則 9)。
+const leaveStaffNames = ['宋佳臻', '鄭晴心', '郭澄希', '熊茗雅'];
 const leaveStaffAliases = {
   '余中魁': '余中魁', '中魁': '余中魁',
   '宋佳臻': '宋佳臻', '佳臻': '宋佳臻',
@@ -146,12 +147,6 @@ const getHolidayName = (day) => {
   return taiwanHolidays[currentMonth.getFullYear()]?.[key] || '';
 };
 
-const fixedPhoneAssignments = {
-  '2026-08': {
-    '宋佳臻': [4, 6, 12, 17, 29],
-    '熊茗雅': [5, 13, 16, 18, 22, 23]
-  }
-};
 const externalRecordFor = (name, day) => externalPersonFor(name)?.days?.[dayKey(day)] || {};
 const isWorkingRecord = (record) => !record?.type && !record?.label && (!Array.isArray(record?.specials) || record.specials.length === 0);
 const isWorkingForFlexible = (record) => {
@@ -167,39 +162,13 @@ const phoneDutyPartners = {
   '鄭晴心': '郭澄希',
   '郭澄希': '鄭晴心'
 };
-const canPairForPhone = (name, day) => {
-  name = canonicalLeaveStaffName(name);
-  const partner = phoneDutyPartners[name];
-  return Boolean(partner) &&
-    isWorkingRecord(externalRecordFor(name, day)) &&
-    isWorkingRecord(externalRecordFor(partner, day));
-};
+// ⛔ 死規則(2026-08-13 中魁):值公務機只鏡射 /api/ext/leave 的 specials('phone')。
+// 禁止前端寫死排班日期、禁止演算法自行輪排、禁止本地 override 蓋過鏡射。
 const hasExternalPhoneDuty = (name, day) => {
-  name = canonicalLeaveStaffName(name);
-  const targetMonth = monthKey(currentMonth);
-  const fixedDays = fixedPhoneAssignments[targetMonth]?.[name];
-  if (Array.isArray(fixedDays)) {
-    return fixedDays.includes(day) && canPairForPhone(name, day);
-  }
-  if (!['鄭晴心', '郭澄希'].includes(name)) return false;
-  const eligibleDays = Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((candidateDay) =>
-    isWorkingRecord(externalRecordFor('鄭晴心', candidateDay)) &&
-    isWorkingRecord(externalRecordFor('郭澄希', candidateDay))
-  );
-  const dutyIndex = eligibleDays.indexOf(day);
-  return dutyIndex >= 0 && (dutyIndex % 2 === 0 ? name === '鄭晴心' : name === '郭澄希');
+  const specials = externalRecordFor(name, day)?.specials;
+  return Array.isArray(specials) && specials.includes('phone');
 };
-const savedRecordFor = (name, day) => {
-  const canonicalName = canonicalLeaveStaffName(name);
-  const staff = staffList.find((item) => canonicalLeaveStaffName(item.name) === canonicalName);
-  return staff ? leaveData.records?.[`${staff.id}_${dayKey(day)}`] || {} : {};
-};
-const hasPhoneDuty = (name, day) => {
-  name = canonicalLeaveStaffName(name);
-  const override = savedRecordFor(name, day).phoneOverride;
-  if (typeof override === 'boolean') return override && Boolean(phoneDutyPartners[name]);
-  return canPairForPhone(name, day) && hasExternalPhoneDuty(name, day);
-};
+const hasPhoneDuty = (name, day) => hasExternalPhoneDuty(canonicalLeaveStaffName(name), day);
 
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
   if (mode === 'phone') return hasPhoneDuty(staff.name, day);
@@ -245,18 +214,6 @@ const editableAttribute = () => canEditLeave ? '' : ' disabled';
 const getShift = (staff) => getStaffShift(staff);
 const leaveCount = (staffId) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => getRecord(staffId, index + 1)).filter((record) => ['leave', 'required'].includes(record?.type) && !record?.label).length;
 
-const leaveAppsScriptFeedUrl = 'https://script.google.com/macros/s/AKfycbw2saSKReX6c4juxILFzSofZPCZzvtui8NimeCrKJnm2gIfdONnHyybMGsZyeRnlvmW/exec';
-const loadLeaveJsonp = (url) => new Promise((resolve, reject) => {
-  const callbackName = `__omniplayLeaveSync_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const script = document.createElement('script');
-  const cleanup = () => { clearTimeout(timer); script.remove(); delete window[callbackName]; };
-  const timer = setTimeout(() => { cleanup(); reject(new Error('Apps Script 休假表同步逾時')); }, 20000);
-  window[callbackName] = (payload) => { cleanup(); resolve(payload); };
-  script.onerror = () => { cleanup(); reject(new Error('Apps Script 休假表同步無法載入')); };
-  script.src = `${url}${url.includes('?') ? '&' : '?'}callback=${encodeURIComponent(callbackName)}&t=${Date.now()}`;
-  document.head.appendChild(script);
-});
-
 const loadExternalLeave = async () => {
   const token = ++externalLeaveLoadToken;
   const targetMonth = monthKey(currentMonth);
@@ -264,22 +221,20 @@ const loadExternalLeave = async () => {
   // 61.216.37.15:8080,輸出合約與舊 worker 逐格一致);失敗時 fallback 舊 Cloudflare worker,
   // 讓 GitHub Pages 部署與後端故障時行為不變。
   const apiBase = (window.CSR_API_BASE || '').replace(/\/+$/, '');
+  // ⛔ 死規則(2026-08-13 中魁):假表資料源只有兩個——①/api/ext/leave(公司排班鏡射=唯一真相)
+  // ②舊 worker(僅故障備援)。禁止新增任何其他來源(Apps Script/Google Sheet/JSONP/寫死資料)、禁止調換順序。
   const sources = [
-    { type: 'jsonp', url: `${leaveAppsScriptFeedUrl}?feed=leave&month=${encodeURIComponent(targetMonth)}` },
-    { type: 'fetch', url: `${apiBase}/api/ext/leave?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` },
-    { type: 'fetch', url: `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` }
+    { url: `${apiBase}/api/ext/leave?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` },
+    { url: `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` }
   ];
   try {
     let payload = null;
     let lastError = null;
     for (const source of sources) {
       try {
-        if (source.type === 'jsonp') payload = await loadLeaveJsonp(source.url);
-        else {
-          const response = await fetch(source.url, { cache: 'no-store' });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          payload = await response.json();
-        }
+        const response = await fetch(source.url, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        payload = await response.json();
         if (payload?.success === false) throw new Error(payload.error || '同步來源回傳失敗');
         const payloadPeople = payload?.people;
         const hasValidPeople = payloadPeople &&
@@ -478,26 +433,9 @@ const toggleSpecial = (staffId, day, specialType) => {
   const key = `${staffId}_${dayKey(day)}`;
   leaveData.records ||= {};
   const staff = staffList.find((item) => item.id === staffId);
-  if (specialType === 'phone' && staff && externalPersonFor(staff.name)) {
-    const currentlyAssigned = hasPhoneDuty(staff.name, numericDay);
-    const canonicalName = canonicalLeaveStaffName(staff.name);
-    if (!currentlyAssigned && !phoneDutyPartners[canonicalName]) {
-      alert('此人員不在 📱 值公務機的配對名單中。');
-      return;
-    }
-    const savedRecord = leaveData.records[key] || {};
-    leaveData.records[key] = { ...savedRecord, phoneOverride: !currentlyAssigned };
-    if (!currentlyAssigned) {
-      const partnerName = phoneDutyPartners[canonicalName];
-      const partnerStaff = staffList.find((item) => canonicalLeaveStaffName(item.name) === partnerName);
-      if (partnerStaff) {
-        const partnerKey = `${partnerStaff.id}_${dayKey(day)}`;
-        const partnerRecord = leaveData.records[partnerKey] || {};
-        leaveData.records[partnerKey] = { ...partnerRecord, phoneOverride: false };
-      }
-    }
-    render();
-    queueSave();
+  if (specialType === 'phone') {
+    // ⛔ 死規則:值機由公司排班系統統一排定,前端僅鏡射顯示。
+    alert('📱 值公務機由排班系統統一排定,此處僅鏡射顯示,無法手動修改。');
     return;
   }
   const record = getRecord(staffId, day);
