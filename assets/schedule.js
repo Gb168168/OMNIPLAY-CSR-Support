@@ -611,7 +611,7 @@ const openGameChangeLog = async () => {
       return `<article class="game-change-log-item">
         <div class="game-change-log-heading"><strong>${escapeHtml(gameTitle)}</strong><time>${escapeHtml(formatGameChangeTime(change.changedAt))}</time></div>
         <p><b>${escapeHtml(change.fieldLabel || '資料')}</b></p>
-        <div class="game-change-values"><span>${escapeHtml(change.oldValue || '（空白）')}</span><i>→</i><strong>${escapeHtml(change.newValue || '（空白）')}</strong></div>
+        <div class="game-change-values"><span><small>變更前</small>${escapeHtml(change.newValue || '（空白）')}</span><i>→</i><strong><small>變更後</small>${escapeHtml(change.oldValue || '（空白）')}</strong></div>
       </article>`;
     }).join('');
   } catch (error) {
