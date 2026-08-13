@@ -8,3 +8,64 @@
 [data-panel="games"] .library-table td { min-width: 125px; white-space: nowrap; }
 [data-panel="games"] .library-table th:nth-child(3),
 [data-panel="games"] .library-table td:nth-child(3) { min-width: 220px; }
+
+
+/* Keep the wide Game Master inside its own scroller on phones. */
+.library-page,
+.library-page body,
+.library-page .app-shell,
+.library-page .main {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.library-tabs {
+  position: relative;
+  z-index: 2;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.library-tabs button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.library-panel,
+.library-toolbar,
+.library-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.library-table-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .library-tabs {
+    width: auto;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+  }
+
+  .library-panel {
+    margin-top: 0;
+    overflow: hidden;
+  }
+
+  .library-sync-bar {
+    flex-wrap: nowrap;
+  }
+
+  [data-panel="games"] .library-table {
+    width: 3000px;
+    max-width: none;
+  }
+}
