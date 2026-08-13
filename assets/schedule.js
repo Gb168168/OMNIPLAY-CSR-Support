@@ -150,6 +150,7 @@ let gameScheduleAutoTimer = null;
 let gameScheduleCountdownTimer = null;
 let gameScheduleNextSyncAt = null;
 let gameScheduleLastFailed = false;
+let scheduleFormInitialSnapshot = '';
 const GAME_SCHEDULE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 const storedSchedulePermission = () => window.getPagePermission?.('schedule') || { view: false, edit: false, delete: false, design: false };
@@ -1019,11 +1020,23 @@ const openModal = (dateKey, scheduleId = null) => {
   formEl?.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !canEditSchedule; });
   document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
   document.querySelector('#saveScheduleButton')?.toggleAttribute('disabled', !canEditSchedule);
+  scheduleFormInitialSnapshot = new URLSearchParams(new FormData(formEl)).toString();
   modalEl.classList.add('is-open');
   modalEl.setAttribute('aria-hidden', 'false');
 };
 
-const closeModal = () => { modalEl.classList.remove('is-open'); modalEl.setAttribute('aria-hidden', 'true'); editingId = null; };
+const hasUnsavedScheduleChanges = () =>
+  modalEl?.classList.contains('is-open') &&
+  scheduleFormInitialSnapshot !== new URLSearchParams(new FormData(formEl)).toString();
+
+const closeModal = (force = false) => {
+  if (!force && hasUnsavedScheduleChanges() && !window.confirm('尚有未儲存的排程內容，確定要放棄嗎？')) return false;
+  modalEl.classList.remove('is-open');
+  modalEl.setAttribute('aria-hidden', 'true');
+  editingId = null;
+  scheduleFormInitialSnapshot = '';
+  return true;
+};
 
 const showSpecials = (type, anchor) => {
   if (!tooltipEl) return;
@@ -1160,9 +1173,12 @@ document.querySelector('#closeGameChangeLog')?.addEventListener('click', closeGa
 gameChangeLogModalEl?.addEventListener('click', (event) => {
   if (event.target === gameChangeLogModalEl) closeGameChangeLog();
 });
-document.querySelector('#closeScheduleModal')?.addEventListener('click', closeModal);
-document.querySelector('#cancelScheduleButton')?.addEventListener('click', closeModal);
-modalEl?.addEventListener('click', (event) => { if (event.target === modalEl) closeModal(); });
+document.querySelector('#closeScheduleModal')?.addEventListener('click', () => closeModal());
+document.querySelector('#cancelScheduleButton')?.addEventListener('click', () => closeModal());
+// 點擊視窗外部不關閉，避免新增／編輯中的內容意外消失。
+modalEl?.addEventListener('click', (event) => {
+  if (event.target === modalEl) event.preventDefault();
+});
 document.addEventListener('click', (event) => { if (tooltipEl && !tooltipEl.contains(event.target) && !event.target.closest('.schedule-special-trigger')) tooltipEl.hidden = true; });
 
 const openScheduleHelp = () => {
@@ -1238,7 +1254,7 @@ formEl?.addEventListener('submit', async (event) => {
       setStatus(successMessage, 'success');
       window.alert(successMessage);
     }
-    closeModal();
+    closeModal(true);
   } catch (error) { console.error('儲存排程失敗：', error); setMessage('儲存排程失敗，請稍後再試。'); }
 });
 
@@ -1247,7 +1263,7 @@ deleteButton?.addEventListener('click', async () => {
   if (!editingId || !scheduleCollection || !confirm('確定要刪除此排程嗎？')) return;
   const user = currentUser();
   await scheduleCollection.doc(editingId).update({ deleted: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, history: firebase.firestore.FieldValue.arrayUnion({ action: '刪除', userId: user.id, userName: user.name, at: firebase.firestore.Timestamp.fromDate(new Date()) }) });
-  closeModal();
+  closeModal(true);
 });
 
 if (!scheduleDb) setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
