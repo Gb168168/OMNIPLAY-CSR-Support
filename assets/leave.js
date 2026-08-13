@@ -162,13 +162,35 @@ const phoneDutyPartners = {
   '鄭晴心': '郭澄希',
   '郭澄希': '鄭晴心'
 };
-// ⛔ 死規則(2026-08-13 中魁):值公務機只鏡射 /api/ext/leave 的 specials('phone')。
-// 禁止前端寫死排班日期、禁止演算法自行輪排、禁止本地 override 蓋過鏡射。
-const hasExternalPhoneDuty = (name, day) => {
-  const specials = externalRecordFor(name, day)?.specials;
-  return Array.isArray(specials) && specials.includes('phone');
+const phoneDutyPairs = [
+  { key: 'early', members: ['宋佳臻', '熊茗雅'] },
+  { key: 'late', members: ['鄭晴心', '郭澄希'] }
+];
+const phoneOverrideKey = (pair, day) => `${pair.key}_${dayKey(day)}`;
+const phonePairForName = (name) => phoneDutyPairs.find((pair) => pair.members.includes(canonicalLeaveStaffName(name)));
+const isPhoneDutyDayEligible = (pair, day) =>
+  pair.members.every((name) => isWorkingRecord(externalRecordFor(name, day)));
+const buildPhoneDutyPlan = () => {
+  const plan = new Map(phoneDutyPairs.flatMap((pair) => pair.members.map((name) => [name, new Set()])));
+  phoneDutyPairs.forEach((pair) => {
+    const counts = Object.fromEntries(pair.members.map((name) => [name, 0]));
+    for (let day = 1; day <= daysInMonth(currentMonth); day += 1) {
+      if (!isPhoneDutyDayEligible(pair, day)) continue;
+      const key = phoneOverrideKey(pair, day);
+      const hasOverride = Object.prototype.hasOwnProperty.call(leaveData.phoneOverrides || {}, key);
+      const override = hasOverride ? leaveData.phoneOverrides[key] : undefined;
+      if (override === '') continue;
+      const selected = pair.members.includes(override)
+        ? override
+        : [...pair.members].sort((a, b) => counts[a] - counts[b] || pair.members.indexOf(a) - pair.members.indexOf(b))[0];
+      plan.get(selected).add(day);
+      counts[selected] += 1;
+    }
+  });
+  return plan;
 };
-const hasPhoneDuty = (name, day) => hasExternalPhoneDuty(canonicalLeaveStaffName(name), day);
+const hasPhoneDuty = (name, day) =>
+  buildPhoneDutyPlan().get(canonicalLeaveStaffName(name))?.has(Number(day)) === true;
 
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
   if (mode === 'phone') return hasPhoneDuty(staff.name, day);
@@ -197,8 +219,8 @@ const getRecord = (staffId, day) => {
   const externalPerson = staff ? externalPersonFor(staff.name) : null;
   if (externalPerson) {
     const externalRecord = externalPerson.days?.[dayKey(day)] || {};
-    const specials = Array.isArray(externalRecord.specials) ? [...externalRecord.specials] : [];
-    if (hasPhoneDuty(staff.name, day) && !specials.includes('phone')) specials.push('phone');
+    const specials = (Array.isArray(externalRecord.specials) ? externalRecord.specials : []).filter((item) => item !== 'phone');
+    if (hasPhoneDuty(staff.name, day)) specials.push('phone');
     return {
       ...externalRecord,
       type: externalRecord.type || '',
@@ -208,7 +230,7 @@ const getRecord = (staffId, day) => {
   const record = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
   return { ...record, type: record.type || '', specials: record.specials || [] };
 };
-const getGlobalQuota = () => externalMaxDays !== null ? externalMaxDays : Number(leaveData.quota ?? 8);
+const getGlobalQuota = () => externalMaxDays;
 const getQuota = () => getGlobalQuota();
 const editableAttribute = () => canEditLeave ? '' : ' disabled';
 const getShift = (staff) => getStaffShift(staff);
@@ -281,8 +303,8 @@ const saveMonthData = async () => {
     await leaveCollection.doc(monthKey(currentMonth)).set({
       month: monthKey(currentMonth),
       records: leaveData.records || {},
-      quota: getGlobalQuota(),
       quotas: leaveData.quotas || {},
+      phoneOverrides: leaveData.phoneOverrides || {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     setStatus('已自動儲存休假表。', 'success');
@@ -309,7 +331,7 @@ const renderBody = () => {
   const rows = staffList.map((staff) => {
     const used = leaveCount(staff.id);
     const quota = getQuota();
-    const overQuota = used > quota;
+    const overQuota = Number.isFinite(quota) && used > quota;
     const cells = Array.from({ length: totalDays }, (_, index) => renderDayCell(staff, index + 1)).join('');
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
       <th class="sticky-col name-col" scope="row">
@@ -337,8 +359,9 @@ const renderDayCell = (staff, day) => {
 const render = () => {
   monthLabel.textContent = `${currentMonth.getFullYear()} 年 ${currentMonth.getMonth() + 1} 月`;
   if (globalQuotaInput) {
-    globalQuotaInput.value = getGlobalQuota();
-    globalQuotaInput.disabled = externalMaxDays !== null || !canEditLeave;
+    globalQuotaInput.value = Number.isFinite(getGlobalQuota()) ? getGlobalQuota() : '';
+    globalQuotaInput.disabled = true;
+    globalQuotaInput.title = Number.isFinite(getGlobalQuota()) ? '可休天數由公司休假系統同步' : '公司休假系統未提供可休天數';
   }
   renderHeader();
   renderBody();
@@ -387,7 +410,7 @@ const subscribeMonth = () => {
   externalMaxDays = null;
   loadExternalLeave();
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
-    leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, quota: 8, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, quota: 8 };
+    leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, phoneOverrides: {} };
     staffList = sortStaffForLeave(staffList);
     render();
     loadMonthlyShifts();
@@ -412,7 +435,7 @@ const toggleLeave = (staffId, day) => {
   leaveData.records[key] = { ...record, type: nextType };
   if (!nextType && !(record.specials || []).length) delete leaveData.records[key];
   const staff = staffList.find((item) => item.id === staffId);
-  if (leaveCount(staffId) > getQuota()) alert(`${staff?.name || '此人員'} 已超過當月可休天數！`);
+  if (Number.isFinite(getQuota()) && leaveCount(staffId) > getQuota()) alert(`${staff?.name || '此人員'} 已超過當月可休天數！`);
   render();
   queueSave();
 };
@@ -434,8 +457,21 @@ const toggleSpecial = (staffId, day, specialType) => {
   leaveData.records ||= {};
   const staff = staffList.find((item) => item.id === staffId);
   if (specialType === 'phone') {
-    // ⛔ 死規則:值機由公司排班系統統一排定,前端僅鏡射顯示。
-    alert('📱 值公務機由排班系統統一排定,此處僅鏡射顯示,無法手動修改。');
+    const pair = phonePairForName(staff?.name);
+    if (!pair || !isPhoneDutyDayEligible(pair, numericDay)) {
+      alert('此日有人有休假、活動或其他文字，不能安排📱值公務機。');
+      return;
+    }
+    leaveData.phoneOverrides ||= {};
+    const overrideKey = phoneOverrideKey(pair, numericDay);
+    const hasOverride = Object.prototype.hasOwnProperty.call(leaveData.phoneOverrides, overrideKey);
+    const currentAssignee = pair.members.find((name) => hasPhoneDuty(name, numericDay)) || '';
+    const clickedName = canonicalLeaveStaffName(staff.name);
+    if (!hasOverride && currentAssignee === clickedName) leaveData.phoneOverrides[overrideKey] = '';
+    else if (hasOverride && leaveData.phoneOverrides[overrideKey] === clickedName) delete leaveData.phoneOverrides[overrideKey];
+    else leaveData.phoneOverrides[overrideKey] = clickedName;
+    render();
+    queueSave();
     return;
   }
   const record = getRecord(staffId, day);
@@ -503,9 +539,9 @@ specialModeButtons.forEach((button) => {
 });
 
 const updateGlobalQuota = (value) => {
-  if (!canEditLeave) return;
+  if (!canEditLeave || externalMaxDays !== null) return;
   leaveData.quota = Number(value || 0);
-  const exceededStaff = staffList.find((staff) => leaveCount(staff.id) > getQuota());
+  const exceededStaff = Number.isFinite(getQuota()) && staffList.find((staff) => leaveCount(staff.id) > getQuota());
   if (exceededStaff) alert('已休天數超過當月全員可休天數！');
   render();
   queueSave();
