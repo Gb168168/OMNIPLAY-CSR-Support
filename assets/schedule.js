@@ -458,8 +458,8 @@ const renderGameScheduleCountdown = () => {
   }
   const remaining = Math.max(0, (gameScheduleNextSyncAt || Date.now() + GAME_SCHEDULE_SYNC_INTERVAL_MS) - Date.now());
   scheduleSyncCountdown.textContent = gameScheduleLastFailed
-    ? `同步失敗；下次重試 ${formatGameScheduleCountdown(remaining)}`
-    : `下次自動同步 ${formatGameScheduleCountdown(remaining)}`;
+    ? `同步失敗｜5 分鐘後自動重試 ${formatGameScheduleCountdown(remaining)}`
+    : `每 5 分鐘自動更新｜下次更新 ${formatGameScheduleCountdown(remaining)}`;
 };
 
 const startGameScheduleCountdown = (delay = GAME_SCHEDULE_SYNC_INTERVAL_MS) => {
