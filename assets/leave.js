@@ -11,6 +11,7 @@ const leaveTableHead = document.querySelector('#leaveTableHead');
 const leaveTableBody = document.querySelector('#leaveTableBody');
 const leaveStatus = document.querySelector('#leaveStatus');
 const leaveLegend = document.querySelector('#leaveLegend');
+const leaveSourceStatus = document.querySelector('#leaveSourceStatus');
 const globalQuotaInput = document.querySelector('#globalLeaveQuota');
 const phoneDutySummary = document.querySelector('#phoneDutySummary');
 const flexibleLeaveSummary = document.querySelector('#flexibleLeaveSummary');
@@ -280,6 +281,11 @@ const loadExternalLeave = async () => {
     );
     const maxDays = Number(payload.maxDays);
     externalMaxDays = Number.isFinite(maxDays) && maxDays >= 0 ? maxDays : null;
+    if (leaveSourceStatus) {
+      leaveSourceStatus.textContent = externalMaxDays === null
+        ? '⚠ 已連動休假資料，但缺少可休天數'
+        : '● 已連動公司休假系統';
+    }
     staffList = sortStaffForLeave(staffList);
     render();
   } catch (error) {
@@ -287,7 +293,8 @@ const loadExternalLeave = async () => {
     externalLeaveData = {};
     externalMaxDays = null;
     console.error('同步外部假表失敗：', error);
-    setStatus('外部假表暫時無法同步，現在顯示 OMNIPLAY 原有資料。', 'error');
+    if (leaveSourceStatus) leaveSourceStatus.textContent = '● 公司休假系統連動失敗';
+    setStatus('公司休假系統暫時無法同步，未使用預設休假或可休天數。', 'error');
     render();
   }
 };
