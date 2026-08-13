@@ -176,14 +176,17 @@ const buildPhoneDutyPlan = () => {
   phoneDutyPairs.forEach((pair) => {
     const counts = Object.fromEntries(pair.members.map((name) => [name, 0]));
     for (let day = 1; day <= daysInMonth(currentMonth); day += 1) {
-      if (!isPhoneDutyDayEligible(pair, day)) continue;
       const key = phoneOverrideKey(pair, day);
       const hasOverride = Object.prototype.hasOwnProperty.call(leaveData.phoneOverrides || {}, key);
       const override = hasOverride ? leaveData.phoneOverrides[key] : undefined;
       if (override === '') continue;
-      const selected = pair.members.includes(override)
-        ? override
-        : [...pair.members].sort((a, b) => counts[a] - counts[b] || pair.members.indexOf(a) - pair.members.indexOf(b))[0];
+      if (pair.members.includes(override)) {
+        plan.get(override).add(day);
+        counts[override] += 1;
+        continue;
+      }
+      if (!isPhoneDutyDayEligible(pair, day)) continue;
+      const selected = [...pair.members].sort((a, b) => counts[a] - counts[b] || pair.members.indexOf(a) - pair.members.indexOf(b))[0];
       plan.get(selected).add(day);
       counts[selected] += 1;
     }
@@ -465,10 +468,7 @@ const toggleSpecial = (staffId, day, specialType) => {
   const staff = staffList.find((item) => item.id === staffId);
   if (specialType === 'phone') {
     const pair = phonePairForName(staff?.name);
-    if (!pair || !isPhoneDutyDayEligible(pair, numericDay)) {
-      alert('此日有人有休假、活動或其他文字，不能安排📱值公務機。');
-      return;
-    }
+    if (!pair) return;
     leaveData.phoneOverrides ||= {};
     const overrideKey = phoneOverrideKey(pair, numericDay);
     const hasOverride = Object.prototype.hasOwnProperty.call(leaveData.phoneOverrides, overrideKey);
