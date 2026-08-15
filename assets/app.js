@@ -137,7 +137,7 @@ const toggleTheme = () => {
 applyTheme(getStoredTheme());
 
 const getStoredSidebarCollapsed = () => false;
-const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
+const isMobileViewport = () => window.matchMedia('(max-width: 1200px)').matches;
 const closeMobileSidebar = () => {
   sidebar?.classList.remove('is-open');
   sidebarOverlay?.classList.remove('is-visible');
