@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260814-schedule-grid-lines2" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260816-schedule-toolbar" />
   <style>
     .day-agenda-heading-actions { display: flex; align-items: center; gap: 8px; }
     .day-agenda-heading-actions .primary-button { min-height: 38px; padding: 7px 12px; white-space: nowrap; }
@@ -60,7 +60,7 @@
       <section class="schedule-panel" aria-label="排程表月曆">
         <div class="panel-heading schedule-heading">
           <div class="schedule-nav-left" aria-label="月份切換">
-            <button class="secondary-button" id="prevSchedulePeriod" type="button">&lt; 上個月</button>
+            <button class="secondary-button schedule-period-step" id="prevSchedulePeriod" type="button" aria-label="上一個期間" title="上一個期間">‹</button>
             <div class="schedule-period-picker-wrap">
               <button class="schedule-period-label" id="schedulePeriodLabel" type="button" aria-haspopup="dialog" aria-expanded="false">—</button>
               <div class="schedule-period-picker" id="schedulePeriodPicker" hidden>
@@ -72,14 +72,9 @@
                 <div class="period-picker-months" id="scheduleMonthPicker" aria-label="選擇月份"></div>
               </div>
             </div>
-            <button class="secondary-button" id="nextSchedulePeriod" type="button">下個月 &gt;</button>
+            <button class="secondary-button schedule-period-step" id="nextSchedulePeriod" type="button" aria-label="下一個期間" title="下一個期間">›</button>
           </div>
           <div class="schedule-heading-actions">
-            <div class="schedule-sync-controls" id="scheduleSyncControls" hidden>
-              <button class="secondary-button" id="syncGameScheduleButton" type="button">🔄 同步遊戲排程</button>
-              <span class="schedule-sync-countdown" id="scheduleSyncCountdown" aria-live="polite">下次自動同步 05:00</span>
-            </div>
-            <button class="secondary-button" id="gameChangeLogButton" type="button">📝 試算表變更</button>
             <div class="view-switch" aria-label="檢視切換">
               <button class="ghost-button" id="weekViewButton" type="button" data-view="week">週</button>
               <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
@@ -88,7 +83,17 @@
             <select class="schedule-filter-select" id="scheduleLabelFilter" aria-label="依標籤篩選排程">
               <option value="">全部標籤</option>
             </select>
-            <button class="secondary-button schedule-help-button" id="openScheduleHelp" type="button">❔ 使用說明</button>
+            <details class="schedule-more-menu">
+              <summary class="secondary-button" aria-label="開啟更多排程功能">⋯ 更多</summary>
+              <div class="schedule-more-popover">
+                <div class="schedule-sync-controls" id="scheduleSyncControls" hidden>
+                  <button class="schedule-more-action" id="syncGameScheduleButton" type="button">🔄 同步遊戲排程</button>
+                  <span class="schedule-sync-countdown" id="scheduleSyncCountdown" aria-live="polite">下次自動同步 05:00</span>
+                </div>
+                <button class="schedule-more-action" id="gameChangeLogButton" type="button">📝 試算表變更</button>
+                <button class="schedule-more-action schedule-help-button" id="openScheduleHelp" type="button">❔ 使用說明</button>
+              </div>
+            </details>
           </div>
         </div>
         <div class="schedule-meta">
@@ -124,7 +129,7 @@
             <section>
               <h3>📅 基本操作</h3>
               <ol>
-                <li>使用「上個月／下個月」切換日期，或點擊月份直接選擇年月。</li>
+                <li>使用月份兩側的箭頭切換日期，或點擊月份直接選擇年月。</li>
                 <li>點日期空白處可新增排程；點排程項目可查看或編輯。</li>
                 <li>可切換「週／月／年」檢視，並使用「全部標籤」篩選。</li>
               </ol>
