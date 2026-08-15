@@ -205,6 +205,12 @@ const normalizeDashboardShift = (value) => {
 };
 
 const dashboardExcludedWorkingNames = new Set(['rondo', '中魁']);
+const dashboardIsExcludedWorkingName = (name) => {
+  const normalized = String(name || '').trim().toLowerCase();
+  return [...dashboardExcludedWorkingNames].some((excluded) =>
+    normalized === excluded || normalized.endsWith(excluded)
+  );
+};
 const dashboardExternalRecord = (name, day) => dashboardState.externalLeave?.[name]?.days?.[String(day)] || {};
 // ⛔ 死規則(2026-08-13 中魁):值公務機只鏡射 /api/ext/leave 的 specials('phone')。
 // 禁止前端寫死排班日期、禁止演算法自行輪排、禁止本地 override 蓋過鏡射(見 AGENTS.md 規則 9)。
@@ -229,14 +235,31 @@ const updateTodayWorking = () => {
   setText('#todayWorkingTitle', `今日上班（${displayDate(today)}）`);
   if (!list) return;
   if (!dashboardState.externalLeaveLoaded) { list.textContent = '載入中...'; return; }
-  Object.entries(dashboardState.externalLeave || {})
-    .filter(([name]) => !dashboardExcludedWorkingNames.has(String(name || '').trim().toLowerCase()))
-    .forEach(([rawName, externalPerson]) => {
-      const name = String(rawName || '').trim();
-      if (!name || !externalPerson || !dashboardRecordIsWorking(dashboardExternalRecord(name, todayNumber))) return;
-      const displayName = `${name}${dashboardHasPhoneDuty(name, todayNumber) ? '📱' : ''}`;
-      groups[normalizeDashboardShift(externalPerson.shift)].push(displayName);
-    });
+  const externalPeople = dashboardState.externalLeave || {};
+  const sourceNames = Object.keys(externalPeople).map((name) => String(name || '').trim()).filter(Boolean);
+  const canonicalName = (name) => sourceNames.find((candidate) =>
+    candidate !== name &&
+    candidate.length > name.length &&
+    candidate.endsWith(name)
+  ) || name;
+  const peopleByCanonicalName = new Map();
+  sourceNames.forEach((sourceName) => {
+    const name = canonicalName(sourceName);
+    if (dashboardIsExcludedWorkingName(name)) return;
+    const sources = peopleByCanonicalName.get(name) || [];
+    sources.push(sourceName);
+    peopleByCanonicalName.set(name, sources);
+  });
+  peopleByCanonicalName.forEach((sources, name) => {
+    const workingSource = sources.find((sourceName) =>
+      dashboardRecordIsWorking(dashboardExternalRecord(sourceName, todayNumber))
+    );
+    if (!workingSource) return;
+    const externalPerson = externalPeople[name] || externalPeople[workingSource] || {};
+    const hasPhoneDuty = sources.some((sourceName) => dashboardHasPhoneDuty(sourceName, todayNumber));
+    const displayName = `${name}${hasPhoneDuty ? '📱' : ''}`;
+    groups[normalizeDashboardShift(externalPerson.shift)].push(displayName);
+  });
   const rows = Object.entries(groups).filter(([, names]) => names.length > 0).map(([shift, names]) => `<div class="today-working-row"><span>${shift} - </span>${escapeDashboardHtml(names.join('、'))}</div>`);
   list.innerHTML = rows.length ? rows.join('') : '<div class="today-working-empty">今日無人上班</div>';
 };
