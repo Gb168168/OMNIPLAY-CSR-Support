@@ -205,6 +205,12 @@ const normalizeDashboardShift = (value) => {
 };
 
 const dashboardExcludedWorkingNames = new Set(['rondo', '中魁']);
+const dashboardIsExcludedWorkingName = (name) => {
+  const normalized = String(name || '').trim().toLowerCase();
+  return [...dashboardExcludedWorkingNames].some((excluded) =>
+    normalized === excluded || normalized.endsWith(excluded)
+  );
+};
 const dashboardExternalRecord = (name, day) => dashboardState.externalLeave?.[name]?.days?.[String(day)] || {};
 // ⛔ 死規則(2026-08-13 中魁):值公務機只鏡射 /api/ext/leave 的 specials('phone')。
 // 禁止前端寫死排班日期、禁止演算法自行輪排、禁止本地 override 蓋過鏡射(見 AGENTS.md 規則 9)。
@@ -239,7 +245,7 @@ const updateTodayWorking = () => {
   const peopleByCanonicalName = new Map();
   sourceNames.forEach((sourceName) => {
     const name = canonicalName(sourceName);
-    if (dashboardExcludedWorkingNames.has(name.toLowerCase())) return;
+    if (dashboardIsExcludedWorkingName(name)) return;
     const sources = peopleByCanonicalName.get(name) || [];
     sources.push(sourceName);
     peopleByCanonicalName.set(name, sources);
