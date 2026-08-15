@@ -208,8 +208,8 @@ const dashboardExcludedWorkingNames = new Set(['rondo', '中魁']);
 const dashboardExternalRecord = (name, day) => dashboardState.externalLeave?.[name]?.days?.[String(day)] || {};
 // ⛔ 死規則(2026-08-13 中魁):值公務機只鏡射 /api/ext/leave 的 specials('phone')。
 // 禁止前端寫死排班日期、禁止演算法自行輪排、禁止本地 override 蓋過鏡射(見 AGENTS.md 規則 9)。
-const dashboardHasPhoneDuty = (staff, day) => {
-  const specials = dashboardExternalRecord(String(staff.name || '').trim(), day)?.specials;
+const dashboardHasPhoneDuty = (name, day) => {
+  const specials = dashboardExternalRecord(String(name || '').trim(), day)?.specials;
   return Array.isArray(specials) && specials.includes('phone');
 };
 const dashboardRecordIsWorking = (record = {}) => {
@@ -229,15 +229,13 @@ const updateTodayWorking = () => {
   setText('#todayWorkingTitle', `今日上班（${displayDate(today)}）`);
   if (!list) return;
   if (!dashboardState.externalLeaveLoaded) { list.textContent = '載入中...'; return; }
-  dashboardState.staff
-    .filter((staff) => isActiveStaff(staff) && !isSystemStaff(staff))
-    .filter((staff) => !dashboardExcludedWorkingNames.has(String(staff.name || staff.code || '').trim().toLowerCase()))
-    .forEach((staff) => {
-      const name = String(staff.name || staff.code || staff.account || '未命名').trim();
-      const externalPerson = dashboardState.externalLeave?.[name];
-      if (!externalPerson || !dashboardRecordIsWorking(dashboardExternalRecord(name, todayNumber))) return;
-      const displayName = `${name}${dashboardHasPhoneDuty(staff, todayNumber) ? '📱' : ''}`;
-      groups[normalizeDashboardShift(externalPerson.shift || staff.shift)].push(displayName);
+  Object.entries(dashboardState.externalLeave || {})
+    .filter(([name]) => !dashboardExcludedWorkingNames.has(String(name || '').trim().toLowerCase()))
+    .forEach(([rawName, externalPerson]) => {
+      const name = String(rawName || '').trim();
+      if (!name || !externalPerson || !dashboardRecordIsWorking(dashboardExternalRecord(name, todayNumber))) return;
+      const displayName = `${name}${dashboardHasPhoneDuty(name, todayNumber) ? '📱' : ''}`;
+      groups[normalizeDashboardShift(externalPerson.shift)].push(displayName);
     });
   const rows = Object.entries(groups).filter(([, names]) => names.length > 0).map(([shift, names]) => `<div class="today-working-row"><span>${shift} - </span>${escapeDashboardHtml(names.join('、'))}</div>`);
   list.innerHTML = rows.length ? rows.join('') : '<div class="today-working-empty">今日無人上班</div>';
