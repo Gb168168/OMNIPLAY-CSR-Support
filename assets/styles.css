@@ -6897,15 +6897,16 @@ body:has(.sidebar-toggle-btn.is-visible)
 
 /* Schedule toolbar: keep the primary controls quiet and group secondary actions. */
 .schedule-heading {
-  grid-template-columns: auto 1fr !important;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
   min-height: 66px;
   padding: 10px 16px !important;
   gap: 18px !important;
 }
 
 .schedule-nav-left {
+  grid-column: 2;
   flex-wrap: nowrap;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 6px;
 }
 
@@ -6919,6 +6920,9 @@ body:has(.sidebar-toggle-btn.is-visible)
 }
 
 .schedule-heading-actions {
+  grid-column: 3;
+  justify-self: end;
+  justify-content: flex-end;
   flex-wrap: nowrap;
   min-width: 0;
 }
@@ -7015,6 +7019,7 @@ body:has(.sidebar-toggle-btn.is-visible)
   }
 
   .schedule-nav-left {
+    grid-column: auto;
     display: grid !important;
     grid-template-columns: 42px minmax(112px, 1fr) 42px !important;
     gap: 5px !important;
@@ -7026,6 +7031,8 @@ body:has(.sidebar-toggle-btn.is-visible)
   }
 
   .schedule-heading-actions {
+    grid-column: auto;
+    justify-self: stretch;
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) minmax(130px, 1fr) auto !important;
     width: 100% !important;
@@ -7035,6 +7042,7 @@ body:has(.sidebar-toggle-btn.is-visible)
   .schedule-heading-actions .view-switch {
     display: grid !important;
     grid-column: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   .schedule-filter-select {
