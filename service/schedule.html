@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260814-schedule-contrast1" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260814-schedule-grid-lines2" />
   <style>
     .day-agenda-heading-actions { display: flex; align-items: center; gap: 8px; }
     .day-agenda-heading-actions .primary-button { min-height: 38px; padding: 7px 12px; white-space: nowrap; }
@@ -28,14 +28,6 @@
       background: #fee2e2 !important;
       color: #991b1b !important;
     }
-    /* Clear boundaries between Friday/Saturday and Sunday/Monday. */
-    .calendar-grid:not(.is-year-view) .calendar-weekday.weekday-6,
-    .calendar-grid:not(.is-year-view) .calendar-day.weekday-6,
-    .calendar-grid:not(.is-year-view) .calendar-weekday.weekday-1,
-    .calendar-grid:not(.is-year-view) .calendar-day.weekday-1 {
-      border-left: 2px solid #94a3b8 !important;
-    }
-
     .schedule-history-changes { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 4px; }
     .schedule-history-changes p { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 7px 8px; border-radius: 8px; background: var(--surface-muted); }
     .schedule-history-changes p b { color: var(--text-secondary); }
