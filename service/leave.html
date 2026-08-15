@@ -47,6 +47,71 @@
       }
       .leave-summary-card-content { grid-template-columns: 1fr 1fr; }
     }
+    @media (max-width: 700px) {
+      .leave-toolbar-wrap {
+        width: 100%;
+        min-width: 0;
+      }
+      .leave-toolbar {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        width: 100%;
+        gap: 8px;
+      }
+      .leave-toolbar .secondary-button,
+      .leave-toolbar .ghost-button {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 8px;
+        white-space: nowrap;
+      }
+      #leaveMonthLabel {
+        align-self: center;
+        white-space: nowrap;
+      }
+      #todayLeaveMonth { grid-column: 1 / -1; }
+      .leave-sync-time {
+        min-height: 46px;
+        padding: 8px 10px;
+      }
+      .leave-summary-cards {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .leave-summary-card {
+        max-height: none;
+      }
+      .leave-summary-card-content {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        font-size: 14px;
+      }
+      .leave-meta { padding: 10px; }
+      .leave-legend {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .leave-table-wrap {
+        max-height: none;
+        padding: 0 !important;
+      }
+      .leave-table {
+        width: max-content;
+        min-width: max-content !important;
+        table-layout: auto;
+      }
+      .leave-table .name-col {
+        min-width: 104px;
+        width: 104px;
+        max-width: 104px;
+      }
+      .leave-table .day-col,
+      .leave-table .leave-day {
+        min-width: 44px;
+        width: 44px;
+      }
+    }
   </style>
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <meta name="theme-color" content="#3B82F6" />
