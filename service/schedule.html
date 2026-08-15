@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260816-schedule-toolbar" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260816-schedule-label-delete" />
   <style>
     .day-agenda-heading-actions { display: flex; align-items: center; gap: 8px; }
     .day-agenda-heading-actions .primary-button { min-height: 38px; padding: 7px 12px; white-space: nowrap; }
@@ -190,9 +190,9 @@
             <div class="label-row schedule-label-row">
               <label><span>顏色</span><input id="scheduleLabelColor" type="color" value="#3b82f6" required /></label>
               <label><span>名稱</span><input id="scheduleLabelName" type="text" placeholder="可輸入標籤名稱" /></label>
-              <label><span>類別</span><select id="scheduleLabelCategory" aria-label="選擇已設置標籤">
+              <label><span>類別</span><span class="schedule-label-category-control"><select id="scheduleLabelCategory" aria-label="選擇已設置標籤">
                 <option value="">自訂／新增標籤</option>
-              </select></label>
+              </select><button class="schedule-label-delete" id="deleteScheduleLabelButton" type="button" aria-label="刪除選取的類別" title="刪除選取的類別" hidden>×</button></span></label>
             </div>
             <label><span>標題</span><input id="scheduleTitle" type="text" required autocomplete="off" /></label>
             <label><span>內容</span><textarea id="scheduleContent" rows="4" placeholder="輸入排程內容"></textarea></label>
@@ -234,6 +234,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260810-backend-switch2"></script>
-  <script src="../assets/schedule.js?v=20260814-dirty-check-id"></script>
+  <script src="../assets/schedule.js?v=20260816-label-delete"></script>
 </body>
 </html>

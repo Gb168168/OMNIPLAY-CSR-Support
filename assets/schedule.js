@@ -22,6 +22,7 @@ const deleteButton = document.querySelector('#deleteScheduleButton');
 const colorInput = document.querySelector('#scheduleLabelColor');
 const labelNameInput = document.querySelector('#scheduleLabelName');
 const labelCategorySelect = document.querySelector('#scheduleLabelCategory');
+const deleteScheduleLabelButton = document.querySelector('#deleteScheduleLabelButton');
 const historyListEl = document.querySelector('#scheduleHistoryList');
 const tooltipEl = document.querySelector('#scheduleSpecialTooltip');
 const repeatSelect = document.querySelector('#scheduleRepeat');
@@ -758,7 +759,16 @@ const renderSavedLabels = () => {
   if ([...labelCategorySelect.options].some((option) => option.value === previousValue)) {
     labelCategorySelect.value = previousValue;
   }
+  updateDeleteLabelButton();
 };
+
+function updateDeleteLabelButton() {
+  if (!deleteScheduleLabelButton) return;
+  const selectedLabel = labelList.find((label) => label.id === labelCategorySelect?.value);
+  deleteScheduleLabelButton.hidden = !canEditSchedule || !selectedLabel;
+  deleteScheduleLabelButton.dataset.labelId = selectedLabel?.id || '';
+  deleteScheduleLabelButton.setAttribute('aria-label', selectedLabel ? `刪除類別「${normalizeLabelName(selectedLabel.name)}」` : '刪除選取的類別');
+}
 
 const renderLabelFilter = () => {
   if (!labelFilterSelect) return;
@@ -1153,9 +1163,31 @@ calendarEl?.addEventListener('click', (event) => {
 
 labelCategorySelect?.addEventListener('change', () => {
   const option = labelCategorySelect.selectedOptions[0];
+  updateDeleteLabelButton();
   if (!option?.value) return;
   colorInput.value = option.dataset.color || '#3b82f6';
   labelNameInput.value = option.dataset.name || option.textContent || '';
+});
+
+deleteScheduleLabelButton?.addEventListener('click', async () => {
+  const labelId = deleteScheduleLabelButton.dataset.labelId;
+  const selectedLabel = labelList.find((label) => label.id === labelId);
+  if (!canEditSchedule || !scheduleLabelCollection || !selectedLabel) return;
+  const labelName = normalizeLabelName(selectedLabel.name);
+  if (!window.confirm(`確定要刪除類別「${labelName}」嗎？\n\n只會刪除類別設定，既有排程不會被刪除。`)) return;
+  deleteScheduleLabelButton.disabled = true;
+  try {
+    await scheduleLabelCollection.doc(labelId).delete();
+    labelCategorySelect.value = '';
+    if (normalizeLabelName(labelNameInput.value) === labelName) labelNameInput.value = '';
+    updateDeleteLabelButton();
+    setMessage(`已刪除類別「${labelName}」。`, 'success');
+  } catch (error) {
+    console.error('刪除排程類別失敗：', error);
+    setMessage('刪除類別失敗，請稍後再試。', 'error');
+  } finally {
+    deleteScheduleLabelButton.disabled = false;
+  }
 });
 
 const syncLabelCategorySelection = () => {
