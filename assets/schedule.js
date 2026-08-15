@@ -37,6 +37,7 @@ const scheduleSyncCountdown = document.querySelector('#scheduleSyncCountdown');
 const gameChangeLogButton = document.querySelector('#gameChangeLogButton');
 const gameChangeLogModalEl = document.querySelector('#gameChangeLogModal');
 const gameChangeLogListEl = document.querySelector('#gameChangeLogList');
+const scheduleMoreMenu = document.querySelector('.schedule-more-menu');
 const gamePmConfirmedLabel = document.querySelector('#gamePmConfirmedLabel');
 const gamePmConfirmedInput = document.querySelector('#gamePmConfirmed');
 
@@ -1175,8 +1176,14 @@ document.querySelector('#todaySchedulePeriod')?.addEventListener('click', () => 
 document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => { viewMode = button.dataset.view; document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('is-active', item === button)); currentDate = new Date(selectedDate); renderCalendar(); }));
 document.querySelector('#phoneDutyButton')?.addEventListener('click', (event) => showSpecials('phone', event.currentTarget));
 document.querySelector('#companyEventButton')?.addEventListener('click', (event) => showSpecials('event', event.currentTarget));
-syncGameScheduleButton?.addEventListener('click', () => syncGameSchedules());
-gameChangeLogButton?.addEventListener('click', openGameChangeLog);
+syncGameScheduleButton?.addEventListener('click', () => {
+  scheduleMoreMenu?.removeAttribute('open');
+  syncGameSchedules();
+});
+gameChangeLogButton?.addEventListener('click', () => {
+  scheduleMoreMenu?.removeAttribute('open');
+  openGameChangeLog();
+});
 document.querySelector('#closeGameChangeLog')?.addEventListener('click', closeGameChangeLog);
 gameChangeLogModalEl?.addEventListener('click', (event) => {
   if (event.target === gameChangeLogModalEl) closeGameChangeLog();
@@ -1190,9 +1197,16 @@ modalEl?.addEventListener('click', (event) => {
 document.addEventListener('click', (event) => { if (tooltipEl && !tooltipEl.contains(event.target) && !event.target.closest('.schedule-special-trigger')) tooltipEl.hidden = true; });
 
 const openScheduleHelp = () => {
+  scheduleMoreMenu?.removeAttribute('open');
   scheduleHelpModalEl?.classList.add('is-open');
   scheduleHelpModalEl?.setAttribute('aria-hidden', 'false');
 };
+
+document.addEventListener('click', (event) => {
+  if (scheduleMoreMenu?.hasAttribute('open') && !scheduleMoreMenu.contains(event.target)) {
+    scheduleMoreMenu.removeAttribute('open');
+  }
+});
 
 const closeScheduleHelp = () => {
   scheduleHelpModalEl?.classList.remove('is-open');
