@@ -158,7 +158,7 @@
                 <li>按「試算表變更」可查看遊戲、變更欄位及原值 → 新值。</li>
                 <li>只匯入預計上線日期為 2026/01/01（含）之後，且有有效上線時間的遊戲。</li>
                 <li>2026/01～2026/06 的遊戲只在預計上線當日建立一列藍色「遊戲上線」資料。</li>
-                <li>2026/07/01 起上線的遊戲會建立 AM 確認（前 14 天）、行銷素材（前 8 天）、UAT／測試環境（前 7 天）及上線當日資料。</li>
+                <li>2026/07/01 起的一般遊戲會先建立 AM 確認（前 14 天）；勾選「AM 已確認」並儲存後，才建立行銷素材（前 8 天）、UAT／測試環境（前 7 天）及上線當日資料。</li>
                 <li>2026/08/01 起，只要「備註 1」含有「首發」兩字，就只建立上線當日的「⭐ 首發平台上線」；其他平台等待 AM 通知後再安排，不會自動猜測日期。</li>
                 <li>首次補入的歷史上線與流程資料不列入「試算表變更」；完成匯入後的新修改才會記錄。</li>
               </ol>
@@ -235,6 +235,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260816-mobile-nav"></script>
-  <script src="../assets/schedule.js?v=20260816-august-first-launch"></script>
+  <script src="../assets/schedule.js?v=20260816-am-confirmation-gate"></script>
 </body>
 </html>
