@@ -5,7 +5,7 @@ if ('serviceWorker' in navigator) {
 // 所有客服系統頁面都載入共用提醒監聽器。
 if (!document.querySelector('script[data-csr-reminders]')) {
   const reminderScript = document.createElement('script');
-  reminderScript.src = `${window.location.pathname.includes('/work/') || window.location.pathname.includes('/service/') || window.location.pathname.includes('/meeting/') || window.location.pathname.includes('/library/') || window.location.pathname.includes('/resource/') ? '../' : ''}assets/reminders.js?v=20260805-background-push1`;
+  reminderScript.src = `${window.location.pathname.includes('/work/') || window.location.pathname.includes('/service/') || window.location.pathname.includes('/meeting/') || window.location.pathname.includes('/resource/') ? '../' : ''}assets/reminders.js?v=20260805-background-push1`;
   reminderScript.dataset.csrReminders = 'true';
   document.head.appendChild(reminderScript);
 }
@@ -29,9 +29,6 @@ const sidebarItems = [
     { label: '提報', icon: '📣', href: 'work/report.html' },
     { label: '對接追蹤', icon: '🔎', href: 'work/tracking.html' },
     { label: 'PROD告警紀錄', icon: '🚨', href: 'work/alert.html' }
-  ] },
-  { title: '藏經閣', icon: '📜', id: 'libraryGroupTitle', items: [
-    { label: 'Game List 管理', icon: '🎮', href: 'library/library.html' }
   ] },
   { title: '會議歷程', icon: '📁', id: 'meetingGroupTitle', items: [
     { label: '會議紀錄', icon: '📝', href: 'meeting/meeting.html' }
@@ -233,7 +230,6 @@ const PAGE_KEYS = {
   'report.html': 'report',
   'tracking.html': 'tracking',
   'alert.html': 'alert',
-  'library.html': 'library',
   'meeting.html': 'meeting',
   'knowledge.html': 'knowledge',
   'ai-database.html': 'ai_database'

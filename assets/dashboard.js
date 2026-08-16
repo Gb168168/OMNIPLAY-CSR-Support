@@ -453,14 +453,13 @@ const reminderItems = (
 const todoSectionDefinitions = [
   { key: 'service', label: '👥客服內部', types: ['排程表'] },
   { key: 'work', label: '🗂️作業管理', types: ['日誌', '日誌 NEW', '收件匣', '交接', '提報', '對接追蹤', 'PROD告警紀錄'] },
-  { key: 'library', label: '📜藏經閣', types: ['藏經閣'] },
   { key: 'meeting', label: '📁會議歷程', types: ['會議紀錄'] },
   { key: 'database', label: '🧠資料庫', types: ['知識庫', 'AI 資料庫'] }
 ];
 const todoTypeLabels = {
   '排程表': '📅排程表', '日誌': '📒日誌', '日誌 NEW': '✨日誌 NEW', '收件匣': '📥收件匣',
   '交接': '🤝交接', '提報': '📣提報', '對接追蹤': '🔎對接追蹤', 'PROD告警紀錄': '🚨PROD告警紀錄',
-  '藏經閣': '📜藏經閣', '會議紀錄': '📝會議紀錄', '知識庫': '📚知識庫', 'AI 資料庫': '🤖AI 資料庫'
+  '會議紀錄': '📝會議紀錄', '知識庫': '📚知識庫', 'AI 資料庫': '🤖AI 資料庫'
 };
 const todoSectionByKey = (key) => todoSectionDefinitions.find((section) => section.key === key);
 
