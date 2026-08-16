@@ -1380,6 +1380,26 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
   <script src="../assets/ragic-table.js?v=20260817-fixed-date-sort"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script>
+    // NAS 目前以 HTTP 開啟；非安全來源沒有 crypto.randomUUID，先提供 Puter SDK 相容實作。
+    (() => {
+      if (typeof window.crypto?.randomUUID === 'function') return;
+      const randomUUID = () => {
+        const bytes = new Uint8Array(16);
+        if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+        else for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = [...bytes].map((value) => value.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      };
+      try {
+        Object.defineProperty(window.crypto, 'randomUUID', { value: randomUUID, configurable: true });
+      } catch (error) {
+        window.crypto.randomUUID = randomUUID;
+      }
+    })();
+  </script>
   <script src="https://js.puter.com/v2/"></script>
   <script>
     initRagicPage({
