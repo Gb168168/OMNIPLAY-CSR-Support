@@ -2270,14 +2270,39 @@
       button.className = 'secondary';
       button.dataset.logNewAi = 'true';
       button.textContent = '✨ AI 分析／重新整理';
-      button.title = '對話與對話圖片會送至 Puter AI；首次使用可能需要登入 Puter。';
+      button.title = '對話與對話圖片會送至 Puter AI；未登入時會先開啟 Puter 授權視窗。';
       button.addEventListener('click', async () => {
         const rows = [...section.querySelectorAll('.subtable-row')].filter((row) => row.querySelector('[data-subfield="conversation"]')?.value.trim() || getLogNewRowImages(row).length);
         if (!rows.length) return alert('請先貼上「對話」或加入「對話圖片」。');
         if (!window.puter?.ai?.chat) return alert('免費 AI 載入失敗，請確認網路後重新整理頁面再試。');
+        if (!window.puter?.auth?.isSignedIn || !window.puter?.auth?.signIn) return alert('Puter 登入功能載入失敗，請重新整理頁面再試。');
         if (!confirm('即將把「對話」與「對話圖片」送至 Puter AI 進行分析。內容可能包含客戶資料，確定要繼續嗎？')) return;
 
         const originalText = button.textContent;
+        if (!puter.auth.isSignedIn()) {
+          button.textContent = '🔐 等待 Puter 登入…';
+          try {
+            await puter.auth.signIn();
+          } catch (error) {
+            console.error('Puter 登入失敗：', error);
+            const errorCode = String(error?.error || error?.code || '');
+            if (errorCode === 'popup_blocked') {
+              alert('Puter 登入視窗被瀏覽器封鎖。請允許此網站開啟彈出式視窗後，再按一次 AI 分析。');
+            } else if (errorCode === 'auth_window_closed') {
+              alert('已取消 Puter 登入，AI 分析尚未執行。');
+            } else {
+              alert(`Puter 登入失敗：${error?.msg || error?.message || '請稍後再試'}`);
+            }
+            button.textContent = originalText;
+            return;
+          }
+          if (!puter.auth.isSignedIn()) {
+            alert('Puter 尚未完成登入，AI 分析尚未執行。');
+            button.textContent = originalText;
+            return;
+          }
+        }
+
         button.disabled = true;
         const totalUnits = rows.reduce((total, row) => total + getLogNewRowImages(row).length + 1, 0);
         let completedUnits = 0;
@@ -2432,7 +2457,7 @@
           alert('AI 分析完成，已填入「AI分析」、「總結」及「問題描述」，請確認內容後再儲存。');
         } catch (error) {
           console.error('日誌 NEW AI 分析失敗：', error);
-          alert(`AI 分析失敗：${error?.message || '請稍後再試'}。若首次使用，請先完成 Puter 登入授權。`);
+          alert(`AI 分析失敗：${error?.message || '請稍後再試'}`);
         } finally {
           clearInterval(progressTimer);
           button.disabled = false;
