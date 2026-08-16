@@ -51,20 +51,21 @@ const GAME_SCHEDULE_COLORS = {
   prod: '#2563eb'
 };
 const GAME_SCHEDULE_START_DATE = new Date(2026, 0, 1, 0, 0, 0, 0);
+const GAME_WORKFLOW_START_DATE = new Date(2026, 6, 1, 0, 0, 0, 0);
 const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: '遊戲上線', color: GAME_SCHEDULE_COLORS.prod };
 const GAME_EVENT_META = {
   'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 AM 確認', color: GAME_SCHEDULE_COLORS.pm },
   'marketing-material': { labelId: 'google-game-marketing', labelName: '行銷素材待辦', color: GAME_SCHEDULE_COLORS.marketing },
-  'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT 上架公告', color: GAME_SCHEDULE_COLORS.uat },
-  'uat-material': { labelId: 'google-game-uat', labelName: 'UAT 上架公告', color: GAME_SCHEDULE_COLORS.uat },
+  'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT／測試環境', color: GAME_SCHEDULE_COLORS.uat },
+  'uat-material': { labelId: 'google-game-uat', labelName: 'UAT／測試環境', color: GAME_SCHEDULE_COLORS.uat },
   'prod-launch': { labelId: 'google-game-prod', labelName: '遊戲上線', color: GAME_SCHEDULE_COLORS.prod }
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const LABEL_CATEGORY_ORDER = [
   '向 AM 確認',
   '行銷素材待辦',
-  'UAT 上架公告',
+  'UAT／測試環境',
   '遊戲上線',
   '問題/需求-代辦提醒'
 ];
@@ -493,12 +494,14 @@ const syncGameSchedules = async () => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
       return launchAt && launchAt >= GAME_SCHEDULE_START_DATE;
     });
-    const isLegacyWorkflowMigration = scheduleList.some((item) =>
+    const hasWorkflowGames = games.some((game) =>
+      parseGameScheduleDate(game.expectedOnlineDate) >= GAME_WORKFLOW_START_DATE);
+    const hasExistingWorkflowRows = scheduleList.some((item) =>
       item.source === 'google-game-sheet' && item.eventType !== 'prod-launch');
-    const changes = isLegacyWorkflowMigration ? [] : collectGameScheduleChanges(games);
-    const rows = games.map((game) => {
+    const isWorkflowBackfill = hasWorkflowGames && !hasExistingWorkflowRows;
+    const changes = isWorkflowBackfill ? [] : collectGameScheduleChanges(games);
+    const rows = games.flatMap((game) => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
-      const dateKey = toDateKey(launchAt);
       const normalizedGame = {
         gameId: String(game.gameId),
         gameNameZh: game.gameNameZh || '',
@@ -506,18 +509,32 @@ const syncGameSchedules = async () => {
         status: game.status || '',
         expectedOnlineDate: game.expectedOnlineDate
       };
-      return {
-        id: `game_prod_${dateKey}_${gameScheduleDocSuffix(normalizedGame)}`,
-        dateKey,
-        launchAt,
-        game: normalizedGame
-      };
+      const definitions = [{
+        idPrefix: 'game_prod', eventType: 'prod-launch', at: launchAt,
+        meta: GAME_ONLINE_META, contentPrefix: '遊戲於今日上線：'
+      }];
+      if (launchAt >= GAME_WORKFLOW_START_DATE) {
+        definitions.unshift(
+          { idPrefix: 'game_pm', eventType: 'pm-confirmation', at: subtractCalendarDays(launchAt, 14), meta: GAME_EVENT_META['pm-confirmation'], contentPrefix: '請向 AM 確認下列遊戲上線資訊：' },
+          { idPrefix: 'game_marketing', eventType: 'marketing-material', at: subtractCalendarDays(launchAt, 8), meta: GAME_EVENT_META['marketing-material'], contentPrefix: '請行銷提供下列遊戲素材：' },
+          { idPrefix: 'game_uat', eventType: 'uat-announcement', at: subtractCalendarDays(launchAt, 7), meta: GAME_EVENT_META['uat-announcement'], contentPrefix: '請處理下列遊戲 UAT／測試環境排程：' }
+        );
+      }
+      return definitions.map((definition) => {
+        const dateKey = toDateKey(definition.at);
+        return {
+          ...definition,
+          id: `${definition.idPrefix}_${dateKey}_${gameScheduleDocSuffix(normalizedGame)}`,
+          dateKey,
+          game: normalizedGame
+        };
+      });
     });
 
     const batch = scheduleDb.batch();
     const syncedAt = firebase.firestore.FieldValue.serverTimestamp();
     const actor = { id: 'google-game-sheet', code: 'SYNC', name: 'Google 遊戲上線表' };
-    const desiredOnlineIds = new Set(rows.map((row) => row.id));
+    const desiredScheduleIds = new Set(rows.map((row) => row.id));
 
     changes.forEach((change) => {
       const changeRef = scheduleGameChangeCollection.doc();
@@ -530,29 +547,27 @@ const syncGameSchedules = async () => {
 
     scheduleList
       .filter((item) => item.source === 'google-game-sheet'
-        && !desiredOnlineIds.has(item.id))
+        && !desiredScheduleIds.has(item.id))
       .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
-    ['google-game-pm', 'google-game-marketing', 'google-game-uat']
-      .forEach((labelId) => batch.delete(scheduleLabelCollection.doc(labelId)));
-
-    batch.set(scheduleLabelCollection.doc(GAME_ONLINE_META.labelId), {
-      name: GAME_ONLINE_META.labelName,
-      color: GAME_ONLINE_META.color,
-      updatedAt: syncedAt,
-      source: 'google-game-sheet'
-    }, { merge: true });
+    [GAME_EVENT_META['pm-confirmation'], GAME_EVENT_META['marketing-material'], GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META]
+      .forEach((meta) => batch.set(scheduleLabelCollection.doc(meta.labelId), {
+        name: meta.labelName,
+        color: meta.color,
+        updatedAt: syncedAt,
+        source: 'google-game-sheet'
+      }, { merge: true }));
 
     rows.forEach((row) => {
       const payload = {
-        eventType: 'prod-launch',
+        eventType: row.eventType,
         date: row.dateKey,
-        title: `${GAME_ONLINE_META.labelName}｜${getGameTitle([row.game])}`,
-        content: gameLine(row.game),
-        reminderAt: firebase.firestore.Timestamp.fromDate(row.launchAt),
-        labelId: GAME_ONLINE_META.labelId,
-        labelName: GAME_ONLINE_META.labelName,
-        labelColor: GAME_ONLINE_META.color,
+        title: `${row.meta.labelName}｜${getGameTitle([row.game])}`,
+        content: `${row.contentPrefix}\n${gameLine(row.game)}`,
+        reminderAt: firebase.firestore.Timestamp.fromDate(row.at),
+        labelId: row.meta.labelId,
+        labelName: row.meta.labelName,
+        labelColor: row.meta.color,
         repeat: 'none',
         staffIds: [],
         staffNames: [],
@@ -567,7 +582,7 @@ const syncGameSchedules = async () => {
 
     await batch.commit();
     gameScheduleLastFailed = false;
-    setStatus(`遊戲上線資料同步完成：已更新 ${rows.length} 筆，記錄 ${changes.length} 項後續變更。`, 'success');
+    setStatus(`遊戲排程同步完成：已更新 ${rows.length} 筆，記錄 ${changes.length} 項後續變更。`, 'success');
   } catch (error) {
     gameScheduleLastFailed = true;
     console.error('同步遊戲排程失敗：', error);
