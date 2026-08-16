@@ -9304,3 +9304,30 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     inset: 102px 0 0 !important;
   }
 }
+
+
+/* 2026-08-16: Keep the desktop primary navigation centered on the viewport. */
+@media (min-width: 1201px) {
+  .sidebar.top-navigation {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  }
+
+  .sidebar.top-navigation .sidebar-header {
+    grid-column: 1 !important;
+    justify-self: start;
+    z-index: 2;
+  }
+
+  .sidebar.top-navigation .top-nav-primary-links {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    justify-content: center !important;
+    z-index: 1;
+  }
+
+  .sidebar.top-navigation .sidebar-footer {
+    grid-column: 3 !important;
+    justify-self: end;
+    z-index: 2;
+  }
+}
