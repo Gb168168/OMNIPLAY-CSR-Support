@@ -1378,7 +1378,7 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/app.js?v=20260816-remove-library"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260813-live-list-width"></script>
+  <script src="../assets/ragic-table.js?v=20260817-fixed-date-sort"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="https://js.puter.com/v2/"></script>
   <script>
@@ -1499,6 +1499,8 @@
           items: { row: 7, col: 1, colSpan: 7, height: 360 }
         }
       },
+      fixedSortKey: 'date',
+      fixedSortDir: 'desc',
       listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time', 'serial']
     });
 
