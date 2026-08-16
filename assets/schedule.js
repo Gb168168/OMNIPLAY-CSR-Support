@@ -50,20 +50,22 @@ const GAME_SCHEDULE_COLORS = {
   uat: '#8b5cf6',
   prod: '#2563eb'
 };
+const GAME_SCHEDULE_START_DATE = new Date(2026, 0, 1, 0, 0, 0, 0);
+const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: '遊戲上線', color: GAME_SCHEDULE_COLORS.prod };
 const GAME_EVENT_META = {
   'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 AM 確認', color: GAME_SCHEDULE_COLORS.pm },
   'marketing-material': { labelId: 'google-game-marketing', labelName: '行銷素材待辦', color: GAME_SCHEDULE_COLORS.marketing },
   'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT 上架公告', color: GAME_SCHEDULE_COLORS.uat },
   'uat-material': { labelId: 'google-game-uat', labelName: 'UAT 上架公告', color: GAME_SCHEDULE_COLORS.uat },
-  'prod-launch': { labelId: 'google-game-prod', labelName: 'PROD 上架公告', color: GAME_SCHEDULE_COLORS.prod }
+  'prod-launch': { labelId: 'google-game-prod', labelName: '遊戲上線', color: GAME_SCHEDULE_COLORS.prod }
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const LABEL_CATEGORY_ORDER = [
   '向 AM 確認',
   '行銷素材待辦',
   'UAT 上架公告',
-  'PROD 上架公告',
+  '遊戲上線',
   '問題/需求-代辦提醒'
 ];
 
@@ -384,7 +386,7 @@ const isGameIdLookupFailure = (value) => /查無\s*此?\s*game\s*id|game\s*id\s*
 const getPreviousScheduleGameMap = () => {
   const games = new Map();
   scheduleList
-    .filter((item) => item.source === 'google-game-sheet' && item.eventType === 'pm-confirmation')
+    .filter((item) => item.source === 'google-game-sheet')
     .forEach((item) => getScheduleGames(item).forEach((game) => {
       const normalized = normalizeFeedGame(game);
       if (normalized.gameId) games.set(normalized.gameId, normalized);
@@ -403,7 +405,7 @@ const preserveNameOnLookupFailure = (game, previousGames) => {
 const collectGameScheduleChanges = (feedGames = []) => {
   const previousGames = new Map();
   scheduleList
-    .filter((item) => item.source === 'google-game-sheet' && item.eventType === 'pm-confirmation')
+    .filter((item) => item.source === 'google-game-sheet')
     .forEach((item) => getScheduleGames(item).forEach((game) => {
       const normalized = normalizeFeedGame(game);
       if (normalized.gameId) previousGames.set(normalized.gameId, normalized);
@@ -482,23 +484,21 @@ const syncGameSchedules = async () => {
 
   try {
     const payload = await loadGameScheduleFeed();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const previousScheduleGames = getPreviousScheduleGameMap();
     const normalizedFeedGames = payload.games
       .map(normalizeFeedGame)
       .filter((game) => game.gameId)
       .map((game) => preserveNameOnLookupFailure(game, previousScheduleGames));
-    const changes = collectGameScheduleChanges(normalizedFeedGames);
     const games = normalizedFeedGames.filter((game) => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
-      const released = /已上線|released/i.test(String(game.status || ''));
-      return launchAt && launchAt >= today && !released;
+      return launchAt && launchAt >= GAME_SCHEDULE_START_DATE;
     });
+    const isLegacyWorkflowMigration = scheduleList.some((item) =>
+      item.source === 'google-game-sheet' && item.eventType !== 'prod-launch');
+    const changes = isLegacyWorkflowMigration ? [] : collectGameScheduleChanges(games);
     const rows = games.map((game) => {
       const launchAt = parseGameScheduleDate(game.expectedOnlineDate);
-      const pmAt = subtractCalendarDays(launchAt, 14);
-      const dateKey = toDateKey(pmAt);
+      const dateKey = toDateKey(launchAt);
       const normalizedGame = {
         gameId: String(game.gameId),
         gameNameZh: game.gameNameZh || '',
@@ -507,10 +507,9 @@ const syncGameSchedules = async () => {
         expectedOnlineDate: game.expectedOnlineDate
       };
       return {
-        id: `game_pm_${dateKey}_${gameScheduleDocSuffix(normalizedGame)}`,
-        legacyId: `game_pm_${dateKey}`,
+        id: `game_prod_${dateKey}_${gameScheduleDocSuffix(normalizedGame)}`,
         dateKey,
-        pmAt,
+        launchAt,
         game: normalizedGame
       };
     });
@@ -518,8 +517,7 @@ const syncGameSchedules = async () => {
     const batch = scheduleDb.batch();
     const syncedAt = firebase.firestore.FieldValue.serverTimestamp();
     const actor = { id: 'google-game-sheet', code: 'SYNC', name: 'Google 遊戲上線表' };
-    const desiredPmIds = new Set(rows.map((row) => row.id));
-    const confirmedRows = [];
+    const desiredOnlineIds = new Set(rows.map((row) => row.id));
 
     changes.forEach((change) => {
       const changeRef = scheduleGameChangeCollection.doc();
@@ -532,41 +530,29 @@ const syncGameSchedules = async () => {
 
     scheduleList
       .filter((item) => item.source === 'google-game-sheet'
-        && item.eventType === 'pm-confirmation'
-        && !desiredPmIds.has(item.id))
+        && !desiredOnlineIds.has(item.id))
       .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
-    const pmMeta = GAME_EVENT_META['pm-confirmation'];
-    batch.set(scheduleLabelCollection.doc(pmMeta.labelId), {
-      name: pmMeta.labelName,
-      color: pmMeta.color,
+    ['google-game-pm', 'google-game-marketing', 'google-game-uat']
+      .forEach((labelId) => batch.delete(scheduleLabelCollection.doc(labelId)));
+
+    batch.set(scheduleLabelCollection.doc(GAME_ONLINE_META.labelId), {
+      name: GAME_ONLINE_META.labelName,
+      color: GAME_ONLINE_META.color,
       updatedAt: syncedAt,
       source: 'google-game-sheet'
     }, { merge: true });
 
     rows.forEach((row) => {
-      const existingItem = scheduleList.find((item) => item.id === row.id);
-      const legacyItem = scheduleList.find((item) => item.id === row.legacyId
-        && getScheduleGames(item).some((game) => String(game.gameId) === row.game.gameId));
-      const previousGameItem = scheduleList.find((item) =>
-        item.source === 'google-game-sheet'
-        && item.eventType === 'pm-confirmation'
-        && getScheduleGames(item).some((game) => String(game.gameId) === row.game.gameId)
-        && item.pmConfirmedAt);
-      const confirmationSource = existingItem?.pmConfirmedAt
-        ? existingItem
-        : legacyItem?.pmConfirmedAt
-          ? legacyItem
-          : previousGameItem || null;
       const payload = {
-        eventType: 'pm-confirmation',
+        eventType: 'prod-launch',
         date: row.dateKey,
-        title: `${pmMeta.labelName}｜${getGameTitle([row.game])}`,
-        content: `${gameLine(row.game)}\n\nAM 確認後，請在編輯視窗勾選「AM 已確認」，系統會建立行銷素材、UAT 上架公告與 PROD 上架公告待辦。`,
-        reminderAt: firebase.firestore.Timestamp.fromDate(row.pmAt),
-        labelId: pmMeta.labelId,
-        labelName: pmMeta.labelName,
-        labelColor: pmMeta.color,
+        title: `${GAME_ONLINE_META.labelName}｜${getGameTitle([row.game])}`,
+        content: gameLine(row.game),
+        reminderAt: firebase.firestore.Timestamp.fromDate(row.launchAt),
+        labelId: GAME_ONLINE_META.labelId,
+        labelName: GAME_ONLINE_META.labelName,
+        labelColor: GAME_ONLINE_META.color,
         repeat: 'none',
         staffIds: [],
         staffNames: [],
@@ -576,20 +562,12 @@ const syncGameSchedules = async () => {
         updatedAt: syncedAt,
         updatedBy: actor
       };
-      if (confirmationSource) {
-        payload.pmConfirmedAt = confirmationSource.pmConfirmedAt;
-        payload.pmConfirmedBy = confirmationSource.pmConfirmedBy || actor;
-        confirmedRows.push({ id: row.id, ...payload });
-      }
       batch.set(scheduleCollection.doc(row.id), payload, { merge: true });
     });
 
     await batch.commit();
-    for (const confirmedRow of confirmedRows) {
-      await createUatSchedules(confirmedRow, actor);
-    }
     gameScheduleLastFailed = false;
-    setStatus(`遊戲排程同步完成：已更新 ${rows.length} 筆排程，記錄 ${changes.length} 項變更。`, 'success');
+    setStatus(`遊戲上線資料同步完成：已更新 ${rows.length} 筆，記錄 ${changes.length} 項後續變更。`, 'success');
   } catch (error) {
     gameScheduleLastFailed = true;
     console.error('同步遊戲排程失敗：', error);
