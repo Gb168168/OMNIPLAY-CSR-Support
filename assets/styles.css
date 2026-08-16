@@ -9304,3 +9304,15 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     inset: 102px 0 0 !important;
   }
 }
+
+
+/* 2026-08-16: Center desktop primary links without overlapping the brand or controls. */
+@media (min-width: 1201px) {
+  .sidebar.top-navigation .top-nav-primary-links > :first-child {
+    margin-left: auto !important;
+  }
+
+  .sidebar.top-navigation .top-nav-primary-links > :last-child {
+    margin-right: auto !important;
+  }
+}
