@@ -9316,3 +9316,22 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     margin-right: auto !important;
   }
 }
+
+
+/* 2026-08-16: Match the approved wide-screen header layout exactly. */
+@media (min-width: 1500px) {
+  .sidebar.top-navigation .top-nav-primary-links {
+    position: absolute !important;
+    top: 0 !important;
+    left: 50% !important;
+    width: max-content !important;
+    height: 52px !important;
+    transform: translateX(-50%) !important;
+    overflow: visible !important;
+  }
+
+  .sidebar.top-navigation .top-nav-primary-links > :first-child,
+  .sidebar.top-navigation .top-nav-primary-links > :last-child {
+    margin-inline: 0 !important;
+  }
+}
