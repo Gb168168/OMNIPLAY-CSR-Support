@@ -51,8 +51,8 @@
      🏃可配合📱手動調整。
    - 舊 worker 只能作 `/api/ext/leave` 故障備援，禁止新增 Apps Script、Google Sheet、JSONP
      或其他休假資料源，也禁止調換主要來源與備援來源順序。
-   - `assets/library.js`／`assets/schedule.js` 的 Apps Script 僅用於 Game List／遊戲排程，
-     **不是休假資料來源**，三條連動不得混用。
+   - `assets/schedule.js` 的 Apps Script 僅用於遊戲排程，**不是休假資料來源**，
+     兩條連動不得混用。
 
 10. **⛔「返回 MyERP」導覽鈕死規則(2026-08-13)**:`assets/app.js` 導覽列的返回鈕(id `myerpReturnBtn`)
    不可刪除、不可改文案、不可改成登出;任何登入/登出/導覽重構都必須原樣保留它。
