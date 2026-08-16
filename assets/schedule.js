@@ -398,6 +398,15 @@ const normalizeFeedGame = (game = {}) => ({
 const isGameIdLookupFailure = (value) => /查無\s*此?\s*game\s*id|game\s*id\s*(?:not\s*found|不存在)/i.test(String(value || '').trim());
 const isFirstLaunchGame = (game = {}, launchAt = null) =>
   launchAt >= GAME_FIRST_LAUNCH_START_DATE && /首發/.test(String(game.note1 || '').trim());
+const isGameWorkflowConfirmed = (game = {}) => scheduleList.some((item) =>
+  item.source === 'google-game-sheet' &&
+  item.eventType === 'pm-confirmation' &&
+  item.pmConfirmedAt &&
+  getScheduleGames(item).some((scheduledGame) =>
+    String(scheduledGame.gameId || '') === String(game.gameId || '') &&
+    String(scheduledGame.expectedOnlineDate || '') === String(game.expectedOnlineDate || '')
+  )
+);
 const getPreviousScheduleGameMap = () => {
   const games = new Map();
   scheduleList
@@ -525,21 +534,30 @@ const syncGameSchedules = async () => {
         expectedOnlineDate: game.expectedOnlineDate
       };
       const firstLaunch = isFirstLaunchGame(normalizedGame, launchAt);
-      const definitions = [{
-        idPrefix: firstLaunch ? 'game_first_launch' : 'game_prod',
-        eventType: firstLaunch ? 'first-launch' : 'prod-launch',
-        at: launchAt,
-        meta: firstLaunch ? GAME_FIRST_LAUNCH_META : GAME_ONLINE_META,
-        contentPrefix: firstLaunch
-          ? '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
-          : '遊戲於今日上線：'
-      }];
-      if (!firstLaunch && launchAt >= GAME_WORKFLOW_START_DATE) {
-        definitions.unshift(
-          { idPrefix: 'game_pm', eventType: 'pm-confirmation', at: subtractCalendarDays(launchAt, 14), meta: GAME_EVENT_META['pm-confirmation'], contentPrefix: '請向 AM 確認下列遊戲上線資訊：' },
-          { idPrefix: 'game_marketing', eventType: 'marketing-material', at: subtractCalendarDays(launchAt, 8), meta: GAME_EVENT_META['marketing-material'], contentPrefix: '請行銷提供下列遊戲素材：' },
-          { idPrefix: 'game_uat', eventType: 'uat-announcement', at: subtractCalendarDays(launchAt, 7), meta: GAME_EVENT_META['uat-announcement'], contentPrefix: '請處理下列遊戲 UAT／測試環境排程：' }
-        );
+      let definitions;
+      if (firstLaunch) {
+        definitions = [{
+          idPrefix: 'game_first_launch', eventType: 'first-launch', at: launchAt,
+          meta: GAME_FIRST_LAUNCH_META,
+          contentPrefix: '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
+        }];
+      } else if (launchAt >= GAME_WORKFLOW_START_DATE) {
+        definitions = [{
+          idPrefix: 'game_pm', eventType: 'pm-confirmation', at: subtractCalendarDays(launchAt, 14),
+          meta: GAME_EVENT_META['pm-confirmation'], contentPrefix: '請向 AM 確認下列遊戲上線資訊：'
+        }];
+        if (isGameWorkflowConfirmed(normalizedGame)) {
+          definitions.push(
+            { idPrefix: 'game_marketing', eventType: 'marketing-material', at: subtractCalendarDays(launchAt, 8), meta: GAME_EVENT_META['marketing-material'], contentPrefix: '請行銷提供下列遊戲素材：' },
+            { idPrefix: 'game_uat', eventType: 'uat-announcement', at: subtractCalendarDays(launchAt, 7), meta: GAME_EVENT_META['uat-announcement'], contentPrefix: '請處理下列遊戲 UAT／測試環境排程：' },
+            { idPrefix: 'game_prod', eventType: 'prod-launch', at: launchAt, meta: GAME_ONLINE_META, contentPrefix: '遊戲於今日上線：' }
+          );
+        }
+      } else {
+        definitions = [{
+          idPrefix: 'game_prod', eventType: 'prod-launch', at: launchAt,
+          meta: GAME_ONLINE_META, contentPrefix: '遊戲於今日上線：'
+        }];
       }
       return definitions.map((definition) => {
         const dateKey = toDateKey(definition.at);
