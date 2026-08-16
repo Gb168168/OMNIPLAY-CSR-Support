@@ -2921,6 +2921,10 @@ const toggleColumnMenu = (key) => {
 };
 
 const sortByField = (fieldKey, direction) => {
+  if (RAGIC_STATE.config?.fixedSortKey) {
+    fieldKey = String(RAGIC_STATE.config.fixedSortKey);
+    direction = RAGIC_STATE.config.fixedSortDir === 'asc' ? 'asc' : 'desc';
+  }
   RAGIC_STATE.sortKey = fieldKey;
   RAGIC_STATE.sortDir = direction;
   RAGIC_STATE.filtered.sort((a, b) => {
@@ -4048,7 +4052,7 @@ const setupRagicFormActions = () => {
 };
 const initRagicPage = async (config) => {
   await waitForPermissions();
-  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.filters = { ...(config.initialFilters || {}) }; document.body?.classList.toggle('is-log-module', isLogModule(RAGIC_STATE.config)); RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
+  RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.filters = { ...(config.initialFilters || {}) }; RAGIC_STATE.sortKey = String(config.fixedSortKey || ''); RAGIC_STATE.sortDir = config.fixedSortDir === 'asc' ? 'asc' : 'desc'; document.body?.classList.toggle('is-log-module', isLogModule(RAGIC_STATE.config)); RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
   window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
   window.togglePin = async (docId) => {
     const currentUser = currentRagicUser();
