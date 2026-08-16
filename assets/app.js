@@ -72,7 +72,6 @@ const renderSidebar = () => {
       <div class="top-nav-primary-links">
         ${renderSidebarLink(sidebarItems[0])}
         ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}" aria-controls="${group.id}Menu" aria-expanded="false"><span class="icon">${group.icon}</span><span class="label">${group.title}</span><span class="mobile-category-caret" aria-hidden="true">›</span></a>`).join('')}
-        ${myerpReturnLink}
       </div>
       <div class="top-nav-secondary">
         ${sidebarItems.slice(1).map((group) => `<section class="sidebar-group${group === activeGroup ? ' is-current-group' : ''}" data-group="${group.id}" aria-labelledby="${group.id}" id="${group.id}Menu">
@@ -82,6 +81,7 @@ const renderSidebar = () => {
       </div>
     </nav>
     <div class="sidebar-footer" id="sidebarUserFooter">
+      ${myerpReturnLink}
       <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
     </div>
   `;
