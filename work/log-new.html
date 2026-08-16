@@ -2638,5 +2638,67 @@
       showFullIssueDescriptions();
     })();
   </script>
+
+  <style>
+    .log-new-datetime-split {
+      display: grid;
+      grid-template-columns: minmax(150px, 1.25fr) minmax(110px, .75fr);
+      gap: 8px;
+      width: 100%;
+    }
+    .log-new-datetime-split input {
+      width: 100% !important;
+      min-width: 0 !important;
+      cursor: pointer;
+    }
+    @media (max-width: 430px) {
+      .log-new-datetime-split { grid-template-columns: 1fr; }
+    }
+  </style>
+  <script>
+    // 日誌 NEW：把難操作的 datetime-local 滾輪拆成月曆日期與獨立時間。
+    (() => {
+      const enhanceDateTimePicker = () => {
+        const original = document.querySelector('#ragicForm input[name="date"][type="datetime-local"]');
+        if (!original || original.dataset.easyDateTime === 'true') return;
+        original.dataset.easyDateTime = 'true';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'log-new-datetime-split';
+        const dateInput = document.createElement('input');
+        const timeInput = document.createElement('input');
+        dateInput.type = 'date';
+        timeInput.type = 'time';
+        timeInput.step = '60';
+        dateInput.required = original.required;
+        timeInput.required = original.required;
+        dateInput.setAttribute('aria-label', '日期');
+        timeInput.setAttribute('aria-label', '時間');
+
+        const readOriginal = () => {
+          const value = String(original.value || '');
+          dateInput.value = value.slice(0, 10);
+          timeInput.value = value.slice(11, 16);
+        };
+        const writeOriginal = () => {
+          original.value = dateInput.value && timeInput.value ? `${dateInput.value}T${timeInput.value}` : '';
+          original.dispatchEvent(new Event('input', { bubbles: true }));
+          original.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        dateInput.addEventListener('change', writeOriginal);
+        timeInput.addEventListener('change', writeOriginal);
+        original.addEventListener('input', readOriginal);
+
+        readOriginal();
+        original.hidden = true;
+        original.insertAdjacentElement('afterend', wrapper);
+        wrapper.append(dateInput, timeInput);
+      };
+
+      const formView = document.querySelector('#ragicFormView');
+      if (formView) new MutationObserver(enhanceDateTimePicker).observe(formView, { childList: true, subtree: true });
+      enhanceDateTimePicker();
+    })();
+  </script>
 </body>
 </html>
