@@ -2612,5 +2612,29 @@
     enhanceLogNewAiUi();
     migrateSavedLogNewConversations();
   </script>
+
+  <script>
+    // 日誌 NEW：列表中的問題描述一律使用完整原文，並依內容自動換行撐高。
+    (() => {
+      const showFullIssueDescriptions = () => {
+        document.querySelectorAll('#ragicListView .ragic-table td[data-field-key="issue"], #ragicListView .ragic-table td:nth-child(7)').forEach((cell) => {
+          const fullText = cell.getAttribute('title');
+          if (fullText && (cell.textContent.trim().endsWith('…') || cell.textContent.trim().endsWith('...') || cell.textContent.length < fullText.length)) {
+            cell.textContent = fullText;
+          }
+          cell.style.setProperty('white-space', 'pre-wrap', 'important');
+          cell.style.setProperty('overflow', 'visible', 'important');
+          cell.style.setProperty('text-overflow', 'clip', 'important');
+          cell.style.setProperty('height', 'auto', 'important');
+          cell.style.setProperty('max-height', 'none', 'important');
+          cell.style.setProperty('overflow-wrap', 'anywhere', 'important');
+          cell.style.setProperty('word-break', 'break-word', 'important');
+        });
+      };
+      const listView = document.querySelector('#ragicListView');
+      if (listView) new MutationObserver(showFullIssueDescriptions).observe(listView, { childList: true, subtree: true });
+      showFullIssueDescriptions();
+    })();
+  </script>
 </body>
 </html>
