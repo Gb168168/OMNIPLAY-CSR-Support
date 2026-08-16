@@ -141,10 +141,7 @@
               <h3>🎨 標籤、標題與框線</h3>
               <p class="schedule-help-label-note">標籤區可選擇顏色、輸入名稱；已設置過的標籤會收納在「類別」下拉選單。遊戲排程顯示「工作類型｜遊戲 ID (遊戲名稱)」。</p>
               <div class="schedule-help-legends">
-                <span><i style="--help-color:#f59e0b"></i>橘色：向 AM 確認</span>
-                <span><i style="--help-color:#14b8a6"></i>綠色：行銷素材待辦</span>
-                <span><i style="--help-color:#8b5cf6"></i>紫色：UAT 上架公告</span>
-                <span><i style="--help-color:#2563eb"></i>藍色：PROD 上架公告</span>
+                <span><i style="--help-color:#2563eb"></i>藍色：遊戲上線</span>
                 <span><b class="help-line is-dashed"></b>虛線：尚未發生</span>
                 <span><b class="help-line"></b>實心：時間已到或已發生</span>
               </div>
@@ -152,15 +149,13 @@
             <section>
               <h3>🔄 同步遊戲排程</h3>
               <ol>
-                <li>開啟排程表時會自動讀取 Google 遊戲上線表，之後每 5 分鐘同步一次；也可按「同步遊戲排程」立即更新。同步會保留已確認狀態、行銷素材、UAT 與 PROD 公告。</li>
+                <li>開啟排程表時會自動讀取 Google 遊戲上線表，之後每 5 分鐘同步一次；也可按「同步遊戲排程」立即更新。</li>
                 <li>按「試算表變更」可查看遊戲、變更欄位及原值 → 新值。</li>
-                <li>系統會從預計上線日往前倒數 14 個日曆天，星期六、星期日及台灣國定假日都計入，再為每款遊戲各建立一列橘色「向 AM 確認」排程。</li>
-                <li>AM 確認後，打開該筆排程並勾選「AM 已確認」，再按儲存。</li>
-                <li>系統會在上線前 8 個日曆天為每款遊戲各建立一列綠色「行銷素材待辦」，提醒行銷提供遊戲素材。</li>
-                <li>系統會在上線前 7 個日曆天為每款遊戲各建立一列紫色「UAT 上架公告」，提醒客服發送 UAT 環境上架公告。</li>
-                <li>系統會在預計 PROD 上線當日為每款遊戲各建立一列藍色「PROD 上架公告」。</li>
+                <li>只匯入預計上線日期為 2026/01/01（含）之後，且有有效上線時間的遊戲。</li>
+                <li>每款遊戲只在預計上線當日建立一列藍色「遊戲上線」資料，不建立 AM 確認、行銷素材或 UAT／測試環境待辦。</li>
+                <li>首次補入的歷史上線資料不列入「試算表變更」；完成匯入後的新修改才會記錄。</li>
               </ol>
-              <p class="schedule-help-note">所有流程皆以日曆天計算，星期六、星期日及台灣國定假日都會計入。</p>
+              <p class="schedule-help-note">同步只處理試算表中的遊戲上線日期，不影響手動建立的排程。</p>
             </section>
           </div>
         </section>
@@ -233,6 +228,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260816-mobile-nav"></script>
-  <script src="../assets/schedule.js?v=20260816-label-delete"></script>
+  <script src="../assets/schedule.js?v=20260816-online-history"></script>
 </body>
 </html>
