@@ -53,6 +53,7 @@ exports.externalLeave=onRequest({region:'asia-east1',timeoutSeconds:30,memory:'2
     ]);
     const employees=Array.isArray(employeePayload)?employeePayload:(employeePayload?.data||[]);
     const allLeaves=leavePayload?.data||{};
+    const allStars=Array.isArray(leavePayload?.stars)?leavePayload.stars:[];
     const people={};
     for(const employee of employees){
       const fullName=String(employee?.name||'').trim();
@@ -62,9 +63,17 @@ exports.externalLeave=onRequest({region:'asia-east1',timeoutSeconds:30,memory:'2
       const days={};
       for(const [day,value] of Object.entries(sourceDays)){
         if(!value||!/^\d{1,2}$/.test(day))continue;
-        const leaveTypes=Array.isArray(value.leave)?value.leave.filter(Boolean):[];
-        if(value.shift==='red')days[day]={type:'required'};
-        else if(value.shift==='black'||leaveTypes.length)days[day]={type:'leave'};
+        const leaveTypes=Array.isArray(value.leave)?value.leave.filter(Boolean).map(item=>String(item).trim()).filter(Boolean):[];
+        const label=leaveTypes.join('、');
+        if(value.shift==='red')days[day]={type:'required',label};
+        else if(value.shift==='black'||leaveTypes.length)days[day]={type:'leave',label};
+      }
+      for(const star of allStars){
+        if(String(star?.employee_id)!==String(employee.id))continue;
+        const day=String(star?.day||'');
+        if(!/^\d{1,2}$/.test(day))continue;
+        const current=days[day]||{};
+        days[day]={...current,specials:[...new Set([...(current.specials||[]),'event'])]};
       }
       people[shortName]={fullName,shift:employee.shift==='晚班'?'晚':'早',days};
     }
