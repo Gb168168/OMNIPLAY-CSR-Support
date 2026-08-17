@@ -165,7 +165,8 @@ const normalizeExternalDayRecord = (record = {}) => {
   const rawValues = [baseRecord.label, baseRecord.mark, baseRecord.symbol, baseRecord.value, baseRecord.text, baseRecord.type]
     .map((value) => String(value || '').trim())
     .filter(Boolean);
-  const isCompanyEvent = rawValues.some((value) => /[★☆⭐]/.test(value) || /^(?:star|event|company[_ -]?activity)$/i.test(value) || /(公司活動|部門旅遊)/.test(value));
+  const externalSymbol = rawValues.map((value) => value.match(/[★☆⭐]/)?.[0] || '').find(Boolean) || '';
+  const isCompanyEvent = Boolean(externalSymbol) || rawValues.some((value) => /^(?:star|event|company[_ -]?activity)$/i.test(value) || /(公司活動|部門旅遊)/.test(value));
   const mappedType = rawValues.some((value) => /^(?:required|required_leave|must_leave|必休)$/i.test(value))
     ? 'required'
     : rawValues.some((value) => /^(?:leave|休假)$/i.test(value))
@@ -182,6 +183,7 @@ const normalizeExternalDayRecord = (record = {}) => {
     ...baseRecord,
     type: isCompanyEvent ? '' : (mappedType || baseRecord.type || ''),
     label: isCompanyEvent || mappedType ? '' : rawLabel,
+    externalSymbol: isCompanyEvent ? (externalSymbol || '★') : '',
     specials: [...specials]
   };
 };
@@ -433,7 +435,7 @@ const renderDayCell = (staff, day) => {
   const holiday = getHolidayName(day);
   const marker = record.label ? '' : record.type === 'required' ? '<span class="leave-marker is-required">▲</span>' : record.type === 'leave' ? '<span class="leave-marker">▲</span>' : '';
   const leaveLabel = record.label ? `<span class="external-leave-label">${escapeHtml(record.label)}</span>` : '';
-  const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : '🎰').join('');
+  const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : item === 'event' ? (record.externalSymbol || '★') : '').join('');
   return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''} ${isTodayDay(day) ? 'is-today' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
     <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(canonicalLeaveStaffName(staff.name))} ${day} 號休假狀態"${editableAttribute()}>${marker}${leaveLabel}<span class="special-icons">${specials}</span></button>
   </td>`;
