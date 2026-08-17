@@ -300,19 +300,31 @@ const renderMonthlySummaries = () => {
 
 const getRecord = (staffId, day) => {
   const staff = staffList.find((item) => item.id === staffId);
+  const recordKey = `${staffId}_${dayKey(day)}`;
+  const localRecord = leaveData.records?.[recordKey] || {};
   const externalPerson = staff ? externalPersonFor(staff.name) : null;
   if (externalPerson) {
     const externalRecord = externalPerson.days?.[dayKey(day)] || {};
-    const specials = (Array.isArray(externalRecord.specials) ? externalRecord.specials : []).filter((item) => item !== 'phone');
+    // The external mirror can return only a generic leave type after the richer
+    // per-cell value has already loaded. Keep the richer mirrored text/symbol
+    // instead of letting that later response cover it with a triangle.
+    const label = String(externalRecord.label || localRecord.label || '').trim();
+    const externalSpecials = (Array.isArray(externalRecord.specials) ? externalRecord.specials : [])
+      .filter((item) => item !== 'phone');
+    const mirroredLocalSpecials = (Array.isArray(localRecord.specials) ? localRecord.specials : [])
+      .filter((item) => item === 'event');
+    const specials = [...new Set([...externalSpecials, ...mirroredLocalSpecials])];
     if (hasPhoneDuty(staff.name, day)) specials.push('phone');
     return {
+      ...localRecord,
       ...externalRecord,
-      type: externalRecord.type || '',
+      type: externalRecord.type || localRecord.type || '',
+      label,
+      externalSymbol: externalRecord.externalSymbol || localRecord.externalSymbol || '',
       specials
     };
   }
-  const record = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
-  return { ...record, type: record.type || '', specials: record.specials || [] };
+  return { ...localRecord, type: localRecord.type || '', specials: localRecord.specials || [] };
 };
 const getGlobalQuota = () => externalMaxDays;
 const getQuota = () => getGlobalQuota();
