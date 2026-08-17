@@ -299,30 +299,27 @@ const renderMonthlySummaries = () => {
 
 const getRecord = (staffId, day) => {
   const staff = staffList.find((item) => item.id === staffId);
-  const recordKey = `${staffId}_${dayKey(day)}`;
-  const localRecord = leaveData.records?.[recordKey] || {};
-  const externalPerson = staff ? externalPersonFor(staff.name) : null;
-  if (externalPerson) {
-    const externalRecord = externalPerson.days?.[dayKey(day)] || {};
-    // Month switching first renders the detailed cached cell, then the external
-    // response may contain only a generic type. Do not let the later response
-    // cover 病2／事2／特0.5／特／喪 or ★ with a triangle.
-    const label = String(externalRecord.label || localRecord.label || '').trim();
-    const externalSpecials = (Array.isArray(externalRecord.specials) ? externalRecord.specials : [])
+  const isCompanyLinkedStaff = Boolean(staff) &&
+    leaveStaffNames.includes(canonicalLeaveStaffName(staff.name));
+
+  // Company-linked staff use /api/ext/leave as the only source of truth.
+  // Never fall back to Firebase records while switching months or after sync.
+  if (isCompanyLinkedStaff) {
+    const externalPerson = externalPersonFor(staff.name);
+    const externalRecord = externalPerson?.days?.[dayKey(day)] || {};
+    const specials = (Array.isArray(externalRecord.specials) ? externalRecord.specials : [])
       .filter((item) => item !== 'phone');
-    const mirroredLocalSpecials = (Array.isArray(localRecord.specials) ? localRecord.specials : [])
-      .filter((item) => item === 'event');
-    const specials = [...new Set([...externalSpecials, ...mirroredLocalSpecials])];
-    if (hasPhoneDuty(staff.name, day)) specials.push('phone');
+    if (externalPerson && hasPhoneDuty(staff.name, day)) specials.push('phone');
     return {
-      ...localRecord,
       ...externalRecord,
-      type: externalRecord.type || localRecord.type || '',
-      label,
-      externalSymbol: externalRecord.externalSymbol || localRecord.externalSymbol || '',
+      type: externalRecord.type || '',
+      label: String(externalRecord.label || '').trim(),
+      externalSymbol: externalRecord.externalSymbol || '',
       specials
     };
   }
+
+  const localRecord = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
   return { ...localRecord, type: localRecord.type || '', specials: localRecord.specials || [] };
 };
 const getGlobalQuota = () => externalMaxDays;
@@ -542,6 +539,8 @@ const changeMonth = (offset) => {
 };
 
 const toggleLeave = (staffId, day) => {
+  const staff = staffList.find((item) => item.id === staffId);
+  if (staff && leaveStaffNames.includes(canonicalLeaveStaffName(staff.name))) return;
   const key = `${staffId}_${dayKey(day)}`;
   leaveData.records ||= {};
   const record = getRecord(staffId, day);
@@ -549,7 +548,6 @@ const toggleLeave = (staffId, day) => {
   const nextType = currentType === '' ? 'leave' : currentType === 'leave' ? 'required' : '';
   leaveData.records[key] = { ...record, type: nextType };
   if (!nextType && !(record.specials || []).length) delete leaveData.records[key];
-  const staff = staffList.find((item) => item.id === staffId);
   if (Number.isFinite(getQuota()) && leaveCount(staffId) > getQuota()) alert(`${staff?.name || '此人員'} 已超過當月可休天數！`);
   render();
   queueSave();
