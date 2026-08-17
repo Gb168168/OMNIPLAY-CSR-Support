@@ -162,9 +162,26 @@ const externalPersonFor = (name) => {
 };
 const normalizeExternalDayRecord = (record = {}) => {
   const baseRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : { value: record };
-  const rawValues = [baseRecord.label, baseRecord.mark, baseRecord.symbol, baseRecord.value, baseRecord.text, baseRecord.type]
-    .map((value) => String(value || '').trim())
-    .filter(Boolean);
+  const rawValues = [...new Set([
+    baseRecord.label,
+    baseRecord.mark,
+    baseRecord.symbol,
+    baseRecord.value,
+    baseRecord.text,
+    baseRecord.display,
+    baseRecord.displayValue,
+    baseRecord.raw,
+    baseRecord.rawValue,
+    baseRecord.leaveLabel,
+    baseRecord.leaveType,
+    baseRecord.leave_type,
+    baseRecord.note,
+    baseRecord.remark,
+    baseRecord.status,
+    baseRecord.type
+  ]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean))];
   const externalSymbol = rawValues.map((value) => value.match(/[★☆⭐]/)?.[0] || '').find(Boolean) || '';
   const isCompanyEvent = Boolean(externalSymbol) || rawValues.some((value) => /^(?:star|event|company[_ -]?activity)$/i.test(value) || /(公司活動|部門旅遊)/.test(value));
   const mappedType = rawValues.some((value) => /^(?:required|required_leave|must_leave|必休)$/i.test(value))
@@ -182,7 +199,8 @@ const normalizeExternalDayRecord = (record = {}) => {
   return {
     ...baseRecord,
     type: isCompanyEvent ? '' : (mappedType || baseRecord.type || ''),
-    label: isCompanyEvent || mappedType ? '' : rawLabel,
+    // Preserve the source's detailed leave value instead of collapsing it to a triangle.
+    label: isCompanyEvent ? '' : rawLabel,
     externalSymbol: isCompanyEvent ? (externalSymbol || '★') : '',
     specials: [...specials]
   };
@@ -281,19 +299,31 @@ const renderMonthlySummaries = () => {
 
 const getRecord = (staffId, day) => {
   const staff = staffList.find((item) => item.id === staffId);
+  const recordKey = `${staffId}_${dayKey(day)}`;
+  const localRecord = leaveData.records?.[recordKey] || {};
   const externalPerson = staff ? externalPersonFor(staff.name) : null;
   if (externalPerson) {
     const externalRecord = externalPerson.days?.[dayKey(day)] || {};
-    const specials = (Array.isArray(externalRecord.specials) ? externalRecord.specials : []).filter((item) => item !== 'phone');
+    // Month switching first renders the detailed cached cell, then the external
+    // response may contain only a generic type. Do not let the later response
+    // cover 病2／事2／特0.5／特／喪 or ★ with a triangle.
+    const label = String(externalRecord.label || localRecord.label || '').trim();
+    const externalSpecials = (Array.isArray(externalRecord.specials) ? externalRecord.specials : [])
+      .filter((item) => item !== 'phone');
+    const mirroredLocalSpecials = (Array.isArray(localRecord.specials) ? localRecord.specials : [])
+      .filter((item) => item === 'event');
+    const specials = [...new Set([...externalSpecials, ...mirroredLocalSpecials])];
     if (hasPhoneDuty(staff.name, day)) specials.push('phone');
     return {
+      ...localRecord,
       ...externalRecord,
-      type: externalRecord.type || '',
+      type: externalRecord.type || localRecord.type || '',
+      label,
+      externalSymbol: externalRecord.externalSymbol || localRecord.externalSymbol || '',
       specials
     };
   }
-  const record = leaveData.records?.[`${staffId}_${dayKey(day)}`] || {};
-  return { ...record, type: record.type || '', specials: record.specials || [] };
+  return { ...localRecord, type: localRecord.type || '', specials: localRecord.specials || [] };
 };
 const getGlobalQuota = () => externalMaxDays;
 const getQuota = () => getGlobalQuota();
