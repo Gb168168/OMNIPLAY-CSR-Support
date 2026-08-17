@@ -161,20 +161,27 @@ const externalPersonFor = (name) => {
   return matchedName ? externalLeaveData[matchedName] : null;
 };
 const normalizeExternalDayRecord = (record = {}) => {
-  // 上游可能把儲存格直接回傳成字串「★」，也可能放在 label/mark/symbol/value/text/type。
-  const baseRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : { label: record };
+  const baseRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : { value: record };
   const rawValues = [baseRecord.label, baseRecord.mark, baseRecord.symbol, baseRecord.value, baseRecord.text, baseRecord.type]
     .map((value) => String(value || '').trim())
     .filter(Boolean);
-  const rawLabel = rawValues[0] || '';
   const isCompanyEvent = rawValues.some((value) => /[★☆⭐]/.test(value) || /^(?:star|event|company[_ -]?activity)$/i.test(value) || /(公司活動|部門旅遊)/.test(value));
+  const mappedType = rawValues.some((value) => /^(?:required|required_leave|must_leave|必休)$/i.test(value))
+    ? 'required'
+    : rawValues.some((value) => /^(?:leave|休假)$/i.test(value))
+      ? 'leave'
+      : '';
   const specials = new Set((Array.isArray(baseRecord.specials) ? baseRecord.specials : [])
     .map((item) => /^(?:star|event|company[_ -]?activity)$/i.test(String(item || '').trim()) ? 'event' : item));
   if (isCompanyEvent) specials.add('event');
+  const rawLabel = rawValues.find((value) =>
+    !/[★☆⭐]/.test(value) &&
+    !/^(?:star|event|company[_ -]?activity|leave|required|required_leave|must_leave|休假|必休)$/i.test(value)
+  ) || '';
   return {
     ...baseRecord,
-    type: isCompanyEvent && /[★☆⭐]/.test(String(baseRecord.type || '')) ? '' : (baseRecord.type || ''),
-    label: isCompanyEvent ? '' : rawLabel,
+    type: isCompanyEvent ? '' : (mappedType || baseRecord.type || ''),
+    label: isCompanyEvent || mappedType ? '' : rawLabel,
     specials: [...specials]
   };
 };
@@ -231,12 +238,13 @@ const buildPhoneDutyPlan = () => {
       const hasOverride = Object.prototype.hasOwnProperty.call(leaveData.phoneOverrides || {}, key);
       const override = hasOverride ? leaveData.phoneOverrides[key] : undefined;
       if (override === '') continue;
+      // 公司活動、休假、必休或其他非正常上班狀態時，連既有手動指派也必須失效。
+      if (!isPhoneDutyDayEligible(pair, day)) continue;
       if (pair.members.includes(override)) {
         plan.get(override).add(day);
         counts[override] += 1;
         continue;
       }
-      if (!isPhoneDutyDayEligible(pair, day)) continue;
       const selected = [...pair.members].sort((a, b) => counts[a] - counts[b] || pair.members.indexOf(a) - pair.members.indexOf(b))[0];
       plan.get(selected).add(day);
       counts[selected] += 1;
