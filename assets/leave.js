@@ -161,10 +161,22 @@ const externalPersonFor = (name) => {
   return matchedName ? externalLeaveData[matchedName] : null;
 };
 const normalizeExternalDayRecord = (record = {}) => {
-  const rawLabel = String(record.label || record.mark || record.symbol || '').trim();
-  const specials = new Set(Array.isArray(record.specials) ? record.specials : []);
-  if (rawLabel === '★' || rawLabel === '☆' || ['star', 'event', 'company_activity'].includes(rawLabel.toLowerCase())) specials.add('event');
-  return { ...record, label: ['★', '☆'].includes(rawLabel) ? '' : rawLabel, specials: [...specials] };
+  // 上游可能把儲存格直接回傳成字串「★」，也可能放在 label/mark/symbol/value/text/type。
+  const baseRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : { label: record };
+  const rawValues = [baseRecord.label, baseRecord.mark, baseRecord.symbol, baseRecord.value, baseRecord.text, baseRecord.type]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+  const rawLabel = rawValues[0] || '';
+  const isCompanyEvent = rawValues.some((value) => /[★☆⭐]/.test(value) || /^(?:star|event|company[_ -]?activity)$/i.test(value) || /(公司活動|部門旅遊)/.test(value));
+  const specials = new Set((Array.isArray(baseRecord.specials) ? baseRecord.specials : [])
+    .map((item) => /^(?:star|event|company[_ -]?activity)$/i.test(String(item || '').trim()) ? 'event' : item));
+  if (isCompanyEvent) specials.add('event');
+  return {
+    ...baseRecord,
+    type: isCompanyEvent && /[★☆⭐]/.test(String(baseRecord.type || '')) ? '' : (baseRecord.type || ''),
+    label: isCompanyEvent ? '' : rawLabel,
+    specials: [...specials]
+  };
 };
 const normalizeExternalPerson = (person = {}) => ({
   ...person,
