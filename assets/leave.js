@@ -365,17 +365,53 @@ const loadExternalLeave = async () => {
     }
     let payload = validPayloads[0] || null;
     if (validPayloads.length > 1) {
-      const primaryMaxDays = Number(validPayloads[0].maxDays);
-      const fallbackMaxDays = Number(validPayloads[1].maxDays);
-      if (Number.isFinite(fallbackMaxDays) &&
-          (!Number.isFinite(primaryMaxDays) || primaryMaxDays !== fallbackMaxDays)) {
-        console.warn('主要休假鏡射的可休天數與備援不一致，改用備援鏡射。', {
-          primaryMaxDays,
-          fallbackMaxDays,
-          month: targetMonth
+      const primary = validPayloads[0];
+      const fallback = validPayloads[1];
+      const mergedPeople = { ...(primary.people || {}) };
+
+      // Both endpoints mirror the same company leave system. The primary proxy
+      // can omit stars or detailed labels, so enrich each cell with the complete
+      // fallback record instead of choosing one whole payload.
+      Object.entries(fallback.people || {}).forEach(([fallbackName, fallbackPerson]) => {
+        const primaryName = Object.keys(mergedPeople)
+          .find((name) => canonicalLeaveStaffName(name) === canonicalLeaveStaffName(fallbackName));
+        const targetName = primaryName || fallbackName;
+        const primaryPerson = mergedPeople[targetName] || {};
+        const mergedDays = { ...(primaryPerson.days || {}) };
+
+        Object.entries(fallbackPerson?.days || {}).forEach(([day, fallbackRecord = {}]) => {
+          const primaryRecord = mergedDays[day] || {};
+          const specials = [...new Set([
+            ...(Array.isArray(primaryRecord.specials) ? primaryRecord.specials : []),
+            ...(Array.isArray(fallbackRecord.specials) ? fallbackRecord.specials : [])
+          ])];
+          const isCompanyEvent = specials.includes('event');
+          mergedDays[day] = {
+            ...fallbackRecord,
+            ...primaryRecord,
+            type: isCompanyEvent ? (fallbackRecord.type || '') : (primaryRecord.type || fallbackRecord.type || ''),
+            label: primaryRecord.label || fallbackRecord.label || '',
+            externalSymbol: primaryRecord.externalSymbol || fallbackRecord.externalSymbol || '',
+            specials
+          };
         });
-        payload = validPayloads[1];
-      }
+
+        mergedPeople[targetName] = {
+          ...fallbackPerson,
+          ...primaryPerson,
+          shift: primaryPerson.shift || fallbackPerson.shift || '',
+          days: mergedDays
+        };
+      });
+
+      const primaryMaxDays = Number(primary.maxDays);
+      const fallbackMaxDays = Number(fallback.maxDays);
+      payload = {
+        ...fallback,
+        ...primary,
+        maxDays: Number.isFinite(primaryMaxDays) ? primaryMaxDays : fallbackMaxDays,
+        people: mergedPeople
+      };
     }
     if (!payload) throw lastError || new Error('假表來源皆無回應');
     if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
