@@ -2640,24 +2640,24 @@
   </script>
 
   <style>
-    .log-new-datetime-split {
-      display: grid;
-      grid-template-columns: minmax(150px, 1.25fr) minmax(110px, .75fr);
-      gap: 8px;
-      width: 100%;
-    }
-    .log-new-datetime-split input {
-      width: 100% !important;
-      min-width: 0 !important;
-      cursor: pointer;
-    }
-    @media (max-width: 430px) {
-      .log-new-datetime-split { grid-template-columns: 1fr; }
-    }
+    .log-new-datetime-split { position: relative; display: grid; grid-template-columns: minmax(160px, 1fr) 150px; gap: 8px; width: 100%; }
+    .log-new-date-display, .log-new-time-input { width: 100% !important; min-width: 0 !important; cursor: pointer; }
+    .log-new-calendar { position: absolute; z-index: 10030; top: calc(100% + 6px); left: 0; width: 320px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 16px 40px rgba(15,23,42,.22); }
+    .log-new-calendar[hidden] { display: none !important; }
+    .log-new-calendar-head { display: grid; grid-template-columns: 38px 1fr 1fr 38px; gap: 6px; margin-bottom: 10px; }
+    .log-new-calendar-head button, .log-new-calendar-head select { min-height: 38px !important; padding: 5px 7px !important; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+    .log-new-calendar-week, .log-new-calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .log-new-calendar-week span { padding: 5px 0; color: var(--text-secondary); text-align: center; font-size: 12px; }
+    .log-new-calendar-days button { min-height: 34px !important; padding: 4px !important; border-radius: 8px; background: transparent; color: var(--text); font-weight: 600; }
+    .log-new-calendar-days button:hover { background: var(--primary-soft); }
+    .log-new-calendar-days button.is-selected { background: var(--primary); color: #fff; }
+    .log-new-calendar-days button:disabled { visibility: hidden; }
+    @media (max-width: 430px) { .log-new-datetime-split { grid-template-columns: 1fr; } .log-new-calendar { width: min(320px, calc(100vw - 32px)); } }
   </style>
   <script>
-    // 日誌 NEW：把難操作的 datetime-local 滾輪拆成月曆日期與獨立時間。
+    // 日誌 NEW：日期改用自訂月曆與年份下拉；時間保留原本的瀏覽器時間選擇。
     (() => {
+      const pad = (value) => String(value).padStart(2, '0');
       const enhanceDateTimePicker = () => {
         const original = document.querySelector('#ragicForm input[name="date"][type="datetime-local"]');
         if (!original || original.dataset.easyDateTime === 'true') return;
@@ -2665,36 +2665,84 @@
 
         const wrapper = document.createElement('div');
         wrapper.className = 'log-new-datetime-split';
-        const dateInput = document.createElement('input');
+        const dateDisplay = document.createElement('input');
+        dateDisplay.type = 'text';
+        dateDisplay.readOnly = true;
+        dateDisplay.className = 'log-new-date-display';
+        dateDisplay.setAttribute('aria-label', '選擇日期');
         const timeInput = document.createElement('input');
-        dateInput.type = 'date';
         timeInput.type = 'time';
         timeInput.step = '60';
-        dateInput.required = original.required;
+        timeInput.className = 'log-new-time-input';
         timeInput.required = original.required;
-        dateInput.setAttribute('aria-label', '日期');
         timeInput.setAttribute('aria-label', '時間');
 
-        const readOriginal = () => {
-          const value = String(original.value || '');
-          dateInput.value = value.slice(0, 10);
-          timeInput.value = value.slice(11, 16);
-        };
+        const calendar = document.createElement('div');
+        calendar.className = 'log-new-calendar';
+        calendar.hidden = true;
+        calendar.innerHTML = '<div class="log-new-calendar-head"><button type="button" data-step="-1">‹</button><select data-year aria-label="年份"></select><select data-month aria-label="月份"></select><button type="button" data-step="1">›</button></div><div class="log-new-calendar-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div class="log-new-calendar-days"></div>';
+        const yearSelect = calendar.querySelector('[data-year]');
+        const monthSelect = calendar.querySelector('[data-month]');
+        const days = calendar.querySelector('.log-new-calendar-days');
+        for (let year = 2000; year <= 2100; year += 1) yearSelect.insertAdjacentHTML('beforeend', '<option value="' + year + '">' + year + ' 年</option>');
+        for (let month = 0; month < 12; month += 1) monthSelect.insertAdjacentHTML('beforeend', '<option value="' + month + '">' + (month + 1) + ' 月</option>');
+
+        let selected = new Date();
         const writeOriginal = () => {
-          original.value = dateInput.value && timeInput.value ? `${dateInput.value}T${timeInput.value}` : '';
+          const dateValue = dateDisplay.dataset.value || '';
+          original.value = dateValue && timeInput.value ? dateValue + 'T' + timeInput.value : '';
           original.dispatchEvent(new Event('input', { bubbles: true }));
           original.dispatchEvent(new Event('change', { bubbles: true }));
         };
-        dateInput.addEventListener('change', writeOriginal);
+        const renderCalendar = () => {
+          yearSelect.value = String(selected.getFullYear());
+          monthSelect.value = String(selected.getMonth());
+          days.innerHTML = '';
+          const firstDay = new Date(selected.getFullYear(), selected.getMonth(), 1).getDay();
+          const total = new Date(selected.getFullYear(), selected.getMonth() + 1, 0).getDate();
+          for (let index = 0; index < firstDay; index += 1) days.insertAdjacentHTML('beforeend', '<button type="button" disabled></button>');
+          const currentValue = dateDisplay.dataset.value || '';
+          for (let day = 1; day <= total; day += 1) {
+            const value = selected.getFullYear() + '-' + pad(selected.getMonth() + 1) + '-' + pad(day);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = String(day);
+            button.classList.toggle('is-selected', value === currentValue);
+            button.addEventListener('click', () => {
+              dateDisplay.dataset.value = value;
+              dateDisplay.value = selected.getFullYear() + '/' + pad(selected.getMonth() + 1) + '/' + pad(day);
+              calendar.hidden = true;
+              writeOriginal();
+            });
+            days.appendChild(button);
+          }
+        };
+        const readOriginal = () => {
+          const value = String(original.value || '');
+          const dateValue = value.slice(0, 10);
+          dateDisplay.dataset.value = dateValue;
+          dateDisplay.value = dateValue ? dateValue.replace(/-/g, '/') : '';
+          timeInput.value = value.slice(11, 16);
+          if (dateValue) {
+            const parts = dateValue.split('-').map(Number);
+            selected = new Date(parts[0], parts[1] - 1, parts[2]);
+          }
+          renderCalendar();
+        };
+
+        dateDisplay.addEventListener('click', () => { calendar.hidden = !calendar.hidden; renderCalendar(); });
         timeInput.addEventListener('change', writeOriginal);
         original.addEventListener('input', readOriginal);
+        yearSelect.addEventListener('change', () => { selected.setFullYear(Number(yearSelect.value)); renderCalendar(); });
+        monthSelect.addEventListener('change', () => { selected.setMonth(Number(monthSelect.value)); renderCalendar(); });
+        calendar.querySelectorAll('[data-step]').forEach((button) => button.addEventListener('click', () => { selected.setMonth(selected.getMonth() + Number(button.dataset.step)); renderCalendar(); }));
+        document.addEventListener('click', (event) => { if (!wrapper.contains(event.target)) calendar.hidden = true; });
 
         readOriginal();
         original.hidden = true;
         original.insertAdjacentElement('afterend', wrapper);
-        wrapper.append(dateInput, timeInput);
+        wrapper.append(dateDisplay, timeInput, calendar);
       };
-
       const formView = document.querySelector('#ragicFormView');
       if (formView) new MutationObserver(enhanceDateTimePicker).observe(formView, { childList: true, subtree: true });
       enhanceDateTimePicker();
