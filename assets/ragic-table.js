@@ -2788,7 +2788,8 @@ const renderTable = () => {
     tr.tabIndex = canUse('edit') ? 0 : -1;
     tr.classList.toggle('is-readonly', !canUse('edit'));
     tr.innerHTML = renderIconActions(record) + fields.map((field) => {
-      const columnClass = `${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''}`;
+      const isFullTextField = Array.isArray(RAGIC_STATE.config?.fullTextListFields) && RAGIC_STATE.config.fullTextListFields.includes(field.key);
+      const columnClass = `${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''}${isFullTextField ? ' col-fixed-full-text' : ''}`;
       const typeAttr = field.type ? ` data-type="${escapeHtml(field.type)}" data-field-type="${escapeHtml(field.type)}"` : '';
       const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
       const width = fieldColumnWidth(field);
@@ -3032,7 +3033,11 @@ const renderHeader = () => {
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
     const style = columnWidthStyle(width);
-    return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden><div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div><div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div>${renderColumnFilterControls(field)}</div></th>`;
+    const fixedSortKey = String(RAGIC_STATE.config?.fixedSortKey || '');
+    const sortControls = fixedSortKey
+      ? `<div class="menu-item" aria-disabled="true">🔒 <span>固定依${escapeHtml(fieldByKey(fixedSortKey)?.label || fixedSortKey)}由新到舊</span></div>`
+      : `<div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div>`;
+    return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden>${sortControls}<div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div>${renderColumnFilterControls(field)}</div></th>`;
   }).join('');
   [...headerRow.children].forEach((cell, index) => {
     const field = index > 0 ? listFields()[index - 1] : null;
