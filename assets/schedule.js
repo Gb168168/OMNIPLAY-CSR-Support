@@ -733,8 +733,9 @@ const getRepeatStepDays = (item) => {
 const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) => !item.deleted && scheduleMatchesActiveLabel(item)).reduce((groups, item) => {
   const original = parseDateValue(item.reminderAt) || new Date(`${item.date}T00:00:00`);
   if (!(original instanceof Date) || Number.isNaN(original.getTime())) return groups;
-  const rawEnd = String(item.endDate || '').trim();
-  const parsedEnd = /^\d{4}-\d{2}-\d{2}$/.test(rawEnd) ? new Date(`${rawEnd}T23:59:59`) : original;
+  const legacyEndDate = String(item.endDate || '').trim();
+  const parsedEnd = parseDateValue(item.endAt) ||
+    (/^\d{4}-\d{2}-\d{2}$/.test(legacyEndDate) ? new Date(`${legacyEndDate}T23:59:59`) : original);
   const rangeDays = Math.max(0, Math.min(366, daysBetween(original, parsedEnd)));
   const addOccurrence = (date, isRepeat) => {
     for (let offset = 0; offset <= rangeDays; offset += 1) {
@@ -849,7 +850,7 @@ const scheduleHistoryFields = [
   ['title', '標題'],
   ['content', '內容'],
   ['reminderAt', '提醒時間'],
-  ['endDate', '結束日期'],
+  ['endAt', '結束時間'],
   ['labelName', '標籤名稱'],
   ['labelColor', '標籤顏色'],
   ['repeat', '重複提醒'],
@@ -861,7 +862,10 @@ const historyValue = (key, value) => {
     const date = parseDateValue(value);
     return date ? date.toLocaleString('zh-TW', { hour12: false }) : String(value);
   }
-  if (key === 'endDate') return String(value).replace(/-/g, '/');
+  if (key === 'endAt') {
+    const date = parseDateValue(value);
+    return date ? date.toLocaleString('zh-TW', { hour12: false }) : String(value);
+  }
   const repeatLabels = { none: '不重複', daily: '每天', weekly: '每週', monthly: '每月', custom: '自訂' };
   if (key === 'repeat') return repeatLabels[value] || String(value);
   return String(value);
@@ -1087,7 +1091,11 @@ const openModal = (dateKey, scheduleId = null) => {
   document.querySelector('#scheduleTitle').value = item?.title || '';
   document.querySelector('#scheduleContent').value = item?.content || '';
   document.querySelector('#scheduleReminderAt').value = toDatetimeLocal(item?.reminderAt ? parseDateValue(item.reminderAt) : new Date(`${dateKey}T09:00`));
-  document.querySelector('#scheduleEndDate').value = item?.endDate || '';
+  const legacyEndAt = item?.endDate
+    ? new Date(`${item.endDate}T${pad((parseDateValue(item?.reminderAt) || new Date()).getHours())}:${pad((parseDateValue(item?.reminderAt) || new Date()).getMinutes())}`)
+    : null;
+  const scheduleEndAt = parseDateValue(item?.endAt) || legacyEndAt;
+  document.querySelector('#scheduleEndAt').value = scheduleEndAt ? toDatetimeLocal(scheduleEndAt) : '';
   repeatSelect.value = item?.repeat || 'none';
   repeatIntervalInput.value = item?.repeatInterval || 1;
   toggleRepeatInterval();
@@ -1342,7 +1350,8 @@ formEl?.addEventListener('submit', async (event) => {
   if (!canEditSchedule) return setMessage('您沒有編輯權限。');
   if (!scheduleCollection) return setMessage('Firebase 尚未完成初始化，無法儲存排程。');
   const reminderAt = new Date(document.querySelector('#scheduleReminderAt').value);
-  const endDate = document.querySelector('#scheduleEndDate').value;
+  const endAtValue = document.querySelector('#scheduleEndAt').value;
+  const endAt = endAtValue ? new Date(endAtValue) : null;
   const user = currentUser();
   const action = editingId ? '編輯' : '新增';
   const labelName = labelNameInput.value.trim();
@@ -1350,18 +1359,21 @@ formEl?.addEventListener('submit', async (event) => {
   const repeat = repeatSelect?.value || 'none';
   const repeatInterval = Math.max(1, Number(repeatIntervalInput?.value) || 1);
   const payload = {
-    date: toDateKey(reminderAt), endDate, labelColor, labelName, repeat,
+    date: toDateKey(reminderAt), labelColor, labelName, repeat,
     title: document.querySelector('#scheduleTitle').value.trim(),
     content: document.querySelector('#scheduleContent').value.trim(),
     reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, deleted: false
   };
-  if (endDate && endDate < toDateKey(reminderAt)) return setMessage('結束日期不可早於提醒開始日期。');
+  if (endAt && endAt <= reminderAt) return setMessage('結束時間必須晚於提醒開始時間。');
+  if (endAt) payload.endAt = firebase.firestore.Timestamp.fromDate(endAt);
+  else if (editingId) payload.endAt = firebase.firestore.FieldValue.delete();
+  if (editingId) payload.endDate = firebase.firestore.FieldValue.delete();
   if (repeat === 'custom') payload.repeatInterval = repeatInterval;
   else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
   if (!payload.title) return setMessage('請輸入標題。');
   const editingItem = scheduleList.find((entry) => entry.id === editingId);
-  const changes = editingItem ? buildScheduleChanges(editingItem, { ...payload, reminderAt }) : [];
+  const changes = editingItem ? buildScheduleChanges(editingItem, { ...payload, reminderAt, endAt }) : [];
   payload.history = firebase.firestore.FieldValue.arrayUnion({
     action,
     userId: user.id,
