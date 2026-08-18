@@ -4702,7 +4702,9 @@ const addDesignerPairFields = (pairType) => {
       if (savedId) {
         if (!existingRecord?.createdAt) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         await collection.doc(savedId).set(data, { merge: true });
-        renderForm({ ...existingRecord, ...data, id: savedId }, { mode: 'view' });
+        // 日誌 NEW 的子表格可能含長對話與多張圖片；儲存後會直接回列表，
+        // 不先建立一份馬上就被丟棄的完整檢視 DOM。
+        if (!isLogNewModule()) renderForm({ ...existingRecord, ...data, id: savedId }, { mode: 'view' });
       } else {
         const docRef = collection.doc();
         savedId = docRef.id;
@@ -4712,7 +4714,12 @@ const addDesignerPairFields = (pairType) => {
       // 新增完成後立刻同步目前資料 ID 與刪除按鈕，不必等待快照或重新整理。
       RAGIC_STATE.currentId = savedId;
       applyRagicPermissionUi();
-      await syncLinkedHandoverFields({ data, logId: savedId });                   
+      const linkedHandoverSync = syncLinkedHandoverFields({ data, logId: savedId });
+      if (isLogNewModule()) {
+        linkedHandoverSync.catch((error) => console.warn('日誌 NEW 交接連動背景同步失敗：', error));
+      } else {
+        await linkedHandoverSync;
+      }
       const savedRecord = { ...existingRecord, ...data, id: savedId };
       if (isLogModule() && window.pendingLinkedReportAfterSave) {
         window.pendingLinkedReportAfterSave = false;
