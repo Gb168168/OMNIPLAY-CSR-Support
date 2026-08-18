@@ -895,8 +895,7 @@ button:hover { transform: translateY(-1px); }
 }
 
 
-.quota-count.is-warning,
-tr.is-over-quota .name-col { color: var(--warning-text); }
+.quota-count.is-warning { color: var(--warning-text); }
 
 .summary-row td,
 .summary-row th {
@@ -2041,8 +2040,7 @@ body { background: var(--bg-gradient); }
 [data-theme="light"] .saved-label-empty,
 [data-theme="light"] .history-empty,
 [data-theme="light"] .schedule-form small { color: var(--muted); }
-[data-theme="light"] .quota-count.is-warning,
-[data-theme="light"] tr.is-over-quota .name-col { color: var(--warning-text); }
+[data-theme="light"] .quota-count.is-warning { color: var(--warning-text); }
 
 [data-theme="light"] .secondary-button, [data-theme="light"] .secondary { color: #1D4ED8; }
 [data-theme="light"] .danger-button, [data-theme="light"] .danger { color: #B91C1C; }
@@ -2198,8 +2196,7 @@ a { color: var(--primary); background: transparent; }
 .ragic-form-toolbar h2,
 .ragic-subtable h3,
 .ragic-subtable-title { background: none; color: var(--text); }
-.quota-count.is-warning,
-tr.is-over-quota .name-col { color: var(--danger); }
+.quota-count.is-warning { color: var(--danger); }
 .summary-row td,
 .summary-row th { color: var(--summary-text); background: var(--summary-bg); }
 .ragic-file-preview { color: var(--primary); background: var(--surface); border-color: var(--border); }
