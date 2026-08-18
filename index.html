@@ -81,7 +81,14 @@
           <h1>首頁</h1>
           <p>快速查看客服支援系統入口。</p>
         </div>
-        <div class="user-pill">● 已連線 Firebase</div>
+        <div class="topbar-actions">
+          <button class="personal-notification-open" id="personalNotificationOpen" type="button">
+            <span aria-hidden="true">🔔</span>
+            <span>個人化通知</span>
+            <span class="personal-notification-count" id="personalNotificationCount" hidden>0</span>
+          </button>
+          <div class="user-pill">● 已連線 Firebase</div>
+        </div>
       </header>
       <section class="dashboard" aria-label="首頁 dashboard">
         <div class="dashboard-stats" id="dashboardStats">
@@ -125,9 +132,66 @@
             <li class="dashboard-empty">載入中...</li>
           </ul>
         </section>
+
+        <section class="personal-notification-panel" aria-labelledby="personalNotificationTitle">
+          <div class="personal-notification-heading">
+            <div>
+              <h2 id="personalNotificationTitle">🔔 個人化通知</h2>
+              <p>你的鬧鐘提醒與便利貼，只顯示在這個帳號的目前裝置。</p>
+            </div>
+            <button class="personal-notification-add" id="personalNotificationAdd" type="button">＋ 新增</button>
+          </div>
+          <div class="personal-notification-list" id="personalNotificationList">
+            <p class="personal-notification-empty">目前沒有個人通知，按「新增」建立第一張便利貼。</p>
+          </div>
+        </section>
       </section>
     </main>
   </section>
+
+  <div class="personal-notification-modal" id="personalNotificationModal" hidden>
+    <form class="personal-notification-dialog" id="personalNotificationForm" role="dialog" aria-modal="true" aria-labelledby="personalNotificationDialogTitle">
+      <div class="personal-notification-dialog-head">
+        <div>
+          <span class="personal-notification-kicker">只屬於你的提醒</span>
+          <h2 id="personalNotificationDialogTitle">新增個人化通知</h2>
+        </div>
+        <button class="personal-notification-close" id="personalNotificationClose" type="button" aria-label="關閉">×</button>
+      </div>
+      <input id="personalNotificationId" type="hidden" />
+      <label class="personal-notification-field">
+        <span>類型</span>
+        <select id="personalNotificationType">
+          <option value="note">📝 便利貼</option>
+          <option value="alarm">⏰ 鬧鐘提醒</option>
+        </select>
+      </label>
+      <label class="personal-notification-field">
+        <span>標題</span>
+        <input id="personalNotificationTitleInput" maxlength="50" placeholder="例如：回覆 AM" required />
+      </label>
+      <label class="personal-notification-field">
+        <span>內容</span>
+        <textarea id="personalNotificationContent" maxlength="500" rows="4" placeholder="寫下要記得的事情…"></textarea>
+      </label>
+      <label class="personal-notification-field" id="personalNotificationTimeField" hidden>
+        <span>提醒時間</span>
+        <input id="personalNotificationTime" type="datetime-local" />
+      </label>
+      <fieldset class="personal-notification-colors">
+        <legend>便利貼顏色</legend>
+        <label><input type="radio" name="personalNotificationColor" value="yellow" checked><span class="color-dot yellow">黃色</span></label>
+        <label><input type="radio" name="personalNotificationColor" value="blue"><span class="color-dot blue">藍色</span></label>
+        <label><input type="radio" name="personalNotificationColor" value="pink"><span class="color-dot pink">粉色</span></label>
+        <label><input type="radio" name="personalNotificationColor" value="green"><span class="color-dot green">綠色</span></label>
+      </fieldset>
+      <p class="personal-notification-form-error" id="personalNotificationFormError" role="alert"></p>
+      <div class="personal-notification-actions">
+        <button class="secondary-button" id="personalNotificationCancel" type="button">取消</button>
+        <button class="primary-button" type="submit">儲存通知</button>
+      </div>
+    </form>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -151,5 +215,6 @@
   <script src="assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="assets/app.js?v=20260816-remove-library"></script>
   <script src="assets/dashboard.js?v=20260806-authgate1"></script>
+  <script src="assets/personal-notifications.js?v=20260818-personal1"></script>
 </body>
 </html>
