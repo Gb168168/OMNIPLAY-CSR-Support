@@ -2813,6 +2813,7 @@ const renderTable = () => {
       const manualWidth = field ? fieldColumnWidth(field) : null;
       cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
       if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
+      if (field) applyListCellAlignment(cell, field);
       const isDateColumn = cell.classList.contains('col-date');
       cell.style.setProperty('white-space', isDateColumn ? 'nowrap' : 'normal', 'important');
       cell.style.setProperty('overflow-wrap', isDateColumn ? 'normal' : 'anywhere', 'important');
@@ -3056,6 +3057,7 @@ const renderHeader = () => {
     const manualWidth = field ? fieldColumnWidth(field) : null;
     cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
     if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
+    if (field) applyListCellAlignment(cell, field);
     const isDateColumn = cell.classList.contains('col-date');
     cell.style.setProperty('white-space', isDateColumn ? 'nowrap' : 'normal', 'important');
     cell.style.setProperty('overflow-wrap', isDateColumn ? 'normal' : 'anywhere', 'important');
@@ -3167,6 +3169,18 @@ const designerPreviewColumnWidth = (field = {}) => {
   if (['select', 'multiselect', 'person'].includes(field.type)) return 150;
   return 140;
 };
+const normalizeListHorizontalAlign = (value) => ['left', 'center', 'right'].includes(String(value || '')) ? String(value) : '';
+const normalizeListVerticalAlign = (value) => ['top', 'middle', 'bottom'].includes(String(value || '')) ? String(value) : '';
+const applyListCellAlignment = (cell, field = {}) => {
+  if (!cell) return;
+  const horizontal = normalizeListHorizontalAlign(field.listHorizontalAlign);
+  const vertical = normalizeListVerticalAlign(field.listVerticalAlign);
+  if (horizontal) cell.style.setProperty('text-align', horizontal, 'important');
+  else cell.style.removeProperty('text-align');
+  if (vertical) cell.style.setProperty('vertical-align', vertical, 'important');
+  else cell.style.removeProperty('vertical-align');
+};
+
 const updateDesignerPreview = () => {
   const modal = document.querySelector('#ragicDesignerModal');
   const body = modal?.querySelector('.designer-body');
@@ -3201,9 +3215,14 @@ const updateDesignerPreview = () => {
   previewTable?.style.setProperty('max-width', 'none', 'important');
   fields.forEach((field, index) => {
     const width = designerPreviewColumnWidth(field);
-    applyColumnWidth(previewTable?.querySelector(`thead tr:not(.designer-sheet-column-letters) th:nth-child(${index + 2})`), width);
+    const headerCell = previewTable?.querySelector(`thead tr:not(.designer-sheet-column-letters) th:nth-child(${index + 2})`);
+    applyColumnWidth(headerCell, width);
+    applyListCellAlignment(headerCell, field);
     applyColumnWidth(previewTable?.querySelector(`thead .designer-sheet-column-letters th:nth-child(${index + 2})`), width);
-    previewTable?.querySelectorAll(`tbody td:nth-child(${index + 2})`).forEach((cell) => applyColumnWidth(cell, width));
+    previewTable?.querySelectorAll(`tbody td:nth-child(${index + 2})`).forEach((cell) => {
+      applyColumnWidth(cell, width);
+      applyListCellAlignment(cell, field);
+    });
   });
 };
 
@@ -3219,7 +3238,7 @@ const openListFieldSettings = (fieldKey) => {
   const field = readDesigner(row.parentElement).find((item) => item.key === fieldKey);
   if (!field) return;
   panel.dataset.fieldKey = fieldKey;
-  panel.innerHTML = `<div class="designer-list-panel-head"><div><small>列表欄位</small><h3>${escapeHtml(field.label || field.key)}</h3></div><button type="button" data-close-list-settings>×</button></div><label><span>欄位名稱</span><input data-list-setting-label value="${escapeHtml(field.label || '')}"></label><label><span>顯示在列表</span><input data-list-setting-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}></label><label><span>列表欄寬</span><div class="designer-list-width-input"><input data-list-setting-width type="number" min="40" max="2000" step="10" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}" placeholder="自動"><em>px</em></div></label><p>列表設定不會改變單筆畫面的欄位位置。</p><button class="primary" type="button" data-apply-list-settings>套用並儲存</button>`;
+  panel.innerHTML = `<div class="designer-list-panel-head"><div><small>列表欄位</small><h3>${escapeHtml(field.label || field.key)}</h3></div><button type="button" data-close-list-settings>×</button></div><label><span>欄位名稱</span><input data-list-setting-label value="${escapeHtml(field.label || '')}"></label><label><span>顯示在列表</span><input data-list-setting-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}></label><label><span>列表欄寬</span><div class="designer-list-width-input"><input data-list-setting-width type="number" min="40" max="2000" step="10" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}" placeholder="自動"><em>px</em></div></label><label><span>水平對齊</span><select data-list-setting-horizontal><option value="" ${!normalizeListHorizontalAlign(field.listHorizontalAlign) ? 'selected' : ''}>沿用目前樣式</option><option value="left" ${field.listHorizontalAlign === 'left' ? 'selected' : ''}>靠左</option><option value="center" ${field.listHorizontalAlign === 'center' ? 'selected' : ''}>置中</option><option value="right" ${field.listHorizontalAlign === 'right' ? 'selected' : ''}>靠右</option></select></label><label><span>垂直對齊</span><select data-list-setting-vertical><option value="" ${!normalizeListVerticalAlign(field.listVerticalAlign) ? 'selected' : ''}>沿用目前樣式</option><option value="top" ${field.listVerticalAlign === 'top' ? 'selected' : ''}>靠上</option><option value="middle" ${field.listVerticalAlign === 'middle' ? 'selected' : ''}>置中</option><option value="bottom" ${field.listVerticalAlign === 'bottom' ? 'selected' : ''}>靠下</option></select></label><p>列表設定不會改變單筆畫面的欄位位置。</p><button class="primary" type="button" data-apply-list-settings>套用並儲存</button>`;
   panel.hidden = false;
 };
 
@@ -3333,6 +3352,16 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
   listVisibleInput.dataset.role = 'list-visible';
   listVisibleInput.value = field.listVisible === false ? '0' : '1';
   row.appendChild(listVisibleInput);
+  const listHorizontalInput = document.createElement('input');
+  listHorizontalInput.type = 'hidden';
+  listHorizontalInput.dataset.role = 'list-horizontal-align';
+  listHorizontalInput.value = normalizeListHorizontalAlign(field.listHorizontalAlign);
+  row.appendChild(listHorizontalInput);
+  const listVerticalInput = document.createElement('input');
+  listVerticalInput.type = 'hidden';
+  listVerticalInput.dataset.role = 'list-vertical-align';
+  listVerticalInput.value = normalizeListVerticalAlign(field.listVerticalAlign);
+  row.appendChild(listVerticalInput);
   const sub = row.querySelector('.designer-subfields');
   const subList = row.querySelector('.designer-subfield-list');
   const sync = () => { sub.hidden = row.querySelector('[data-role="type"]').value !== 'subtable'; };
@@ -3376,7 +3405,9 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
     help: row.querySelector('[data-role="help"]')?.value || '',
     readonly: row.querySelector('[data-role="readonly"]')?.value === '1',
     hidden: row.querySelector('[data-role="hidden"]')?.value === '1',
-    listVisible: row.querySelector('[data-role="list-visible"]')?.value !== '0'
+    listVisible: row.querySelector('[data-role="list-visible"]')?.value !== '0',
+    listHorizontalAlign: normalizeListHorizontalAlign(row.querySelector('[data-role="list-horizontal-align"]')?.value),
+    listVerticalAlign: normalizeListVerticalAlign(row.querySelector('[data-role="list-vertical-align"]')?.value)
   };
   if (row.dataset.linkedHandover === '1') field.linkedHandover = true;
   const formRow = normalizeFormLayoutNumber(row.querySelector('[data-role="form-row"]')?.value);
@@ -4277,6 +4308,8 @@ const initRagicPage = async (config) => {
       if (!panel || !row || applyButton.disabled) return;
       row.querySelector('[data-role="label"]').value = panel.querySelector('[data-list-setting-label]').value.trim() || '未命名欄位';
       row.querySelector('[data-role="list-visible"]').value = panel.querySelector('[data-list-setting-visible]').checked ? '1' : '0';
+      row.querySelector('[data-role="list-horizontal-align"]').value = normalizeListHorizontalAlign(panel.querySelector('[data-list-setting-horizontal]').value);
+      row.querySelector('[data-role="list-vertical-align"]').value = normalizeListVerticalAlign(panel.querySelector('[data-list-setting-vertical]').value);
       setDesignerListFieldWidth(panel.dataset.fieldKey, panel.querySelector('[data-list-setting-width]').value, false);
       updateDesignerPreview();
       applyButton.disabled = true;
