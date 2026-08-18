@@ -162,36 +162,59 @@ const scheduleDateFromParts = (dateValue, timeValue = '00:00') => {
 };
 
 const scheduleOriginalDate = (item = {}) => valueDate(item.reminderAt) || valueDate(item.datetime) || valueDate(item.startAt) || scheduleDateFromParts(item.date, item.time || item.startTime);
+const scheduleEndDate = (item = {}, fallback = null) => {
+  const endAt = valueDate(item.endAt);
+  if (endAt) return endAt;
+  const legacyEndDate = String(item.endDate || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(legacyEndDate)) {
+    return scheduleDateFromParts(legacyEndDate, '23:59');
+  }
+  return fallback;
+};
+const scheduleRangeText = (item = {}) => {
+  const rangeStart = scheduleOriginalDate(item);
+  const rangeEnd = scheduleEndDate(item, rangeStart);
+  if (!rangeStart || !rangeEnd) return '';
+  const startText = displayDate(rangeStart);
+  const endText = displayDate(rangeEnd);
+  return startText === endText ? startText : `${startText}~${endText}`;
+};
 
 const scheduleOccurrencesForDay = (date = new Date()) => {
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const end = new Date(start);
   end.setHours(23, 59, 59, 999);
   const items = [];
-  const addOccurrence = (item, occurrenceAt, isRepeat) => {
+  const addOccurrence = (item, occurrenceStart, isRepeat, rangeDays = 0) => {
+    const occurrenceEnd = new Date(occurrenceStart);
+    occurrenceEnd.setDate(occurrenceStart.getDate() + rangeDays);
+    if (occurrenceStart > end || occurrenceEnd < start) return;
+    const occurrenceAt = occurrenceStart < start ? new Date(start) : occurrenceStart;
     items.push({ ...item, occurrenceAt, isRepeatOccurrence: isRepeat });
   };
 
   dashboardState.schedules.filter((item) => item.deleted !== true).forEach((item) => {
     const original = scheduleOriginalDate(item);
     if (!(original instanceof Date) || Number.isNaN(original.getTime())) return;
-    if (original >= start && original <= end) addOccurrence(item, original, false);
+    const originalEnd = scheduleEndDate(item, original);
+    const rangeDays = Math.max(0, Math.min(366, daysBetween(original, originalEnd)));
+    addOccurrence(item, original, false, rangeDays);
 
     if ((item.repeat || 'none') === 'monthly') {
       for (let i = 1, occurrence = addMonthsClamped(original, i); occurrence <= end; i += 1, occurrence = addMonthsClamped(original, i)) {
-        if (occurrence >= start) addOccurrence(item, occurrence, true);
+        addOccurrence(item, occurrence, true, rangeDays);
       }
       return;
     }
 
     const step = getRepeatStepDays(item);
     if (!step) return;
-    const firstOffset = Math.max(step, Math.ceil(Math.max(1, daysBetween(original, start)) / step) * step);
+    const firstOffset = Math.max(step, Math.ceil(Math.max(1, daysBetween(original, start) - rangeDays) / step) * step);
     for (let offset = firstOffset; ; offset += step) {
       const occurrence = new Date(original);
       occurrence.setDate(original.getDate() + offset);
       if (occurrence > end) break;
-      if (occurrence >= start) addOccurrence(item, occurrence, true);
+      addOccurrence(item, occurrence, true, rangeDays);
     }
   });
   
@@ -410,6 +433,7 @@ const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
     href: withRecordLink('service/schedule.html', item.id),
     title: item.title || '未命名事項',
     scheduleLabel: item.labelName || item.eventType || '排程',
+    scheduleDateRange: scheduleRangeText(item),
     labelColor,
     sortAt: item.occurrenceAt.getTime()
   };
@@ -630,6 +654,11 @@ const renderTodoList = () => {
     const renderTrackingDetails = (item) => {
     const details = item.details;
 
+    if (item.type === '排程表') {
+      const rangeSuffix = item.scheduleDateRange ? `｜${escapeDashboardHtml(item.scheduleDateRange)}` : '';
+      return `<strong>📅排程表 ${escapeDashboardHtml(item.title)}${rangeSuffix}</strong>`;
+    }
+
     if (!details) {
       return `<strong>${escapeDashboardHtml(item.title)}</strong>`;
     }
@@ -667,9 +696,9 @@ const renderTodoList = () => {
     ? filteredItems.map((item) => `
         <li>
           <a href="${item.href}">
-            <span class="todo-type">
+            ${item.type === '排程表' ? '' : `<span class="todo-type">
               ${item.icon} ${escapeDashboardHtml(item.time)}
-            </span>
+            </span>`}
             ${renderTrackingDetails(item)}
 
             <div class="todo-tags">
