@@ -84,9 +84,9 @@ const canonicalScheduleLabelName = (name = '') => {
 };
 
 const getScheduleEventMeta = (item = {}) => GAME_EVENT_META[item.eventType] || null;
-const getScheduleDisplayColor = (item = {}) => getScheduleEventMeta(item)?.color || item.labelColor || '#3b82f6';
+const getScheduleDisplayColor = (item = {}) => item.labelColor || getScheduleEventMeta(item)?.color || '#3b82f6';
 const getScheduleDisplayLabel = (item = {}) =>
-  getScheduleEventMeta(item)?.labelName || canonicalScheduleLabelName(item.labelName);
+  canonicalScheduleLabelName(item.labelName) || getScheduleEventMeta(item)?.labelName || '';
 const getScheduleGames = (item = {}) => {
   if (Array.isArray(item.games) && item.games.length) return item.games;
   if (item.gameId) return [{
@@ -109,11 +109,12 @@ const getGameTitle = (games = []) => games
 const getScheduleDisplayTitle = (item = {}) => {
   const meta = getScheduleEventMeta(item);
   if (!meta) return item.title || '';
+  const displayLabel = getScheduleDisplayLabel(item) || meta.labelName;
   const gameTitle = getGameTitle(getScheduleGames(item));
-  if (gameTitle) return `${meta.labelName}｜${gameTitle}`;
+  if (gameTitle) return `${displayLabel}｜${gameTitle}`;
   const titleBody = String(item.title || '').replace(GAME_TITLE_PREFIX_PATTERN, '').trim();
   const fallbackTitle = titleBody && !/^\d+\s*款遊戲$/.test(titleBody) ? titleBody : '未命名遊戲';
-  return `${meta.labelName}｜${fallbackTitle}`;
+  return `${displayLabel}｜${fallbackTitle}`;
 };
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
@@ -163,6 +164,15 @@ let gameScheduleLastFailed = false;
 let scheduleFormInitialSnapshot = '';
 let selectedScheduleLabelId = '';
 const GAME_SCHEDULE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+
+const resolveSavedScheduleMeta = (meta) => {
+  const saved = labelList.find((label) => label.id === meta.labelId);
+  return saved ? {
+    ...meta,
+    labelName: canonicalScheduleLabelName(saved.name) || meta.labelName,
+    color: saved.color || meta.color
+  } : meta;
+};
 
 const storedSchedulePermission = () => window.getPagePermission?.('schedule') || { view: false, edit: false, delete: false, design: false };
 let canEditSchedule = Boolean(window.isOmniplayAdmin?.());
@@ -326,16 +336,19 @@ const createUatSchedules = async (item, actor) => {
     const legacySnapshots = await Promise.all(legacyRefs.map((ref) => transaction.get(ref)));
     staleWorkflowIds.forEach((id) => transaction.delete(scheduleCollection.doc(id)));
 
-    [marketingMeta, uatMeta, prodMeta].forEach((meta) => {
-      transaction.set(scheduleLabelCollection.doc(meta.labelId), {
-        name: meta.labelName,
-        color: meta.color,
-        updatedAt,
-        source: 'google-game-sheet'
-      }, { merge: true });
-    });
+    [marketingMeta, uatMeta, prodMeta]
+      .filter((meta) => !labelList.some((label) => label.id === meta.labelId))
+      .forEach((meta) => {
+        transaction.set(scheduleLabelCollection.doc(meta.labelId), {
+          name: meta.labelName,
+          color: meta.color,
+          updatedAt,
+          source: 'google-game-sheet'
+        }, { merge: true });
+      });
 
     groups.forEach((target, index) => {
+      const displayMeta = resolveSavedScheduleMeta(target.meta);
       const legacyGames = legacySnapshots[index].exists ? legacySnapshots[index].data()?.games : [];
       const rowGames = mergeScheduleGames(legacyGames, target.group.games);
       rowGames.forEach((game) => {
@@ -345,12 +358,12 @@ const createUatSchedules = async (item, actor) => {
         transaction.set(rowRef, {
           eventType: target.eventType,
           date: target.dateKey,
-          title: `${target.meta.labelName}｜${getGameTitle([game])}`,
+          title: `${displayMeta.labelName}｜${getGameTitle([game])}`,
           content: `${target.contentPrefix}\n${gameLine(game)}`,
           reminderAt: firebase.firestore.Timestamp.fromDate(target.group.reminderAt),
-          labelId: target.meta.labelId,
-          labelName: target.meta.labelName,
-          labelColor: target.meta.color,
+          labelId: displayMeta.labelId,
+          labelName: displayMeta.labelName,
+          labelColor: displayMeta.color,
           repeat: 'none',
           staffIds: [],
           staffNames: [],
@@ -591,6 +604,7 @@ const syncGameSchedules = async () => {
       .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
     [GAME_EVENT_META['pm-confirmation'], GAME_EVENT_META['marketing-material'], GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META, GAME_FIRST_LAUNCH_META]
+      .filter((meta) => !labelList.some((label) => label.id === meta.labelId))
       .forEach((meta) => batch.set(scheduleLabelCollection.doc(meta.labelId), {
         name: meta.labelName,
         color: meta.color,
@@ -599,15 +613,16 @@ const syncGameSchedules = async () => {
       }, { merge: true }));
 
     rows.forEach((row) => {
+      const displayMeta = resolveSavedScheduleMeta(row.meta);
       const payload = {
         eventType: row.eventType,
         date: row.dateKey,
-        title: `${row.meta.labelName}｜${getGameTitle([row.game])}`,
+        title: `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
         content: `${row.contentPrefix}\n${gameLine(row.game)}`,
         reminderAt: firebase.firestore.Timestamp.fromDate(row.at),
-        labelId: row.meta.labelId,
-        labelName: row.meta.labelName,
-        labelColor: row.meta.color,
+        labelId: displayMeta.labelId,
+        labelName: displayMeta.labelName,
+        labelColor: displayMeta.color,
         repeat: 'none',
         staffIds: [],
         staffNames: [],
