@@ -2671,8 +2671,19 @@
   </script>
 
   <style>
-    .log-new-datetime-split { position: relative; display: grid; grid-template-columns: minmax(160px, 1fr) 150px; gap: 8px; width: 100%; }
-    .log-new-date-display, .log-new-time-input { width: 100% !important; min-width: 0 !important; cursor: pointer; }
+    .log-new-datetime-split { position: relative; width: 100%; }
+    .log-new-date-display { width: 100% !important; min-width: 0 !important; cursor: pointer; }
+    .log-new-calendar-time {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .log-new-calendar-time label { flex: 0 0 auto; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+    .log-new-time-input { flex: 1 1 auto; min-width: 0 !important; height: 38px !important; }
+    .log-new-calendar-done { flex: 0 0 auto; min-height: 38px !important; padding: 6px 12px !important; border-radius: 8px; background: var(--primary); color: #fff; font-weight: 800; }
     .log-new-calendar { position: absolute; z-index: 10030; top: calc(100% + 6px); left: 0; width: 320px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 16px 40px rgba(15,23,42,.22); }
     .log-new-calendar[hidden] { display: none !important; }
     .log-new-calendar-head { display: grid; grid-template-columns: 38px 1fr 1fr 38px; gap: 6px; margin-bottom: 10px; }
@@ -2683,10 +2694,10 @@
     .log-new-calendar-days button:hover { background: var(--primary-soft); }
     .log-new-calendar-days button.is-selected { background: var(--primary); color: #fff; }
     .log-new-calendar-days button:disabled { visibility: hidden; }
-    @media (max-width: 430px) { .log-new-datetime-split { grid-template-columns: 1fr; } .log-new-calendar { width: min(320px, calc(100vw - 32px)); } }
+    @media (max-width: 430px) { .log-new-calendar { width: min(320px, calc(100vw - 32px)); } }
   </style>
   <script>
-    // 日誌 NEW：日期改用自訂月曆與年份下拉；時間保留原本的瀏覽器時間選擇。
+    // 日誌 NEW：單一日期時間欄位，點開後使用自訂月曆並在月曆內選時間。
     (() => {
       const pad = (value) => String(value).padStart(2, '0');
       const enhanceDateTimePicker = () => {
@@ -2711,17 +2722,29 @@
         const calendar = document.createElement('div');
         calendar.className = 'log-new-calendar';
         calendar.hidden = true;
-        calendar.innerHTML = '<div class="log-new-calendar-head"><button type="button" data-step="-1">‹</button><select data-year aria-label="年份"></select><select data-month aria-label="月份"></select><button type="button" data-step="1">›</button></div><div class="log-new-calendar-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div class="log-new-calendar-days"></div>';
+        calendar.innerHTML = '<div class="log-new-calendar-head"><button type="button" data-step="-1">‹</button><select data-year aria-label="年份"></select><select data-month aria-label="月份"></select><button type="button" data-step="1">›</button></div><div class="log-new-calendar-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div class="log-new-calendar-days"></div><div class="log-new-calendar-time"><label>時間</label><span data-time-slot></span><button class="log-new-calendar-done" type="button">完成</button></div>';
         const yearSelect = calendar.querySelector('[data-year]');
         const monthSelect = calendar.querySelector('[data-month]');
         const days = calendar.querySelector('.log-new-calendar-days');
+        calendar.querySelector('[data-time-slot]').appendChild(timeInput);
+        const doneButton = calendar.querySelector('.log-new-calendar-done');
         for (let year = 2000; year <= 2100; year += 1) yearSelect.insertAdjacentHTML('beforeend', '<option value="' + year + '">' + year + ' 年</option>');
         for (let month = 0; month < 12; month += 1) monthSelect.insertAdjacentHTML('beforeend', '<option value="' + month + '">' + (month + 1) + ' 月</option>');
 
         let selected = new Date();
+        const refreshDisplay = () => {
+          const dateValue = dateDisplay.dataset.value || '';
+          const [hourText = '', minute = ''] = String(timeInput.value || '').split(':');
+          const hour = Number(hourText);
+          const timeText = hourText
+            ? (hour < 12 ? '上午 ' : '下午 ') + pad(hour % 12 || 12) + ':' + minute
+            : '';
+          dateDisplay.value = [dateValue ? dateValue.replace(/-/g, '/') : '', timeText].filter(Boolean).join(' ');
+        };
         const writeOriginal = () => {
           const dateValue = dateDisplay.dataset.value || '';
           original.value = dateValue && timeInput.value ? dateValue + 'T' + timeInput.value : '';
+          refreshDisplay();
           original.dispatchEvent(new Event('input', { bubbles: true }));
           original.dispatchEvent(new Event('change', { bubbles: true }));
         };
@@ -2741,9 +2764,9 @@
             button.classList.toggle('is-selected', value === currentValue);
             button.addEventListener('click', () => {
               dateDisplay.dataset.value = value;
-              dateDisplay.value = selected.getFullYear() + '/' + pad(selected.getMonth() + 1) + '/' + pad(day);
-              calendar.hidden = true;
+              selected = new Date(selected.getFullYear(), selected.getMonth(), day);
               writeOriginal();
+              renderCalendar();
             });
             days.appendChild(button);
           }
@@ -2752,8 +2775,8 @@
           const value = String(original.value || '');
           const dateValue = value.slice(0, 10);
           dateDisplay.dataset.value = dateValue;
-          dateDisplay.value = dateValue ? dateValue.replace(/-/g, '/') : '';
           timeInput.value = value.slice(11, 16);
+          refreshDisplay();
           if (dateValue) {
             const parts = dateValue.split('-').map(Number);
             selected = new Date(parts[0], parts[1] - 1, parts[2]);
@@ -2763,6 +2786,7 @@
 
         dateDisplay.addEventListener('click', () => { calendar.hidden = !calendar.hidden; renderCalendar(); });
         timeInput.addEventListener('change', writeOriginal);
+        doneButton.addEventListener('click', () => { writeOriginal(); calendar.hidden = true; });
         original.addEventListener('input', readOriginal);
         yearSelect.addEventListener('change', () => { selected.setFullYear(Number(yearSelect.value)); renderCalendar(); });
         monthSelect.addEventListener('change', () => { selected.setMonth(Number(monthSelect.value)); renderCalendar(); });
@@ -2772,7 +2796,7 @@
         readOriginal();
         original.hidden = true;
         original.insertAdjacentElement('afterend', wrapper);
-        wrapper.append(dateDisplay, timeInput, calendar);
+        wrapper.append(dateDisplay, calendar);
       };
       const formView = document.querySelector('#ragicFormView');
       if (formView) new MutationObserver(enhanceDateTimePicker).observe(formView, { childList: true, subtree: true });
