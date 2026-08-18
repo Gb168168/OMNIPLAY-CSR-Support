@@ -145,7 +145,8 @@
                 <span><i style="--help-color:#f59e0b"></i>橘色：向 AM 確認</span>
                 <span><i style="--help-color:#14b8a6"></i>綠色：行銷素材待辦</span>
                 <span><i style="--help-color:#8b5cf6"></i>紫色：UAT／測試環境</span>
-                <span><i style="--help-color:#ec4899"></i>粉色：⭐ 首發平台上線</span>
+                <span><i style="--help-color:#ec4899"></i>粉色：⭐ 首發平台上線／⭐ 首發＋🔒 獨家</span>
+                <span><i style="--help-color:#ca8a04"></i>金色：🔒 獨家平台</span>
                 <span><i style="--help-color:#2563eb"></i>藍色：遊戲上線</span>
                 <span><b class="help-line is-dashed"></b>虛線：尚未發生</span>
                 <span><b class="help-line"></b>實心：時間已到或已發生</span>
@@ -159,7 +160,7 @@
                 <li>只匯入預計上線日期為 2026/01/01（含）之後，且有有效上線時間的遊戲。</li>
                 <li>2026/01～2026/06 的遊戲只在預計上線當日建立一列藍色「遊戲上線」資料。</li>
                 <li>2026/07/01 起的一般遊戲會先建立 AM 確認（前 14 天）；勾選「AM 已確認」並儲存後，才建立行銷素材（前 8 天）、UAT／測試環境（前 7 天）及上線當日資料。</li>
-                <li>2026/08/01 起，只有「備註 1」明確含「首發」時才建立「⭐ 首發平台上線」；若同時含 8/13-8/26 這類日期範圍，會轉為跨日長條。獨家不等於首發，所有備註仍會完整同步到排程內容。</li>
+                <li>2026/08/01 起依「備註 1」分流：含「首發」建立粉色「⭐ 首發平台上線」；只含「獨家」建立金色「🔒 獨家平台」；兩者皆有則建立粉色「⭐ 首發／🔒 獨家平台」。備註若含 8/13-8/26 這類日期範圍，會轉為跨日長條，完整備註也會同步到排程內容。</li>
                 <li>首次補入的歷史上線與流程資料不列入「試算表變更」；完成匯入後的新修改才會記錄。</li>
               </ol>
               <p class="schedule-help-note">同步只處理試算表中的遊戲上線日期，不影響手動建立的排程。</p>
@@ -238,6 +239,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260816-remove-library"></script>
-  <script src="../assets/schedule.js?v=20260819-note-date-range"></script>
+  <script src="../assets/schedule.js?v=20260819-exclusive-labels"></script>
 </body>
 </html>
