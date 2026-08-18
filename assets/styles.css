@@ -6102,6 +6102,39 @@ body:has(.sidebar-toggle-btn.is-visible)
   min-height: 16px;
 }
 
+/* Multi-day schedules render as a continuous bar across each calendar week. */
+.calendar-grid.is-month-view .calendar-event.is-range {
+  position: relative;
+  z-index: 2;
+  border-color: var(--event-color, #3b82f6);
+  background: color-mix(in srgb, var(--event-color, #3b82f6) 28%, var(--card));
+}
+.calendar-grid.is-month-view .calendar-event.is-range:not(.is-range-start):not(.is-range-week-start) {
+  margin-left: -7px;
+  padding-left: 8px;
+  border-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.calendar-grid.is-month-view .calendar-event.is-range:not(.is-range-end):not(.is-range-week-end) {
+  margin-right: -7px;
+  padding-right: 8px;
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.calendar-grid.is-month-view .calendar-event.is-range-middle:not(.is-range-week-start) > span,
+.calendar-grid.is-month-view .calendar-event.is-range-end:not(.is-range-week-start) > span {
+  opacity: 0;
+}
+.calendar-grid.is-month-view .calendar-event.is-range-middle i,
+.calendar-grid.is-month-view .calendar-event.is-range-end i { display: none; }
+.schedule-range-row { grid-template-columns: minmax(0, 1.35fr) minmax(180px, .65fr); }
+@media (max-width: 720px) {
+  .schedule-range-row { grid-template-columns: 1fr; }
+  .calendar-grid.is-mobile-month-agenda .calendar-event.is-range > span { opacity: 1; }
+}
+
 @media (max-height: 760px) and (min-width: 721px) {
   .calendar-grid.is-month-view {
     grid-template-rows: 36px repeat(6, minmax(0, 1fr));
