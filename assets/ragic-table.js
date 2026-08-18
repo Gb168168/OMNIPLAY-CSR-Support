@@ -4101,12 +4101,43 @@ const setupRagicFormActions = () => {
 const initRagicPage = async (config) => {
   await waitForPermissions();
   RAGIC_STATE.config = { ...config, collection: dataCollectionName(config), schemaCollection: schemaCollectionName(config) }; RAGIC_STATE.filters = { ...(config.initialFilters || {}) }; RAGIC_STATE.sortKey = String(config.fixedSortKey || ''); RAGIC_STATE.sortDir = config.fixedSortDir === 'asc' ? 'asc' : 'desc'; document.body?.classList.toggle('is-log-module', isLogModule(RAGIC_STATE.config)); RAGIC_STATE.pageSize = Number(localStorage.getItem(ragicPageSizeKey())) || 50; const db = window.omniplayDb; const collection = db?.collection(RAGIC_STATE.config.collection); RAGIC_STATE.collection = collection; const schemaDoc = db?.collection(RAGIC_STATE.config.schemaCollection).doc('active'); RAGIC_STATE.schemaDoc = schemaDoc;
-  window.toggleFire = async (docId) => { const doc = await collection.doc(docId).get(); await collection.doc(docId).update({ fire: !doc.data()?.fire }); };
+  window.toggleFire = async (docId) => {
+    const record = RAGIC_STATE.records.find((item) => String(item.id) === String(docId));
+    if (!record) return;
+    const previous = Boolean(record.fire);
+    const next = !previous;
+    record.fire = next;
+    applyFilters();
+    try {
+      await collection.doc(docId).update({ fire: next });
+    } catch (error) {
+      if (record.fire === next) {
+        record.fire = previous;
+        applyFilters();
+      }
+      console.error('更新重要標記失敗：', error);
+      alert('標記儲存失敗，請稍後再試');
+    }
+  };
   window.togglePin = async (docId) => {
     const currentUser = currentRagicUser();
     if (!currentUser) return alert('請先登入再使用個人釘選');
-    const doc = await collection.doc(docId).get();
-    await collection.doc(docId).update({ [`pins.${currentUser}`]: !doc.data()?.pins?.[currentUser] });
+    const record = RAGIC_STATE.records.find((item) => String(item.id) === String(docId));
+    if (!record) return;
+    const previous = Boolean(record.pins?.[currentUser]);
+    const next = !previous;
+    record.pins = { ...(record.pins || {}), [currentUser]: next };
+    applyFilters();
+    try {
+      await collection.doc(docId).update({ [`pins.${currentUser}`]: next });
+    } catch (error) {
+      if (Boolean(record.pins?.[currentUser]) === next) {
+        record.pins = { ...(record.pins || {}), [currentUser]: previous };
+        applyFilters();
+      }
+      console.error('更新個人釘選失敗：', error);
+      alert('釘選儲存失敗，請稍後再試');
+    }
   };
   
   const saveDesignerSchema = async ({ close = false } = {}) => {
