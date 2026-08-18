@@ -434,7 +434,7 @@ const isGameIdLookupFailure = (value) => /查無\s*此?\s*game\s*id|game\s*id\s*
 const isFirstLaunchGame = (game = {}, launchAt = null) => {
   if (!(launchAt instanceof Date) || launchAt < GAME_FIRST_LAUNCH_START_DATE) return false;
   const note = String(game.note1 || '').trim();
-  return /首發|獨家/.test(note) || Boolean(parseFirstLaunchNoteRange(note, launchAt));
+  return /首發/.test(note);
 };
 const isGameWorkflowConfirmed = (game = {}) => scheduleList.some((item) =>
   item.source === 'google-game-sheet' &&
