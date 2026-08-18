@@ -161,6 +161,7 @@ let gameScheduleCountdownTimer = null;
 let gameScheduleNextSyncAt = null;
 let gameScheduleLastFailed = false;
 let scheduleFormInitialSnapshot = '';
+let selectedScheduleLabelId = '';
 const GAME_SCHEDULE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 const storedSchedulePermission = () => window.getPagePermission?.('schedule') || { view: false, edit: false, delete: false, design: false };
@@ -858,6 +859,7 @@ const scheduleHistoryFields = [
 ];
 const historyValue = (key, value) => {
   if (value == null || value === '') return '（空白）';
+  if (typeof value === 'object' && typeof value.toDate !== 'function' && !(value instanceof Date)) return '（空白）';
   if (key === 'reminderAt') {
     const date = parseDateValue(value);
     return date ? date.toLocaleString('zh-TW', { hour12: false }) : String(value);
@@ -916,6 +918,10 @@ const calendarEventClass = (item = {}) => {
 
 const calendarEventHtml = (item = {}) => `<span class="${calendarEventClass(item)}" data-id="${escapeHtml(item.id)}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i><span>${escapeHtml(item.title)}</span></span>`;
 
+const sortCalendarItems = (a, b) =>
+  Number(b.rangeDays > 0) - Number(a.rangeDays > 0) ||
+  String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant');
+
 const renderCalendar = () => {
   if (!calendarEl) return;
   const today = new Date();
@@ -952,7 +958,7 @@ const renderCalendar = () => {
       .filter((day) => day.getMonth() === currentDate.getMonth())
       .map((day) => {
         const key = toDateKey(day);
-        const items = (schedulesByDay[key] || []).sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
+        const items = (schedulesByDay[key] || []).sort(sortCalendarItems);
         const count = items.length > 2 ? `<span class="mobile-agenda-more">＋${items.length - 2}</span>` : '';
         const events = items.slice(0, 2).map(calendarEventHtml).join('');
         return `<button class="calendar-day mobile-agenda-day weekday-${day.getDay()} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}" data-item-count="${items.length}">
@@ -966,7 +972,7 @@ const renderCalendar = () => {
   const header = weekdays.map((day, index) => `<div class="calendar-weekday weekday-${index}">${day}</div>`).join('');
   const cells = days.map((day) => {
     const key = toDateKey(day);
-    const items = (schedulesByDay[key] || []).sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
+    const items = (schedulesByDay[key] || []).sort(sortCalendarItems);
     const otherMonth = day.getMonth() !== currentDate.getMonth() && viewMode === 'month';
     const countBadgeBackground = getDayCountBackground(items);
     const countBadge = items.length > 2
@@ -1087,6 +1093,7 @@ const openModal = (dateKey, scheduleId = null) => {
     const matchedLabel = labelList.find((label) =>
       label.name === (item?.labelName || '') && label.color === (item?.labelColor || '#3b82f6'));
     labelCategorySelect.value = matchedLabel?.id || '';
+    selectedScheduleLabelId = matchedLabel?.id || '';
   }
   document.querySelector('#scheduleTitle').value = item?.title || '';
   document.querySelector('#scheduleContent').value = item?.content || '';
@@ -1149,9 +1156,19 @@ const showSpecials = (type, anchor) => {
   tooltipEl.hidden = false;
 };
 
-const saveLabelIfNeeded = async (name, color) => {
+const saveLabelIfNeeded = async (name, color, selectedLabelId = '') => {
   const normalizedName = normalizeLabelName(name);
   if (!scheduleLabelCollection || !normalizedName) return;
+  const selectedLabel = labelList.find((label) => label.id === selectedLabelId);
+  if (selectedLabel) {
+    if (selectedLabel.color === color && selectedLabel.name === normalizedName) return;
+    await scheduleLabelCollection.doc(selectedLabel.id).set({
+      name: normalizedName,
+      color,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    return;
+  }
   const existing = labelList.find((label) => normalizeLabelName(label.name) === normalizedName);
   if (existing) {
     if (existing.color === color && existing.name === normalizedName) return;
@@ -1241,6 +1258,7 @@ calendarEl?.addEventListener('click', (event) => {
 
 labelCategorySelect?.addEventListener('change', () => {
   const option = labelCategorySelect.selectedOptions[0];
+  selectedScheduleLabelId = option?.value || '';
   updateDeleteLabelButton();
   if (!option?.value) return;
   colorInput.value = option.dataset.color || '#3b82f6';
@@ -1257,6 +1275,7 @@ deleteScheduleLabelButton?.addEventListener('click', async () => {
   try {
     await scheduleLabelCollection.doc(labelId).delete();
     labelCategorySelect.value = '';
+    selectedScheduleLabelId = '';
     if (normalizeLabelName(labelNameInput.value) === labelName) labelNameInput.value = '';
     updateDeleteLabelButton();
     setMessage(`已刪除類別「${labelName}」。`, 'success');
@@ -1270,9 +1289,11 @@ deleteScheduleLabelButton?.addEventListener('click', async () => {
 
 const syncLabelCategorySelection = () => {
   if (!labelCategorySelect) return;
+  if (labelList.some((label) => label.id === selectedScheduleLabelId)) return;
   const matchedLabel = labelList.find((label) =>
     label.name === labelNameInput.value.trim() && label.color === colorInput.value);
   labelCategorySelect.value = matchedLabel?.id || '';
+  selectedScheduleLabelId = matchedLabel?.id || '';
 };
 
 colorInput?.addEventListener('input', syncLabelCategorySelection);
@@ -1382,7 +1403,7 @@ formEl?.addEventListener('submit', async (event) => {
     changes
   });
   try {
-    await saveLabelIfNeeded(labelName, labelColor);
+    await saveLabelIfNeeded(labelName, labelColor, selectedScheduleLabelId);
     if (editingId) await scheduleCollection.doc(editingId).update(payload);
     else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
     if (editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
