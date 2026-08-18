@@ -9440,3 +9440,28 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 @media (max-width: 1180px) {
   .dashboard-main-columns { grid-template-columns: 1fr; }
 }
+
+/* Keep multi-day schedule segments joined across adjacent calendar cells. */
+.calendar-grid.is-month-view .day-events:has(.calendar-event.is-range) {
+  overflow: visible;
+}
+.calendar-grid.is-month-view .calendar-event.is-range {
+  box-sizing: border-box;
+}
+.calendar-grid.is-month-view .calendar-event.is-range:not(.is-range-end):not(.is-range-week-end)::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: -1px;
+  bottom: -1px;
+  left: calc(100% - 1px);
+  width: 16px;
+  border-top: 1px solid var(--event-color, #3b82f6);
+  border-bottom: 1px solid var(--event-color, #3b82f6);
+  background: inherit;
+  pointer-events: none;
+}
+.calendar-grid.is-month-view .calendar-event.is-range > * {
+  position: relative;
+  z-index: 1;
+}
