@@ -2442,6 +2442,14 @@ const subtableRowHasUserValue = (row) => {
   });
 };
 
+const ensureInitialLogNewSubtableRow = (section, field) => {
+  const body = section?.querySelector('tbody');
+  if (!body || body.querySelector(':scope > .subtable-row')) return;
+  const row = renderSubtableRow(field);
+  body.appendChild(row);
+  row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
+};
+
 const enableAutoAppendSubtableRows = (section, field) => {
   const body = section?.querySelector('tbody');
   if (!body || body.dataset.autoAppendRows === 'true') return;
@@ -2548,7 +2556,11 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
       section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
       const body = section.querySelector('tbody');
       (record[field.key]?.length ? record[field.key] : []).forEach((item) => body.appendChild(renderSubtableRow(field, item)));
-      enableAutoAppendSubtableRows(section, field);
+      if (document.body.classList.contains('log-new-page')) {
+        ensureInitialLogNewSubtableRow(section, field);
+      } else {
+        enableAutoAppendSubtableRows(section, field);
+      }
       (fixedLogLayout ? form : grid).appendChild(section);
     });
     mergeTrackingWalletIntoGroupEditor(form);
