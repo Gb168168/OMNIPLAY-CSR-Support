@@ -55,30 +55,27 @@ const GAME_SCHEDULE_COLORS = {
 const GAME_SCHEDULE_START_DATE = new Date(2026, 0, 1, 0, 0, 0, 0);
 const GAME_WORKFLOW_START_DATE = new Date(2026, 6, 1, 0, 0, 0, 0);
 const GAME_FIRST_LAUNCH_START_DATE = new Date(2026, 7, 1, 0, 0, 0, 0);
-const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: '遊戲上線', color: GAME_SCHEDULE_COLORS.prod };
+const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: 'PORD', color: GAME_SCHEDULE_COLORS.prod };
 const GAME_FIRST_LAUNCH_META = { labelId: 'google-game-first-launch', labelName: '⭐ 首發平台上線', color: GAME_SCHEDULE_COLORS.firstLaunch };
 const GAME_EXCLUSIVE_META = { labelId: 'google-game-exclusive', labelName: '🔒 獨家平台', color: GAME_SCHEDULE_COLORS.exclusive };
-const GAME_FIRST_EXCLUSIVE_META = { labelId: 'google-game-first-exclusive', labelName: '⭐ 首發／🔒 獨家平台', color: GAME_SCHEDULE_COLORS.firstLaunch };
 const GAME_EVENT_META = {
   'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 AM 確認', color: GAME_SCHEDULE_COLORS.pm },
   'marketing-material': { labelId: 'google-game-marketing', labelName: '行銷素材待辦', color: GAME_SCHEDULE_COLORS.marketing },
-  'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT／測試環境', color: GAME_SCHEDULE_COLORS.uat },
-  'uat-material': { labelId: 'google-game-uat', labelName: 'UAT／測試環境', color: GAME_SCHEDULE_COLORS.uat },
-  'prod-launch': { labelId: 'google-game-prod', labelName: '遊戲上線', color: GAME_SCHEDULE_COLORS.prod },
+  'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
+  'uat-material': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
+  'prod-launch': { labelId: 'google-game-prod', labelName: 'PORD', color: GAME_SCHEDULE_COLORS.prod },
   'first-launch': GAME_FIRST_LAUNCH_META,
-  'exclusive-launch': GAME_EXCLUSIVE_META,
-  'first-exclusive-launch': GAME_FIRST_EXCLUSIVE_META
+  'exclusive-launch': GAME_EXCLUSIVE_META
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台上線|🔒 獨家平台|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台上線|🔒 獨家平台|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const LABEL_CATEGORY_ORDER = [
   '向 AM 確認',
   '行銷素材待辦',
-  'UAT／測試環境',
-  '⭐ 首發／🔒 獨家平台',
+  'UAT',
   '⭐ 首發平台上線',
   '🔒 獨家平台',
-  '遊戲上線',
+  'PORD',
   '問題/需求-代辦提醒'
 ];
 
@@ -86,6 +83,9 @@ const canonicalScheduleLabelName = (name = '') => {
   const normalized = String(name).trim().replace(/\s+/g, ' ');
   if (normalized === '向 PM 確認') return '向 AM 確認';
   if (normalized === '預計 PROD 上線') return 'PROD 上架公告';
+  if (normalized === 'UAT／測試環境') return 'UAT';
+  if (normalized === '遊戲上線') return 'PORD';
+  if (normalized === '⭐ 首發／🔒 獨家平台') return '⭐ 首發平台上線';
   if (normalized === '代辦事項') return '問題/需求-代辦提醒';
   return normalized;
 };
@@ -588,18 +588,15 @@ const syncGameSchedules = async () => {
       const exclusive = isExclusiveGame(normalizedGame, launchAt);
       let definitions;
       if (firstLaunch || exclusive) {
-        const isFirstExclusive = firstLaunch && exclusive;
         definitions = [{
-          idPrefix: isFirstExclusive ? 'game_first_exclusive' : firstLaunch ? 'game_first_launch' : 'game_exclusive',
-          eventType: isFirstExclusive ? 'first-exclusive-launch' : firstLaunch ? 'first-launch' : 'exclusive-launch',
+          idPrefix: firstLaunch ? 'game_first_launch' : 'game_exclusive',
+          eventType: firstLaunch ? 'first-launch' : 'exclusive-launch',
           at: noteRange?.start || launchAt,
           endAt: noteRange?.end || null,
-          meta: isFirstExclusive ? GAME_FIRST_EXCLUSIVE_META : firstLaunch ? GAME_FIRST_LAUNCH_META : GAME_EXCLUSIVE_META,
-          contentPrefix: isFirstExclusive
-            ? '此遊戲同時包含首發與獨家平台資訊：'
-            : firstLaunch
-              ? '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
-              : '此遊戲包含獨家平台資訊：'
+          meta: firstLaunch ? GAME_FIRST_LAUNCH_META : GAME_EXCLUSIVE_META,
+          contentPrefix: firstLaunch
+            ? '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
+            : '此遊戲包含獨家平台資訊：'
         }];
       } else if (launchAt >= GAME_WORKFLOW_START_DATE) {
         definitions = [{
@@ -649,7 +646,7 @@ const syncGameSchedules = async () => {
         && !desiredScheduleIds.has(item.id))
       .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
-    [GAME_EVENT_META['pm-confirmation'], GAME_EVENT_META['marketing-material'], GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META, GAME_FIRST_LAUNCH_META, GAME_EXCLUSIVE_META, GAME_FIRST_EXCLUSIVE_META]
+    [GAME_EVENT_META['pm-confirmation'], GAME_EVENT_META['marketing-material'], GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META, GAME_FIRST_LAUNCH_META, GAME_EXCLUSIVE_META]
       .filter((meta) => !labelList.some((label) => label.id === meta.labelId))
       .forEach((meta) => batch.set(scheduleLabelCollection.doc(meta.labelId), {
         name: meta.labelName,
@@ -657,6 +654,13 @@ const syncGameSchedules = async () => {
         updatedAt: syncedAt,
         source: 'google-game-sheet'
       }, { merge: true }));
+    [GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META].forEach((meta) => {
+      batch.set(scheduleLabelCollection.doc(meta.labelId), {
+        name: meta.labelName,
+        updatedAt: syncedAt
+      }, { merge: true });
+    });
+    batch.delete(scheduleLabelCollection.doc('google-game-first-exclusive'));
 
     rows.forEach((row) => {
       const displayMeta = resolveSavedScheduleMeta(row.meta);
@@ -670,7 +674,7 @@ const syncGameSchedules = async () => {
           : `${row.contentPrefix}\n${gameLine(row.game)}`,
         reminderAt: firebase.firestore.Timestamp.fromDate(row.at),
         labelId: existingItem?.labelId || displayMeta.labelId,
-        labelName: existingItem?.labelName || displayMeta.labelName,
+        labelName: canonicalScheduleLabelName(existingItem?.labelName) || displayMeta.labelName,
         labelColor: existingItem?.labelColor || displayMeta.color,
         repeat: existingItem?.repeat || 'none',
         staffIds: [],
