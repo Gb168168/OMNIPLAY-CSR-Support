@@ -555,6 +555,9 @@ setupPullToRefresh();
     yearSelect.addEventListener('change', () => { selected.setFullYear(Number(yearSelect.value)); renderCalendar(); });
     monthSelect.addEventListener('change', () => { selected.setMonth(Number(monthSelect.value)); renderCalendar(); });
     popover.querySelectorAll('[data-step]').forEach((button) => button.addEventListener('click', () => { selected.setMonth(selected.getMonth() + Number(button.dataset.step)); renderCalendar(); }));
+    original.__omniplayDateTimeSync = readOriginal;
+    original.dataset.omniplayLastValue = String(original.value || '');
+    original.dataset.omniplayLastDisabled = String(original.disabled);
     readOriginal();
     original.hidden = true;
     original.insertAdjacentElement('afterend', wrapper);
@@ -573,5 +576,16 @@ setupPullToRefresh();
     }));
   }).observe(document.documentElement, { childList: true, subtree: true });
   enhanceAllDateTimeInputs();
+  window.setInterval(() => {
+    document.querySelectorAll('input[type="datetime-local"][data-easy-date-time="true"]').forEach((input) => {
+      if (typeof input.__omniplayDateTimeSync !== 'function') return;
+      const value = String(input.value || '');
+      const disabled = String(input.disabled);
+      if (input.dataset.omniplayLastValue === value && input.dataset.omniplayLastDisabled === disabled) return;
+      input.dataset.omniplayLastValue = value;
+      input.dataset.omniplayLastDisabled = disabled;
+      input.__omniplayDateTimeSync();
+    });
+  }, 300);
   window.initOmniplayDateTimePickers = enhanceAllDateTimeInputs;
 })();
