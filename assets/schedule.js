@@ -409,9 +409,33 @@ const normalizeFeedGame = (game = {}) => ({
   expectedOnlineDate: String(game.expectedOnlineDate || '').trim()
 });
 
+const parseFirstLaunchNoteRange = (note = '', referenceDate = null) => {
+  if (!(referenceDate instanceof Date) || Number.isNaN(referenceDate.getTime())) return null;
+  const normalized = String(note || '')
+    .replace(/[－—–]/g, '-')
+    .replace(/[～~]/g, '~')
+    .replace(/\s+/g, ' ');
+  const match = normalized.match(/(?:^|[^\d])(\d{1,2})\s*[\/.]\s*(\d{1,2})\s*(?:-|~|至|到)\s*(\d{1,2})\s*[\/.]\s*(\d{1,2})(?!\d)/);
+  if (!match) return null;
+  const year = referenceDate.getFullYear();
+  const start = new Date(year, Number(match[1]) - 1, Number(match[2]), 9, 0, 0, 0);
+  let end = new Date(year, Number(match[3]) - 1, Number(match[4]), 9, 0, 0, 0);
+  if (
+    start.getMonth() !== Number(match[1]) - 1 ||
+    start.getDate() !== Number(match[2]) ||
+    end.getMonth() !== Number(match[3]) - 1 ||
+    end.getDate() !== Number(match[4])
+  ) return null;
+  if (end < start) end = new Date(year + 1, Number(match[3]) - 1, Number(match[4]), 9, 0, 0, 0);
+  return { start, end };
+};
+
 const isGameIdLookupFailure = (value) => /查無\s*此?\s*game\s*id|game\s*id\s*(?:not\s*found|不存在)/i.test(String(value || '').trim());
-const isFirstLaunchGame = (game = {}, launchAt = null) =>
-  launchAt >= GAME_FIRST_LAUNCH_START_DATE && /首發/.test(String(game.note1 || '').trim());
+const isFirstLaunchGame = (game = {}, launchAt = null) => {
+  if (!(launchAt instanceof Date) || launchAt < GAME_FIRST_LAUNCH_START_DATE) return false;
+  const note = String(game.note1 || '').trim();
+  return /首發|獨家/.test(note) || Boolean(parseFirstLaunchNoteRange(note, launchAt));
+};
 const isGameWorkflowConfirmed = (game = {}) => scheduleList.some((item) =>
   item.source === 'google-game-sheet' &&
   item.eventType === 'pm-confirmation' &&
@@ -547,11 +571,14 @@ const syncGameSchedules = async () => {
         note1: game.note1 || '',
         expectedOnlineDate: game.expectedOnlineDate
       };
+      const firstLaunchRange = parseFirstLaunchNoteRange(normalizedGame.note1, launchAt);
       const firstLaunch = isFirstLaunchGame(normalizedGame, launchAt);
       let definitions;
       if (firstLaunch) {
         definitions = [{
-          idPrefix: 'game_first_launch', eventType: 'first-launch', at: launchAt,
+          idPrefix: 'game_first_launch', eventType: 'first-launch',
+          at: firstLaunchRange?.start || launchAt,
+          endAt: firstLaunchRange?.end || null,
           meta: GAME_FIRST_LAUNCH_META,
           contentPrefix: '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
         }];
@@ -619,7 +646,9 @@ const syncGameSchedules = async () => {
         eventType: row.eventType,
         date: row.dateKey,
         title: existingItem?.title || `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
-        content: `${row.contentPrefix}\n${gameLine(row.game)}`,
+        content: row.game.note1
+          ? `備註 1：${row.game.note1}\n\n${row.contentPrefix}\n${gameLine(row.game)}`
+          : `${row.contentPrefix}\n${gameLine(row.game)}`,
         reminderAt: firebase.firestore.Timestamp.fromDate(row.at),
         labelId: existingItem?.labelId || displayMeta.labelId,
         labelName: existingItem?.labelName || displayMeta.labelName,
@@ -633,6 +662,7 @@ const syncGameSchedules = async () => {
         updatedAt: syncedAt,
         updatedBy: actor
       };
+      if (row.endAt) payload.endAt = firebase.firestore.Timestamp.fromDate(row.endAt);
       batch.set(scheduleCollection.doc(row.id), payload, { merge: true });
     });
 
