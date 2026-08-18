@@ -49,28 +49,35 @@ const GAME_SCHEDULE_COLORS = {
   marketing: '#14b8a6',
   uat: '#8b5cf6',
   prod: '#2563eb',
-  firstLaunch: '#ec4899'
+  firstLaunch: '#ec4899',
+  exclusive: '#ca8a04'
 };
 const GAME_SCHEDULE_START_DATE = new Date(2026, 0, 1, 0, 0, 0, 0);
 const GAME_WORKFLOW_START_DATE = new Date(2026, 6, 1, 0, 0, 0, 0);
 const GAME_FIRST_LAUNCH_START_DATE = new Date(2026, 7, 1, 0, 0, 0, 0);
 const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: '遊戲上線', color: GAME_SCHEDULE_COLORS.prod };
 const GAME_FIRST_LAUNCH_META = { labelId: 'google-game-first-launch', labelName: '⭐ 首發平台上線', color: GAME_SCHEDULE_COLORS.firstLaunch };
+const GAME_EXCLUSIVE_META = { labelId: 'google-game-exclusive', labelName: '🔒 獨家平台', color: GAME_SCHEDULE_COLORS.exclusive };
+const GAME_FIRST_EXCLUSIVE_META = { labelId: 'google-game-first-exclusive', labelName: '⭐ 首發／🔒 獨家平台', color: GAME_SCHEDULE_COLORS.firstLaunch };
 const GAME_EVENT_META = {
   'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 AM 確認', color: GAME_SCHEDULE_COLORS.pm },
   'marketing-material': { labelId: 'google-game-marketing', labelName: '行銷素材待辦', color: GAME_SCHEDULE_COLORS.marketing },
   'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT／測試環境', color: GAME_SCHEDULE_COLORS.uat },
   'uat-material': { labelId: 'google-game-uat', labelName: 'UAT／測試環境', color: GAME_SCHEDULE_COLORS.uat },
   'prod-launch': { labelId: 'google-game-prod', labelName: '遊戲上線', color: GAME_SCHEDULE_COLORS.prod },
-  'first-launch': GAME_FIRST_LAUNCH_META
+  'first-launch': GAME_FIRST_LAUNCH_META,
+  'exclusive-launch': GAME_EXCLUSIVE_META,
+  'first-exclusive-launch': GAME_FIRST_EXCLUSIVE_META
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發平台上線|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台上線|🔒 獨家平台|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const LABEL_CATEGORY_ORDER = [
   '向 AM 確認',
   '行銷素材待辦',
   'UAT／測試環境',
+  '⭐ 首發／🔒 獨家平台',
   '⭐ 首發平台上線',
+  '🔒 獨家平台',
   '遊戲上線',
   '問題/需求-代辦提醒'
 ];
@@ -436,6 +443,11 @@ const isFirstLaunchGame = (game = {}, launchAt = null) => {
   const note = String(game.note1 || '').trim();
   return /首發/.test(note);
 };
+const isExclusiveGame = (game = {}, launchAt = null) => {
+  if (!(launchAt instanceof Date) || launchAt < GAME_FIRST_LAUNCH_START_DATE) return false;
+  const note = String(game.note1 || '').trim();
+  return /獨家/.test(note);
+};
 const isGameWorkflowConfirmed = (game = {}) => scheduleList.some((item) =>
   item.source === 'google-game-sheet' &&
   item.eventType === 'pm-confirmation' &&
@@ -571,16 +583,23 @@ const syncGameSchedules = async () => {
         note1: game.note1 || '',
         expectedOnlineDate: game.expectedOnlineDate
       };
-      const firstLaunchRange = parseFirstLaunchNoteRange(normalizedGame.note1, launchAt);
+      const noteRange = parseFirstLaunchNoteRange(normalizedGame.note1, launchAt);
       const firstLaunch = isFirstLaunchGame(normalizedGame, launchAt);
+      const exclusive = isExclusiveGame(normalizedGame, launchAt);
       let definitions;
-      if (firstLaunch) {
+      if (firstLaunch || exclusive) {
+        const isFirstExclusive = firstLaunch && exclusive;
         definitions = [{
-          idPrefix: 'game_first_launch', eventType: 'first-launch',
-          at: firstLaunchRange?.start || launchAt,
-          endAt: firstLaunchRange?.end || null,
-          meta: GAME_FIRST_LAUNCH_META,
-          contentPrefix: '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
+          idPrefix: isFirstExclusive ? 'game_first_exclusive' : firstLaunch ? 'game_first_launch' : 'game_exclusive',
+          eventType: isFirstExclusive ? 'first-exclusive-launch' : firstLaunch ? 'first-launch' : 'exclusive-launch',
+          at: noteRange?.start || launchAt,
+          endAt: noteRange?.end || null,
+          meta: isFirstExclusive ? GAME_FIRST_EXCLUSIVE_META : firstLaunch ? GAME_FIRST_LAUNCH_META : GAME_EXCLUSIVE_META,
+          contentPrefix: isFirstExclusive
+            ? '此遊戲同時包含首發與獨家平台資訊：'
+            : firstLaunch
+              ? '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
+              : '此遊戲包含獨家平台資訊：'
         }];
       } else if (launchAt >= GAME_WORKFLOW_START_DATE) {
         definitions = [{
@@ -630,7 +649,7 @@ const syncGameSchedules = async () => {
         && !desiredScheduleIds.has(item.id))
       .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
-    [GAME_EVENT_META['pm-confirmation'], GAME_EVENT_META['marketing-material'], GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META, GAME_FIRST_LAUNCH_META]
+    [GAME_EVENT_META['pm-confirmation'], GAME_EVENT_META['marketing-material'], GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META, GAME_FIRST_LAUNCH_META, GAME_EXCLUSIVE_META, GAME_FIRST_EXCLUSIVE_META]
       .filter((meta) => !labelList.some((label) => label.id === meta.labelId))
       .forEach((meta) => batch.set(scheduleLabelCollection.doc(meta.labelId), {
         name: meta.labelName,
