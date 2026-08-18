@@ -614,16 +614,17 @@ const syncGameSchedules = async () => {
 
     rows.forEach((row) => {
       const displayMeta = resolveSavedScheduleMeta(row.meta);
+      const existingItem = scheduleList.find((item) => item.id === row.id);
       const payload = {
         eventType: row.eventType,
         date: row.dateKey,
-        title: `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
+        title: existingItem?.title || `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
         content: `${row.contentPrefix}\n${gameLine(row.game)}`,
         reminderAt: firebase.firestore.Timestamp.fromDate(row.at),
-        labelId: displayMeta.labelId,
-        labelName: displayMeta.labelName,
-        labelColor: displayMeta.color,
-        repeat: 'none',
+        labelId: existingItem?.labelId || displayMeta.labelId,
+        labelName: existingItem?.labelName || displayMeta.labelName,
+        labelColor: existingItem?.labelColor || displayMeta.color,
+        repeat: existingItem?.repeat || 'none',
         staffIds: [],
         staffNames: [],
         deleted: false,
