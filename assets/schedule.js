@@ -733,12 +733,31 @@ const getRepeatStepDays = (item) => {
 const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) => !item.deleted && scheduleMatchesActiveLabel(item)).reduce((groups, item) => {
   const original = parseDateValue(item.reminderAt) || new Date(`${item.date}T00:00:00`);
   if (!(original instanceof Date) || Number.isNaN(original.getTime())) return groups;
+  const rawEnd = String(item.endDate || '').trim();
+  const parsedEnd = /^\d{4}-\d{2}-\d{2}$/.test(rawEnd) ? new Date(`${rawEnd}T23:59:59`) : original;
+  const rangeDays = Math.max(0, Math.min(366, daysBetween(original, parsedEnd)));
   const addOccurrence = (date, isRepeat) => {
-    const key = toDateKey(date);
-    groups[key] ||= [];
-    groups[key].push({ ...item, occurrenceDate: key, isRepeatOccurrence: isRepeat, hasOccurred: date.getTime() <= Date.now() });
+    for (let offset = 0; offset <= rangeDays; offset += 1) {
+      const rangeDate = new Date(date);
+      rangeDate.setDate(date.getDate() + offset);
+      if (rangeDate < start || rangeDate > end) continue;
+      const key = toDateKey(rangeDate);
+      groups[key] ||= [];
+      groups[key].push({
+        ...item,
+        occurrenceDate: key,
+        isRepeatOccurrence: isRepeat,
+        hasOccurred: rangeDate.getTime() <= Date.now(),
+        rangeOffset: offset,
+        rangeDays,
+        rangeWeekStart: rangeDate.getDay() === 0,
+        rangeWeekEnd: rangeDate.getDay() === 6
+      });
+    }
   };
-  if (original >= start && original <= end) addOccurrence(original, false);
+  const originalRangeEnd = new Date(original);
+  originalRangeEnd.setDate(original.getDate() + rangeDays);
+  if (original <= end && originalRangeEnd >= start) addOccurrence(original, false);
   const repeat = item.repeat || 'none';
   if (repeat === 'monthly') {
     for (let i = 1, occurrence = addMonthsClamped(original, i); occurrence <= end; i += 1, occurrence = addMonthsClamped(original, i)) {
@@ -830,6 +849,7 @@ const scheduleHistoryFields = [
   ['title', '標題'],
   ['content', '內容'],
   ['reminderAt', '提醒時間'],
+  ['endDate', '結束日期'],
   ['labelName', '標籤名稱'],
   ['labelColor', '標籤顏色'],
   ['repeat', '重複提醒'],
@@ -841,6 +861,7 @@ const historyValue = (key, value) => {
     const date = parseDateValue(value);
     return date ? date.toLocaleString('zh-TW', { hour12: false }) : String(value);
   }
+  if (key === 'endDate') return String(value).replace(/-/g, '/');
   const repeatLabels = { none: '不重複', daily: '每天', weekly: '每週', monthly: '每月', custom: '自訂' };
   if (key === 'repeat') return repeatLabels[value] || String(value);
   return String(value);
@@ -874,6 +895,22 @@ const getDayCountBackground = (items = []) => {
     `${color} ${index * segment}% ${(index + 1) * segment}%`);
   return `conic-gradient(${stops.join(', ')})`;
 };
+
+const calendarEventClass = (item = {}) => {
+  const classes = ['calendar-event'];
+  if (!item.hasOccurred) classes.push('is-repeat');
+  if (item.rangeDays > 0) {
+    classes.push('is-range');
+    if (item.rangeOffset === 0) classes.push('is-range-start');
+    else if (item.rangeOffset === item.rangeDays) classes.push('is-range-end');
+    else classes.push('is-range-middle');
+    if (item.rangeWeekStart) classes.push('is-range-week-start');
+    if (item.rangeWeekEnd) classes.push('is-range-week-end');
+  }
+  return classes.join(' ');
+};
+
+const calendarEventHtml = (item = {}) => `<span class="${calendarEventClass(item)}" data-id="${escapeHtml(item.id)}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i><span>${escapeHtml(item.title)}</span></span>`;
 
 const renderCalendar = () => {
   if (!calendarEl) return;
@@ -913,7 +950,7 @@ const renderCalendar = () => {
         const key = toDateKey(day);
         const items = (schedulesByDay[key] || []).sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
         const count = items.length > 2 ? `<span class="mobile-agenda-more">＋${items.length - 2}</span>` : '';
-        const events = items.slice(0, 2).map((item) => `<span class="calendar-event ${item.hasOccurred ? '' : 'is-repeat'}" data-id="${escapeHtml(item.id)}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('');
+        const events = items.slice(0, 2).map(calendarEventHtml).join('');
         return `<button class="calendar-day mobile-agenda-day weekday-${day.getDay()} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}" data-item-count="${items.length}">
           <span class="mobile-agenda-date"><strong>${day.getDate()}</strong><small>週${weekdays[day.getDay()]}</small></span>
           <span class="day-events">${events || '<span class="mobile-agenda-empty">沒有排程</span>'}</span>${count}
@@ -934,7 +971,7 @@ const renderCalendar = () => {
     const visibleItems = items.slice(0, 2);
     return `<button class="calendar-day weekday-${day.getDay()} ${otherMonth ? 'is-muted' : ''} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}" data-item-count="${items.length}">
       <span class="day-heading"><span class="day-number">${day.getDate()}</span>${countBadge}</span>
-      <span class="day-events" aria-label="本日 ${items.length} 則事項">${visibleItems.map((item) => `<span class="calendar-event ${item.hasOccurred ? '' : 'is-repeat'}" data-id="${item.id}" style="--event-color:${escapeHtml(item.labelColor)}"><i></i>${escapeHtml(item.title)}</span>`).join('')}</span>
+      <span class="day-events" aria-label="本日 ${items.length} 則事項">${visibleItems.map(calendarEventHtml).join('')}</span>
     </button>`;
   }).join('');
   calendarEl.innerHTML = header + cells;
@@ -1050,6 +1087,7 @@ const openModal = (dateKey, scheduleId = null) => {
   document.querySelector('#scheduleTitle').value = item?.title || '';
   document.querySelector('#scheduleContent').value = item?.content || '';
   document.querySelector('#scheduleReminderAt').value = toDatetimeLocal(item?.reminderAt ? parseDateValue(item.reminderAt) : new Date(`${dateKey}T09:00`));
+  document.querySelector('#scheduleEndDate').value = item?.endDate || '';
   repeatSelect.value = item?.repeat || 'none';
   repeatIntervalInput.value = item?.repeatInterval || 1;
   toggleRepeatInterval();
@@ -1304,6 +1342,7 @@ formEl?.addEventListener('submit', async (event) => {
   if (!canEditSchedule) return setMessage('您沒有編輯權限。');
   if (!scheduleCollection) return setMessage('Firebase 尚未完成初始化，無法儲存排程。');
   const reminderAt = new Date(document.querySelector('#scheduleReminderAt').value);
+  const endDate = document.querySelector('#scheduleEndDate').value;
   const user = currentUser();
   const action = editingId ? '編輯' : '新增';
   const labelName = labelNameInput.value.trim();
@@ -1311,12 +1350,13 @@ formEl?.addEventListener('submit', async (event) => {
   const repeat = repeatSelect?.value || 'none';
   const repeatInterval = Math.max(1, Number(repeatIntervalInput?.value) || 1);
   const payload = {
-    date: toDateKey(reminderAt), labelColor, labelName, repeat,
+    date: toDateKey(reminderAt), endDate, labelColor, labelName, repeat,
     title: document.querySelector('#scheduleTitle').value.trim(),
     content: document.querySelector('#scheduleContent').value.trim(),
     reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, deleted: false
   };
+  if (endDate && endDate < toDateKey(reminderAt)) return setMessage('結束日期不可早於提醒開始日期。');
   if (repeat === 'custom') payload.repeatInterval = repeatInterval;
   else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
   if (!payload.title) return setMessage('請輸入標題。');
