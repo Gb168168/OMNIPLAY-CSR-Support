@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260816-mobile-nav" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260818-schedule-ranges" />
   <style>
     .day-agenda-heading-actions { display: flex; align-items: center; gap: 8px; }
     .day-agenda-heading-actions .primary-button { min-height: 38px; padding: 7px 12px; white-space: nowrap; }
@@ -130,7 +130,7 @@
               <h3>📅 基本操作</h3>
               <ol>
                 <li>使用月份兩側的箭頭切換日期，或點擊月份直接選擇年月。</li>
-                <li>點日期空白處可新增排程；點排程項目可查看或編輯。</li>
+                <li>點日期空白處可新增排程；點排程項目可查看或編輯。填寫結束日期後，月曆會以長條橫跨整段日期。</li>
                 <li>可切換「月／年」檢視，並使用「全部標籤」篩選。</li>
               </ol>
             </section>
@@ -197,7 +197,10 @@
             </div>
             <label><span>標題</span><input id="scheduleTitle" type="text" required autocomplete="off" /></label>
             <label><span>內容</span><textarea id="scheduleContent" rows="4" placeholder="輸入排程內容"></textarea></label>
-            <label><span>提醒時間</span><input id="scheduleReminderAt" type="datetime-local" required /></label>
+            <div class="label-row schedule-range-row">
+              <label><span>提醒開始時間</span><input id="scheduleReminderAt" type="datetime-local" required /></label>
+              <label><span>結束日期（選填）</span><input id="scheduleEndDate" type="date" /></label>
+            </div>
             <label class="game-pm-confirmed" id="gamePmConfirmedLabel" hidden>
               <span>遊戲上線流程</span>
               <span><input id="gamePmConfirmed" type="checkbox" /> AM 已確認（勾選並儲存後，自動建立行銷素材、UAT 上架公告與 PROD 上架公告待辦）</span>
@@ -235,6 +238,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260816-remove-library"></script>
-  <script src="../assets/schedule.js?v=20260816-am-confirmation-gate"></script>
+  <script src="../assets/schedule.js?v=20260818-date-ranges"></script>
 </body>
 </html>
