@@ -694,7 +694,7 @@ const renderTodoList = () => {
 
   todoList.innerHTML = filteredItems.length
     ? filteredItems.map((item) => `
-        <li>
+        <li class="${item.type === '排程表' ? 'schedule-todo-item' : ''}">
           <a href="${item.href}">
             ${item.type === '排程表' ? '' : `<span class="todo-type">
               ${item.icon} ${escapeDashboardHtml(item.time)}

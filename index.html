@@ -62,6 +62,21 @@
       background: color-mix(in srgb, var(--schedule-label-color) 12%, #fff);
       color: var(--schedule-label-color);
     }
+    .dashboard-todo-list .schedule-todo-item > a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow-x: auto;
+    }
+    .schedule-todo-item strong {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+    .schedule-todo-item .todo-tags {
+      flex: 0 0 auto;
+      margin-left: auto;
+      white-space: nowrap;
+    }
     @media (max-width: 720px) {
       .dashboard-todo-title-row {
         align-items: flex-start;
@@ -216,7 +231,7 @@
   </script>
   <script src="assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="assets/app.js?v=20260816-remove-library"></script>
-  <script src="assets/dashboard.js?v=20260818-schedule-range1"></script>
+  <script src="assets/dashboard.js?v=20260818-schedule-single-line"></script>
   <script src="assets/personal-notifications.js?v=20260818-personal1"></script>
 </body>
 </html>
