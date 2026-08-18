@@ -432,3 +432,160 @@ const setupPullToRefresh = () => {
 };
 
 setupPullToRefresh();
+
+
+// 全站統一日期時間選擇器：保留 datetime-local 資料格式，使用自訂月曆與單一顯示欄位。
+(() => {
+  if (window.__omniplayDateTimePickerInstalled) return;
+  window.__omniplayDateTimePickerInstalled = true;
+  const padDateTimePart = (value) => String(value).padStart(2, '0');
+  const pickerStyle = document.createElement('style');
+  pickerStyle.id = 'omniplay-datetime-picker-style';
+  pickerStyle.textContent = `
+    .omniplay-datetime-picker { position: relative; width: 100%; min-width: 0; }
+    .omniplay-datetime-display { width: 100% !important; min-width: 0 !important; cursor: pointer; }
+    .omniplay-datetime-popover { position: absolute; z-index: 10040; top: calc(100% + 6px); left: 0; width: 320px; padding: 12px; border: 1px solid var(--border, #dbe3ef); border-radius: 12px; background: var(--surface, #fff); box-shadow: 0 16px 40px rgba(15,23,42,.22); color: var(--text, #172033); }
+    .omniplay-datetime-popover[hidden] { display: none !important; }
+    .omniplay-datetime-head { display: grid; grid-template-columns: 38px 1fr 1fr 38px; gap: 6px; margin-bottom: 10px; }
+    .omniplay-datetime-head button, .omniplay-datetime-head select { min-height: 38px !important; padding: 5px 7px !important; border: 1px solid var(--border, #dbe3ef); border-radius: 8px; background: var(--surface, #fff); color: var(--text, #172033); }
+    .omniplay-datetime-week, .omniplay-datetime-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .omniplay-datetime-week span { padding: 5px 0; color: var(--text-secondary, #64748b); text-align: center; font-size: 12px; }
+    .omniplay-datetime-days button { min-height: 34px !important; padding: 4px !important; border: 0; border-radius: 8px; background: transparent; color: var(--text, #172033); font-weight: 600; }
+    .omniplay-datetime-days button:hover { background: var(--primary-soft, #dbeafe); }
+    .omniplay-datetime-days button.is-selected { background: var(--primary, #3b82f6); color: #fff; }
+    .omniplay-datetime-days button:disabled { visibility: hidden; }
+    .omniplay-datetime-time { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border, #dbe3ef); }
+    .omniplay-datetime-time label { flex: 0 0 auto; font-size: 13px; font-weight: 700; color: var(--text-secondary, #64748b); }
+    .omniplay-datetime-time input { flex: 1 1 auto; min-width: 0 !important; height: 38px !important; }
+    .omniplay-datetime-done { flex: 0 0 auto; min-height: 38px !important; padding: 6px 12px !important; border: 0; border-radius: 8px; background: var(--primary, #3b82f6); color: #fff; font-weight: 800; }
+    @media (max-width: 430px) { .omniplay-datetime-popover { width: min(320px, calc(100vw - 32px)); } }
+  `;
+  document.head.appendChild(pickerStyle);
+  let openPopover = null;
+  const closeOpenPicker = () => { if (openPopover) openPopover.hidden = true; openPopover = null; };
+  const enhanceDateTimeInput = (original) => {
+    if (!(original instanceof HTMLInputElement) || original.dataset.easyDateTime === 'true') return;
+    original.dataset.easyDateTime = 'true';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'omniplay-datetime-picker';
+    const display = document.createElement('input');
+    display.type = 'text';
+    display.readOnly = true;
+    display.className = 'omniplay-datetime-display';
+    display.placeholder = original.placeholder || '年／月／日 上午 00:00';
+    display.setAttribute('aria-label', original.getAttribute('aria-label') || '選擇日期與時間');
+    const timeInput = document.createElement('input');
+    timeInput.type = 'time';
+    timeInput.step = original.step || '60';
+    timeInput.setAttribute('aria-label', '時間');
+    const popover = document.createElement('div');
+    popover.className = 'omniplay-datetime-popover';
+    popover.hidden = true;
+    popover.innerHTML = '<div class="omniplay-datetime-head"><button type="button" data-step="-1">‹</button><select data-year aria-label="年份"></select><select data-month aria-label="月份"></select><button type="button" data-step="1">›</button></div><div class="omniplay-datetime-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div class="omniplay-datetime-days"></div><div class="omniplay-datetime-time"><label>時間</label><span data-time-slot></span><button class="omniplay-datetime-done" type="button">完成</button></div>';
+    const yearSelect = popover.querySelector('[data-year]');
+    const monthSelect = popover.querySelector('[data-month]');
+    const days = popover.querySelector('.omniplay-datetime-days');
+    const doneButton = popover.querySelector('.omniplay-datetime-done');
+    popover.querySelector('[data-time-slot]').appendChild(timeInput);
+    for (let year = 2000; year <= 2100; year += 1) yearSelect.insertAdjacentHTML('beforeend', '<option value="' + year + '">' + year + ' 年</option>');
+    for (let month = 0; month < 12; month += 1) monthSelect.insertAdjacentHTML('beforeend', '<option value="' + month + '">' + (month + 1) + ' 月</option>');
+    let selected = new Date();
+    const refreshDisplay = () => {
+      const dateValue = display.dataset.value || '';
+      const [hourText = '', minute = ''] = String(timeInput.value || '').split(':');
+      const hour = Number(hourText);
+      const timeText = hourText ? (hour < 12 ? '上午 ' : '下午 ') + padDateTimePart(hour % 12 || 12) + ':' + minute : '';
+      display.value = [dateValue ? dateValue.replace(/-/g, '/') : '', timeText].filter(Boolean).join(' ');
+    };
+    const writeOriginal = () => {
+      const dateValue = display.dataset.value || '';
+      original.value = dateValue && timeInput.value ? dateValue + 'T' + timeInput.value : '';
+      refreshDisplay();
+      original.dispatchEvent(new Event('input', { bubbles: true }));
+      original.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const renderCalendar = () => {
+      yearSelect.value = String(selected.getFullYear());
+      monthSelect.value = String(selected.getMonth());
+      days.innerHTML = '';
+      const firstDay = new Date(selected.getFullYear(), selected.getMonth(), 1).getDay();
+      const total = new Date(selected.getFullYear(), selected.getMonth() + 1, 0).getDate();
+      for (let index = 0; index < firstDay; index += 1) days.insertAdjacentHTML('beforeend', '<button type="button" disabled></button>');
+      const currentValue = display.dataset.value || '';
+      for (let day = 1; day <= total; day += 1) {
+        const value = selected.getFullYear() + '-' + padDateTimePart(selected.getMonth() + 1) + '-' + padDateTimePart(day);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = String(day);
+        button.classList.toggle('is-selected', value === currentValue);
+        button.addEventListener('click', () => {
+          display.dataset.value = value;
+          selected = new Date(selected.getFullYear(), selected.getMonth(), day);
+          if (!timeInput.value) { const now = new Date(); timeInput.value = padDateTimePart(now.getHours()) + ':' + padDateTimePart(now.getMinutes()); }
+          writeOriginal();
+          renderCalendar();
+        });
+        days.appendChild(button);
+      }
+    };
+    const readOriginal = () => {
+      const value = String(original.value || '');
+      const dateValue = value.slice(0, 10);
+      display.dataset.value = dateValue;
+      timeInput.value = value.slice(11, 16);
+      refreshDisplay();
+      if (dateValue) { const parts = dateValue.split('-').map(Number); selected = new Date(parts[0], parts[1] - 1, parts[2]); }
+      display.disabled = original.disabled;
+      renderCalendar();
+    };
+    display.addEventListener('click', () => {
+      if (display.disabled) return;
+      const willOpen = popover.hidden;
+      closeOpenPicker();
+      if (!willOpen) return;
+      if (!timeInput.value) { const now = new Date(); timeInput.value = padDateTimePart(now.getHours()) + ':' + padDateTimePart(now.getMinutes()); }
+      popover.hidden = false;
+      openPopover = popover;
+      renderCalendar();
+    });
+    timeInput.addEventListener('change', writeOriginal);
+    doneButton.addEventListener('click', () => { writeOriginal(); closeOpenPicker(); });
+    original.addEventListener('input', readOriginal);
+    original.addEventListener('change', readOriginal);
+    yearSelect.addEventListener('change', () => { selected.setFullYear(Number(yearSelect.value)); renderCalendar(); });
+    monthSelect.addEventListener('change', () => { selected.setMonth(Number(monthSelect.value)); renderCalendar(); });
+    popover.querySelectorAll('[data-step]').forEach((button) => button.addEventListener('click', () => { selected.setMonth(selected.getMonth() + Number(button.dataset.step)); renderCalendar(); }));
+    original.__omniplayDateTimeSync = readOriginal;
+    original.dataset.omniplayLastValue = String(original.value || '');
+    original.dataset.omniplayLastDisabled = String(original.disabled);
+    readOriginal();
+    original.hidden = true;
+    original.insertAdjacentElement('afterend', wrapper);
+    wrapper.append(display, popover);
+  };
+  const enhanceAllDateTimeInputs = (root = document) => {
+    if (root.matches?.('input[type="datetime-local"]')) enhanceDateTimeInput(root);
+    root.querySelectorAll?.('input[type="datetime-local"]').forEach(enhanceDateTimeInput);
+  };
+  document.addEventListener('click', (event) => {
+    if (openPopover && !openPopover.parentElement?.contains(event.target)) closeOpenPicker();
+  });
+  new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) enhanceAllDateTimeInputs(node);
+    }));
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  enhanceAllDateTimeInputs();
+  window.setInterval(() => {
+    document.querySelectorAll('input[type="datetime-local"][data-easy-date-time="true"]').forEach((input) => {
+      if (typeof input.__omniplayDateTimeSync !== 'function') return;
+      const value = String(input.value || '');
+      const disabled = String(input.disabled);
+      if (input.dataset.omniplayLastValue === value && input.dataset.omniplayLastDisabled === disabled) return;
+      input.dataset.omniplayLastValue = value;
+      input.dataset.omniplayLastDisabled = disabled;
+      input.__omniplayDateTimeSync();
+    });
+  }, 300);
+  window.initOmniplayDateTimePickers = enhanceAllDateTimeInputs;
+})();
