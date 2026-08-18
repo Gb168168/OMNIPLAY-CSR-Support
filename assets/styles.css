@@ -9334,6 +9334,14 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 }
 
 /* Homepage personal notifications */
+.dashboard-main-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  align-items: start;
+  gap: 22px;
+}
+.dashboard-main-columns > * { min-width: 0; }
+.dashboard-main-columns .personal-notification-list { grid-template-columns: 1fr; }
 .personal-notification-open,
 .personal-notification-add {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -9395,4 +9403,7 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   .personal-notification-add { width: 100%; }
   .personal-notification-list { grid-template-columns: 1fr; }
   .personal-notification-actions > button { flex: 1; width: auto; }
+}
+@media (max-width: 1180px) {
+  .dashboard-main-columns { grid-template-columns: 1fr; }
 }
