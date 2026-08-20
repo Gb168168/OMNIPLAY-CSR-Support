@@ -5093,12 +5093,6 @@ body:has(.sidebar-toggle-btn.is-visible)
 }
 
 
-/* Remove the empty tracking grid row before the main detail subtable. */
-.tracking-page #ragicForm .ragic-form-grid > .ragic-subtable:not(.is-tracking-group-subtable) {
-  --form-row: 3 !important;
-}
-
-
 /* Keep tracking view-mode group rows as a compact two-column table. */
 .tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable .ragic-view-subtable {
   display: table !important;
@@ -6543,7 +6537,6 @@ body:has(.sidebar-toggle-btn.is-visible)
 
 /* Tracking detail subtable: keep date controls readable and use the full form width. */
 .tracking-page #ragicForm .is-tracking-detail-subtable {
-  grid-column: 1 / -1 !important;
   width: 100% !important;
   min-width: 0 !important;
 }

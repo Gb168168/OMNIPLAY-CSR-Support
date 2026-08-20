@@ -632,9 +632,10 @@ const applyDenseFormLayout = (element, field = {}) => {
   element.style.setProperty('--dense-span', String(layout.span));
   return element;
 };
-// 日誌 NEW 的檢視與編輯必須忠實使用設計表格儲存的 formLayout。
+// 有獨立排版設計器的頁面，檢視與編輯都必須忠實使用已儲存的 formLayout。
 const usesDenseFormLayout = () =>
   !document.body.classList.contains('handover-page') &&
+  !isTrackingModule() &&
   !isLogNewModule();
 const applyDenseSubtableLayout = (section) => {
   if (!section) return section;
