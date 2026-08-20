@@ -782,7 +782,9 @@ const listFields = () => {
   const configuredColumns = Array.isArray(savedOrder) && savedOrder.length
     ? savedOrder
     : RAGIC_STATE.config?.listColumns;
-  const visible = (field) => RAGIC_STATE.schema?.listVisibility?.[field.key] !== false;
+  const visible = (field) => RAGIC_STATE.schema?.listVisibility?.[field.key] !== false && (
+    !field.listParentKey || RAGIC_STATE.schema?.listVisibility?.[field.listParentKey] !== false
+  );
   if (!Array.isArray(configuredColumns) || !configuredColumns.length) return defaultFields.filter(visible);
   return configuredColumns
     .map((column) => {
@@ -4163,7 +4165,12 @@ const initRagicPage = async (config) => {
       ...fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]),
       ...flatListFields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false])
     ]);
-    const visibleListKeys = new Set(flatListFields.filter((field) => field.key && field.listVisible !== false).map((field) => field.key));
+    const parentVisibility = new Map(fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]));
+    const visibleListKeys = new Set(flatListFields.filter((field) => (
+      field.key &&
+      field.listVisible !== false &&
+      (!field.listParentKey || parentVisibility.get(field.listParentKey) !== false)
+    )).map((field) => field.key));
     const listOrder = orderedDesignerListFields(document.querySelector('#ragicDesignerModal'), fields)
       .map((field) => field.key)
       .filter((key) => visibleListKeys.has(key));
