@@ -761,6 +761,20 @@ const virtualListSubfield = (parent, subfield) => ({
   listParentKey: parent.key,
   listSubfieldKey: subfield.key
 });
+const flattenDesignerListFields = (fields = []) => fields.flatMap((field) => field.type === 'subtable'
+  ? (field.fields || []).map((subfield) => virtualListSubfield(field, subfield))
+  : [field]);
+const orderedDesignerListFields = (modal, fields = []) => {
+  const flatFields = flattenDesignerListFields(fields);
+  const fieldMap = new Map(flatFields.map((field) => [field.key, field]));
+  const savedOrder = Array.isArray(modal?._designerListOrder) ? modal._designerListOrder : [];
+  const order = [
+    ...savedOrder.filter((key) => fieldMap.has(key)),
+    ...flatFields.map((field) => field.key).filter((key) => !savedOrder.includes(key))
+  ];
+  if (modal) modal._designerListOrder = order;
+  return order.map((key) => fieldMap.get(key)).filter(Boolean);
+};
 const listFields = () => {
   const allFields = getFields();
   const defaultFields = allFields.filter((field) => field.type !== 'subtable');
@@ -3187,9 +3201,8 @@ const updateDesignerPreview = () => {
   const hiddenFields = modal?.querySelector('#designerHiddenListFields');
   if (!body || !preview) return;
   const sourceFields = readDesigner(body);
-  const allFields = sourceFields.flatMap((field) => field.type === 'subtable'
-    ? (field.listVisible === false ? [] : (field.fields || []).map((subfield) => virtualListSubfield(field, subfield)))
-    : [field]);
+  const allFields = orderedDesignerListFields(modal, sourceFields)
+    .filter((field) => !field.listParentKey || sourceFields.find((parent) => parent.key === field.listParentKey)?.listVisible !== false);
   const fields = allFields.filter((field) => field.listVisible !== false);
   if (hiddenFields) {
     const hidden = sourceFields.flatMap((field) => {
@@ -3200,7 +3213,7 @@ const updateDesignerPreview = () => {
         .map((subfield) => virtualListSubfield(field, subfield));
     });
     hiddenFields.innerHTML = hidden.length
-      ? hidden.map((field) => `<button type="button" data-show-list-field="${escapeHtml(field.key)}">＋ ${escapeHtml(field.label || field.key)}</button>`).join('')
+      ? hidden.map((field) => `<button type="button" draggable="true" data-show-list-field="${escapeHtml(field.key)}" title="拖曳到資料列表指定位置">＋ ${escapeHtml(field.label || field.key)}</button>`).join('')
       : '<span>全部欄位都顯示在列表</span>';
   }
   if (!fields.length) {
@@ -3911,6 +3924,11 @@ const openDesigner = async () => {
       ? renderedListKeys
       : currentListFields.map((field) => field.key);
     const currentListKeys = new Set(currentListKeyOrder);
+    const allListKeys = flattenDesignerListFields(fields).map((field) => field.key);
+    modal._designerListOrder = [
+      ...currentListKeyOrder.filter((key) => allListKeys.includes(key)),
+      ...allListKeys.filter((key) => !currentListKeys.has(key))
+    ];
     const isCurrentListField = (field) => currentListKeys.has(field.key) || (
       field.type === 'subtable' &&
       (field.fields || []).some((subfield) => currentListKeys.has(`${field.key}::${subfield.key}`))
@@ -4173,12 +4191,15 @@ const initRagicPage = async (config) => {
 
   try {
     const fields = readDesigner(designerBody);
-    const listVisibility = Object.fromEntries(fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]));
-    const listOrder = fields
-      .filter((field) => field.key && field.listVisible !== false)
-      .flatMap((field) => field.type === 'subtable'
-        ? (field.fields || []).filter((subfield) => subfield.key && subfield.listVisible !== false).map((subfield) => `${field.key}::${subfield.key}`)
-        : [field.key]);
+    const flatListFields = flattenDesignerListFields(fields);
+    const listVisibility = Object.fromEntries([
+      ...fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]),
+      ...flatListFields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false])
+    ]);
+    const visibleListKeys = new Set(flatListFields.filter((field) => field.key && field.listVisible !== false).map((field) => field.key));
+    const listOrder = orderedDesignerListFields(document.querySelector('#ragicDesignerModal'), fields)
+      .map((field) => field.key)
+      .filter((key) => visibleListKeys.has(key));
 
     /*
      * 直接取得目前設計器最新排版，
@@ -4340,10 +4361,14 @@ const initRagicPage = async (config) => {
     }
     const showButton = event.target.closest('[data-show-list-field]');
     if (showButton) {
-      const row = designerRowByKey(showButton.dataset.showListField);
+      const fieldKey = showButton.dataset.showListField;
+      const row = designerRowByKey(fieldKey);
       if (row) row.querySelector('[data-role="list-visible"]').value = '1';
+      const designerModal = showButton.closest('#ragicDesignerModal');
+      designerModal._designerListOrder = (designerModal._designerListOrder || []).filter((key) => key !== fieldKey);
+      designerModal._designerListOrder.push(fieldKey);
       updateDesignerPreview();
-      openListFieldSettings(showButton.dataset.showListField);
+      openListFieldSettings(fieldKey);
       return;
     }
     if (event.target.closest('[data-close-list-settings]')) {
@@ -4377,13 +4402,17 @@ const initRagicPage = async (config) => {
   {
     const modal = document.querySelector('#ragicDesignerModal');
     let draggedListFieldKey = '';
+    let draggedListFieldWasHidden = false;
     modal?.addEventListener('dragstart', (event) => {
       const dragHandle = event.target.closest('.designer-list-drag');
       const header = dragHandle?.closest('th[data-list-field-key]');
-      if (!header) return;
-      draggedListFieldKey = header.dataset.listFieldKey;
+      const hiddenButton = event.target.closest('[data-show-list-field]');
+      if (!header && !hiddenButton) return;
+      draggedListFieldKey = header?.dataset.listFieldKey || hiddenButton.dataset.showListField;
+      draggedListFieldWasHidden = Boolean(hiddenButton);
       event.dataTransfer.setData('text/plain', draggedListFieldKey);
-      header.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      (header || hiddenButton).classList.add('is-dragging');
     });
     modal?.addEventListener('dragover', (event) => {
       const header = event.target.closest('th[data-list-field-key]');
@@ -4394,17 +4423,24 @@ const initRagicPage = async (config) => {
     });
     modal?.addEventListener('drop', (event) => {
       const header = event.target.closest('th[data-list-field-key]');
-      const body = modal.querySelector('.designer-body');
-      const sourceRow = designerRowByKey(draggedListFieldKey);
-      const targetRow = designerRowByKey(header?.dataset.listFieldKey);
-      if (!header || !body || !sourceRow || !targetRow || sourceRow === targetRow || sourceRow.parentElement !== targetRow.parentElement) return;
+      if (!header || !draggedListFieldKey) return;
       event.preventDefault();
-      sourceRow.parentElement.insertBefore(sourceRow, targetRow);
+      const targetKey = header.dataset.listFieldKey;
+      if (draggedListFieldKey === targetKey) return;
+      const row = designerRowByKey(draggedListFieldKey);
+      if (draggedListFieldWasHidden && row) row.querySelector('[data-role="list-visible"]').value = '1';
+      const order = (modal._designerListOrder || []).filter((key) => key !== draggedListFieldKey);
+      const targetIndex = order.indexOf(targetKey);
+      const rect = header.getBoundingClientRect();
+      const insertAfter = event.clientX > rect.left + rect.width / 2;
+      order.splice(Math.max(0, targetIndex + (insertAfter ? 1 : 0)), 0, draggedListFieldKey);
+      modal._designerListOrder = order;
       updateDesignerPreview();
     });
     modal?.addEventListener('dragend', () => {
       draggedListFieldKey = '';
-      modal.querySelectorAll('th.is-dragging, th.is-list-drop-target').forEach((item) => item.classList.remove('is-dragging', 'is-list-drop-target'));
+      draggedListFieldWasHidden = false;
+      modal.querySelectorAll('.is-dragging, th.is-list-drop-target').forEach((item) => item.classList.remove('is-dragging', 'is-list-drop-target'));
     });
     const beginListColumnResize = (event) => {
       const handle = event.target.closest('[data-list-resize]');
