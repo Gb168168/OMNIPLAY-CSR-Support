@@ -2441,56 +2441,21 @@ const renderSubtableRow = (field, item = {}) => {
 };
 
 
-const subtableRowHasUserValue = (row) => {
-  if (!row) return false;
-  if (row.querySelector('.image-upload-preview img, .image-preview img, [data-existing-file]')) return true;
-  return [...row.querySelectorAll('input, select, textarea')].some((control) => {
-    if (control.disabled) return false;
-    if (control.type === 'checkbox' || control.type === 'radio') return control.checked;
-    if (control.type === 'file') return Boolean(control.files?.length);
-    if (control.tagName === 'SELECT' && control.multiple) {
-      return [...control.selectedOptions].some((option) => String(option.value || '').trim());
-    }
-    return String(control.value || control.dataset?.imageValue || '').trim().length > 0;
-  });
-};
-
-const ensureInitialLogNewSubtableRow = (section, field) => {
+const enableManualSubtableRows = (section, field) => {
+  const head = section?.querySelector('.ragic-subtable-head');
   const body = section?.querySelector('tbody');
-  if (!body || body.querySelector(':scope > .subtable-row')) return;
-  const row = renderSubtableRow(field);
-  body.appendChild(row);
-  row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
-};
-
-const enableAutoAppendSubtableRows = (section, field) => {
-  const body = section?.querySelector('tbody');
-  if (!body || body.dataset.autoAppendRows === 'true') return;
-  body.dataset.autoAppendRows = 'true';
-
-  const appendBlankRow = () => {
+  if (!head || !body || head.querySelector('.subtable-add-row')) return;
+  const addButton = document.createElement('button');
+  addButton.className = 'secondary subtable-add-row';
+  addButton.type = 'button';
+  addButton.textContent = '＋ 新增';
+  addButton.addEventListener('click', () => {
     const row = renderSubtableRow(field);
-    row.classList.add('subtable-auto-blank-row');
     body.appendChild(row);
     row.querySelectorAll('.image-upload-area').forEach(attachImageUploadArea);
-  };
-  const ensureTrailingBlankRow = () => {
-    const rows = [...body.querySelectorAll(':scope > .subtable-row')];
-    if (!rows.length || subtableRowHasUserValue(rows[rows.length - 1])) appendBlankRow();
-  };
-
-  ensureTrailingBlankRow();
-  const handleEntry = (event) => {
-    const row = event.target?.closest?.('.subtable-row');
-    if (!row || row !== body.querySelector(':scope > .subtable-row:last-child')) return;
-    row.classList.remove('subtable-auto-blank-row');
-    if (subtableRowHasUserValue(row)) ensureTrailingBlankRow();
-  };
-  body.addEventListener('input', handleEntry);
-  body.addEventListener('change', handleEntry);
-  body.addEventListener('click', (event) => {
-    if (event.target?.closest?.('.subtable-row-delete')) queueMicrotask(ensureTrailingBlankRow);
+    row.querySelector('input, select, textarea, button')?.focus();
   });
+  head.appendChild(addButton);
 };
 
 const setRagicFormOverlayOffset = () => {
@@ -2569,11 +2534,7 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
       section.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label)}</h3></div><div class="ragic-table-wrap"><table><tbody></tbody></table></div>`;
       const body = section.querySelector('tbody');
       (record[field.key]?.length ? record[field.key] : []).forEach((item) => body.appendChild(renderSubtableRow(field, item)));
-      if (document.body.classList.contains('log-new-page')) {
-        ensureInitialLogNewSubtableRow(section, field);
-      } else {
-        enableAutoAppendSubtableRows(section, field);
-      }
+      enableManualSubtableRows(section, field);
       (fixedLogLayout ? form : grid).appendChild(section);
     });
     mergeTrackingWalletIntoGroupEditor(form);
