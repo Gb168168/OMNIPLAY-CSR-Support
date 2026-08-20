@@ -3192,10 +3192,19 @@ const updateDesignerPreview = () => {
   const preview = modal?.querySelector('#designerPreviewTable');
   const hiddenFields = modal?.querySelector('#designerHiddenListFields');
   if (!body || !preview) return;
-  const allFields = readDesigner(body).filter((field) => field.type !== 'subtable');
+  const sourceFields = readDesigner(body);
+  const allFields = sourceFields.flatMap((field) => field.type === 'subtable'
+    ? (field.listVisible === false ? [] : (field.fields || []).map((subfield) => virtualListSubfield(field, subfield)))
+    : [field]);
   const fields = allFields.filter((field) => field.listVisible !== false);
   if (hiddenFields) {
-    const hidden = allFields.filter((field) => field.listVisible === false);
+    const hidden = sourceFields.flatMap((field) => {
+      if (field.type !== 'subtable') return field.listVisible === false ? [field] : [];
+      if (field.listVisible === false) return [field];
+      return (field.fields || [])
+        .filter((subfield) => subfield.listVisible === false)
+        .map((subfield) => virtualListSubfield(field, subfield));
+    });
     hiddenFields.innerHTML = hidden.length
       ? hidden.map((field) => `<button type="button" data-show-list-field="${escapeHtml(field.key)}">＋ ${escapeHtml(field.label || field.key)}</button>`).join('')
       : '<span>全部欄位都顯示在列表</span>';
@@ -3232,8 +3241,12 @@ const updateDesignerPreview = () => {
 };
 
 const designerRowByKey = (fieldKey) => {
-  const escapedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/"/g, '\\"');
-  return document.querySelector(`#ragicDesignerModal .designer-body > .designer-field[data-field-key="${escapedKey}"], #ragicDesignerModal .designer-body > .designer-field[data-key="${escapedKey}"]`);
+  const [parentKey, subfieldKey] = String(fieldKey || '').split('::');
+  const escapedParent = window.CSS?.escape ? CSS.escape(parentKey) : parentKey.replace(/"/g, '\\"');
+  const parentRow = document.querySelector(`#ragicDesignerModal .designer-body > .designer-field[data-field-key="${escapedParent}"], #ragicDesignerModal .designer-body > .designer-field[data-key="${escapedParent}"]`);
+  if (!parentRow || !subfieldKey) return parentRow;
+  const escapedSubfield = window.CSS?.escape ? CSS.escape(subfieldKey) : subfieldKey.replace(/"/g, '\\"');
+  return parentRow.querySelector(`.designer-subfield-list > .designer-field[data-field-key="${escapedSubfield}"], .designer-subfield-list > .designer-field[data-key="${escapedSubfield}"]`);
 };
 
 const openListFieldSettings = (fieldKey) => {
@@ -4170,7 +4183,7 @@ const initRagicPage = async (config) => {
     const listOrder = fields
       .filter((field) => field.key && field.listVisible !== false)
       .flatMap((field) => field.type === 'subtable'
-        ? (field.fields || []).filter((subfield) => subfield.key).map((subfield) => `${field.key}::${subfield.key}`)
+        ? (field.fields || []).filter((subfield) => subfield.key && subfield.listVisible !== false).map((subfield) => `${field.key}::${subfield.key}`)
         : [field.key]);
 
     /*
@@ -4390,9 +4403,9 @@ const initRagicPage = async (config) => {
       const body = modal.querySelector('.designer-body');
       const sourceRow = designerRowByKey(draggedListFieldKey);
       const targetRow = designerRowByKey(header?.dataset.listFieldKey);
-      if (!header || !body || !sourceRow || !targetRow || sourceRow === targetRow) return;
+      if (!header || !body || !sourceRow || !targetRow || sourceRow === targetRow || sourceRow.parentElement !== targetRow.parentElement) return;
       event.preventDefault();
-      body.insertBefore(sourceRow, targetRow);
+      sourceRow.parentElement.insertBefore(sourceRow, targetRow);
       updateDesignerPreview();
     });
     modal?.addEventListener('dragend', () => {
