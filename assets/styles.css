@@ -4988,6 +4988,45 @@ body:has(.sidebar-toggle-btn.is-visible)
   min-height: 42px !important;
 }
 
+/* Tracking record and image share an auto-height row. Whichever side has more
+   content defines the row height and the other side stretches to match it. */
+.tracking-page #ragicForm .ragic-form-grid > .form-field.is-tracking-record-field[data-type="textarea"],
+.tracking-page #ragicForm .ragic-form-grid > .ragic-field-image,
+.tracking-page #ragicForm .ragic-view-grid > .is-tracking-record-field,
+.tracking-page #ragicForm .ragic-view-grid > .ragic-view-field-image {
+  align-self: stretch !important;
+  height: auto !important;
+  min-height: 58px !important;
+  max-height: none !important;
+  box-sizing: border-box !important;
+}
+
+.tracking-page #ragicForm .ragic-form-grid > .form-field.is-tracking-record-field[data-type="textarea"],
+.tracking-page #ragicForm .ragic-form-grid > .ragic-field-image,
+.tracking-page #ragicForm .ragic-view-grid > .is-tracking-record-field,
+.tracking-page #ragicForm .ragic-view-grid > .ragic-view-field-image {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.tracking-page #ragicForm .is-tracking-record-field textarea,
+.tracking-page #ragicForm .is-tracking-record-field > .ragic-view-value,
+.tracking-page #ragicForm .is-tracking-record-field > .field-value {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 42px !important;
+  max-height: none !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+  box-sizing: border-box !important;
+}
+
+.tracking-page #ragicForm .ragic-field-image .image-upload-area {
+  flex: 1 1 auto !important;
+  min-height: 58px !important;
+}
+
 .tracking-page #ragicForm .is-tracking-placeholder-field {
   display: none !important;
 }
@@ -5028,6 +5067,23 @@ body:has(.sidebar-toggle-btn.is-visible)
 .tracking-page #ragicForm .is-tracking-group-subtable .ragic-table-wrap {
   padding: 0 !important;
   overflow: visible !important;
+}
+
+/* Empty subtables do not need a table canvas or horizontal scrolling. The
+   heading and its add button remain visible until the first row is created. */
+#ragicForm .ragic-subtable:has(> .ragic-table-wrap tbody:empty) > .ragic-table-wrap {
+  display: none !important;
+}
+
+#ragicForm .ragic-view-subtable-section:has(> .ragic-view-empty) {
+  height: auto !important;
+  min-height: 58px !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+
+#ragicForm .ragic-view-subtable-section:has(> .ragic-view-empty) > .ragic-view-empty {
+  padding: 0 16px 12px;
 }
 
 .tracking-page #ragicForm .is-tracking-group-subtable table,
