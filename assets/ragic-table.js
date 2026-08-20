@@ -773,6 +773,12 @@ const listFields = () => {
   return configuredColumns
     .map((column) => {
       const target = String(column || '').trim();
+      const [parentKey, subfieldKey] = target.split('::');
+      if (subfieldKey) {
+        const parent = allFields.find((field) => field.type === 'subtable' && field.key === parentKey);
+        const subfield = parent?.fields?.find((field) => field.key === subfieldKey);
+        if (parent && subfield) return virtualListSubfield(parent, subfield);
+      }
       const directField = allFields.find((field) => field.key === column || String(field.label || '').trim() === target);
       if (directField && directField.type !== 'subtable') return directField;
       const parent = allFields.find((field) =>
@@ -3898,6 +3904,10 @@ const openDesigner = async () => {
       ? renderedListKeys
       : currentListFields.map((field) => field.key);
     const currentListKeys = new Set(currentListKeyOrder);
+    const isCurrentListField = (field) => currentListKeys.has(field.key) || (
+      field.type === 'subtable' &&
+      (field.fields || []).some((subfield) => currentListKeys.has(`${field.key}::${subfield.key}`))
+    );
     const fieldMap = new Map(fields.map((field) => [field.key, field]));
     const orderedFields = [
       ...currentListKeyOrder.map((key) => fieldMap.get(key)).filter(Boolean),
@@ -3908,7 +3918,7 @@ const openDesigner = async () => {
       try {
         body.appendChild(fieldDesigner({
           ...field,
-          listVisible: currentListKeys.has(field.key) && listVisibility[field.key] !== false
+          listVisible: isCurrentListField(field) && listVisibility[field.key] !== false
         }));
       } catch (fieldError) {
         console.error('建立設計欄位失敗：', field, fieldError);
@@ -4158,8 +4168,10 @@ const initRagicPage = async (config) => {
     const fields = readDesigner(designerBody);
     const listVisibility = Object.fromEntries(fields.filter((field) => field.key).map((field) => [field.key, field.listVisible !== false]));
     const listOrder = fields
-      .filter((field) => field.key && field.type !== 'subtable' && field.listVisible !== false)
-      .map((field) => field.key);
+      .filter((field) => field.key && field.listVisible !== false)
+      .flatMap((field) => field.type === 'subtable'
+        ? (field.fields || []).filter((subfield) => subfield.key).map((subfield) => `${field.key}::${subfield.key}`)
+        : [field.key]);
 
     /*
      * 直接取得目前設計器最新排版，
