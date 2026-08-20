@@ -529,7 +529,7 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
     if (start >= rows || span < 1) return;
     const desiredHeight =
       field.type === 'textarea' ? (isTrackingModule() ? 48 : 178) :
-      ['image', 'file'].includes(field.type) ? 175 :
+      ['image', 'file'].includes(field.type) ? (isTrackingModule() ? 48 : 175) :
       Math.max(60, Number(config?.formRowHeight) || 60);
     const trackHeight = Math.max(48, Math.ceil((desiredHeight - (rowGap * (span - 1))) / span));
     for (let offset = 0; offset < span; offset += 1) {
@@ -1567,6 +1567,9 @@ const createField = (field, value = '') => {
   const wrap = document.createElement('label');
   const isPairToggle = isReminderEnabledField(field) || field.type === 'reportEnabled';
   wrap.className = `ragic-field ragic-field-${field.type || 'text'}${isPairToggle ? ' ragic-field-pair-toggle' : ''}`;
+  if (isTrackingModule() && String(field.label || '').trim() === '紀錄') {
+    wrap.classList.add('is-tracking-record-field');
+  }
   if (isTrackingModule() && field.type === 'text' && String(field.label || '').trim() === '單行文字') {
     wrap.classList.add('is-tracking-placeholder-field');
   }
@@ -2274,6 +2277,9 @@ const renderViewForm = (form, record = {}) => {
     const fieldValue = reminderRecordValue(record, field);
     const isChecked = fieldValue === true || fieldValue === 'true' || fieldValue === '1';
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}${isPairToggle ? ' ragic-view-field-pair-toggle' : ''}${isPairToggle && isChecked ? ' is-checked' : ''}`;
+    if (isTrackingModule() && String(field.label || '').trim() === '紀錄') {
+      item.classList.add('is-tracking-record-field');
+    }
     if (isTrackingModule() && field.type === 'text' && String(field.label || '').trim() === '單行文字') {
       item.classList.add('is-tracking-placeholder-field');
     }
