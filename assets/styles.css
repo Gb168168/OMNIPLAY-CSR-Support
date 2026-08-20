@@ -9548,3 +9548,24 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   position: relative;
   z-index: 1;
 }
+
+/* Tracking view scrollbar cleanup must stay after the generic compact-view
+   rules so empty cards cannot regain overflow from later declarations. */
+#ragicForm .compact-view-grid > .ragic-view-subtable-section:has(> .ragic-view-empty) {
+  height: auto !important;
+  min-height: 58px !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable,
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable .ragic-view-subtable-wrap {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+.tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable .ragic-view-subtable {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
