@@ -2647,21 +2647,102 @@
   </script>
 
   <script>
-    // 日誌 NEW：列表中的問題描述一律使用完整原文，並依內容自動換行撐高。
+    // 日誌 NEW：NAS 列表端點可能只回傳問題描述摘要；遇到省略內容時，
+    // 依該筆 ID 讀取單筆資料，補回完整原文與換行。
     (() => {
-      const showFullIssueDescriptions = () => {
-        document.querySelectorAll('#ragicListView .ragic-table td[data-field-key="issue"], #ragicListView .ragic-table td:nth-child(7)').forEach((cell) => {
-          const fullText = cell.getAttribute('title');
-          if (fullText && (cell.textContent.trim().endsWith('…') || cell.textContent.trim().endsWith('...') || cell.textContent.length < fullText.length)) {
-            cell.textContent = fullText;
+      const fullIssueCache = new Map();
+      const requestQueue = [];
+      let activeRequests = 0;
+      const maxConcurrentRequests = 6;
+      const issueCells = () => document.querySelectorAll(
+        '#ragicListView .ragic-table td[data-field-key="issue"], #ragicListView .ragic-table td:nth-child(7)'
+      );
+      const isTruncated = (value = '') => /(?:\.\.\.|…|\.\.\s*)$/.test(String(value).trim());
+      const leafText = (value) => {
+        if (value == null) return '';
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+        if (Array.isArray(value)) return value.map(leafText).filter(Boolean).join('\n');
+        if (typeof value === 'object') {
+          const preferred = ['fullValue', 'rawValue', 'value', 'text', 'content']
+            .map((key) => leafText(value[key]))
+            .filter(Boolean)
+            .sort((a, b) => b.length - a.length);
+          if (preferred.length) return preferred[0];
+          return Object.values(value).map(leafText).filter(Boolean).join('\n');
+        }
+        return String(value);
+      };
+      const issueFromRecord = (record = {}) => {
+        const formData = record.formData && typeof record.formData === 'object' ? record.formData : {};
+        return [
+          record.issue,
+          record['問題描述'],
+          formData.issue,
+          formData['問題描述']
+        ].map(leafText).filter(Boolean).sort((a, b) => b.length - a.length)[0] || '';
+      };
+      const applyFullText = (cell, fullText) => {
+        if (!cell || !fullText) return;
+        const current = String(cell.textContent || '').trim();
+        if (fullText.length < current.length && !isTruncated(current)) return;
+        const textTarget = cell.querySelector('span') || cell;
+        textTarget.textContent = fullText;
+        cell.title = fullText;
+        cell.dataset.fullIssueState = 'resolved';
+      };
+      const styleCell = (cell) => {
+        cell.style.setProperty('white-space', 'pre-wrap', 'important');
+        cell.style.setProperty('overflow', 'visible', 'important');
+        cell.style.setProperty('text-overflow', 'clip', 'important');
+        cell.style.setProperty('height', 'auto', 'important');
+        cell.style.setProperty('max-height', 'none', 'important');
+        cell.style.setProperty('overflow-wrap', 'anywhere', 'important');
+        cell.style.setProperty('word-break', 'break-word', 'important');
+      };
+      const runQueue = () => {
+        while (activeRequests < maxConcurrentRequests && requestQueue.length) {
+          const task = requestQueue.shift();
+          activeRequests += 1;
+          task().finally(() => {
+            activeRequests -= 1;
+            runQueue();
+          });
+        }
+      };
+      const loadFullIssue = (cell) => {
+        const id = cell.dataset.docId;
+        if (!id || cell.dataset.fullIssueState === 'loading' || cell.dataset.fullIssueState === 'resolved') return;
+        if (fullIssueCache.has(id)) {
+          applyFullText(cell, fullIssueCache.get(id));
+          return;
+        }
+        cell.dataset.fullIssueState = 'loading';
+        requestQueue.push(async () => {
+          try {
+            const snapshot = await window.omniplayDb.collection('log_new').doc(id).get();
+            const fullText = issueFromRecord(snapshot?.data?.() || {});
+            if (fullText) {
+              fullIssueCache.set(id, fullText);
+              document.querySelectorAll(
+                '#ragicListView .ragic-table td[data-field-key="issue"][data-doc-id="' + CSS.escape(id) + '"]'
+              ).forEach((target) => applyFullText(target, fullText));
+            } else {
+              cell.dataset.fullIssueState = 'empty';
+            }
+          } catch (error) {
+            cell.dataset.fullIssueState = 'error';
+            console.warn('讀取日誌 NEW 完整問題描述失敗：', id, error);
           }
-          cell.style.setProperty('white-space', 'pre-wrap', 'important');
-          cell.style.setProperty('overflow', 'visible', 'important');
-          cell.style.setProperty('text-overflow', 'clip', 'important');
-          cell.style.setProperty('height', 'auto', 'important');
-          cell.style.setProperty('max-height', 'none', 'important');
-          cell.style.setProperty('overflow-wrap', 'anywhere', 'important');
-          cell.style.setProperty('word-break', 'break-word', 'important');
+        });
+        runQueue();
+      };
+      const showFullIssueDescriptions = () => {
+        issueCells().forEach((cell) => {
+          styleCell(cell);
+          const current = String(cell.textContent || '').trim();
+          const titleText = String(cell.getAttribute('title') || '');
+          if (titleText && titleText.length > current.length) applyFullText(cell, titleText);
+          if (isTruncated(cell.textContent)) loadFullIssue(cell);
         });
       };
       const listView = document.querySelector('#ragicListView');
