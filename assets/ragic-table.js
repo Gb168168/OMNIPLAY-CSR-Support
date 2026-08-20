@@ -632,11 +632,9 @@ const applyDenseFormLayout = (element, field = {}) => {
   element.style.setProperty('--dense-span', String(layout.span));
   return element;
 };
-// 有獨立排版設計器的頁面，檢視與編輯都必須忠實使用已儲存的 formLayout。
-const usesDenseFormLayout = () =>
-  !document.body.classList.contains('handover-page') &&
-  !isTrackingModule() &&
-  !isLogNewModule();
+// 排版設計器是所有動態表單唯一的桌面排版來源。
+// 舊版 dense 排版會重排欄位，導致設計、檢視與編輯三個畫面不一致。
+const usesDenseFormLayout = () => false;
 const applyDenseSubtableLayout = (section) => {
   if (!section) return section;
   section.classList.add('dense-form-subtable');
