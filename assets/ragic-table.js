@@ -1551,7 +1551,7 @@ const startInlineEdit = (td) => {
 
 const createField = (field, value = '') => {
   const wrap = document.createElement('label');
-  const isPairToggle = ['reminderEnabled', 'reportEnabled'].includes(field.type);
+  const isPairToggle = isReminderEnabledField(field) || field.type === 'reportEnabled';
   wrap.className = `ragic-field ragic-field-${field.type || 'text'}${isPairToggle ? ' ragic-field-pair-toggle' : ''}`;
   if (isTrackingModule() && field.type === 'text' && String(field.label || '').trim() === '單行文字') {
     wrap.classList.add('is-tracking-placeholder-field');
@@ -1560,12 +1560,6 @@ const createField = (field, value = '') => {
   applyFormLayout(wrap, field);
   if (usesDenseFormLayout()) applyDenseFormLayout(wrap, field);
   const control = createControl(field, value);
-  if (isReminderEnabledField(field)) {
-    control.checked = true;
-    control.disabled = true;
-    control.setAttribute('aria-readonly', 'true');
-    control.title = '提醒固定啟用';
-  }
   wrap.appendChild(field.type === 'image' || field.type === 'file' ? createFileUploadArea(field, control, value) : control);
   return wrap;
 };
@@ -1922,7 +1916,7 @@ const getFormData = async () => {
       const container = input.closest('.image-upload-area');
       data[field.key] = container?.dataset.fileCleared === 'true' ? '' : (input.files?.[0] ? await fileToBase64Payload(input.files[0]) : (getFileInputValue(input)));
     }
-    else if (isReminderEnabledField(field)) data[field.key] = true;
+    else if (isReminderEnabledField(field)) data[field.key] = input.checked;
     else if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field.type)) data[field.key] = input.checked;
     else data[field.key] = input.value.trim();
   }
@@ -2262,7 +2256,7 @@ const renderViewForm = (form, record = {}) => {
     return !fixedLogLayout || Boolean(logFieldLayoutFor(field));
   }).forEach((field) => {
     const item = document.createElement('div');
-    const isPairToggle = ['reminderEnabled', 'reportEnabled'].includes(field.type);
+    const isPairToggle = isReminderEnabledField(field) || field.type === 'reportEnabled';
     const fieldValue = reminderRecordValue(record, field);
     const isChecked = fieldValue === true || fieldValue === 'true' || fieldValue === '1';
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}${isPairToggle ? ' ragic-view-field-pair-toggle' : ''}${isPairToggle && isChecked ? ' is-checked' : ''}`;
