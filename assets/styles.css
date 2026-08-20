@@ -5168,6 +5168,34 @@ body:has(.sidebar-toggle-btn.is-visible)
   line-height: 1.35;
 }
 
+/* Legacy tracking schemas store 啟用提醒 as a checkbox. Keep old records on
+   the same compact horizontal toggle layout and hide the legacy text value. */
+.tracking-page #ragicForm .ragic-view-field-pair-toggle .ragic-view-label {
+  white-space: nowrap !important;
+  line-height: 1.35 !important;
+}
+
+.tracking-page #ragicForm .ragic-view-field-pair-toggle .ragic-view-value,
+.tracking-page #ragicForm .ragic-view-field-pair-toggle .field-value {
+  width: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 18px !important;
+  white-space: nowrap !important;
+}
+
+.tracking-page #ragicForm .ragic-view-field-pair-toggle.is-checked .ragic-view-value::after,
+.tracking-page #ragicForm .ragic-view-field-pair-toggle.is-checked .field-value::after {
+  color: var(--text) !important;
+  font-size: 16px !important;
+}
+
 
 /* Override the compact grid rule so both reminder cards are exactly equal. */
 .tracking-page #ragicForm .ragic-form-grid > .form-field.ragic-view-field-reminderEnabled.ragic-view-field-pair-toggle {
