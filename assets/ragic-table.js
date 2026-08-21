@@ -3654,6 +3654,15 @@ const clampLayoutItem = (item = {}, layout = {}) => {
     height: normalizeFormLayoutNumber(item.height, { min: 32, max: 2000, fallback: null })
   };
 };
+const scaleLayoutItemColumns = (item = {}, previousColumns = 1, nextColumns = 1) => {
+  const sourceColumns = Math.max(1, Number(previousColumns) || 1);
+  const targetColumns = Math.max(1, Number(nextColumns) || 1);
+  const sourceCol = Math.min(sourceColumns, Math.max(1, Number(item.col) || 1));
+  const sourceEnd = Math.min(sourceColumns, sourceCol + Math.max(1, Number(item.colSpan) || 1) - 1);
+  const col = Math.floor(((sourceCol - 1) * targetColumns) / sourceColumns) + 1;
+  const end = Math.max(col, Math.ceil((sourceEnd * targetColumns) / sourceColumns));
+  return { ...item, col, colSpan: Math.min(targetColumns - col + 1, end - col + 1) };
+};
 const getLayoutCellMetrics = (grid) => {
   const gridRect = grid.getBoundingClientRect();
   const styles = getComputedStyle(grid);
@@ -3789,7 +3798,9 @@ const fieldTypeButtons =
   const contextBar = panel.querySelector('.layout-context-toolbar');
   if (contextBar) contextBar.innerHTML = '<div data-layout-context-format hidden></div><span data-layout-context-hint>點擊欄位後即可在這裡調整格式</span><b>拖曳藍色邊線可改寬高</b>';
   const grid = panel.querySelector('.layout-grid');
-  grid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
+  grid.style.setProperty('width', '100%', 'important');
+  grid.style.setProperty('min-width', '0', 'important');
+  grid.style.setProperty('grid-template-columns', `repeat(${layout.columns}, minmax(0, 1fr))`, 'important');
   grid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(64px, auto))`;
   for (let row = 1; row <= layout.rows; row += 1) {
     for (let col = 1; col <= layout.columns; col += 1) {
@@ -3999,12 +4010,18 @@ const attachLayoutDesignerEvents = (panel) => {
   panel.addEventListener('change', (event) => {
     if (!event.target.matches('#gridCols, #gridRows')) return;
     updateLayoutDesignerState((layout) => {
-      layout.columns = Number(panel.querySelector('#gridCols').value);
+      const previousColumns = Math.max(1, Number(layout.columns) || 1);
+      const nextColumns = Number(panel.querySelector('#gridCols').value);
+      if (nextColumns !== previousColumns) {
+        Object.entries(layout.fields || {}).forEach(([key, item]) => {
+          layout.fields[key] = scaleLayoutItemColumns(item, previousColumns, nextColumns);
+        });
+      }
+      layout.columns = nextColumns;
       layout.rows = Number(panel.querySelector('#gridRows').value);
       Object.entries(layout.fields || {}).forEach(([key, item]) => {
         const next = clampLayoutItem(item, layout);
-        if (isLayoutAreaFree(layout, key, next)) layout.fields[key] = next;
-        else delete layout.fields[key];
+        layout.fields[key] = next;
       });
     });
   });
