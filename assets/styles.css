@@ -7177,8 +7177,14 @@ body:has(.sidebar-toggle-btn.is-visible)
 }
 #ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format][hidden] { display: none !important; }
 #ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] .designer-option-format-toolbar {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-format-label {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 #ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] select {
   max-width: 86px;
