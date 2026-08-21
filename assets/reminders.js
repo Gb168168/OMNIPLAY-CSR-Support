@@ -161,10 +161,10 @@
 
 (() => {
   const normalizedPath = window.location.pathname.replace(/^\/OMNIPLAY-CSR-Support/, '');
-  if (!new Set(['/work/log.html', '/work/log-new.html', '/work/handover.html', '/work/report.html']).has(normalizedPath)) return;
+  if (!new Set(['/work/log.html', '/work/log-new.html', '/work/handover.html', '/work/report.html', '/work/alert.html']).has(normalizedPath)) return;
   if (document.querySelector('script[data-ragic-schema-recovery]')) return;
   const script = document.createElement('script');
-  script.src = '../assets/ragic-schema-recovery.js?v=20260821-schema-stall1';
+  script.src = '../assets/ragic-schema-recovery.js?v=20260821-schema-stall2';
   script.dataset.ragicSchemaRecovery = 'true';
   document.head.appendChild(script);
 })();
