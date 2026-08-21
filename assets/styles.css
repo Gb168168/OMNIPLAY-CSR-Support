@@ -10242,3 +10242,16 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   min-width: 100% !important;
   justify-content: flex-start !important;
 }
+
+/* Give the field properties rail enough room for grouped formatting controls. */
+@media (min-width: 1181px) {
+  #ragicDesignerModal.is-wysiwyg-form-designer #layoutDesignerPanel {
+    grid-template-columns: minmax(0, 1fr) 500px !important;
+  }
+
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench,
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
+    grid-template-columns: 230px minmax(0, 1fr) 500px !important;
+  }
+}
