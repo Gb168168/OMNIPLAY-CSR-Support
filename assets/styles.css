@@ -10206,3 +10206,32 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   overflow-x: hidden !important;
   overflow-y: auto !important;
 }
+
+/* Keep grouped format controls readable inside the narrow settings rail. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-option-format-toolbar {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-group {
+  display: flex !important;
+  flex-wrap: wrap;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-group > button,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-group > label,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-group input,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-group select {
+  width: auto !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-group input[type="number"] {
+  width: 52px !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-group input[type="color"] {
+  width: 22px !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-clear {
+  width: 100% !important;
+  margin-left: 0;
+}
