@@ -817,6 +817,100 @@ const recordListFieldValue = (record = {}, field = {}) => {
   return values.join('\n');
 };
 const optionList = (field) => Array.isArray(field.options) ? field.options : String(field.options || '').split('\n').map((item) => item.trim()).filter(Boolean);
+const normalizeOptionStyles = (value) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(Object.entries(source).map(([option, style]) => [option, {
+    color: /^#[0-9a-f]{6}$/i.test(String(style?.color || '')) ? String(style.color) : '',
+    backgroundColor: /^#[0-9a-f]{6}$/i.test(String(style?.backgroundColor || '')) ? String(style.backgroundColor) : '',
+    fontSize: Math.min(32, Math.max(10, Number(style?.fontSize) || 14)),
+    bold: Boolean(style?.bold),
+    italic: Boolean(style?.italic),
+    strike: Boolean(style?.strike),
+    textAlign: ['left', 'center', 'right'].includes(style?.textAlign) ? style.textAlign : 'left',
+    verticalAlign: ['top', 'middle', 'bottom'].includes(style?.verticalAlign) ? style.verticalAlign : 'middle'
+  }]).filter(([, style]) => style.color || style.backgroundColor || style.fontSize !== 14 || style.bold || style.italic || style.strike || style.textAlign !== 'left' || style.verticalAlign !== 'middle'));
+};
+const optionStyle = (field, option) => normalizeOptionStyles(field?.optionStyles)[String(option)] || {};
+const optionStyleCss = (field, option) => {
+  const style = optionStyle(field, option);
+  return `${style.color ? `color:${style.color};` : ''}${style.backgroundColor ? `background-color:${style.backgroundColor};` : ''}${style.fontSize ? `font-size:${style.fontSize}px;` : ''}${style.bold ? 'font-weight:800;' : ''}${style.italic ? 'font-style:italic;' : ''}${style.strike ? 'text-decoration:line-through;' : ''}${style.textAlign ? `text-align:${style.textAlign};` : ''}${style.verticalAlign ? `vertical-align:${style.verticalAlign};` : ''}`;
+};
+const renderStyledOptionValue = (field, value) => {
+  const values = Array.isArray(value) ? value.map(String) : [String(value ?? '')];
+  return values.filter(Boolean).map((item) => {
+    const css = optionStyleCss(field, item);
+    return `<span class="ragic-option-color${css ? ' has-color' : ''}"${css ? ` style="${css}"` : ''}>${escapeHtml(item)}</span>`;
+  }).join('、');
+};
+const attachOptionColorEditor = (root, field = {}, { optionsSelector = '[data-role="options"]', typeSelector = '[data-role="type"]' } = {}) => {
+  const optionsInput = root.querySelector(optionsSelector);
+  const typeInput = root.querySelector(typeSelector);
+  if (!optionsInput || !typeInput) return;
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden';
+  hidden.dataset.role = 'option-styles';
+  hidden.value = JSON.stringify(normalizeOptionStyles(field.optionStyles));
+  const editor = document.createElement('div');
+  editor.className = 'designer-option-color-editor';
+  optionsInput.insertAdjacentElement('afterend', editor);
+  root.appendChild(hidden);
+  const readStyles = () => { try { return normalizeOptionStyles(JSON.parse(hidden.value || '{}')); } catch { return {}; } };
+  const refresh = () => {
+    const enabled = ['select', 'multiselect'].includes(typeInput.value);
+    editor.hidden = !enabled;
+    if (!enabled) return;
+    const styles = readStyles();
+    const options = String(optionsInput.value || '').split(/\n+/).map((item) => item.trim()).filter(Boolean);
+    editor.innerHTML = options.length ? `<strong>選項顏色</strong>${options.map((option) => {
+      const style = styles[option] || {};
+      return `<div class="designer-option-format-row" data-option-color="${escapeHtml(option)}"><strong>${escapeHtml(option)}</strong><div class="designer-option-format-toolbar"><button type="button" data-font-size-step="-1" title="縮小字體">−</button><input type="number" min="10" max="32" step="1" data-option-font-size value="${style.fontSize || 14}" title="字體大小"><button type="button" data-font-size-step="1" title="放大字體">＋</button><button type="button" data-option-toggle="bold" class="${style.bold ? 'is-active' : ''}" title="粗體"><b>B</b></button><button type="button" data-option-toggle="italic" class="${style.italic ? 'is-active' : ''}" title="斜體"><i>I</i></button><button type="button" data-option-toggle="strike" class="${style.strike ? 'is-active' : ''}" title="刪除線"><s>S</s></button><label title="文字顏色">A<input type="color" data-option-text-color value="${style.color || '#1f2937'}"></label><label title="背景顏色">▰<input type="color" data-option-background-color value="${style.backgroundColor || '#ffffff'}"></label><select data-option-text-align title="水平對齊"><option value="left" ${style.textAlign === 'left' ? 'selected' : ''}>靠左</option><option value="center" ${style.textAlign === 'center' ? 'selected' : ''}>置中</option><option value="right" ${style.textAlign === 'right' ? 'selected' : ''}>靠右</option></select><select data-option-vertical-align title="垂直對齊"><option value="top" ${style.verticalAlign === 'top' ? 'selected' : ''}>靠上</option><option value="middle" ${!style.verticalAlign || style.verticalAlign === 'middle' ? 'selected' : ''}>置中</option><option value="bottom" ${style.verticalAlign === 'bottom' ? 'selected' : ''}>靠下</option></select><button type="button" data-clear-option-color title="清除格式">清除</button></div></div>`;
+    }).join('')}` : '<small>請先輸入選項</small>';
+  };
+  editor.addEventListener('input', (event) => {
+    const row = event.target.closest('[data-option-color]');
+    if (!row) return;
+    const styles = readStyles();
+    const previous = styles[row.dataset.optionColor] || {};
+    styles[row.dataset.optionColor] = {
+      color: row.querySelector('[data-option-text-color]').value,
+      backgroundColor: row.querySelector('[data-option-background-color]').value,
+      fontSize: Number(row.querySelector('[data-option-font-size]').value) || 14,
+      bold: Boolean(previous.bold), italic: Boolean(previous.italic), strike: Boolean(previous.strike),
+      textAlign: row.querySelector('[data-option-text-align]').value,
+      verticalAlign: row.querySelector('[data-option-vertical-align]').value
+    };
+    hidden.value = JSON.stringify(styles);
+  });
+  editor.addEventListener('click', (event) => {
+    const step = event.target.closest('[data-font-size-step]');
+    if (step) {
+      const input = step.closest('[data-option-color]').querySelector('[data-option-font-size]');
+      input.value = String(Math.min(32, Math.max(10, Number(input.value || 14) + Number(step.dataset.fontSizeStep))));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+    const toggle = event.target.closest('[data-option-toggle]');
+    if (toggle) {
+      const row = toggle.closest('[data-option-color]');
+      const styles = readStyles();
+      const option = row.dataset.optionColor;
+      styles[option] = { ...(styles[option] || {}), [toggle.dataset.optionToggle]: !styles[option]?.[toggle.dataset.optionToggle] };
+      hidden.value = JSON.stringify(styles);
+      refresh();
+      return;
+    }
+    const button = event.target.closest('[data-clear-option-color]');
+    if (!button) return;
+    const option = button.closest('[data-option-color]')?.dataset.optionColor;
+    const styles = readStyles();
+    delete styles[option];
+    hidden.value = JSON.stringify(styles);
+    refresh();
+  });
+  optionsInput.addEventListener('input', refresh);
+  typeInput.addEventListener('change', refresh);
+  refresh();
+};
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
 const fieldSelector = (fieldKey) => `[data-field="${window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\"')}"]`;
 
@@ -1245,12 +1339,13 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
     const opt = document.createElement('option');
     opt.value = option;
     opt.textContent = option;
+    opt.style.cssText = optionStyleCss(field, option);
     opt.selected = selected.includes(option);
     select.appendChild(opt);
   });
   const display = document.createElement('div');
   display.className = 'multi-select-display';
-  display.textContent = selected.length ? selected.join('、') : '請選擇';
+  display.innerHTML = selected.length ? renderStyledOptionValue(field, selected) : '請選擇';
   display.title = selected.join('、');
   const dropdown = document.createElement('div');
   dropdown.className = 'multi-select-dropdown';
@@ -1261,6 +1356,7 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
     label.setAttribute('role', 'option');
     label.setAttribute('aria-selected', String(selected.includes(option)));
     label.innerHTML = `<input type="checkbox" value="${escapeHtml(option)}" ${selected.includes(option) ? 'checked' : ''}><span>${escapeHtml(option)}</span>`;
+    label.querySelector('span').style.cssText = optionStyleCss(field, option);
     dropdown.appendChild(label);
   });
   wrapper.append(select, display, dropdown);
@@ -1277,7 +1373,7 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
       if (option) option.selected = checkbox.checked;
       checkbox.closest('[role="option"]')?.setAttribute('aria-selected', String(checkbox.checked));
       const values = [...select.selectedOptions].map((option) => option.value);
-      display.textContent = values.length ? values.join('、') : '請選擇';
+      display.innerHTML = values.length ? renderStyledOptionValue(field, values) : '請選擇';
       display.title = values.join('、');
     });
   });
@@ -1381,6 +1477,7 @@ const createControl = (field, value = '', subfield = false) => {
       const opt = document.createElement('option');
       opt.value = option;
       opt.textContent = option;
+      opt.style.cssText = optionStyleCss(field, option);
 
       if (/^-{3,}$/.test(option)) {
         opt.disabled = true;
@@ -1389,6 +1486,11 @@ const createControl = (field, value = '', subfield = false) => {
 
       input.appendChild(opt);
     });
+    const applySelectedOptionStyle = () => {
+      input.style.cssText = optionStyleCss(field, input.value);
+    };
+    input.addEventListener('change', applySelectedOptionStyle);
+    queueMicrotask(applySelectedOptionStyle);
   } else if (manualSystemDateField(field) && !subfield) {
     input = document.createElement('input');
     input.type = 'datetime-local';
@@ -2246,6 +2348,7 @@ const renderDisplayValue = (field, value) => {
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '<span class="ragic-view-empty">—</span>';
   if (field?.type === 'date') return escapeHtml(displayDate(value)) || '<span class="ragic-view-empty">—</span>';
   if (['datetime', 'createdDate', 'updatedDate'].includes(field?.type)) return escapeHtml(displayDateTime(value)) || '<span class="ragic-view-empty">—</span>';
+  if (['select', 'multiselect'].includes(field?.type)) return renderStyledOptionValue(field, value) || '<span class="ragic-view-empty">—</span>';
   const text = String(valueToText(value));
   return text ? escapeHtml(text).replace(/\n/g, '<br>') : '<span class="ragic-view-empty">—</span>';
 };
@@ -2620,6 +2723,7 @@ const renderCell = (record, field) => {
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
   if (['datetime', 'createdDate', 'updatedDate'].includes(field?.type)) return escapeHtml(displayDateTime(value));
+  if (['select', 'multiselect'].includes(field?.type)) return renderStyledOptionValue(field, value);
   if (field?.type === 'subtable') {
     const rows = Array.isArray(value) ? value : [];
     const subfields = Array.isArray(field.fields) ? field.fields : [];
@@ -3324,6 +3428,7 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
   `;
 }).join('');
     row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="子欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}</select><textarea class="designer-subfield-options" data-role="options" rows="3" placeholder="選項，每行一個" ${['select', 'multiselect'].includes(subfieldType) ? '' : 'hidden'}>${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-width" title="儲存後同步套用到檢視與編輯子表格"><span>欄寬</span><input data-role="width" type="number" min="40" max="1200" step="10" inputmode="numeric" placeholder="例如 200" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div>`;
+    attachOptionColorEditor(row, field);
     const syncSubfieldOptions = () => {
       const supportsOptions = ['select', 'multiselect'].includes(row.querySelector('[data-role="type"]').value);
       row.querySelector('[data-role="options"]').hidden = !supportsOptions;
@@ -3348,6 +3453,7 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
   }).join('');
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
   row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-form-layout" aria-label="表單排版"><label><span>列</span><input data-role="form-row" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formRow) ?? '')}"></label><label><span>欄</span><input data-role="form-col" type="number" min="1" max="4" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formCol, { max: 4 }) ?? '')}"></label><label><span>跨欄</span><input data-role="form-colspan" type="number" min="1" max="4" step="1" inputmode="numeric" value="${escapeHtml(normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 }))}"></label></div><input data-role="default" type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-role="help" type="hidden" value="${escapeHtml(field.help || '')}"><input data-role="readonly" type="hidden" value="${field.readonly ? '1' : ''}"><input data-role="hidden" type="hidden" value="${field.hidden ? '1' : ''}"><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
+  attachOptionColorEditor(row, field);
   const listVisibleInput = document.createElement('input');
   listVisibleInput.type = 'hidden';
   listVisibleInput.dataset.role = 'list-visible';
@@ -3402,6 +3508,7 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
     width,
     manualWidth: Boolean(width),
     options: (row.querySelector('[data-role="options"]')?.value || '').split('\n').map((v) => v.trim()).filter(Boolean),
+    optionStyles: (() => { try { return normalizeOptionStyles(JSON.parse(row.querySelector('[data-role="option-styles"]')?.value || '{}')); } catch { return {}; } })(),
     defaultValue: row.querySelector('[data-role="default"]')?.value || '',
     help: row.querySelector('[data-role="help"]')?.value || '',
     readonly: row.querySelector('[data-role="readonly"]')?.value === '1',
@@ -3578,6 +3685,7 @@ const openLayoutFieldSettings = (fieldKey) => {
   if (!panel) return;
   const options = optionList(field).join('\n');
   panel.innerHTML = `<div class="layout-settings-head"><h3>欄位屬性設定</h3><div class="layout-settings-head-actions"><button class="primary" data-confirm-settings type="button">確認並儲存</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button><button class="secondary" data-close-layout-settings type="button">關閉</button></div></div><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><textarea data-option-list data-option rows="7" placeholder="每行一個選項">${escapeHtml(options)}</textarea></div><input data-setting-default type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-setting-help type="hidden" value="${escapeHtml(field.help || '')}"><input data-layout-row type="hidden" value="${escapeHtml(item.row || 1)}"><input data-layout-col type="hidden" value="${escapeHtml(item.col || 1)}"><input data-layout-rowspan type="hidden" value="${escapeHtml(item.rowSpan || 1)}"><input data-layout-colspan type="hidden" value="${escapeHtml(item.colSpan || 1)}"><input data-layout-width type="hidden" value="${escapeHtml(item.width || field.formWidth || '')}"><input data-layout-height type="hidden" value="${escapeHtml(layoutHeightValue(item, field))}"><input data-setting-required type="hidden" value="${field.required ? '1' : ''}"><input data-setting-readonly type="hidden" value="${field.readonly ? '1' : ''}"><input data-setting-hidden type="hidden" value="${field.hidden ? '1' : ''}">${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}`;
+  attachOptionColorEditor(panel, field, { optionsSelector: '[data-option-list]', typeSelector: '[data-setting-type]' });
   panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<section class="designer-list-settings"><div class="designer-list-settings-head"><strong>列表顯示設定</strong><span>只影響列表，欄位仍會保留在表單中</span></div><label class="designer-list-visible"><span>顯示在列表</span><input data-setting-list-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}><i aria-hidden="true"></i></label><label class="designer-list-width"><span>列表欄寬</span><div><input data-setting-list-width type="number" min="40" max="2000" step="10" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><em>px</em></div></label></section>`);
   panel.hidden = false;
   panel.dataset.fieldKey = fieldKey;
@@ -4576,6 +4684,9 @@ const addDesignerPairFields = (pairType) => {
         .map((option) => option.trim())
         .filter(Boolean)
         .join('\n');
+
+    const optionStylesInput = row.querySelector('[data-role="option-styles"]');
+    if (optionStylesInput) optionStylesInput.value = panel.querySelector('[data-role="option-styles"]')?.value || '{}';
 
     row.querySelector('[data-role="required"]').checked =
       panel.querySelector('[data-setting-required]')?.checked ||

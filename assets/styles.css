@@ -9597,3 +9597,49 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   overflow-y: auto !important;
   resize: none !important;
 }
+
+/* Per-option formatting controls in the table designer. */
+.designer-option-color-editor {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.designer-option-color-editor[hidden] { display: none !important; }
+.designer-option-color-editor > strong { font-size: 13px; }
+.designer-option-format-row { display: grid; gap: 6px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.designer-option-format-row:first-of-type { padding-top: 0; border-top: 0; }
+.designer-option-format-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.designer-option-format-toolbar button,
+.designer-option-format-toolbar select,
+.designer-option-format-toolbar input[type="number"],
+.designer-option-format-toolbar label {
+  width: auto;
+  min-width: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-solid);
+  color: var(--text);
+  font-size: 12px;
+}
+.designer-option-format-toolbar input[type="number"] { width: 52px; text-align: center; }
+.designer-option-format-toolbar label { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; }
+.designer-option-format-toolbar input[type="color"] { width: 22px; height: 22px; padding: 0; border: 0; }
+.designer-option-format-toolbar button.is-active { color: #fff; background: var(--primary); }
+
+.ragic-option-color {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
