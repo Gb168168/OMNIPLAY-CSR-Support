@@ -7186,6 +7186,35 @@ body:has(.sidebar-toggle-btn.is-visible)
   font-weight: 700;
   white-space: nowrap;
 }
+#ragicDesignerModal .layout-wysiwyg-designer .designer-format-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #dbe5f2;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-format-group > .designer-format-label {
+  padding: 0 4px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-format-group > label {
+  white-space: nowrap;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-format-clear {
+  margin-left: auto;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-option-format-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-group {
+  width: 100%;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-format-clear {
+  width: 100%;
+  margin-left: 0;
+}
 #ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] select {
   max-width: 86px;
 }
