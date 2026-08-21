@@ -5554,6 +5554,67 @@ body:has(.sidebar-toggle-btn.is-visible)
   }
 }
 
+/* WYSIWYG designer side panel: keep the canvas full width until a tool is open. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench {
+  grid-template-columns: minmax(0, 1fr) 0 !important;
+  transition: grid-template-columns .18s ease;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel {
+  width: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  border-left: 0 !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
+  grid-template-columns: minmax(560px, 1fr) minmax(340px, 420px) !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel:has(> :not([hidden])) {
+  width: auto !important;
+  overflow: auto !important;
+  border-left: 1px solid #e2e8f0 !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-add-popover {
+  position: static !important;
+  inset: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-height: 100% !important;
+  padding: 16px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-head {
+  top: -16px;
+  margin: -16px -16px 14px;
+  padding: 12px 14px;
+  flex-wrap: wrap;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-head-actions button {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+@media (max-width: 1050px) {
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel:has(> :not([hidden])) {
+    width: 100% !important;
+    max-height: 360px;
+    border-left: 0 !important;
+    border-top: 1px solid #e2e8f0 !important;
+  }
+}
+
 
 /* Wider field settings with all primary actions in the sticky header. */
 #ragicDesignerModal .layout-settings-popover {
