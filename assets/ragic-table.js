@@ -4005,6 +4005,11 @@ const attachLayoutDesignerEvents = (panel) => {
       updateLayoutDesignerState((layout) => { delete layout.fields[key]; });
       return;
     }
+    const editableField = event.target.closest('.layout-wysiwyg-field, .layout-library-item');
+    if (editableField && !event.target.closest('[data-resize], button, input, select, textarea')) {
+      openLayoutFieldSettings(editableField.dataset.fieldKey);
+      return;
+    }
     if (event.target.closest('.btn-preview-layout')) panel.querySelector('.layout-preview')?.scrollIntoView({ block: 'nearest' });
   });
   panel.addEventListener('change', (event) => {
