@@ -10155,6 +10155,8 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 /* The field editor must occupy the full right rail instead of a short popover. */
 #ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel {
   position: relative !important;
+  height: 100% !important;
+  max-height: none !important;
   overflow: hidden !important;
 }
 #ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel > .layout-field-settings:not([hidden]) {
