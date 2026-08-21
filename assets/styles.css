@@ -4145,6 +4145,100 @@ body {
 #ragicDesignerModal .layout-field.is-dragging,
 #ragicDesignerModal .layout-field-chip.is-dragging { cursor: grabbing; opacity: .55; }
 
+/* WYSIWYG form designer: the canvas uses the real view components. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-live-hint {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid {
+  gap: 10px 12px;
+  padding: 14px;
+  align-items: stretch;
+  align-content: start;
+  overflow: auto;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid-slot {
+  min-width: 0;
+  min-height: 64px;
+  border: 1px dashed #dbe4f0;
+  border-radius: 12px;
+  background: rgba(255,255,255,.55);
+}
+#ragicDesignerModal .layout-wysiwyg-field.layout-field {
+  z-index: 2;
+  display: block;
+  width: auto;
+  min-width: 0;
+  min-height: 64px;
+  padding: 12px;
+  color: var(--text, #172033);
+  text-align: left;
+  white-space: normal;
+  overflow: hidden;
+  background: var(--surface-muted, #f8fafc);
+  border: 1px solid var(--border, #d8e0ef);
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.12);
+  cursor: grab;
+}
+#ragicDesignerModal .layout-wysiwyg-field.layout-field:hover,
+#ragicDesignerModal .layout-wysiwyg-field.layout-field:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.16);
+}
+#ragicDesignerModal .layout-wysiwyg-field .ragic-view-label {
+  margin-bottom: 8px;
+}
+#ragicDesignerModal .layout-wysiwyg-field .layout-drag-grip {
+  top: 6px;
+  left: auto;
+  right: 50px;
+  z-index: 8;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: rgba(255,255,255,.9);
+}
+#ragicDesignerModal .layout-wysiwyg-field .settings-btn {
+  top: 5px;
+  right: 25px;
+  z-index: 8;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: rgba(255,255,255,.92);
+}
+#ragicDesignerModal .layout-wysiwyg-field .remove-btn {
+  top: 6px;
+  right: 5px;
+  z-index: 8;
+}
+#ragicDesignerModal .layout-wysiwyg-field.layout-field-subtable {
+  padding: 0;
+  color: var(--text, #172033);
+  background: var(--surface, #fff);
+  border-color: var(--border, #d8e0ef);
+}
+#ragicDesignerModal .layout-wysiwyg-field .ragic-subtable-head {
+  padding-right: 80px;
+}
+#ragicDesignerModal .layout-wysiwyg-field .ragic-table-wrap {
+  max-height: 240px;
+  overflow: auto;
+}
+#ragicDesignerModal .layout-wysiwyg-field .ragic-view-subtable {
+  min-width: 100%;
+}
+#ragicDesignerModal .layout-wysiwyg-field .resize-handle-right,
+#ragicDesignerModal .layout-wysiwyg-field .resize-handle-bottom,
+#ragicDesignerModal .layout-wysiwyg-field .resize-handle-corner {
+  z-index: 9;
+}
+@media (max-width: 900px) {
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-live-hint { width: 100%; }
+}
+
 /* 設計表格：
    移除即時預覽後，放大左側工作區與右側設定欄，
    並避免右側子欄位內容被撐出或截斷。
