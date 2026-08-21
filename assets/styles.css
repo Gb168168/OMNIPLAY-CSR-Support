@@ -9529,6 +9529,16 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   z-index: 1;
 }
 
+/* Preserve one visual line per subtable row in the main list. This must stay
+   after the desktop nowrap rules used by ordinary list cells. */
+#ragicListView .ragic-table td span.ragic-list-subtable-lines {
+  display: block !important;
+  white-space: pre-line !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  line-height: 1.55 !important;
+}
+
 /* Tracking view scrollbar cleanup must stay after the generic compact-view
    rules so empty cards cannot regain overflow from later declarations. */
 #ragicForm .compact-view-grid > .ragic-view-subtable-section:has(> .ragic-view-empty) {

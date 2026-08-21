@@ -812,11 +812,9 @@ const fieldByKey = (key) => getFields().find((field) => field.key === key) || li
 const recordListFieldValue = (record = {}, field = {}) => {
   if (!field.listParentKey || !field.listSubfieldKey) return record[field.key];
   const rows = Array.isArray(record[field.listParentKey]) ? record[field.listParentKey] : [];
-  return rows
-    .map((row) => row?.[field.listSubfieldKey])
-    .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
-    .map((value) => String(valueToText(value)))
-    .join('\n');
+  const values = rows.map((row) => String(valueToText(row?.[field.listSubfieldKey] ?? '')));
+  while (values.length && !values[values.length - 1].trim()) values.pop();
+  return values.join('\n');
 };
 const optionList = (field) => Array.isArray(field.options) ? field.options : String(field.options || '').split('\n').map((item) => item.trim()).filter(Boolean);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
@@ -2606,7 +2604,7 @@ const renderCell = (record, field) => {
   const embeddedImages = imageDataSources(value);
   if (embeddedImages.length) return renderFileCell(embeddedImages, field?.label || '圖片');
   if (field?.listParentKey) {
-    return `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(String(valueToText(value)))}</span>`;
+    return `<span class="ragic-list-subtable-lines">${escapeHtml(String(valueToText(value)))}</span>`;
   }
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
