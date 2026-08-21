@@ -7149,6 +7149,44 @@ body:has(.sidebar-toggle-btn.is-visible)
   }
 }
 
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #dbe5f2;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format > strong {
+  color: #334155;
+  font-size: 12px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format .designer-option-format-toolbar {
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format .designer-option-format-toolbar:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format][hidden] { display: none !important; }
+#ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] .designer-option-format-toolbar {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] select {
+  max-width: 86px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-context-toolbar:has([data-layout-context-format]:not([hidden])) > [data-layout-context-hint] {
+  display: none;
+}
+
 /* Schedule toolbar: keep the primary controls quiet and group secondary actions. */
 .schedule-heading {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
