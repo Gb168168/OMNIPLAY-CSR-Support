@@ -5110,7 +5110,6 @@ body:has(.sidebar-toggle-btn.is-visible)
 
 .tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-fields {
   display: grid !important;
-  grid-template-columns: 68px minmax(180px, 1fr) minmax(120px, .55fr) !important;
   gap: 8px !important;
   align-items: end !important;
 }
@@ -5125,17 +5124,19 @@ body:has(.sidebar-toggle-btn.is-visible)
 
 .tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-field span {
   margin-bottom: 4px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .tracking-page #ragicForm .is-tracking-group-subtable select,
-.tracking-page #ragicForm .is-tracking-group-subtable input {
+.tracking-page #ragicForm .is-tracking-group-subtable input,
+.tracking-page #ragicForm .is-tracking-group-subtable textarea {
   width: 100% !important;
   min-width: 0 !important;
   min-height: 36px !important;
   height: 36px !important;
   padding: 6px 8px !important;
+  font-size: 14px !important;
 }
 
 .tracking-page #ragicForm .is-tracking-group-subtable .subtable-row-delete {
@@ -5171,8 +5172,9 @@ body:has(.sidebar-toggle-btn.is-visible)
 .tracking-page #ragicForm .ragic-view-subtable-section.is-tracking-group-subtable td {
   display: table-cell !important;
   padding: 6px 7px !important;
-  font-size: 12px !important;
-  line-height: 1.35;
+  box-sizing: border-box !important;
+  font-size: 14px !important;
+  line-height: 1.5;
   vertical-align: top;
   overflow-wrap: anywhere;
 }
@@ -5242,7 +5244,6 @@ body:has(.sidebar-toggle-btn.is-visible)
 
 /* Tracking edit: keep APP, group name and wallet type in one horizontal row. */
 .tracking-page #ragicForm .is-tracking-group-subtable.has-inline-wallet-field .subtable-row-fields {
-  grid-template-columns: 68px minmax(180px, 1fr) minmax(120px, .55fr) !important;
   align-items: end;
 }
 
@@ -5265,7 +5266,7 @@ body:has(.sidebar-toggle-btn.is-visible)
 .tracking-page #ragicForm .is-tracking-group-subtable .tracking-inline-wallet-field > span {
   display: block;
   margin: 0 0 4px !important;
-  font-size: 11px !important;
+  font-size: 13px !important;
   color: var(--text-secondary);
 }
 
