@@ -7187,6 +7187,89 @@ body:has(.sidebar-toggle-btn.is-visible)
   display: none;
 }
 
+/* Final WYSIWYG workspace polish: readable cards and a non-clipping settings rail. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-canvas {
+  padding: 10px 12px 12px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-context-toolbar {
+  min-height: 42px;
+  margin-bottom: 6px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid {
+  padding: 10px;
+  gap: 8px 10px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid-slot {
+  min-height: 58px;
+}
+#ragicDesignerModal .layout-wysiwyg-field.layout-field {
+  min-height: 58px;
+  padding: 10px 12px;
+  box-shadow: none;
+}
+#ragicDesignerModal .layout-wysiwyg-field.layout-field:hover,
+#ragicDesignerModal .layout-wysiwyg-field.layout-field.is-selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.17);
+}
+#ragicDesignerModal .layout-wysiwyg-field > .layout-drag-grip,
+#ragicDesignerModal .layout-wysiwyg-field > .settings-btn,
+#ragicDesignerModal .layout-wysiwyg-field > .remove-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+#ragicDesignerModal .layout-wysiwyg-field:hover > .layout-drag-grip,
+#ragicDesignerModal .layout-wysiwyg-field:hover > .settings-btn,
+#ragicDesignerModal .layout-wysiwyg-field:hover > .remove-btn,
+#ragicDesignerModal .layout-wysiwyg-field.is-selected > .layout-drag-grip,
+#ragicDesignerModal .layout-wysiwyg-field.is-selected > .settings-btn,
+#ragicDesignerModal .layout-wysiwyg-field.is-selected > .remove-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+#ragicDesignerModal .layout-library-item.is-selected {
+  border-color: #2563eb !important;
+  background: #dbeafe !important;
+  color: #1d4ed8;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel * {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel {
+  overflow-x: hidden !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-field-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 12px;
+  overflow-x: hidden !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-list-settings,
+#ragicDesignerModal .layout-wysiwyg-designer .designer-list-settings > label,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format {
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100%;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel input,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel select,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel textarea {
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-option-format-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(32px, auto));
+  align-items: center;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-option-format-toolbar select,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-option-format-toolbar label,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel .designer-option-format-toolbar [data-clear-field-style] {
+  grid-column: span 2;
+}
+
 /* Schedule toolbar: keep the primary controls quiet and group secondary actions. */
 .schedule-heading {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;

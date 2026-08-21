@@ -3632,7 +3632,10 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
 
 
 const designerFieldRowsFromModal = () => [...document.querySelectorAll('#ragicDesignerModal .designer-body > .designer-field')];
-const currentDesignerLayout = () => normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, readDesigner(document.querySelector('#ragicDesignerModal .designer-body') || document.createElement('div')));
+const currentDesignerLayout = () => compactEmptyLayoutRows(
+  normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, readDesigner(document.querySelector('#ragicDesignerModal .designer-body') || document.createElement('div'))),
+  true
+);
 const placedLayoutKeys = (layout) => new Set(Object.keys(layout.fields || {}));
 const layoutCellsOverlap = (a, b) => a.row < b.row + b.rowSpan && a.row + a.rowSpan > b.row && a.col < b.col + b.colSpan && a.col + a.colSpan > b.col;
 const isLayoutAreaFree = (layout, fieldKey, candidate) => !Object.entries(layout.fields || {}).some(([key, item]) => key !== fieldKey && layoutCellsOverlap(candidate, item));
@@ -3752,7 +3755,7 @@ const renderLayoutDesigner = () => {
   const body = modal?.querySelector('.designer-body');
   if (!panel || !body) return;
   const fields = readDesigner(body);
-  const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
+  const layout = compactEmptyLayoutRows(normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields), true);
   const fixedLogLayout = false;
   const rowsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
   const colsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
@@ -3891,6 +3894,10 @@ const openLayoutFieldSettings = (fieldKey) => {
   bindDirectFieldFormatControls(panel, fieldKey);
   const designer = panel.closest('.layout-wysiwyg-designer');
   if (designer) designer.dataset.selectedFieldKey = fieldKey;
+  designer?.querySelectorAll('.layout-wysiwyg-field.is-selected, .layout-library-item.is-selected').forEach((element) => element.classList.remove('is-selected'));
+  const escapedSelectedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/"/g, '\\"');
+  designer?.querySelector(`.layout-wysiwyg-field[data-field-key="${escapedSelectedKey}"]`)?.classList.add('is-selected');
+  designer?.querySelector(`.layout-library-item[data-field-key="${escapedSelectedKey}"]`)?.classList.add('is-selected');
   const contextToolbar = designer?.querySelector('[data-layout-context-format]');
   if (contextToolbar) {
     contextToolbar.hidden = false;
@@ -3920,7 +3927,7 @@ const autoLayoutFields = (layout, fields) => {
 const updateLayoutDesignerState = (patcher) => {
   const body = document.querySelector('#ragicDesignerModal .designer-body');
   const fields = readDesigner(body || document.createElement('div'));
-  const layout = normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields);
+  const layout = compactEmptyLayoutRows(normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout, fields), true);
   patcher(layout, fields);
   RAGIC_STATE.schema = { ...(RAGIC_STATE.schema || {}), fields: normalizeFields(fields), formLayout: normalizeDesignerFormLayout(layout, fields) };
   renderLayoutDesigner();
