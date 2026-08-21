@@ -3688,6 +3688,49 @@ const refreshLayoutWidthHint = (panel = document.querySelector('#layoutFieldSett
   const spanWidth = layoutSpanWidth(grid, colSpan);
   hint.textContent = spanWidth ? `跨欄 ${colSpan} 欄約 ${spanWidth}px` : '跨欄寬度會依目前畫布寬度計算';
 };
+const designerSampleValue = (field = {}, index = 0) => {
+  const configured = field.defaultValue;
+  if (![undefined, null, ''].includes(configured)) return configured;
+  if (field.type === 'date') return '2026-08-21';
+  if (['datetime', 'createdDate', 'updatedDate', 'reminderTime'].includes(field.type)) return '2026-08-21 01:30';
+  if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field.type)) return true;
+  if (field.type === 'link') return 'https://example.com/';
+  if (field.type === 'textarea') return '這裡會直接顯示多行內容，設計時看到的大小與檢視畫面相同。';
+  if (field.type === 'image') return '';
+  if (field.type === 'file') return '';
+  if (['select', 'multiselect'].includes(field.type)) return optionList(field)[0] || '選項範例';
+  return index === 0 ? '範例資料' : `範例資料 ${index + 1}`;
+};
+const designerSampleRows = (field = {}) => [0, 1].map((rowIndex) => Object.fromEntries(
+  (field.fields || []).map((subfield, columnIndex) => [subfield.key, designerSampleValue(subfield, rowIndex + columnIndex)])
+));
+const createDesignerViewField = (field = {}, item = {}) => {
+  const isSubtable = field.type === 'subtable';
+  const element = document.createElement(isSubtable ? 'section' : 'div');
+  element.className = isSubtable
+    ? 'ragic-subtable ragic-view-subtable-section layout-field layout-field-subtable layout-wysiwyg-field'
+    : `ragic-view-field ragic-view-field-${field.type || 'text'} layout-field layout-wysiwyg-field`;
+  element.dataset.fieldKey = field.key;
+  element.dataset.type = field.type || 'text';
+  element.style.gridColumn = `${item.col} / span ${item.colSpan}`;
+  element.style.gridRow = `${item.row} / span ${item.rowSpan}`;
+  if (item.height && !(isTrackingModule() && isSubtable)) {
+    element.style.height = `${item.height}px`;
+    element.style.minHeight = `${item.height}px`;
+  }
+  if (isSubtable) {
+    element.dataset.subtable = field.key;
+    element.innerHTML = `<div class="ragic-subtable-head"><h3 class="ragic-subtable-title">${escapeHtml(field.label || field.key)}</h3></div>${renderSubtableView(field, designerSampleRows(field))}`;
+  } else {
+    const value = designerSampleValue(field);
+    const isToggle = isReminderEnabledField(field) || field.type === 'reportEnabled';
+    element.classList.toggle('ragic-view-field-pair-toggle', isToggle);
+    element.classList.toggle('is-checked', isToggle && Boolean(value));
+    element.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${isReminderEnabledField(field) ? '已啟用' : (isToggle ? '' : renderDisplayValue(field, value))}</div>`;
+  }
+  element.insertAdjacentHTML('beforeend', '<span class="layout-drag-grip" title="拖曳欄位" aria-label="拖曳欄位">⠿</span><button class="settings-btn" type="button" title="設定">⚙️</button><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>');
+  return element;
+};
 const renderLayoutDesigner = () => {
   const modal = document.querySelector('#ragicDesignerModal');
   const panel = modal?.querySelector('#layoutDesignerPanel');
@@ -3699,21 +3742,6 @@ const renderLayoutDesigner = () => {
   const rowsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
   const colsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
   const placed = placedLayoutKeys(layout);
-  const gridLines = [];
-  for (let row = 1; row <= layout.rows; row += 1) for (let col = 1; col <= layout.columns; col += 1) gridLines.push(`<div class="layout-grid-slot" data-row="${row}" data-col="${col}" style="grid-column:${col};grid-row:${row};"></div>`);
-  const placedFields = fields.filter((field) => placed.has(field.key)).map((field) => {
-  const item = layout.fields[field.key];
-    
-    const fixedLogField = fixedLogLayout && Boolean(logFieldLayoutFor(field));
-    const useDesignerPixelHeight =
-      item.height &&
-      !(isTrackingModule() && field.type === 'subtable');
-    const size =
-  `${useDesignerPixelHeight
-    ? `height:${item.height}px;min-height:${item.height}px;`
-    : ''}`;
-    return `<div class="layout-field ${field.type === 'subtable' ? 'layout-field-subtable' : ''}" draggable="false" ${fixedLogField ? 'data-layout-locked="true"' : ''} data-field-key="${escapeHtml(field.key)}" style="grid-column:${item.col} / span ${item.colSpan};grid-row:${item.row} / span ${item.rowSpan};${size}"><span class="layout-drag-grip" title="拖曳欄位" aria-label="拖曳欄位">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small>${field.type === 'subtable' ? '<button class="subtable-edit-btn" type="button">編輯子表格</button>' : ''}<button class="settings-btn" type="button" title="設定">⚙️</button>${fixedLogField ? '' : '<button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>'}</div>`;
-  }).join('');
   const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button><button class="remove-btn" type="button" aria-label="移除欄位">×</button></div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
   const normalFieldTypeButtons = FIELD_TYPES.map((type) => `
   <button
@@ -3739,7 +3767,22 @@ const pairFieldTypeButtons = FIELD_PAIR_TYPES.map((type) => `
 
 const fieldTypeButtons =
   normalFieldTypeButtons + pairFieldTypeButtons;
-  panel.innerHTML = `<div class="layout-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>排版表格（拖曳欄位到表格中，可調整大小、跨欄跨列） 欄框設置131x48</h3><div class="layout-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="排版表格拖曳區" style="grid-template-columns:repeat(${layout.columns}, 131px);grid-template-rows:repeat(${layout.rows}, 48px);">${gridLines.join('')}${placedFields}</div></div></main><aside class="layout-side-panel"><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings layout-settings-popover" hidden></aside></aside></div></div>`;
+  panel.innerHTML = `<div class="layout-designer layout-wysiwyg-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><strong>表單設計（所見即所得）</strong><span class="layout-live-hint">設計畫面＝檢視畫面，邊改邊看效果</span><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>直接拖曳欄位調整位置；拖曳藍色邊線調整寬高；點擊欄位開啟設定</h3><div class="layout-grid ragic-form-grid ragic-view-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="所見即所得表單設計區"></div></div></main><aside class="layout-side-panel"><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings layout-settings-popover" hidden></aside></aside></div></div>`;
+  const grid = panel.querySelector('.layout-grid');
+  grid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
+  grid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(64px, auto))`;
+  for (let row = 1; row <= layout.rows; row += 1) {
+    for (let col = 1; col <= layout.columns; col += 1) {
+      const slot = document.createElement('div');
+      slot.className = 'layout-grid-slot';
+      slot.dataset.row = row;
+      slot.dataset.col = col;
+      slot.style.gridColumn = col;
+      slot.style.gridRow = row;
+      grid.appendChild(slot);
+    }
+  }
+  fields.filter((field) => placed.has(field.key)).forEach((field) => grid.appendChild(createDesignerViewField(field, layout.fields[field.key])));
 };
 const updateDesignerFieldByKey = (fieldKey, patcher) => {
   const escapedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\\"');
