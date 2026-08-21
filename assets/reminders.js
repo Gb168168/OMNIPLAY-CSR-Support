@@ -134,8 +134,7 @@
   };
   const registerPushToken = async () => {
     if (!window.firebase?.messaging || !db) return;
-    try {
-      const config = await db.collection('settings').doc('reminders').get(); const vapidKey = config.data()?.vapidPublicKey;
+    try { const config = await db.collection('settings').doc('reminders').get(); const vapidKey = config.data()?.vapidPublicKey;
       if (!vapidKey) return;
       const registration = await navigator.serviceWorker.ready;
       const token = await firebase.messaging().getToken({ vapidKey, serviceWorkerRegistration: registration });
@@ -158,4 +157,14 @@
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
+})();
+
+(() => {
+  const normalizedPath = window.location.pathname.replace(/^\/OMNIPLAY-CSR-Support/, '');
+  if (!new Set(['/work/log.html', '/work/log-new.html', '/work/handover.html', '/work/report.html', '/work/alert.html']).has(normalizedPath)) return;
+  if (document.querySelector('script[data-ragic-schema-recovery]')) return;
+  const script = document.createElement('script');
+  script.src = '../assets/ragic-schema-recovery.js?v=20260821-schema-stall2';
+  script.dataset.ragicSchemaRecovery = 'true';
+  document.head.appendChild(script);
 })();
