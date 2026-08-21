@@ -7149,6 +7149,44 @@ body:has(.sidebar-toggle-btn.is-visible)
   }
 }
 
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #dbe5f2;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format > strong {
+  color: #334155;
+  font-size: 12px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format .designer-option-format-toolbar {
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-direct-format .designer-option-format-toolbar:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format][hidden] { display: none !important; }
+#ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] .designer-option-format-toolbar {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer [data-layout-context-format] select {
+  max-width: 86px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-context-toolbar:has([data-layout-context-format]:not([hidden])) > [data-layout-context-hint] {
+  display: none;
+}
+
 /* Schedule toolbar: keep the primary controls quiet and group secondary actions. */
 .schedule-heading {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
@@ -9835,4 +9873,158 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   line-height: 1.35;
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+/* Three-column WYSIWYG form designer (field library / canvas / settings). */
+#ragicDesignerModal .layout-wysiwyg-designer {
+  grid-template-rows: auto minmax(0, 1fr) !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 320px !important;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-field-library {
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid #e2e8f0;
+  background: #fff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  gap: 3px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-head small { color: #64748b; }
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-list {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 26px;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 8px;
+  border-radius: 8px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-item.is-placed {
+  border-color: #93b5ff;
+  background: #eff6ff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-copy {
+  display: grid;
+  min-width: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-copy b,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-canvas {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-context-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 38px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px solid #dbe5f2;
+  border-radius: 9px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-context-toolbar b { color: #2563eb; }
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid-section { min-height: 0; }
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid { min-height: 100%; }
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel:has(> :not([hidden])) {
+  display: block;
+  width: auto !important;
+  min-width: 0 !important;
+  overflow: auto !important;
+  border-left: 1px solid #e2e8f0 !important;
+  background: #fff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-empty {
+  display: grid;
+  gap: 8px;
+  padding: 18px 16px;
+  color: #64748b;
+  text-align: left;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-empty strong { color: #172033; }
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-empty p { margin: 0; }
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel:has(.layout-settings-popover:not([hidden])) > .layout-settings-empty,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel:has(.layout-add-popover:not([hidden])) > .layout-settings-empty {
+  display: none;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-mode-switch {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #d8e0ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-mode-switch button {
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-mode-switch button.active {
+  background: #2563eb;
+  color: #fff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-field-library,
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-side-panel,
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-context-toolbar,
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-grid-slot,
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-wysiwyg-field > .layout-drag-grip,
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-wysiwyg-field > .settings-btn,
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-wysiwyg-field > .remove-btn,
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-wysiwyg-field > [data-resize] {
+  display: none !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-workbench {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-canvas {
+  grid-template-rows: minmax(0, 1fr);
+  padding: 18px 24px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer[data-layout-mode="preview"] .layout-wysiwyg-field.layout-field {
+  box-shadow: none;
+  cursor: default;
+}
+@media (max-width: 1100px) {
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench,
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
+    grid-template-columns: 190px minmax(0, 1fr) 280px !important;
+  }
 }

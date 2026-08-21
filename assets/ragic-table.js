@@ -2477,7 +2477,7 @@ const renderViewForm = (form, record = {}) => {
       ? fieldValue.some((entry) => entry && Object.values(entry).some(Boolean))
       : ![undefined, null, ''].includes(fieldValue);
     item.classList.toggle('is-empty-view-field', !hasValue);
-    item.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${isReminderEnabledField(field) ? '已啟用' : (isPairToggle ? '' : renderDisplayValue(field, fieldValue))}</div>`;
+    item.innerHTML = `<div class="ragic-view-label" style="${textStyleCss(field.headerStyle)}">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value" style="${textStyleCss(field.contentStyle)}">${isReminderEnabledField(field) ? '已啟用' : (isPairToggle ? '' : renderDisplayValue(field, fieldValue))}</div>`;
     appendFormResizeHandles(item, field);
     grid.appendChild(item);
   });
@@ -3528,6 +3528,11 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
   const legacy = LEGACY_FIELD_TYPES.some((type) => type.value === field.type) ? `<optgroup label="舊類型（僅既有欄位）">${LEGACY_FIELD_TYPES.map((type) => `<option value="${type.value}" ${field.type === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}</optgroup>` : '';
   row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}${legacy}</select><textarea data-role="options" placeholder="選項，每行一個">${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-required"><input data-role="required" type="checkbox" ${field.required ? 'checked' : ''}> 必填</label><label class="designer-width"><span>寬度</span><input data-role="width" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-form-layout" aria-label="表單排版"><label><span>列</span><input data-role="form-row" type="number" min="1" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formRow) ?? '')}"></label><label><span>欄</span><input data-role="form-col" type="number" min="1" max="4" step="1" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFormLayoutNumber(field.formCol, { max: 4 }) ?? '')}"></label><label><span>跨欄</span><input data-role="form-colspan" type="number" min="1" max="4" step="1" inputmode="numeric" value="${escapeHtml(normalizeFormLayoutNumber(field.formColSpan, { max: 4, fallback: 1 }))}"></label></div><input data-role="default" type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-role="help" type="hidden" value="${escapeHtml(field.help || '')}"><input data-role="readonly" type="hidden" value="${field.readonly ? '1' : ''}"><input data-role="hidden" type="hidden" value="${field.hidden ? '1' : ''}"><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div><div class="designer-subfields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-role="columns-per-row" type="number" min="1" max="10" step="1" inputmode="numeric" value="${escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow))}"><span>個欄位</span></label></div><div class="designer-subfield-list"></div><button class="secondary" data-add-subfield type="button">+ 新增子欄位</button></div>`;
   attachOptionColorEditor(row, field);
+  const fieldStylesInput = document.createElement('input');
+  fieldStylesInput.type = 'hidden';
+  fieldStylesInput.dataset.role = 'field-styles';
+  fieldStylesInput.value = JSON.stringify({ headerStyle: normalizeTextStyle(field.headerStyle), contentStyle: normalizeTextStyle(field.contentStyle) });
+  row.appendChild(fieldStylesInput);
   const listVisibleInput = document.createElement('input');
   listVisibleInput.type = 'hidden';
   listVisibleInput.dataset.role = 'list-visible';
@@ -3591,6 +3596,16 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
     listHorizontalAlign: normalizeListHorizontalAlign(row.querySelector('[data-role="list-horizontal-align"]')?.value),
     listVerticalAlign: normalizeListVerticalAlign(row.querySelector('[data-role="list-vertical-align"]')?.value)
   };
+  if (!row.classList.contains('designer-subfield-row')) {
+    try {
+      const styles = JSON.parse(row.querySelector('[data-role="field-styles"]')?.value || '{}');
+      field.headerStyle = normalizeTextStyle(styles.headerStyle);
+      field.contentStyle = normalizeTextStyle(styles.contentStyle);
+    } catch {
+      field.headerStyle = {};
+      field.contentStyle = {};
+    }
+  }
   if (row.classList.contains('designer-subfield-row')) {
     try {
       const styles = JSON.parse(row.querySelector('[data-role="subfield-styles"]')?.value || '{}');
@@ -3726,7 +3741,7 @@ const createDesignerViewField = (field = {}, item = {}) => {
     const isToggle = isReminderEnabledField(field) || field.type === 'reportEnabled';
     element.classList.toggle('ragic-view-field-pair-toggle', isToggle);
     element.classList.toggle('is-checked', isToggle && Boolean(value));
-    element.innerHTML = `<div class="ragic-view-label">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value">${isReminderEnabledField(field) ? '已啟用' : (isToggle ? '' : renderDisplayValue(field, value))}</div>`;
+    element.innerHTML = `<div class="ragic-view-label" style="${textStyleCss(field.headerStyle)}">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value" style="${textStyleCss(field.contentStyle)}">${isReminderEnabledField(field) ? '已啟用' : (isToggle ? '' : renderDisplayValue(field, value))}</div>`;
   }
   element.insertAdjacentHTML('beforeend', '<span class="layout-drag-grip" title="拖曳欄位" aria-label="拖曳欄位">⠿</span><button class="settings-btn" type="button" title="設定">⚙️</button><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>');
   return element;
@@ -3742,7 +3757,7 @@ const renderLayoutDesigner = () => {
   const rowsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
   const colsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
   const placed = placedLayoutKeys(layout);
-  const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button><button class="remove-btn" type="button" aria-label="移除欄位">×</button></div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
+  const fieldLibrary = fields.map((field) => `<div class="layout-field-chip layout-library-item ${placed.has(field.key) ? 'is-placed' : 'is-unplaced'} ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><span class="layout-library-copy"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small></span><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button></div>`).join('') || '<span class="layout-empty">尚未建立欄位</span>';
   const normalFieldTypeButtons = FIELD_TYPES.map((type) => `
   <button
     class="layout-type-button"
@@ -3767,7 +3782,9 @@ const pairFieldTypeButtons = FIELD_PAIR_TYPES.map((type) => `
 
 const fieldTypeButtons =
   normalFieldTypeButtons + pairFieldTypeButtons;
-  panel.innerHTML = `<div class="layout-designer layout-wysiwyg-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><strong>表單設計（所見即所得）</strong><span class="layout-live-hint">設計畫面＝檢視畫面，邊改邊看效果</span><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>直接拖曳欄位調整位置；拖曳藍色邊線調整寬高；點擊欄位開啟設定</h3><div class="layout-grid ragic-form-grid ragic-view-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="所見即所得表單設計區"></div></div></main><aside class="layout-side-panel"><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings layout-settings-popover" hidden></aside></aside></div></div>`;
+  panel.innerHTML = `<div class="layout-designer layout-wysiwyg-designer" data-layout-mode="design"><div class="layout-toolbar"><div class="layout-toolbar-controls"><div class="layout-mode-switch" role="group" aria-label="設計模式切換"><button class="active" data-layout-mode="design" type="button">設計模式</button><button data-layout-mode="preview" type="button">檢視模式</button></div><span class="layout-live-hint">✓ 設計畫面＝檢視畫面，邊改邊看效果</span><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-workbench"><aside class="layout-field-library"><div class="layout-library-head"><strong>欄位清單</strong><small>拖曳欄位調整位置</small></div><div class="layout-library-list">${fieldLibrary}</div></aside><main class="layout-canvas"><div class="layout-context-toolbar"><span>點擊欄位後，在右側直接調整</span><b>拖曳藍色邊線可改寬高</b></div><div class="layout-grid-section"><div class="layout-grid ragic-form-grid ragic-view-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="所見即所得表單設計區"></div></div></main><aside class="layout-side-panel"><div class="layout-settings-empty"><strong>欄位設定</strong><p>請點選中央畫布或左側清單中的欄位。</p></div><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings layout-settings-popover" hidden></aside></aside></div></div>`;
+  const contextBar = panel.querySelector('.layout-context-toolbar');
+  if (contextBar) contextBar.innerHTML = '<div data-layout-context-format hidden></div><span data-layout-context-hint>點擊欄位後即可在這裡調整格式</span><b>拖曳藍色邊線可改寬高</b>';
   const grid = panel.querySelector('.layout-grid');
   grid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
   grid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(64px, auto))`;
@@ -3803,6 +3820,60 @@ const removeDesignerFieldByKey = (fieldKey) => {
   return true;
 };
 
+const updateDesignerFieldTextStyle = (fieldKey, kind, patcher) => {
+  const row = designerRowByKey(fieldKey);
+  const hidden = row?.querySelector('[data-role="field-styles"]');
+  if (!hidden || !['headerStyle', 'contentStyle'].includes(kind)) return;
+  let styles = {};
+  try { styles = JSON.parse(hidden.value || '{}'); } catch { styles = {}; }
+  styles[kind] = normalizeTextStyle(patcher(normalizeTextStyle(styles[kind])));
+  hidden.value = JSON.stringify(styles);
+  const escapedKey = window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/"/g, '\\"');
+  const fieldElement = document.querySelector(`#layoutDesignerPanel .layout-wysiwyg-field[data-field-key="${escapedKey}"]`);
+  const target = kind === 'headerStyle'
+    ? fieldElement?.querySelector(':scope > .ragic-view-label')
+    : fieldElement?.querySelector(':scope > .ragic-view-value');
+  if (target) target.style.cssText = textStyleCss(styles[kind]);
+};
+const bindDirectFieldFormatControls = (scope, fieldKey) => {
+  if (!scope || scope.dataset.directFormatBound === 'true') return;
+  scope.dataset.directFormatBound = 'true';
+  const syncToolbar = (toolbar) => updateDesignerFieldTextStyle(fieldKey, toolbar.dataset.fieldStyleToolbar, (old) => ({
+    ...old,
+    fontSize: Number(toolbar.querySelector('[data-field-font-size]')?.value) || 14,
+    color: toolbar.querySelector('[data-field-text-color]')?.value || '',
+    backgroundColor: toolbar.querySelector('[data-field-background-color]')?.value || '',
+    textAlign: toolbar.querySelector('[data-field-text-align]')?.value || 'left',
+    verticalAlign: toolbar.querySelector('[data-field-vertical-align]')?.value || 'middle'
+  }));
+  scope.addEventListener('input', (event) => {
+    const toolbar = event.target.closest('[data-field-style-toolbar]');
+    if (toolbar) syncToolbar(toolbar);
+  });
+  scope.addEventListener('click', (event) => {
+    const toolbar = event.target.closest('[data-field-style-toolbar]');
+    if (!toolbar) return;
+    const step = event.target.closest('[data-field-font-step]');
+    if (step) {
+      const input = toolbar.querySelector('[data-field-font-size]');
+      input.value = String(Math.min(32, Math.max(10, Number(input.value || 14) + Number(step.dataset.fieldFontStep))));
+      syncToolbar(toolbar);
+      return;
+    }
+    const toggle = event.target.closest('[data-field-style-toggle]');
+    if (toggle) {
+      toggle.classList.toggle('is-active');
+      updateDesignerFieldTextStyle(fieldKey, toolbar.dataset.fieldStyleToolbar, (old) => ({ ...old, [toggle.dataset.fieldStyleToggle]: toggle.classList.contains('is-active') }));
+      return;
+    }
+    if (event.target.closest('[data-clear-field-style]')) {
+      updateDesignerFieldTextStyle(fieldKey, toolbar.dataset.fieldStyleToolbar, () => ({}));
+      toolbar.querySelector('[data-field-font-size]').value = '14';
+      toolbar.querySelectorAll('[data-field-style-toggle]').forEach((button) => button.classList.remove('is-active'));
+    }
+  });
+};
+
 const openLayoutFieldSettings = (fieldKey) => {
   const field = readDesigner(document.querySelector('#ragicDesignerModal .designer-body') || document.createElement('div')).find((item) => item.key === fieldKey);
   const layout = currentDesignerLayout();
@@ -3813,9 +3884,19 @@ const openLayoutFieldSettings = (fieldKey) => {
   const options = optionList(field).join('\n');
   panel.innerHTML = `<div class="layout-settings-head"><h3>欄位屬性設定</h3><div class="layout-settings-head-actions"><button class="primary" data-confirm-settings type="button">確認並儲存</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button><button class="secondary" data-close-layout-settings type="button">關閉</button></div></div><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><textarea data-option-list data-option rows="7" placeholder="每行一個選項">${escapeHtml(options)}</textarea></div><input data-setting-default type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-setting-help type="hidden" value="${escapeHtml(field.help || '')}"><input data-layout-row type="hidden" value="${escapeHtml(item.row || 1)}"><input data-layout-col type="hidden" value="${escapeHtml(item.col || 1)}"><input data-layout-rowspan type="hidden" value="${escapeHtml(item.rowSpan || 1)}"><input data-layout-colspan type="hidden" value="${escapeHtml(item.colSpan || 1)}"><input data-layout-width type="hidden" value="${escapeHtml(item.width || field.formWidth || '')}"><input data-layout-height type="hidden" value="${escapeHtml(layoutHeightValue(item, field))}"><input data-setting-required type="hidden" value="${field.required ? '1' : ''}"><input data-setting-readonly type="hidden" value="${field.readonly ? '1' : ''}"><input data-setting-hidden type="hidden" value="${field.hidden ? '1' : ''}">${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}`;
   attachOptionColorEditor(panel, field, { optionsSelector: '[data-option-list]', typeSelector: '[data-setting-type]' });
+  panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<section class="layout-direct-format"><strong>標題格式</strong>${textFormatToolbarHtml('headerStyle', field.headerStyle)}<strong>內容格式</strong>${textFormatToolbarHtml('contentStyle', field.contentStyle)}</section>`);
   panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<section class="designer-list-settings"><div class="designer-list-settings-head"><strong>列表顯示設定</strong><span>只影響列表，欄位仍會保留在表單中</span></div><label class="designer-list-visible"><span>顯示在列表</span><input data-setting-list-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}><i aria-hidden="true"></i></label><label class="designer-list-width"><span>列表欄寬</span><div><input data-setting-list-width type="number" min="40" max="2000" step="10" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><em>px</em></div></label></section>`);
   panel.hidden = false;
   panel.dataset.fieldKey = fieldKey;
+  bindDirectFieldFormatControls(panel, fieldKey);
+  const designer = panel.closest('.layout-wysiwyg-designer');
+  if (designer) designer.dataset.selectedFieldKey = fieldKey;
+  const contextToolbar = designer?.querySelector('[data-layout-context-format]');
+  if (contextToolbar) {
+    contextToolbar.hidden = false;
+    contextToolbar.innerHTML = `<span>目前選取：<b>${escapeHtml(field.label || field.key)}</b></span>${textFormatToolbarHtml('contentStyle', field.contentStyle)}`;
+    bindDirectFieldFormatControls(contextToolbar, fieldKey);
+  }
   const subfieldList = panel.querySelector('[data-setting-subfields]');
   if (subfieldList) (field.fields || []).forEach((child) => subfieldList.appendChild(fieldDesigner(child, true)));
   refreshSubfieldWidthSummary(panel);
@@ -3890,6 +3971,14 @@ const attachLayoutDesignerEvents = (panel) => {
   });
   panel.addEventListener('dragend', () => { dragKey = ''; panel.querySelector('.layout-drop-preview')?.remove(); panel.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging')); });
   panel.addEventListener('click', (event) => {
+    const modeButton = event.target.closest('[data-layout-mode]');
+    if (modeButton?.tagName === 'BUTTON') {
+      const designer = modeButton.closest('.layout-wysiwyg-designer');
+      const mode = modeButton.dataset.layoutMode === 'preview' ? 'preview' : 'design';
+      if (designer) designer.dataset.layoutMode = mode;
+      designer?.querySelectorAll('.layout-mode-switch button').forEach((button) => button.classList.toggle('active', button === modeButton));
+      return;
+    }
     const remove = event.target.closest('.remove-btn');
     if (remove) {
       const key = remove.closest('[data-field-key]')?.dataset.fieldKey;
