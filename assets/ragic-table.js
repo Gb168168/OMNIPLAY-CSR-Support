@@ -863,7 +863,8 @@ const attachOptionColorEditor = (root, field = {}, { optionsSelector = '[data-ro
     const options = String(optionsInput.value || '').split(/\n+/).map((item) => item.trim()).filter(Boolean);
     editor.innerHTML = options.length ? `<strong>選項顏色</strong>${options.map((option) => {
       const style = styles[option] || {};
-      return `<div class="designer-option-format-row" data-option-color="${escapeHtml(option)}"><strong>${escapeHtml(option)}</strong><div class="designer-option-format-toolbar"><button type="button" data-font-size-step="-1" title="縮小字體">−</button><input type="number" min="10" max="32" step="1" data-option-font-size value="${style.fontSize || 14}" title="字體大小"><button type="button" data-font-size-step="1" title="放大字體">＋</button><button type="button" data-option-toggle="bold" class="${style.bold ? 'is-active' : ''}" title="粗體"><b>B</b></button><button type="button" data-option-toggle="italic" class="${style.italic ? 'is-active' : ''}" title="斜體"><i>I</i></button><button type="button" data-option-toggle="strike" class="${style.strike ? 'is-active' : ''}" title="刪除線"><s>S</s></button><label title="文字顏色">A<input type="color" data-option-text-color value="${style.color || '#1f2937'}"></label><label title="背景顏色">▰<input type="color" data-option-background-color value="${style.backgroundColor || '#ffffff'}"></label><select data-option-text-align title="水平對齊"><option value="left" ${style.textAlign === 'left' ? 'selected' : ''}>靠左</option><option value="center" ${style.textAlign === 'center' ? 'selected' : ''}>置中</option><option value="right" ${style.textAlign === 'right' ? 'selected' : ''}>靠右</option></select><select data-option-vertical-align title="垂直對齊"><option value="top" ${style.verticalAlign === 'top' ? 'selected' : ''}>靠上</option><option value="middle" ${!style.verticalAlign || style.verticalAlign === 'middle' ? 'selected' : ''}>置中</option><option value="bottom" ${style.verticalAlign === 'bottom' ? 'selected' : ''}>靠下</option></select><button type="button" data-clear-option-color title="清除格式">清除</button></div></div>`;
+      const previewCss = optionStyleCss({ optionStyles: { [option]: style } }, option);
+      return `<details class="designer-option-format-row" data-option-color="${escapeHtml(option)}"><summary><span${previewCss ? ` style="${previewCss}"` : ''}>${escapeHtml(option)}</span><b>🎨 格式</b></summary><div class="designer-option-format-toolbar"><button type="button" data-font-size-step="-1" title="縮小字體">−</button><input type="number" min="10" max="32" step="1" data-option-font-size value="${style.fontSize || 14}" title="字體大小"><button type="button" data-font-size-step="1" title="放大字體">＋</button><button type="button" data-option-toggle="bold" class="${style.bold ? 'is-active' : ''}" title="粗體"><b>B</b></button><button type="button" data-option-toggle="italic" class="${style.italic ? 'is-active' : ''}" title="斜體"><i>I</i></button><button type="button" data-option-toggle="strike" class="${style.strike ? 'is-active' : ''}" title="刪除線"><s>S</s></button><label title="文字顏色">A<input type="color" data-option-text-color value="${style.color || '#1f2937'}"></label><label title="背景顏色">▰<input type="color" data-option-background-color value="${style.backgroundColor || '#ffffff'}"></label><select data-option-text-align title="水平對齊"><option value="left" ${style.textAlign === 'left' ? 'selected' : ''}>靠左</option><option value="center" ${style.textAlign === 'center' ? 'selected' : ''}>置中</option><option value="right" ${style.textAlign === 'right' ? 'selected' : ''}>靠右</option></select><select data-option-vertical-align title="垂直對齊"><option value="top" ${style.verticalAlign === 'top' ? 'selected' : ''}>靠上</option><option value="middle" ${!style.verticalAlign || style.verticalAlign === 'middle' ? 'selected' : ''}>置中</option><option value="bottom" ${style.verticalAlign === 'bottom' ? 'selected' : ''}>靠下</option></select><button type="button" data-clear-option-color title="清除格式">清除</button></div></details>`;
     }).join('')}` : '<small>請先輸入選項</small>';
   };
   editor.addEventListener('input', (event) => {
@@ -910,6 +911,76 @@ const attachOptionColorEditor = (root, field = {}, { optionsSelector = '[data-ro
   optionsInput.addEventListener('input', refresh);
   typeInput.addEventListener('change', refresh);
   refresh();
+};
+const normalizeTextStyle = (value) => normalizeOptionStyles({ value }).value || {};
+const textStyleCss = (value) => optionStyleCss({ optionStyles: { value: normalizeTextStyle(value) } }, 'value');
+const textFormatToolbarHtml = (kind, styleValue = {}) => {
+  const style = normalizeTextStyle(styleValue);
+  return `<div class="designer-option-format-toolbar" data-field-style-toolbar="${kind}"><button type="button" data-field-font-step="-1">−</button><input type="number" min="10" max="32" value="${style.fontSize || 14}" data-field-font-size><button type="button" data-field-font-step="1">＋</button><button type="button" data-field-style-toggle="bold" class="${style.bold ? 'is-active' : ''}"><b>B</b></button><button type="button" data-field-style-toggle="italic" class="${style.italic ? 'is-active' : ''}"><i>I</i></button><button type="button" data-field-style-toggle="strike" class="${style.strike ? 'is-active' : ''}"><s>S</s></button><label>A<input type="color" data-field-text-color value="${style.color || '#1f2937'}"></label><label>▰<input type="color" data-field-background-color value="${style.backgroundColor || '#ffffff'}"></label><select data-field-text-align><option value="left" ${style.textAlign === 'left' ? 'selected' : ''}>靠左</option><option value="center" ${style.textAlign === 'center' ? 'selected' : ''}>置中</option><option value="right" ${style.textAlign === 'right' ? 'selected' : ''}>靠右</option></select><select data-field-vertical-align><option value="top" ${style.verticalAlign === 'top' ? 'selected' : ''}>靠上</option><option value="middle" ${!style.verticalAlign || style.verticalAlign === 'middle' ? 'selected' : ''}>置中</option><option value="bottom" ${style.verticalAlign === 'bottom' ? 'selected' : ''}>靠下</option></select><button type="button" data-clear-field-style>清除</button></div>`;
+};
+const attachSubfieldFormatEditor = (row, field = {}) => {
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden';
+  hidden.dataset.role = 'subfield-styles';
+  hidden.value = JSON.stringify({ headerStyle: normalizeTextStyle(field.headerStyle), contentStyle: normalizeTextStyle(field.contentStyle) });
+  const editor = document.createElement('details');
+  editor.className = 'designer-subfield-format-editor';
+  const render = () => {
+    let styles = {};
+    try { styles = JSON.parse(hidden.value || '{}'); } catch { styles = {}; }
+    editor.innerHTML = `<summary>🎨 欄位格式</summary><section><strong>標題格式</strong>${textFormatToolbarHtml('headerStyle', styles.headerStyle)}</section><section><strong>內容格式</strong>${textFormatToolbarHtml('contentStyle', styles.contentStyle)}</section>`;
+  };
+  const update = (toolbar) => {
+    let styles = {};
+    try { styles = JSON.parse(hidden.value || '{}'); } catch { styles = {}; }
+    const kind = toolbar.dataset.fieldStyleToolbar;
+    const old = normalizeTextStyle(styles[kind]);
+    styles[kind] = normalizeTextStyle({
+      ...old,
+      fontSize: Number(toolbar.querySelector('[data-field-font-size]').value) || 14,
+      color: toolbar.querySelector('[data-field-text-color]').value,
+      backgroundColor: toolbar.querySelector('[data-field-background-color]').value,
+      textAlign: toolbar.querySelector('[data-field-text-align]').value,
+      verticalAlign: toolbar.querySelector('[data-field-vertical-align]').value
+    });
+    hidden.value = JSON.stringify(styles);
+  };
+  editor.addEventListener('input', (event) => {
+    const toolbar = event.target.closest('[data-field-style-toolbar]');
+    if (toolbar) update(toolbar);
+  });
+  editor.addEventListener('click', (event) => {
+    const toolbar = event.target.closest('[data-field-style-toolbar]');
+    if (!toolbar) return;
+    const step = event.target.closest('[data-field-font-step]');
+    if (step) {
+      const input = toolbar.querySelector('[data-field-font-size]');
+      input.value = String(Math.min(32, Math.max(10, Number(input.value || 14) + Number(step.dataset.fieldFontStep))));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+    const toggle = event.target.closest('[data-field-style-toggle]');
+    if (toggle) {
+      let styles = {};
+      try { styles = JSON.parse(hidden.value || '{}'); } catch { styles = {}; }
+      const kind = toolbar.dataset.fieldStyleToolbar;
+      styles[kind] = { ...normalizeTextStyle(styles[kind]), [toggle.dataset.fieldStyleToggle]: !styles[kind]?.[toggle.dataset.fieldStyleToggle] };
+      hidden.value = JSON.stringify(styles);
+      render();
+      editor.open = true;
+      return;
+    }
+    if (event.target.closest('[data-clear-field-style]')) {
+      let styles = {};
+      try { styles = JSON.parse(hidden.value || '{}'); } catch { styles = {}; }
+      styles[toolbar.dataset.fieldStyleToolbar] = {};
+      hidden.value = JSON.stringify(styles);
+      render();
+      editor.open = true;
+    }
+  });
+  render();
+  row.append(editor, hidden);
 };
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
 const fieldSelector = (fieldKey) => `[data-field="${window.CSS?.escape ? CSS.escape(fieldKey) : String(fieldKey).replace(/\"/g, '\\"')}"]`;
@@ -2370,8 +2441,8 @@ const renderSubtableView = (field, rows = []) => {
     return `<col${width ? ` style="width:${width}px;min-width:${width}px;max-width:${width}px;"` : ''}>`;
   }).join('')}</colgroup>`;
   const tableStyle = explicitTableWidth ? ` style="width:${explicitTableWidth}px;min-width:${explicitTableWidth}px;"` : '';
-  const header = subfields.map((sub) => `<th class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}">${escapeHtml(sub.label || sub.key)}</th>`).join('');
-  const body = bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}"><div class="ragic-view-value field-value">${renderDisplayValue(sub, item[sub.key])}</div></td>`).join('')}</tr>`).join('');
+  const header = subfields.map((sub) => `<th class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}${textStyleCss(sub.headerStyle)}">${escapeHtml(sub.label || sub.key)}</th>`).join('');
+  const body = bodyRows.map((item) => `<tr>${subfields.map((sub) => `<td class="form-field-resizable ragic-view-subfield" data-subfield-key="${escapeHtml(sub.key)}" style="${subtableViewCellStyle(sub)}${textStyleCss(sub.contentStyle)}"><div class="ragic-view-value field-value">${renderDisplayValue(sub, item[sub.key])}</div></td>`).join('')}</tr>`).join('');
   return `<div class="ragic-table-wrap ragic-view-subtable-wrap"><table class="ragic-view-subtable"${tableStyle}>${colgroup}<thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
 };
 
@@ -2540,6 +2611,8 @@ const renderSubtableRow = (field, item = {}) => {
     fieldWrap.className = `subtable-row-field subtable-row-field-${sub.type || 'text'}`;
     fieldWrap.innerHTML = `<span>${escapeHtml(sub.label || sub.key)}${sub.required ? ' *' : ''}</span>`;
     const control = createControl(sub, item[sub.key], true);
+    fieldWrap.querySelector(':scope > span').style.cssText = textStyleCss(sub.headerStyle);
+    control.style.cssText += textStyleCss(sub.contentStyle);
     fieldWrap.appendChild(sub.type === 'image' || sub.type === 'file' ? createFileUploadArea(sub, control, item[sub.key], { subfield: true }) : control);
     fieldsGrid.appendChild(fieldWrap);
   });
@@ -3429,6 +3502,7 @@ const typeOptions = SUBFIELD_TYPE_GROUPS.map((group) => {
 }).join('');
     row.innerHTML = `<span class="drag-handle" title="拖拉排序" aria-label="拖拉排序">⠿</span><input data-role="label" placeholder="子欄位名稱" value="${escapeHtml(field.label || '')}"><select data-role="type">${typeOptions}</select><textarea class="designer-subfield-options" data-role="options" rows="3" placeholder="選項，每行一個" ${['select', 'multiselect'].includes(subfieldType) ? '' : 'hidden'}>${escapeHtml(optionList(field).join('\n'))}</textarea><label class="designer-width" title="儲存後同步套用到檢視與編輯子表格"><span>欄寬</span><input data-role="width" type="number" min="40" max="1200" step="10" inputmode="numeric" placeholder="例如 200" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><span>px</span></label><div class="designer-actions"><button class="ghost danger" data-remove type="button">刪除</button></div>`;
     attachOptionColorEditor(row, field);
+    attachSubfieldFormatEditor(row, field);
     const syncSubfieldOptions = () => {
       const supportsOptions = ['select', 'multiselect'].includes(row.querySelector('[data-role="type"]').value);
       row.querySelector('[data-role="options"]').hidden = !supportsOptions;
@@ -3517,6 +3591,16 @@ const readDesigner = (container) => [...container.children].filter((el) => el.cl
     listHorizontalAlign: normalizeListHorizontalAlign(row.querySelector('[data-role="list-horizontal-align"]')?.value),
     listVerticalAlign: normalizeListVerticalAlign(row.querySelector('[data-role="list-vertical-align"]')?.value)
   };
+  if (row.classList.contains('designer-subfield-row')) {
+    try {
+      const styles = JSON.parse(row.querySelector('[data-role="subfield-styles"]')?.value || '{}');
+      field.headerStyle = normalizeTextStyle(styles.headerStyle);
+      field.contentStyle = normalizeTextStyle(styles.contentStyle);
+    } catch {
+      field.headerStyle = {};
+      field.contentStyle = {};
+    }
+  }
   if (row.dataset.linkedHandover === '1') field.linkedHandover = true;
   const formRow = normalizeFormLayoutNumber(row.querySelector('[data-role="form-row"]')?.value);
   const formCol = normalizeFormLayoutNumber(row.querySelector('[data-role="form-col"]')?.value, { max: 4 });
