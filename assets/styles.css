@@ -10235,3 +10235,10 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   width: 100% !important;
   margin-left: 0;
 }
+
+/* Tracking's wide saved grid must start at the left edge of the live designer. */
+.tracking-page #ragicDesignerModal.is-wysiwyg-form-designer .wysiwyg-live-stage-inner {
+  width: 100% !important;
+  min-width: 100% !important;
+  justify-content: flex-start !important;
+}
