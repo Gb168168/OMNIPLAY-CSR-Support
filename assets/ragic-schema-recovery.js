@@ -5,7 +5,8 @@
     '/work/log.html',
     '/work/log-new.html',
     '/work/handover.html',
-    '/work/report.html'
+    '/work/report.html',
+    '/work/alert.html'
   ]);
   const normalizedPath = window.location.pathname.replace(/^\/OMNIPLAY-CSR-Support/, '');
   if (!TARGET_PATHS.has(normalizedPath)) return;
