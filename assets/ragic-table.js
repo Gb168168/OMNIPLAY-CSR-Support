@@ -1583,13 +1583,22 @@ const createField = (field, value = '') => {
 
 const mergeTrackingWalletIntoGroupEditor = (form) => {
   if (!isTrackingModule() || !form) return;
+  let groupField = null;
   const groupSection = [...form.querySelectorAll('.ragic-subtable')].find((section) => {
     const parent = getFields().find((field) => field.key === section.dataset.subtable);
-    return parent?.type === 'subtable' && (
+    const isGroupSection = parent?.type === 'subtable' && (
       String(parent.label || '').includes('群組名稱') ||
       (parent.fields || []).some((subfield) => String(subfield.label || '').trim() === '群組名稱')
     );
+    if (isGroupSection) groupField = parent;
+    return isGroupSection;
   });
+  // Newer schemas already keep wallet type inside the group subtable. In that
+  // case retain the designer-configured columns instead of applying the legacy
+  // three-column merge, which makes edit widths differ from view widths.
+  if ((groupField?.fields || []).some(
+    (subfield) => String(subfield.label || '').trim() === '錢包類型'
+  )) return;
   const walletField = [...form.querySelectorAll('.ragic-field')].find(
     (field) => String(field.querySelector(':scope > span')?.textContent || '').trim() === '錢包類型'
   );
