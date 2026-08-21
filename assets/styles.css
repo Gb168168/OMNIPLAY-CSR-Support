@@ -10152,19 +10152,12 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
-/* Keep the field editor wide enough for formatting controls and long values. */
-@media (min-width: 1401px) {
-  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench,
-  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
-  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
-    grid-template-columns: 230px minmax(0, 1fr) clamp(500px, 31vw, 600px) !important;
-  }
-}
-
-@media (min-width: 1101px) and (max-width: 1400px) {
-  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench,
-  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
-  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
-    grid-template-columns: 210px minmax(0, 1fr) 440px !important;
-  }
+/* Keep the settings editor vertically continuous; the outer rail owns scrolling. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel > .layout-field-settings:not([hidden]) {
+  display: grid !important;
+  height: max-content !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  align-content: start !important;
+  overflow: visible !important;
 }
