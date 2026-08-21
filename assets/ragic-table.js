@@ -3742,7 +3742,7 @@ const renderLayoutDesigner = () => {
   const rowsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
   const colsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
   const placed = placedLayoutKeys(layout);
-  const unplaced = fields.filter((field) => !placed.has(field.key)).map((field) => `<div class="layout-field-chip ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button><button class="remove-btn" type="button" aria-label="移除欄位">×</button></div>`).join('') || '<span class="layout-empty">全部欄位都已放置</span>';
+  const fieldLibrary = fields.map((field) => `<div class="layout-field-chip layout-library-item ${placed.has(field.key) ? 'is-placed' : 'is-unplaced'} ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><span class="layout-library-copy"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small></span><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button></div>`).join('') || '<span class="layout-empty">尚未建立欄位</span>';
   const normalFieldTypeButtons = FIELD_TYPES.map((type) => `
   <button
     class="layout-type-button"
@@ -3767,7 +3767,7 @@ const pairFieldTypeButtons = FIELD_PAIR_TYPES.map((type) => `
 
 const fieldTypeButtons =
   normalFieldTypeButtons + pairFieldTypeButtons;
-  panel.innerHTML = `<div class="layout-designer layout-wysiwyg-designer"><div class="layout-toolbar"><div class="layout-toolbar-controls"><strong>表單設計（所見即所得）</strong><span class="layout-live-hint">設計畫面＝檢視畫面，邊改邊看效果</span><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-unplaced"><span class="layout-section-label">未放置的欄位：</span><div class="layout-unplaced-fields">${unplaced}</div></div><div class="layout-workbench"><main class="layout-canvas"><div class="layout-grid-section"><h3>直接拖曳欄位調整位置；拖曳藍色邊線調整寬高；點擊欄位開啟設定</h3><div class="layout-grid ragic-form-grid ragic-view-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="所見即所得表單設計區"></div></div></main><aside class="layout-side-panel"><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings layout-settings-popover" hidden></aside></aside></div></div>`;
+  panel.innerHTML = `<div class="layout-designer layout-wysiwyg-designer" data-layout-mode="design"><div class="layout-toolbar"><div class="layout-toolbar-controls"><div class="layout-mode-switch" role="group" aria-label="設計模式切換"><button class="active" data-layout-mode="design" type="button">設計模式</button><button data-layout-mode="preview" type="button">檢視模式</button></div><span class="layout-live-hint">✓ 設計畫面＝檢視畫面，邊改邊看效果</span><label>欄數：<select id="gridCols" ${fixedLogLayout ? 'disabled' : ''}>${colsSelect}</select></label><label>列數：<select id="gridRows" ${fixedLogLayout ? 'disabled' : ''}>${rowsSelect}</select></label></div><div class="layout-toolbar-actions"><button class="primary layout-add-toggle" data-toggle-layout-add type="button">＋ 新增欄位</button></div></div><div class="layout-workbench"><aside class="layout-field-library"><div class="layout-library-head"><strong>欄位清單</strong><small>拖曳欄位調整位置</small></div><div class="layout-library-list">${fieldLibrary}</div></aside><main class="layout-canvas"><div class="layout-context-toolbar"><span>點擊欄位後，在右側直接調整</span><b>拖曳藍色邊線可改寬高</b></div><div class="layout-grid-section"><div class="layout-grid ragic-form-grid ragic-view-grid" data-columns="${layout.columns}" data-rows="${layout.rows}" aria-label="所見即所得表單設計區"></div></div></main><aside class="layout-side-panel"><div class="layout-settings-empty"><strong>欄位設定</strong><p>請點選中央畫布或左側清單中的欄位。</p></div><section class="layout-add-card layout-add-popover" hidden><div class="layout-add-card-head"><div><h3>新增欄位</h3><p>選擇欄位類型</p></div><button class="secondary layout-add-close" data-close-layout-add type="button">關閉</button></div><div class="layout-type-grid">${fieldTypeButtons}</div></section><aside id="layoutFieldSettingsPanel" class="layout-field-settings layout-settings-popover" hidden></aside></aside></div></div>`;
   const grid = panel.querySelector('.layout-grid');
   grid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
   grid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(64px, auto))`;
@@ -3890,6 +3890,14 @@ const attachLayoutDesignerEvents = (panel) => {
   });
   panel.addEventListener('dragend', () => { dragKey = ''; panel.querySelector('.layout-drop-preview')?.remove(); panel.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging')); });
   panel.addEventListener('click', (event) => {
+    const modeButton = event.target.closest('[data-layout-mode]');
+    if (modeButton?.tagName === 'BUTTON') {
+      const designer = modeButton.closest('.layout-wysiwyg-designer');
+      const mode = modeButton.dataset.layoutMode === 'preview' ? 'preview' : 'design';
+      if (designer) designer.dataset.layoutMode = mode;
+      designer?.querySelectorAll('.layout-mode-switch button').forEach((button) => button.classList.toggle('active', button === modeButton));
+      return;
+    }
     const remove = event.target.closest('.remove-btn');
     if (remove) {
       const key = remove.closest('[data-field-key]')?.dataset.fieldKey;
