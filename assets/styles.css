@@ -10152,12 +10152,20 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
-/* Keep the settings editor vertically continuous; the outer rail owns scrolling. */
+/* The field editor must occupy the full right rail instead of a short popover. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel {
+  position: relative !important;
+  overflow: hidden !important;
+}
 #ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel > .layout-field-settings:not([hidden]) {
+  position: absolute !important;
+  inset: 0 !important;
   display: grid !important;
-  height: max-content !important;
-  min-height: 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
   max-height: none !important;
   align-content: start !important;
-  overflow: visible !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
 }
