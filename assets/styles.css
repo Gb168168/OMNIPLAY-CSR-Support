@@ -10142,19 +10142,24 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
    the minimum, so wrapped values and subtable headers are never cut in half. */
 #ragicDesignerModal .layout-wysiwyg-field.layout-field {
   height: auto !important;
-  overflow: visible;
+  max-height: 100%;
+  overflow: hidden;
   align-self: stretch;
   box-sizing: border-box;
 }
 #ragicDesignerModal .layout-wysiwyg-field.layout-field-subtable {
-  min-height: max-content;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 #ragicDesignerModal .layout-wysiwyg-field.layout-field-subtable .ragic-table-wrap {
+  flex: 1 1 auto;
   width: 100%;
   max-width: 100%;
-  max-height: none;
-  overflow-x: auto;
-  overflow-y: visible;
+  min-height: 0;
+  max-height: 240px;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 #ragicDesignerModal .layout-wysiwyg-field > .ragic-view-label,
 #ragicDesignerModal .layout-wysiwyg-field > .ragic-view-value,
@@ -10163,7 +10168,8 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   max-width: 100%;
   height: auto !important;
   max-height: none !important;
-  overflow: visible !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
   white-space: normal;
   overflow-wrap: anywhere;
 }
