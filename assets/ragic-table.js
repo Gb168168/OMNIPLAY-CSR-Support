@@ -3742,7 +3742,8 @@ const createDesignerViewField = (field = {}, item = {}) => {
   element.style.gridColumn = `${item.col} / span ${item.colSpan}`;
   element.style.gridRow = `${item.row} / span ${item.rowSpan}`;
   if (item.height && !(isTrackingModule() && isSubtable)) {
-    element.style.height = `${item.height}px`;
+    // Saved heights are a lower bound in the live designer.  A fixed height
+    // clips labels/values as soon as the canvas gets narrower or text wraps.
     element.style.minHeight = `${item.height}px`;
   }
   if (isSubtable) {
@@ -3798,8 +3799,11 @@ const fieldTypeButtons =
   const contextBar = panel.querySelector('.layout-context-toolbar');
   if (contextBar) contextBar.innerHTML = '<div data-layout-context-format hidden></div><span data-layout-context-hint>點擊欄位後即可在這裡調整格式</span><b>拖曳藍色邊線可改寬高</b>';
   const grid = panel.querySelector('.layout-grid');
-  grid.style.setProperty('width', '100%', 'important');
-  grid.style.setProperty('min-width', '0', 'important');
+  // Keep every grid column usable.  Wide layouts scroll as one aligned canvas
+  // instead of squeezing eight or ten columns until their contents disappear.
+  const minimumCanvasWidth = Math.max(960, layout.columns * 140);
+  grid.style.setProperty('width', `max(100%, ${minimumCanvasWidth}px)`, 'important');
+  grid.style.setProperty('min-width', `${minimumCanvasWidth}px`, 'important');
   grid.style.setProperty('grid-template-columns', `repeat(${layout.columns}, minmax(0, 1fr))`, 'important');
   grid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(64px, auto))`;
   for (let row = 1; row <= layout.rows; row += 1) {
