@@ -4,7 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>首頁｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="assets/styles.css?v=20260818-home-equal-columns" />
+  <link rel="stylesheet" href="assets/styles.css?v=20260822-personal-custom-repeat" />
+  <style>
+    .personal-notification-repeat { margin-bottom: 14px; }
+    .personal-notification-custom-repeat { margin: -2px 0 16px; padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+    .personal-notification-custom-repeat[hidden] { display: none; }
+    .personal-notification-repeat-title { margin-bottom: 16px; font-size: 17px; font-weight: 900; }
+    .personal-notification-repeat-row { display: grid; grid-template-columns: auto 80px minmax(100px, 1fr); gap: 8px; align-items: center; margin-bottom: 18px; }
+    .personal-notification-repeat-row input, .personal-notification-repeat-row select,
+    .personal-notification-repeat-end input[type="date"], .personal-notification-repeat-end input[type="number"] { min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: var(--text); background: var(--panel-solid); font: inherit; }
+    .personal-notification-repeat-end { display: grid; gap: 12px; padding: 0; border: 0; }
+    .personal-notification-repeat-end legend { margin-bottom: 12px; font-weight: 800; }
+    .personal-notification-repeat-end label { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); gap: 8px; align-items: center; font-weight: 500; }
+    .personal-notification-repeat-end label:first-of-type { grid-template-columns: 22px auto; }
+    .personal-note-repeat { display: block; margin-top: 5px; color: #475569; font-weight: 800; }
+    @media (max-width: 720px) { .personal-notification-repeat-row { grid-template-columns: auto 66px minmax(88px, 1fr); } }
+  </style>
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
   <meta name="theme-color" content="#3B82F6" />
@@ -195,6 +210,34 @@
         <span>提醒時間</span>
         <input id="personalNotificationTime" type="datetime-local" />
       </label>
+      <div class="personal-notification-repeat" id="personalNotificationRepeatField" hidden>
+        <label class="personal-notification-field">
+          <span>重複</span>
+          <select id="personalNotificationRepeat">
+            <option value="none">不重複</option>
+            <option value="daily">每天</option>
+            <option value="weekly">每週</option>
+            <option value="monthly">每月</option>
+            <option value="custom">自定義</option>
+          </select>
+        </label>
+        <div class="personal-notification-custom-repeat" id="personalNotificationCustomRepeat" hidden>
+          <div class="personal-notification-repeat-title">↻ 自定義</div>
+          <div class="personal-notification-repeat-row">
+            <span>重複間隔：每</span>
+            <input id="personalNotificationRepeatInterval" type="number" min="1" max="365" value="1" aria-label="重複間隔" />
+            <select id="personalNotificationRepeatUnit" aria-label="重複單位">
+              <option value="day">天</option><option value="week">週</option><option value="month">月</option>
+            </select>
+          </div>
+          <fieldset class="personal-notification-repeat-end">
+            <legend>結束時間</legend>
+            <label><input type="radio" name="personalNotificationRepeatEnd" value="never" checked /> 無</label>
+            <label><input type="radio" name="personalNotificationRepeatEnd" value="date" /> 於：<input id="personalNotificationRepeatEndDate" type="date" disabled /></label>
+            <label><input type="radio" name="personalNotificationRepeatEnd" value="count" /> 次數：<input id="personalNotificationRepeatEndCount" type="number" min="1" max="999" value="1" disabled /></label>
+          </fieldset>
+        </div>
+      </div>
       <fieldset class="personal-notification-colors">
         <legend>便利貼顏色</legend>
         <label><input type="radio" name="personalNotificationColor" value="yellow" checked><span class="color-dot yellow">黃色</span></label>
@@ -232,6 +275,6 @@
   <script src="assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="assets/app.js?v=20260816-remove-library"></script>
   <script src="assets/dashboard.js?v=20260818-schedule-single-line"></script>
-  <script src="assets/personal-notifications.js?v=20260818-personal1"></script>
+  <script src="assets/personal-notifications.js?v=20260822-custom-repeat"></script>
 </body>
 </html>
