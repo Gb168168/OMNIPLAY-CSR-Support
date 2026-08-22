@@ -3805,7 +3805,7 @@ const fieldTypeButtons =
   grid.style.setProperty('width', `max(100%, ${minimumCanvasWidth}px)`, 'important');
   grid.style.setProperty('min-width', `${minimumCanvasWidth}px`, 'important');
   grid.style.setProperty('grid-template-columns', `repeat(${layout.columns}, minmax(0, 1fr))`, 'important');
-  grid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(64px, max-content))`;
+  grid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(64px, auto))`;
   for (let row = 1; row <= layout.rows; row += 1) {
     for (let col = 1; col <= layout.columns; col += 1) {
       const slot = document.createElement('div');
