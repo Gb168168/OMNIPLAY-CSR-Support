@@ -10114,8 +10114,37 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   font-size: 12px;
 }
 #ragicDesignerModal .layout-wysiwyg-designer .layout-context-toolbar b { color: #2563eb; }
-#ragicDesignerModal .layout-wysiwyg-designer .layout-grid-section { min-height: 0; }
-#ragicDesignerModal .layout-wysiwyg-designer .layout-grid { min-height: 100%; }
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid-section {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid {
+  min-height: 100%;
+  height: max-content;
+  overflow: visible;
+}
+
+/* Let a row grow with its real field content.  The saved resize height remains
+   the minimum, so wrapped values and subtable headers are never cut in half. */
+#ragicDesignerModal .layout-wysiwyg-field.layout-field {
+  height: auto !important;
+  overflow: visible;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+#ragicDesignerModal .layout-wysiwyg-field > .ragic-view-label,
+#ragicDesignerModal .layout-wysiwyg-field > .ragic-view-value,
+#ragicDesignerModal .layout-wysiwyg-field > .field-value {
+  min-width: 0;
+  max-width: 100%;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 #ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel,
 #ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel:has(> :not([hidden])) {
   display: block;
