@@ -10117,13 +10117,25 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 #ragicDesignerModal .layout-wysiwyg-designer .layout-grid-section {
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
 }
 #ragicDesignerModal .layout-wysiwyg-designer .layout-grid {
   min-height: 100%;
-  height: max-content;
+  height: auto;
   overflow: visible;
+}
+
+/* Keep empty cells usable as drop targets without drawing phantom boxes behind
+   the real form. Show the guides only while a field is being dragged. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid-slot {
+  border-color: transparent;
+  background: transparent;
+}
+#ragicDesignerModal .layout-wysiwyg-designer:has(.layout-field.is-dragging) .layout-grid-slot {
+  border-color: #dbe4f0;
+  background: rgba(255,255,255,.55);
 }
 
 /* Let a row grow with its real field content.  The saved resize height remains
@@ -10133,6 +10145,16 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   overflow: visible;
   align-self: stretch;
   box-sizing: border-box;
+}
+#ragicDesignerModal .layout-wysiwyg-field.layout-field-subtable {
+  min-height: max-content;
+}
+#ragicDesignerModal .layout-wysiwyg-field.layout-field-subtable .ragic-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 #ragicDesignerModal .layout-wysiwyg-field > .ragic-view-label,
 #ragicDesignerModal .layout-wysiwyg-field > .ragic-view-value,
