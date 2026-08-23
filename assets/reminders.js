@@ -60,13 +60,24 @@
   }
   function snoozeAlarm() {
     const current = state.ringing; stopAlarm();
-    if (current) window.setTimeout(() => trigger(current.module, current.id, current.record, new Date()), 5 * 60 * 1000);
+    if (!current) return;
+    if (current.snooze) window.setTimeout(current.snooze, 5 * 60 * 1000);
+    else window.setTimeout(() => trigger(current.module, current.id, current.record, new Date()), 5 * 60 * 1000);
   }
-  const trigger = async (module, id, record, at) => {
+  const showAlarm = ({ title, text, snooze = null }) => {
     if (state.ringing) stopAlarm();
-    const config = MODULES[module]; const text = config.text(record); markFired(module, id, at); ensureUi();
-    document.querySelector('#reminderAlarmTitle').textContent = config.title; document.querySelector('#reminderAlarmText').textContent = text; document.querySelector('#reminderAlarmModal').hidden = false;
-    beep(); state.ringing = { module, id, record, interval: window.setInterval(beep, 1400) };
+    ensureUi();
+    document.querySelector('#reminderAlarmTitle').textContent = title;
+    document.querySelector('#reminderAlarmText').textContent = text;
+    document.querySelector('#reminderAlarmModal').hidden = false;
+    beep();
+    state.ringing = { snooze, interval: window.setInterval(beep, 1400) };
+  };
+  window.csrReminderAlarm = { show: showAlarm, stop: stopAlarm };
+  const trigger = async (module, id, record, at) => {
+    const config = MODULES[module]; const text = config.text(record); markFired(module, id, at);
+    showAlarm({ title: config.title, text, snooze: () => trigger(module, id, record, new Date()) });
+    state.ringing = { ...state.ringing, module, id, record };
     if ('Notification' in window && Notification.permission === 'granted') {
       const registration = await navigator.serviceWorker?.ready;
       registration?.showNotification(config.title, { body: text, icon: `${ROOT}assets/icon-192.png`, badge: `${ROOT}assets/icon-192.png`, tag: `csr-${module}-${id}`, requireInteraction: true, data: { url: `${ROOT}${config.path}?id=${encodeURIComponent(id)}` } });
