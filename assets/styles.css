@@ -10474,3 +10474,27 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     width: 100%;
   }
 }
+
+
+/* Subtable settings: show child columns first and never expose the irrelevant parent option box. */
+#ragicDesignerModal .layout-settings-popover .setting-options[hidden] {
+  display: none !important;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields {
+  order: 0;
+  margin-top: 2px;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head {
+  position: sticky;
+  top: 55px;
+  z-index: 2;
+  padding: 9px 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel-solid);
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head h4 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 13px;
+}
