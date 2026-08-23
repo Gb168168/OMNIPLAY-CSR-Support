@@ -235,7 +235,7 @@
   document.querySelector('#personalNotificationType').addEventListener('change', updateTypeFields);
   document.querySelector('#personalNotificationRepeat').addEventListener('change', updateRepeatFields);
   form.querySelectorAll('[name="personalNotificationRepeatEnd"]').forEach((radio) => radio.addEventListener('change', updateRepeatFields));
-  modal.addEventListener('click', (event) => { if (event.target === modal) closeForm(); });
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !modal.hidden) closeForm(); });
+  // 日期／時間選擇器在部分瀏覽器會把互動判定為點擊背景或 Escape，
+  // 表單僅允許透過「×」或「取消」關閉，避免選擇時間途中視窗跳掉。
   render();
 })();
