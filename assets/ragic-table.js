@@ -990,7 +990,7 @@ const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 const MAX_IMAGE_TOTAL_BYTES = 800 * 1024;
 const IMAGE_TOTAL_LIMIT_MESSAGE = '舊版內嵌圖片總大小超過限制，請刪除部分舊圖片後再上傳';
 if (!window._multiSelectClickBound) {
-  document.addEventListener('click', () => document.querySelectorAll('.multi-select-dropdown.show').forEach((dropdown) => dropdown.classList.remove('show')));
+  document.addEventListener('click', () => document.querySelectorAll('.ragic-option-dropdown.show').forEach((dropdown) => dropdown.classList.remove('show')));
   window._multiSelectClickBound = true;
 }
 if (!window._ragicSelectBackspaceBound) {
@@ -1419,7 +1419,7 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
   display.innerHTML = selected.length ? renderStyledOptionValue(field, selected) : '請選擇';
   display.title = selected.join('、');
   const dropdown = document.createElement('div');
-  dropdown.className = 'multi-select-dropdown';
+  dropdown.className = 'multi-select-dropdown ragic-option-dropdown';
   dropdown.setAttribute('role', 'listbox');
   dropdown.setAttribute('aria-multiselectable', 'true');
   baseOptions.forEach((option) => {
@@ -1448,6 +1448,96 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
       display.title = values.join('、');
     });
   });
+  return wrapper;
+};
+
+const createSingleSelectControl = (field, value = '', subfield = false) => {
+  const selectOptions = [...optionList(field)];
+  const loginName = currentRagicUserName();
+  if (field.defaultCurrentUser && loginName && !selectOptions.includes(loginName)) selectOptions.unshift(loginName);
+
+  const selectedValue = String(value || (!subfield && !RAGIC_STATE.currentId && field.defaultCurrentUser ? loginName : '') || field.defaultValue || '');
+  // 容忍歷史值：只補進目前這筆控制項，不修改 schema 的正式選項清單。
+  if (selectedValue && !selectOptions.includes(selectedValue)) selectOptions.push(selectedValue);
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'single-select ragic-single-select';
+  const select = document.createElement('select');
+  select.className = 'ragic-native-select';
+  select.name = subfield ? '' : field.key;
+  select.required = Boolean(field.required);
+  select.tabIndex = -1;
+  if (subfield) select.dataset.subfield = field.key;
+
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = '請選擇';
+  select.appendChild(emptyOption);
+  selectOptions.forEach((option) => {
+    const opt = document.createElement('option');
+    opt.value = option;
+    opt.textContent = /^-{3,}$/.test(option) ? '──────────' : option;
+    opt.disabled = /^-{3,}$/.test(option);
+    opt.style.cssText = optionStyleCss(field, option);
+    select.appendChild(opt);
+  });
+  select.value = selectedValue;
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'single-select-display';
+  toggle.setAttribute('aria-haspopup', 'listbox');
+  toggle.setAttribute('aria-expanded', 'false');
+  const dropdown = document.createElement('div');
+  dropdown.className = 'single-select-dropdown ragic-option-dropdown';
+  dropdown.setAttribute('role', 'listbox');
+
+  const renderValue = () => {
+    const current = select.value;
+    toggle.innerHTML = `<span class="single-select-value">${current ? renderStyledOptionValue(field, current) : '請選擇'}</span><span class="single-select-arrow" aria-hidden="true">⌄</span>`;
+    toggle.title = current;
+    dropdown.querySelectorAll('[role="option"]').forEach((item) => item.setAttribute('aria-selected', String(item.dataset.value === current)));
+  };
+  const close = () => {
+    dropdown.classList.remove('show');
+    toggle.setAttribute('aria-expanded', 'false');
+  };
+  const choose = (nextValue) => {
+    select.value = nextValue;
+    renderValue();
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    close();
+    toggle.focus();
+  };
+
+  [{ value: '', label: '請選擇' }, ...selectOptions.map((option) => ({ value: option, label: /^-{3,}$/.test(option) ? '──────────' : option }))].forEach(({ value: option, label }) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'single-select-option';
+    item.dataset.value = option;
+    item.setAttribute('role', 'option');
+    item.disabled = /^-{3,}$/.test(option);
+    item.innerHTML = `<span>${escapeHtml(label)}</span>`;
+    if (option) item.querySelector('span').style.cssText = optionStyleCss(field, option);
+    item.addEventListener('click', (event) => { event.stopPropagation(); choose(option); });
+    dropdown.appendChild(item);
+  });
+  toggle.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (select.disabled) return;
+    document.querySelectorAll('.ragic-option-dropdown.show').forEach((item) => { if (item !== dropdown) item.classList.remove('show'); });
+    dropdown.classList.toggle('show');
+    toggle.setAttribute('aria-expanded', String(dropdown.classList.contains('show')));
+  });
+  toggle.addEventListener('keydown', (event) => {
+    if (event.key === 'Backspace' || event.key === 'Delete') { event.preventDefault(); choose(''); }
+    if (event.key === 'Escape') close();
+  });
+  dropdown.addEventListener('click', (event) => event.stopPropagation());
+  select.addEventListener('change', renderValue);
+  wrapper.append(select, toggle, dropdown);
+  renderValue();
   return wrapper;
 };
 
@@ -1497,6 +1587,10 @@ const createControl = (field, value = '', subfield = false) => {
     return createMultiSelectControl(field, value, subfield);
   }
 
+  if (field.type === 'select') {
+    return createSingleSelectControl(field, value, subfield);
+  }
+
   if (field.type === 'checkbox' || field.type === 'boolean') {
     const input = document.createElement('input');
     input.type = 'checkbox';
@@ -1519,49 +1613,6 @@ const createControl = (field, value = '', subfield = false) => {
   if (field.type === 'textarea') {
     input = document.createElement('textarea');
     input.rows = isTrackingModule() ? 1 : (field.rows || 4);
-  } else if (field.type === 'select') {
-    input = document.createElement('select');
-
-    const emptyOption = document.createElement('option');
-    emptyOption.value = '';
-    emptyOption.textContent = '請選擇';
-    input.appendChild(emptyOption);
-
-    const selectOptions = [...optionList(field)];
-    const loginName = currentRagicUserName();
-
-    if (
-      field.defaultCurrentUser &&
-      loginName &&
-      !selectOptions.includes(loginName)
-    ) {
-      selectOptions.unshift(loginName);
-    }
-
-    // 容忍歷史值：舊資料不在目前選項時，仍顯示並保留原值。
-    const currentValue = value == null ? '' : String(value);
-    if (currentValue && !selectOptions.includes(currentValue)) {
-      selectOptions.push(currentValue);
-    }
-
-    selectOptions.forEach((option) => {
-      const opt = document.createElement('option');
-      opt.value = option;
-      opt.textContent = option;
-      opt.style.cssText = optionStyleCss(field, option);
-
-      if (/^-{3,}$/.test(option)) {
-        opt.disabled = true;
-        opt.textContent = '──────────';
-      }
-
-      input.appendChild(opt);
-    });
-    const applySelectedOptionStyle = () => {
-      input.style.cssText = optionStyleCss(field, input.value);
-    };
-    input.addEventListener('change', applySelectedOptionStyle);
-    queueMicrotask(applySelectedOptionStyle);
   } else if (manualSystemDateField(field) && !subfield) {
     input = document.createElement('input');
     input.type = 'datetime-local';
@@ -1655,7 +1706,8 @@ const createInlineEditor = (field, value) => {
     return control;
   }
   const control = createControl(field, currentValue);
-  control.required = false;
+  if (field.type === 'select') control.querySelector('select').required = false;
+  else control.required = false;
   if (field.type === 'textarea') {
     control.rows = Math.max(2, field.rows || 2);
     autoGrowTextarea(control);
@@ -1664,10 +1716,11 @@ const createInlineEditor = (field, value) => {
 };
 const getInlineEditorValue = (editor, field) => {
   if (field.type === 'multiselect') return [...editor.querySelectorAll('select option:checked')].map((option) => option.value);
+  if (field.type === 'select') return editor.querySelector('select')?.value || '';
   return editor.value;
 };
 const focusInlineEditor = (editor, field) => {
-  const focusTarget = field.type === 'multiselect' ? editor.querySelector('.multi-select-display') : editor;
+  const focusTarget = field.type === 'multiselect' ? editor.querySelector('.multi-select-display') : field.type === 'select' ? editor.querySelector('.single-select-display') : editor;
   focusTarget?.focus?.();
   if (editor.select && field.type !== 'date' && field.type !== 'datetime') editor.select();
 };
@@ -4347,6 +4400,11 @@ const setFormEditable = (form) => {
   form.querySelectorAll('.ragic-multi-select').forEach((control) => {
     control.classList.toggle('is-disabled', !editable);
     control.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => { checkbox.disabled = !editable; });
+  });
+  form.querySelectorAll('.ragic-single-select').forEach((control) => {
+    control.classList.toggle('is-disabled', !editable);
+    const toggle = control.querySelector('.single-select-display');
+    if (toggle) toggle.disabled = !editable;
   });
   form.querySelectorAll('.ragic-subtable-head button, .subtable-row .danger').forEach((button) => {
     button.hidden = !editable;
