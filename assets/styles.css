@@ -10498,3 +10498,70 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   color: var(--primary);
   font-size: 13px;
 }
+
+
+/* Narrow right rail: render every subfield as a readable vertical card. */
+#ragicDesignerModal .layout-side-panel .designer-subfield-list {
+  display: grid;
+  gap: 10px;
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row {
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr) 34px !important;
+  grid-template-rows: auto auto auto auto auto auto !important;
+  gap: 7px !important;
+  padding: 9px !important;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-solid);
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row > .drag-handle {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: center;
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row > input[data-role="label"] {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row > .designer-actions {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row > select[data-role="type"] {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row > .designer-width {
+  grid-column: 1 / -1 !important;
+  grid-row: 3 !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  align-items: center;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row > .designer-subfield-options {
+  grid-column: 1 / -1 !important;
+  grid-row: 4 !important;
+  width: 100% !important;
+  min-height: 74px;
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row > .designer-option-color-editor {
+  grid-column: 1 / -1 !important;
+  grid-row: 5 !important;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-side-panel .designer-subfield-row > .designer-subfield-format-editor {
+  grid-column: 1 / -1 !important;
+  grid-row: 6 !important;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-side-panel .designer-option-color-row {
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+}
+#ragicDesignerModal .layout-side-panel .designer-option-color-row > button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
