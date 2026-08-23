@@ -140,21 +140,28 @@
     if (next) item.remindAt = next.toISOString();
     saveItems();
     render();
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      const context = new AudioContext();
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.frequency.value = 880;
-      oscillator.connect(gain); gain.connect(context.destination);
-      gain.gain.setValueAtTime(.2, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(.001, context.currentTime + 1.2);
-      oscillator.start(); oscillator.stop(context.currentTime + 1.2);
-    } catch (_) {}
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(`⏰ ${item.title}`, { body: item.content || '提醒時間到了', icon: 'assets/icon-192.png', tag: `personal-${item.id}` });
+    const alarmText = item.content || '提醒時間到了';
+    if (window.csrReminderAlarm) {
+      const showPersonalAlarm = () => window.csrReminderAlarm.show({
+        title: `個人提醒｜${item.title}`,
+        text: alarmText,
+        snooze: showPersonalAlarm
+      });
+      showPersonalAlarm();
+    } else {
+      window.alert(`⏰ 個人提醒\n\n${item.title}${item.content ? `\n${item.content}` : ''}`);
     }
-    window.alert(`⏰ 個人提醒\n\n${item.title}${item.content ? `\n${item.content}` : ''}`);
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const registration = await navigator.serviceWorker?.ready;
+      registration?.showNotification(`⏰ ${item.title}`, {
+        body: alarmText,
+        icon: 'assets/icon-192.png',
+        badge: 'assets/icon-192.png',
+        tag: `personal-${item.id}`,
+        requireInteraction: true,
+        data: { url: '/OMNIPLAY-CSR-Support/' }
+      });
+    }
   }
 
   form.addEventListener('submit', async (event) => {
