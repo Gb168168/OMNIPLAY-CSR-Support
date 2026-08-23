@@ -851,63 +851,58 @@ const attachOptionColorEditor = (root, field = {}, { optionsSelector = '[data-ro
   hidden.dataset.role = 'option-styles';
   hidden.value = JSON.stringify(normalizeOptionStyles(field.optionStyles));
   const editor = document.createElement('div');
-  editor.className = 'designer-option-color-editor';
+  editor.className = 'designer-option-color-editor designer-option-color-editor-compact';
   optionsInput.insertAdjacentElement('afterend', editor);
   root.appendChild(hidden);
-  const readStyles = () => { try { return normalizeOptionStyles(JSON.parse(hidden.value || '{}')); } catch { return {}; } };
+
+  const readStyles = () => {
+    try { return normalizeOptionStyles(JSON.parse(hidden.value || '{}')); }
+    catch { return {}; }
+  };
+
   const refresh = () => {
     const enabled = ['select', 'multiselect'].includes(typeInput.value);
     editor.hidden = !enabled;
     if (!enabled) return;
     const styles = readStyles();
     const options = String(optionsInput.value || '').split(/\n+/).map((item) => item.trim()).filter(Boolean);
-    editor.innerHTML = options.length ? `<strong>選項顏色</strong>${options.map((option) => {
-      const style = styles[option] || {};
-      const previewCss = optionStyleCss({ optionStyles: { [option]: style } }, option);
-      return `<details class="designer-option-format-row" data-option-color="${escapeHtml(option)}"><summary><span${previewCss ? ` style="${previewCss}"` : ''}>${escapeHtml(option)}</span><b>🎨 格式</b></summary><div class="designer-option-format-toolbar"><button type="button" data-font-size-step="-1" title="縮小字體">−</button><input type="number" min="10" max="32" step="1" data-option-font-size value="${style.fontSize || 14}" title="字體大小"><button type="button" data-font-size-step="1" title="放大字體">＋</button><button type="button" data-option-toggle="bold" class="${style.bold ? 'is-active' : ''}" title="粗體"><b>B</b></button><button type="button" data-option-toggle="italic" class="${style.italic ? 'is-active' : ''}" title="斜體"><i>I</i></button><button type="button" data-option-toggle="strike" class="${style.strike ? 'is-active' : ''}" title="刪除線"><s>S</s></button><label title="文字顏色">A<input type="color" data-option-text-color value="${style.color || '#1f2937'}"></label><label title="背景顏色">▰<input type="color" data-option-background-color value="${style.backgroundColor || '#ffffff'}"></label><select data-option-text-align title="水平對齊"><option value="left" ${style.textAlign === 'left' ? 'selected' : ''}>靠左</option><option value="center" ${style.textAlign === 'center' ? 'selected' : ''}>置中</option><option value="right" ${style.textAlign === 'right' ? 'selected' : ''}>靠右</option></select><select data-option-vertical-align title="垂直對齊"><option value="top" ${style.verticalAlign === 'top' ? 'selected' : ''}>靠上</option><option value="middle" ${!style.verticalAlign || style.verticalAlign === 'middle' ? 'selected' : ''}>置中</option><option value="bottom" ${style.verticalAlign === 'bottom' ? 'selected' : ''}>靠下</option></select><button type="button" data-clear-option-color title="清除格式">清除</button></div></details>`;
-    }).join('')}` : '<small>請先輸入選項</small>';
+    editor.innerHTML = options.length
+      ? `<div class="designer-option-color-head"><strong>選項顏色</strong><small>每個選項可設定不同顏色</small></div><div class="designer-option-color-list">${options.map((option) => {
+          const style = styles[option] || {};
+          const previewCss = optionStyleCss({ optionStyles: { [option]: style } }, option);
+          return `<div class="designer-option-color-row" data-option-color="${escapeHtml(option)}"><span class="designer-option-color-name"${previewCss ? ` style="${previewCss}"` : ''}>${escapeHtml(option)}</span><label title="文字顏色"><span>文字</span><input type="color" data-option-text-color value="${style.color || '#1f2937'}"></label><label title="背景顏色"><span>背景</span><input type="color" data-option-background-color value="${style.backgroundColor || '#ffffff'}"></label><button type="button" class="ghost" data-clear-option-color>清除</button></div>`;
+        }).join('')}</div>`
+      : '<small>請先在上方輸入選項，每行一個</small>';
   };
+
   editor.addEventListener('input', (event) => {
     const row = event.target.closest('[data-option-color]');
     if (!row) return;
     const styles = readStyles();
-    const previous = styles[row.dataset.optionColor] || {};
-    styles[row.dataset.optionColor] = {
+    const option = row.dataset.optionColor;
+    const previous = styles[option] || {};
+    styles[option] = {
+      ...previous,
       color: row.querySelector('[data-option-text-color]').value,
-      backgroundColor: row.querySelector('[data-option-background-color]').value,
-      fontSize: Number(row.querySelector('[data-option-font-size]').value) || 14,
-      bold: Boolean(previous.bold), italic: Boolean(previous.italic), strike: Boolean(previous.strike),
-      textAlign: row.querySelector('[data-option-text-align]').value,
-      verticalAlign: row.querySelector('[data-option-vertical-align]').value
+      backgroundColor: row.querySelector('[data-option-background-color]').value
     };
     hidden.value = JSON.stringify(styles);
+    refresh();
   });
+
   editor.addEventListener('click', (event) => {
-    const step = event.target.closest('[data-font-size-step]');
-    if (step) {
-      const input = step.closest('[data-option-color]').querySelector('[data-option-font-size]');
-      input.value = String(Math.min(32, Math.max(10, Number(input.value || 14) + Number(step.dataset.fontSizeStep))));
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      return;
-    }
-    const toggle = event.target.closest('[data-option-toggle]');
-    if (toggle) {
-      const row = toggle.closest('[data-option-color]');
-      const styles = readStyles();
-      const option = row.dataset.optionColor;
-      styles[option] = { ...(styles[option] || {}), [toggle.dataset.optionToggle]: !styles[option]?.[toggle.dataset.optionToggle] };
-      hidden.value = JSON.stringify(styles);
-      refresh();
-      return;
-    }
     const button = event.target.closest('[data-clear-option-color]');
     if (!button) return;
     const option = button.closest('[data-option-color]')?.dataset.optionColor;
     const styles = readStyles();
-    delete styles[option];
+    if (!styles[option]) return;
+    const { color, backgroundColor, ...remaining } = styles[option];
+    if (Object.keys(remaining).length) styles[option] = remaining;
+    else delete styles[option];
     hidden.value = JSON.stringify(styles);
     refresh();
   });
+
   optionsInput.addEventListener('input', refresh);
   typeInput.addEventListener('change', refresh);
   refresh();
@@ -3960,7 +3955,7 @@ const openLayoutFieldSettings = (fieldKey) => {
   panel.innerHTML = `<div class="layout-settings-head"><h3>欄位屬性設定</h3><div class="layout-settings-head-actions"><button class="primary" data-confirm-settings type="button">確認並儲存</button><button class="danger" data-remove-settings-field type="button">刪除欄位</button><button class="secondary" data-close-layout-settings type="button">關閉</button></div></div><label>欄位名稱<input data-setting-label value="${escapeHtml(field.label || '')}"></label><label>欄位類型<select data-setting-type>${typeSelectOptions(field.type)}</select></label><div class="setting-options" ${['select','multiselect'].includes(field.type) ? '' : 'hidden'}><span>選項:</span><textarea data-option-list data-option rows="7" placeholder="每行一個選項">${escapeHtml(options)}</textarea></div><input data-setting-default type="hidden" value="${escapeHtml(field.defaultValue || '')}"><input data-setting-help type="hidden" value="${escapeHtml(field.help || '')}"><input data-layout-row type="hidden" value="${escapeHtml(item.row || 1)}"><input data-layout-col type="hidden" value="${escapeHtml(item.col || 1)}"><input data-layout-rowspan type="hidden" value="${escapeHtml(item.rowSpan || 1)}"><input data-layout-colspan type="hidden" value="${escapeHtml(item.colSpan || 1)}"><input data-layout-width type="hidden" value="${escapeHtml(item.width || field.formWidth || '')}"><input data-layout-height type="hidden" value="${escapeHtml(layoutHeightValue(item, field))}"><input data-setting-required type="hidden" value="${field.required ? '1' : ''}"><input data-setting-readonly type="hidden" value="${field.readonly ? '1' : ''}"><input data-setting-hidden type="hidden" value="${field.hidden ? '1' : ''}">${field.type === 'subtable' ? '<section class="setting-subtable-fields"><div class="designer-subfields-head"><h4>子欄位設定</h4><span class="designer-subfield-total" data-subfield-total-width>欄框總寬度：0px</span><label class="designer-columns-per-row"><span>每列顯示</span><input data-setting-columns-per-row type="number" min="1" max="10" step="1" inputmode="numeric" value="' + escapeHtml(normalizeSubtableColumnsPerRow(field.columnsPerRow)) + '"><span>個欄位</span></label></div><div class="designer-subfield-list" data-setting-subfields></div><button class="secondary" data-add-setting-subfield type="button">+ 新增子欄位</button></section>' : ''}`;
   attachOptionColorEditor(panel, field, { optionsSelector: '[data-option-list]', typeSelector: '[data-setting-type]' });
   panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<section class="designer-list-settings"><div class="designer-list-settings-head"><strong>列表顯示設定</strong><span>只影響列表，欄位仍會保留在表單中</span></div><label class="designer-list-visible"><span>顯示在列表</span><input data-setting-list-visible type="checkbox" ${field.listVisible === false ? '' : 'checked'}><i aria-hidden="true"></i></label><label class="designer-list-width"><span>列表欄寬</span><div><input data-setting-list-width type="number" min="40" max="2000" step="10" inputmode="numeric" placeholder="自動" value="${escapeHtml(normalizeFieldWidth(field.width) ?? '')}"><em>px</em></div></label></section>`);
-  panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<section class="layout-direct-format"><strong>標題格式</strong>${textFormatToolbarHtml('headerStyle', field.headerStyle)}<strong>內容格式</strong>${textFormatToolbarHtml('contentStyle', field.contentStyle)}</section>`);
+  panel.querySelector('[data-setting-type]')?.closest('label')?.insertAdjacentHTML('afterend', `<details class="layout-direct-format layout-direct-format-collapsible"><summary>更多格式設定</summary><section><strong>標題格式</strong>${textFormatToolbarHtml('headerStyle', field.headerStyle)}<strong>內容格式</strong>${textFormatToolbarHtml('contentStyle', field.contentStyle)}</section></details>`);
   panel.hidden = false;
   panel.dataset.fieldKey = fieldKey;
   bindDirectFieldFormatControls(panel, fieldKey);
