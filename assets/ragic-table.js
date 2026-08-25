@@ -1425,6 +1425,10 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
   });
   const display = document.createElement('div');
   display.className = 'multi-select-display';
+  display.setAttribute('role', 'button');
+  display.setAttribute('tabindex', '0');
+  display.setAttribute('aria-haspopup', 'listbox');
+  display.setAttribute('aria-expanded', 'false');
   display.innerHTML = selected.length ? renderStyledOptionValue(field, selected) : '請選擇';
   display.title = selected.join('、');
   const dropdown = document.createElement('div');
@@ -1440,11 +1444,32 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
     dropdown.appendChild(label);
   });
   wrapper.append(select, display, dropdown);
-  display.addEventListener('click', (event) => {
-    event.stopPropagation();
+  const setDropdownOpen = (open) => {
+    dropdown.classList.toggle('show', open);
+    display.setAttribute('aria-expanded', String(open));
+  };
+  const toggleDropdown = () => {
     if (select.disabled) return;
-    document.querySelectorAll('.multi-select-dropdown.show').forEach((item) => { if (item !== dropdown) item.classList.remove('show'); });
-    dropdown.classList.toggle('show');
+    document.querySelectorAll('.ragic-option-dropdown.show').forEach((item) => {
+      if (item !== dropdown) item.classList.remove('show');
+    });
+    setDropdownOpen(!dropdown.classList.contains('show'));
+  };
+  display.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleDropdown();
+  });
+  display.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleDropdown();
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setDropdownOpen(false);
+    }
   });
   dropdown.addEventListener('click', (event) => event.stopPropagation());
   dropdown.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
@@ -1801,7 +1826,9 @@ const startInlineEdit = (td) => {
 };
 
 const createField = (field, value = '') => {
-  const wrap = document.createElement('label');
+  // 多選控制項內含多個 checkbox label，外層不能再使用 label，
+  // 否則瀏覽器會重新派送預設點擊，讓剛展開的選單立刻關閉。
+  const wrap = document.createElement(field.type === 'multiselect' ? 'div' : 'label');
   const isPairToggle = isReminderEnabledField(field) || field.type === 'reportEnabled';
   wrap.className = `ragic-field ragic-field-${field.type || 'text'}${isPairToggle ? ' ragic-field-pair-toggle' : ''}`;
   if (isTrackingModule() && String(field.label || '').trim() === '紀錄') {
