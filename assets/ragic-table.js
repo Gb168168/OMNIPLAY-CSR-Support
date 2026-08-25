@@ -3512,6 +3512,8 @@ const refreshSubfieldWidthSummary = (scope = document) => {
     const list = section.querySelector('.designer-subfield-list');
     const badge = section.querySelector('[data-subfield-total-width]');
     if (!list || !badge) return;
+    const normalizedOnOpen = fitSubtableWidthsToLimit(list);
+    if (normalizedOnOpen) syncSubtableParentWidth(list);
     const { total, count, complete, difference } = subfieldWidthSummary(list);
     let status = '';
     if (!count) status = '尚未新增子欄位';
