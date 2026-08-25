@@ -10882,3 +10882,69 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 #ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-format-editor {
   overflow: hidden !important;
 }
+
+
+/* Narrow property rail: stack subfield controls instead of pushing them off-screen. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row {
+  display: grid !important;
+  grid-template-columns: 26px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto auto auto auto auto !important;
+  gap: 8px !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row > .drag-handle {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: center;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row > input[data-role="label"] {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row > select[data-role="type"] {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row .designer-width {
+  grid-column: 2 !important;
+  grid-row: 3 !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  width: 100% !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row .designer-width input {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row .designer-actions {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: start;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row .designer-subfield-options {
+  grid-column: 1 / -1 !important;
+  grid-row: 4 !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row > .designer-option-color-editor {
+  grid-column: 1 / -1 !important;
+  grid-row: 5 !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row > .designer-option-color-editor:not([hidden])
+  + input[data-role="option-styles"]
+  + .designer-subfield-format-editor,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row > .designer-subfield-format-editor {
+  grid-column: 1 / -1 !important;
+  grid-row: 6 !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-name {
+  grid-column: 1 / -1 !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-row > button {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  min-height: 34px;
+}
