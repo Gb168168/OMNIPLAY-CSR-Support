@@ -2894,6 +2894,10 @@ const renderCell = (record, field) => {
   }
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
+  if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field?.type)) {
+    const checked = value === true || value === 'true' || value === '1';
+    return checked ? '<span class="ragic-list-checkmark" aria-label="是">✓</span>' : '';
+  }
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
   if (['datetime', 'createdDate', 'updatedDate'].includes(field?.type)) return escapeHtml(displayDateTime(value));
