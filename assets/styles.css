@@ -11000,3 +11000,58 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   margin: 0;
   box-sizing: border-box;
 }
+
+
+/* Subfield card actions: keep drag and delete as two unmistakable controls. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row {
+  position: relative !important;
+  padding: 10px 48px 10px 10px !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row > .drag-handle {
+  position: static !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  justify-self: center !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  color: #64748b;
+  cursor: grab;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row > .drag-handle:active {
+  cursor: grabbing;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row .designer-actions {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  z-index: 3;
+  display: flex !important;
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  margin: 0 !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row .designer-actions button {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  color: #dc2626;
+  font-size: 0 !important;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row .designer-actions button::before {
+  content: "×";
+  font-size: 20px;
+  line-height: 28px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row .designer-actions button:hover {
+  color: #fff;
+  border-color: #dc2626;
+  background: #dc2626;
+}
