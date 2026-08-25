@@ -10825,3 +10825,60 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     border-top: 1px solid #dbe4f0 !important;
   }
 }
+
+
+/* Subfield inspector: one outer scroll area and unclipped option-color controls. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .setting-subtable-fields,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-list,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-editor,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-list {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-row {
+  align-content: start;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-options {
+  width: 100% !important;
+  min-height: 72px;
+  overflow-y: auto !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+  gap: 7px !important;
+  width: 100% !important;
+  padding: 8px !important;
+  overflow: visible !important;
+  box-sizing: border-box;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-name {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 9px;
+  box-sizing: border-box;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-row > label {
+  display: flex !important;
+  justify-content: space-between;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 34px;
+  padding: 4px 7px !important;
+  box-sizing: border-box;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-row > label input[type="color"] {
+  flex: 0 0 24px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-option-color-row > button {
+  align-self: stretch;
+  min-width: 48px;
+  min-height: 34px;
+  padding: 4px 8px !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover .designer-subfield-format-editor {
+  overflow: hidden !important;
+}
