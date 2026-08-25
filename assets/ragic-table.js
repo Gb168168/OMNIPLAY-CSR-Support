@@ -2851,6 +2851,16 @@ const renderCell = (record, field) => {
   const embeddedImages = imageDataSources(value);
   if (embeddedImages.length) return renderFileCell(embeddedImages, field?.label || '圖片');
   if (field?.listParentKey) {
+    if (['select', 'multiselect'].includes(field?.type)) {
+      const lines = String(value ?? '').split('\n');
+      const styledLines = lines.map((line) => {
+        const items = field.type === 'multiselect'
+          ? line.split('、').map((item) => item.trim()).filter(Boolean)
+          : line;
+        return renderStyledOptionValue(field, items);
+      });
+      return `<span class="ragic-list-subtable-lines">${styledLines.join('<br>')}</span>`;
+    }
     return `<span class="ragic-list-subtable-lines">${escapeHtml(String(valueToText(value)))}</span>`;
   }
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
