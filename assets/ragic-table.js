@@ -2548,14 +2548,15 @@ const renderViewForm = (form, record = {}) => {
     return !fixedLogLayout || Boolean(logFieldLayoutFor(field));
   }).forEach((field) => {
     const item = document.createElement('div');
-    const isPairToggle = isReminderEnabledField(field) || field.type === 'reportEnabled';
+    const isReportToggle = field.type === 'reportEnabled';
     // Report must use the exact same record value and boolean rule as the list.
-    // Keeping it out of reminderRecordValue prevents reminder-specific defaults
-    // from making an unchecked report appear checked in view mode.
-    const fieldValue = field.type === 'reportEnabled'
+    const fieldValue = isReportToggle
       ? recordListFieldValue(record, field)
       : reminderRecordValue(record, field);
     const isChecked = isCheckedValue(fieldValue);
+    // An unchecked report is intentionally blank in both list and view mode.
+    // Reminder keeps its checkbox treatment because it is a separate control.
+    const isPairToggle = isReminderEnabledField(field) || (isReportToggle && isChecked);
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}${isPairToggle ? ' ragic-view-field-pair-toggle' : ''}${isPairToggle && isChecked ? ' is-checked' : ''}`;
     if (isTrackingModule() && String(field.label || '').trim() === '紀錄') {
       item.classList.add('is-tracking-record-field');
@@ -2574,7 +2575,7 @@ const renderViewForm = (form, record = {}) => {
       ? fieldValue.some((entry) => entry && Object.values(entry).some(Boolean))
       : ![undefined, null, ''].includes(fieldValue);
     item.classList.toggle('is-empty-view-field', !hasValue);
-    item.innerHTML = `<div class="ragic-view-label" style="${textStyleCss(field.headerStyle)}">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value" style="${textStyleCss(field.contentStyle)}">${isReminderEnabledField(field) ? '已啟用' : (isPairToggle ? '' : renderDisplayValue(field, fieldValue))}</div>`;
+    item.innerHTML = `<div class="ragic-view-label" style="${textStyleCss(field.headerStyle)}">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value" style="${textStyleCss(field.contentStyle)}">${isReminderEnabledField(field) ? '已啟用' : (isReportToggle ? '' : renderDisplayValue(field, fieldValue))}</div>`;
     appendFormResizeHandles(item, field);
     grid.appendChild(item);
   });
