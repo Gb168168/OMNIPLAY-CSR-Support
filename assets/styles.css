@@ -10948,3 +10948,55 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   width: 100% !important;
   min-height: 34px;
 }
+
+
+/* Form multiselect: align with the label and keep the option menu interactive. */
+#ragicForm .ragic-field-multiselect {
+  overflow: visible !important;
+}
+#ragicForm .ragic-field-multiselect:has(.multi-select-dropdown.show) {
+  position: relative;
+  z-index: 120;
+}
+#ragicForm .ragic-multi-select {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+#ragicForm .multi-select-display {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px 8px 12px;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+}
+#ragicForm .multi-select-display::after {
+  content: "⌄";
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+#ragicForm .multi-select-dropdown.show {
+  left: 0;
+  right: auto;
+  z-index: 1000;
+  width: max(100%, 220px);
+  min-width: 100%;
+  max-width: min(420px, calc(100vw - 32px));
+  box-sizing: border-box;
+}
+#ragicForm .ragic-form-grid,
+#ragicForm .dense-ragic-grid {
+  overflow: visible !important;
+}
+#ragicForm .multi-select-dropdown label {
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
