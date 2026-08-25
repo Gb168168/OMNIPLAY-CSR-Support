@@ -10528,3 +10528,131 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   color: var(--primary);
   font-size: 13px;
 }
+
+/* Polished subtable editor: compact hierarchy for the narrow property rail. */
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head {
+  position: static;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 14px;
+  padding: 12px;
+  border-color: #dbe5f2;
+  border-radius: 12px;
+  box-shadow: none;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head h4 {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.3;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head h4 small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head .designer-subfield-total {
+  grid-column: 1;
+  justify-self: start;
+  min-height: 28px;
+  padding: 4px 9px;
+  color: #15803d;
+  border-color: #86efac;
+  background: #f0fdf4;
+  font-size: 11px;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head .designer-columns-per-row {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  grid-template-columns: auto 58px auto;
+  gap: 6px;
+  white-space: nowrap;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head .designer-columns-per-row input {
+  min-height: 34px;
+  padding: 6px 8px;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields .designer-subfield-list {
+  gap: 10px;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields .designer-subfield-row {
+  padding: 10px !important;
+  border: 1px solid #dbe5f2;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+#ragicDesignerModal .layout-settings-popover .designer-subfield-row .designer-subfield-options {
+  min-height: 58px;
+  padding: 9px 10px;
+  line-height: 1.4;
+  resize: vertical;
+}
+#ragicDesignerModal .layout-settings-popover .designer-subfield-row > .designer-option-color-editor {
+  gap: 8px;
+  padding: 10px;
+  border-color: #dbe5f2;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-settings-popover .designer-option-color-head {
+  align-items: center;
+}
+#ragicDesignerModal .layout-settings-popover .designer-option-color-head strong {
+  font-size: 12px;
+}
+#ragicDesignerModal .layout-settings-popover .designer-option-color-head small {
+  font-size: 10px;
+}
+#ragicDesignerModal .layout-settings-popover .designer-option-color-row {
+  grid-template-columns: minmax(80px, 1fr) auto auto auto;
+  padding: 7px 8px;
+  border-color: #e2e8f0;
+  background: #fff;
+}
+#ragicDesignerModal .layout-settings-popover .designer-option-color-row > label {
+  padding: 3px 6px;
+  background: #fff;
+}
+#ragicDesignerModal .layout-settings-popover .designer-option-color-row > button {
+  min-height: 30px;
+  padding: 4px 8px;
+}
+#ragicDesignerModal .layout-settings-popover .designer-subfield-format-editor {
+  margin-top: 0;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-settings-popover .designer-subfield-format-editor > summary {
+  min-height: 34px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+#ragicDesignerModal .layout-settings-popover .setting-subtable-fields > [data-add-setting-subfield] {
+  justify-self: start;
+  min-height: 36px;
+}
+@media (max-width: 700px) {
+  #ragicDesignerModal .layout-settings-popover .setting-subtable-fields > .designer-subfields-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  #ragicDesignerModal .layout-settings-popover .designer-option-color-head {
+    display: grid;
+    justify-content: stretch;
+    gap: 2px;
+  }
+  #ragicDesignerModal .layout-settings-popover .designer-option-color-row {
+    grid-template-columns: minmax(70px, 1fr) auto auto auto;
+  }
+  #ragicDesignerModal .layout-settings-popover .designer-option-color-row > button {
+    grid-column: auto;
+    width: auto;
+  }
+}
