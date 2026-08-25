@@ -17,6 +17,7 @@ const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includ
 const isLogNewModule = (config = RAGIC_STATE?.config) => ['log_new', 'workLogsNew'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').trim() === '日誌 NEW';
 const isTrackingModule = (config = RAGIC_STATE?.config) => ['tracking', 'workTracking'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '') === '對接追蹤';
 const isReminderEnabledField = (field = {}) => field.type === 'reminderEnabled' || field.key === 'reminder_enabled' || String(field.label || '').trim() === '啟用提醒';
+const isCheckedValue = (value) => value === true || value === 'true' || value === 1 || value === '1';
 const reminderRecordValue = (record = {}, field = {}) => {
   if (isReminderEnabledField(field)) return true;
   if (field.type === 'reminderTime' || field.key === 'reminder_at' || String(field.label || '').trim() === '提醒時間') {
@@ -2548,8 +2549,13 @@ const renderViewForm = (form, record = {}) => {
   }).forEach((field) => {
     const item = document.createElement('div');
     const isPairToggle = isReminderEnabledField(field) || field.type === 'reportEnabled';
-    const fieldValue = reminderRecordValue(record, field);
-    const isChecked = fieldValue === true || fieldValue === 'true' || fieldValue === '1';
+    // Report must use the exact same record value and boolean rule as the list.
+    // Keeping it out of reminderRecordValue prevents reminder-specific defaults
+    // from making an unchecked report appear checked in view mode.
+    const fieldValue = field.type === 'reportEnabled'
+      ? recordListFieldValue(record, field)
+      : reminderRecordValue(record, field);
+    const isChecked = isCheckedValue(fieldValue);
     item.className = `ragic-view-field ragic-view-field-${field.type || 'text'}${isPairToggle ? ' ragic-view-field-pair-toggle' : ''}${isPairToggle && isChecked ? ' is-checked' : ''}`;
     if (isTrackingModule() && String(field.label || '').trim() === '紀錄') {
       item.classList.add('is-tracking-record-field');
@@ -2895,7 +2901,7 @@ const renderCell = (record, field) => {
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
   if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
   if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field?.type)) {
-    const checked = value === true || value === 'true' || value === '1';
+    const checked = isCheckedValue(value);
     return checked ? '<span class="ragic-list-checkmark" aria-label="是">✓</span>' : '';
   }
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
