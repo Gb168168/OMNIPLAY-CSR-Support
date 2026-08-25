@@ -1455,6 +1455,8 @@ const createMultiSelectControl = (field, value = '', subfield = false) => {
       const values = [...select.selectedOptions].map((option) => option.value);
       display.innerHTML = values.length ? renderStyledOptionValue(field, values) : '請選擇';
       display.title = values.join('、');
+      select.dispatchEvent(new Event('input', { bubbles: true }));
+      select.dispatchEvent(new Event('change', { bubbles: true }));
     });
   });
   return wrapper;
