@@ -4548,7 +4548,8 @@ const setupRagicKeyboardShortcuts = () => {
 
   document.addEventListener('keydown', (event) => {
     const accelerator = event.ctrlKey || event.metaKey;
-    if (!accelerator || event.altKey || String(event.key).toLowerCase() !== 's') return;
+    const saveKey = event.code === 'KeyS' || String(event.key).toLowerCase() === 's';
+    if (!accelerator || event.altKey || !saveKey) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -4578,15 +4579,17 @@ const setupRagicKeyboardShortcuts = () => {
 
     const formView = document.querySelector('#ragicFormView');
     const form = document.querySelector('#ragicForm');
-    const formSave = document.querySelector('button[form="ragicForm"][type="submit"], #ragicForm button[type="submit"]');
     if (
       RAGIC_STATE.formMode === 'edit' &&
       isRagicElementVisible(formView) &&
-      form &&
-      formSave &&
-      !formSave.disabled
+      form
     ) {
-      form.requestSubmit(formSave);
+      const formSave = [...document.querySelectorAll(
+        '#ragicFormView button[form="ragicForm"][type="submit"], #ragicForm button[type="submit"]'
+      )].find((button) => isRagicElementVisible(button) && !button.disabled);
+
+      if (formSave) formSave.click();
+      else form.requestSubmit();
       return;
     }
 
