@@ -830,7 +830,21 @@ const normalizeOptionStyles = (value) => {
     verticalAlign: ['top', 'middle', 'bottom'].includes(style?.verticalAlign) ? style.verticalAlign : 'middle'
   }]).filter(([, style]) => style.color || style.backgroundColor || style.fontSize !== 14 || style.bold || style.italic || style.strike || style.textAlign !== 'left' || style.verticalAlign !== 'middle'));
 };
-const optionStyle = (field, option) => normalizeOptionStyles(field?.optionStyles)[String(option)] || {};
+const normalizeOptionStyleMatchKey = (value) => String(value ?? '')
+  .normalize('NFKC')
+  .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLocaleLowerCase('zh-TW');
+const optionStyle = (field, option) => {
+  const styles = normalizeOptionStyles(field?.optionStyles);
+  const exactKey = String(option ?? '');
+  if (styles[exactKey]) return styles[exactKey];
+  const matchKey = normalizeOptionStyleMatchKey(exactKey);
+  if (!matchKey) return {};
+  const compatibleKey = Object.keys(styles).find((key) => normalizeOptionStyleMatchKey(key) === matchKey);
+  return compatibleKey ? styles[compatibleKey] : {};
+};
 const optionStyleCss = (field, option) => {
   const style = optionStyle(field, option);
   return `${style.color ? `color:${style.color};` : ''}${style.backgroundColor ? `background-color:${style.backgroundColor};` : ''}${style.fontSize ? `font-size:${style.fontSize}px;` : ''}${style.bold ? 'font-weight:800;' : ''}${style.italic ? 'font-style:italic;' : ''}${style.strike ? 'text-decoration:line-through;' : ''}${style.textAlign ? `text-align:${style.textAlign};` : ''}${style.verticalAlign ? `vertical-align:${style.verticalAlign};` : ''}`;
