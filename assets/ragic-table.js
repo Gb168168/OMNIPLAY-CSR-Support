@@ -4532,6 +4532,68 @@ const syncLinkedHandoverFields = async ({ data = {}, logId = '' } = {}) => {
   }, { merge: true });
 };
 
+const isRagicElementVisible = (element) => Boolean(
+  element &&
+  !element.hidden &&
+  element.getClientRects().length
+);
+
+const setupRagicKeyboardShortcuts = () => {
+  if (window._ragicKeyboardShortcutsBound) return;
+  window._ragicKeyboardShortcutsBound = true;
+
+  document.querySelectorAll(
+    '#saveSchemaButton, .btn-save-layout, [data-confirm-settings], button[form="ragicForm"][type="submit"]'
+  ).forEach((button) => button.setAttribute('aria-keyshortcuts', 'Control+S Meta+S'));
+
+  document.addEventListener('keydown', (event) => {
+    const accelerator = event.ctrlKey || event.metaKey;
+    if (!accelerator || event.altKey || String(event.key).toLowerCase() !== 's') return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.repeat) return;
+
+    const designerModal = document.querySelector('#ragicDesignerModal');
+    if (isRagicElementVisible(designerModal)) {
+      const settingsPanel = designerModal.querySelector('#layoutFieldSettingsPanel');
+      const settingsSave = settingsPanel?.querySelector('[data-confirm-settings]');
+      if (isRagicElementVisible(settingsPanel) && settingsSave && !settingsSave.disabled) {
+        settingsSave.click();
+        return;
+      }
+
+      const designerSave = designerModal.querySelector('#saveSchemaButton, .btn-save-layout');
+      if (designerSave && !designerSave.disabled) {
+        designerSave.click();
+        return;
+      }
+    }
+
+    const inlineCell = document.querySelector('#ragicTableBody td.editing');
+    if (inlineCell) {
+      finishInlineEdit(inlineCell);
+      return;
+    }
+
+    const formView = document.querySelector('#ragicFormView');
+    const form = document.querySelector('#ragicForm');
+    const formSave = document.querySelector('button[form="ragicForm"][type="submit"], #ragicForm button[type="submit"]');
+    if (
+      RAGIC_STATE.formMode === 'edit' &&
+      isRagicElementVisible(formView) &&
+      form &&
+      formSave &&
+      !formSave.disabled
+    ) {
+      form.requestSubmit(formSave);
+      return;
+    }
+
+    showRagicNotice('目前沒有可儲存的內容', { tone: 'error', duration: 2200 });
+  }, true);
+};
+
 const setupRagicFormActions = () => {
   const deleteButton = document.querySelector('#deleteButton');
   const cancelButton = document.querySelector('#backToListButton');
@@ -5133,6 +5195,7 @@ const addDesignerPairFields = (pairType) => {
     await saveDesignerSchema({ close: true });
   });
   setupRagicFormActions();
+  setupRagicKeyboardShortcuts();
   document.addEventListener('click', (event) => {
     if (!hasUnsavedRagicChanges()) return;
     const link = event.target.closest('a[href]');
