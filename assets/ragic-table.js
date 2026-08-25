@@ -3958,7 +3958,7 @@ const openLayoutFieldSettings = (fieldKey) => {
   if (field.type === 'subtable') {
     const subtableSettings = panel.querySelector('.setting-subtable-fields');
     if (subtableSettings && typeSettingLabel) {
-      subtableSettings.querySelector('h4').textContent = '子欄位設定（下拉欄位可個別設定選項顏色）';
+      subtableSettings.querySelector('h4').innerHTML = '<span>子欄位設定</span><small>下拉欄位可個別設定選項顏色</small>';
       typeSettingLabel.insertAdjacentElement('afterend', subtableSettings);
     }
   } else {
