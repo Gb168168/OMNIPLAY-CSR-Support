@@ -10656,3 +10656,172 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     width: auto;
   }
 }
+
+
+/* 2026-08 form designer usability pass: progressive rails and calmer spacing. */
+#ragicDesignerModal .layout-wysiwyg-designer {
+  min-height: 0;
+  background: #f4f7fb;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-toolbar {
+  min-height: 58px;
+  padding: 9px 16px !important;
+  gap: 8px 14px !important;
+  border-bottom: 1px solid #dbe4f0;
+  background: #fff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-toolbar label {
+  gap: 6px;
+  font-size: 13px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-toolbar select {
+  min-width: 76px;
+  min-height: 34px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-toolbar-actions {
+  margin-left: auto;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-toolbar-actions button {
+  min-height: 36px;
+  padding: 6px 14px;
+}
+
+/* Default state: field library plus a wide canvas. The empty inspector is hidden. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover[hidden]),
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover[hidden]) {
+  grid-template-columns: 210px minmax(0, 1fr) 0 !important;
+  min-height: 0;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-left: 0 !important;
+  overflow: hidden !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-empty {
+  display: none !important;
+}
+
+/* Editing state: remove the library temporarily and give the inspector one clear rail. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
+  grid-template-columns: minmax(620px, 1fr) clamp(360px, 27vw, 430px) !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])) .layout-field-library,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) .layout-field-library {
+  display: none !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel:has(> :not([hidden])) {
+  width: auto !important;
+  min-width: 0 !important;
+  border-left: 1px solid #dbe4f0 !important;
+  overflow: hidden !important;
+}
+
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-head {
+  padding: 12px 12px 9px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-list {
+  gap: 6px;
+  padding: 8px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-library-item {
+  grid-template-columns: 16px minmax(0, 1fr) 24px;
+  gap: 6px;
+  min-height: 46px;
+  padding: 7px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-canvas {
+  padding: 12px 16px 16px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-context-toolbar {
+  min-height: 42px;
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-grid {
+  gap: 10px;
+  padding: 12px;
+}
+
+/* Inspector: sticky actions, clearer groups and fewer nested boxes. */
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-popover,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-add-popover {
+  padding: 0 14px 18px !important;
+  background: #fff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-head {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 8;
+  margin: 0 -14px 12px !important;
+  padding: 10px 14px !important;
+  border-bottom: 1px solid #dbe4f0;
+  background: rgba(255,255,255,.98);
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-head-actions {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-settings-head-actions button {
+  min-height: 34px;
+  padding: 5px 9px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-field-settings {
+  gap: 10px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-field-settings > label {
+  gap: 5px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .layout-field-settings input,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-field-settings select,
+#ragicDesignerModal .layout-wysiwyg-designer .layout-field-settings textarea {
+  min-height: 36px;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-option-color-editor {
+  gap: 7px;
+  padding: 9px;
+  border-color: #dbe4f0;
+  background: #f8fafc;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-option-color-row {
+  gap: 6px;
+  padding: 7px;
+  border-radius: 8px;
+  background: #fff;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-option-format-toolbar {
+  gap: 6px !important;
+}
+#ragicDesignerModal .layout-wysiwyg-designer .designer-subfield-format-editor {
+  margin-top: 0;
+}
+
+/* Narrow screens use one vertical workflow instead of three squeezed columns. */
+@media (max-width: 1050px) {
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench,
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-settings-popover:not([hidden])),
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-workbench:has(.layout-add-popover:not([hidden])) {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(460px, 1fr) auto;
+    overflow: auto !important;
+  }
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-field-library {
+    display: block !important;
+    max-height: 190px;
+    border-right: 0;
+    border-bottom: 1px solid #dbe4f0;
+  }
+  #ragicDesignerModal .layout-wysiwyg-designer .layout-side-panel:has(> :not([hidden])) {
+    width: 100% !important;
+    max-height: none !important;
+    border-left: 0 !important;
+    border-top: 1px solid #dbe4f0 !important;
+  }
+}
