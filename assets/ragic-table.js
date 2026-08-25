@@ -3537,9 +3537,35 @@ const syncSubtableParentWidth = (subfieldList) => {
     if (layoutWidth) layoutWidth.value = SUBTABLE_FIXED_TOTAL_WIDTH;
   }
 };
+const fitSubtableWidthsToLimit = (list) => {
+  const inputs = [...(list?.querySelectorAll(':scope > .designer-field [data-role="width"]') || [])];
+  const widths = inputs.map((input) => normalizeFieldWidth(input.value));
+  if (!inputs.length || widths.some((width) => !width)) return false;
+  const total = widths.reduce((sum, width) => sum + width, 0);
+  if (total <= SUBTABLE_FIXED_TOTAL_WIDTH) return false;
+
+  const minimum = 40;
+  const distributable = Math.max(0, SUBTABLE_FIXED_TOTAL_WIDTH - minimum * inputs.length);
+  const weights = widths.map((width) => Math.max(0, width - minimum));
+  const weightTotal = weights.reduce((sum, width) => sum + width, 0) || inputs.length;
+  const fitted = weights.map((weight) => minimum + Math.floor(distributable * (weightTotal === inputs.length ? 1 : weight) / weightTotal));
+  let remainder = SUBTABLE_FIXED_TOTAL_WIDTH - fitted.reduce((sum, width) => sum + width, 0);
+  for (let index = 0; remainder > 0; index = (index + 1) % fitted.length) {
+    fitted[index] += 1;
+    remainder -= 1;
+  }
+  inputs.forEach((input, index) => { input.value = fitted[index]; });
+  return true;
+};
+
 const syncSubtableWidthFromEvent = (target) => {
   const list = target?.closest?.('.designer-subfield-list');
-  if (list) syncSubtableParentWidth(list);
+  if (list) {
+    syncSubtableParentWidth(list);
+    if (target?.matches?.('[data-role="width"]') && fitSubtableWidthsToLimit(list)) {
+      showRagicNotice('子表格總寬度上限為 1000px，已自動縮放各欄位', { duration: 3200 });
+    }
+  }
   refreshSubfieldWidthSummary(target?.closest?.('.designer-subfields, .setting-subtable-fields') || document);
 };
 
