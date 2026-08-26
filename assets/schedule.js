@@ -103,6 +103,14 @@ const getScheduleEventMeta = (item = {}) => GAME_EVENT_META[item.eventType] || n
 const getScheduleDisplayColor = (item = {}) => item.labelColor || getScheduleEventMeta(item)?.color || '#3b82f6';
 const getScheduleDisplayLabel = (item = {}) =>
   canonicalScheduleLabelName(item.labelName) || getScheduleEventMeta(item)?.labelName || '';
+const isFirstLaunchSchedule = (item = {}) => {
+  if (item.eventType === 'first-launch') return true;
+  const labels = [item.labelName, item.category, item.labelCategory]
+    .map((value) => canonicalScheduleLabelName(value))
+    .filter(Boolean);
+  if (labels.includes('⭐ 首發平台上線')) return true;
+  return /^\s*⭐\s*首發平台上線(?:\s*[｜|]|\s*$)/.test(String(item.title || ''));
+};
 const getScheduleGames = (item = {}) => {
   if (Array.isArray(item.games) && item.games.length) return item.games;
   if (item.gameId) return [{
@@ -1238,7 +1246,7 @@ const openModal = (dateKey, scheduleId = null) => {
   toggleRepeatInterval();
   renderHistory(item?.history || []);
   const isPmConfirmation = item?.source === 'google-game-sheet' && item?.eventType === 'pm-confirmation';
-  const isFirstLaunch = item?.source === 'google-game-sheet' && item?.eventType === 'first-launch';
+  const isFirstLaunch = isFirstLaunchSchedule(item);
   if (gamePmConfirmedLabel) gamePmConfirmedLabel.hidden = !isPmConfirmation;
   if (firstLaunchOtherPlatform) firstLaunchOtherPlatform.hidden = !isFirstLaunch;
   if (firstLaunchOtherPlatformEnabled) firstLaunchOtherPlatformEnabled.checked = Boolean(item?.otherPlatformEnabled);
@@ -1539,7 +1547,7 @@ formEl?.addEventListener('submit', async (event) => {
   else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
   if (!payload.title) return setMessage('請輸入標題。');
   const editingItem = scheduleList.find((entry) => entry.id === editingId);
-  const isEditingFirstLaunch = editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'first-launch';
+  const isEditingFirstLaunch = isFirstLaunchSchedule(editingItem);
   const otherPlatformEnabled = isEditingFirstLaunch && Boolean(firstLaunchOtherPlatformEnabled?.checked);
   const otherPlatformUatDate = firstLaunchOtherPlatformUatDate?.value || '';
   const otherPlatformProdDate = firstLaunchOtherPlatformProdDate?.value || '';
