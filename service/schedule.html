@@ -4,16 +4,41 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260818-range-field-widths" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260826-other-platform-toggle1" />
   <style>
     .day-agenda-heading-actions { display: flex; align-items: center; gap: 8px; }
     .day-agenda-heading-actions .primary-button { min-height: 38px; padding: 7px 12px; white-space: nowrap; }
 
     .game-pm-confirmed[hidden], .first-launch-other-platform[hidden], .first-launch-other-platform-dates[hidden] { display: none !important; }
-    .first-launch-other-platform { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); }
-    .first-launch-other-platform > label { display: flex; align-items: center; gap: 8px; font-weight: 800; }
-    .first-launch-other-platform-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    @media (max-width: 640px) { .first-launch-other-platform-dates { grid-template-columns: 1fr; } }
+    .first-launch-other-platform { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid #d8e3f0; border-radius: 12px; background: #f8fbff; }
+    .schedule-form .first-launch-other-platform-toggle {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      margin: 0;
+      cursor: pointer;
+    }
+    .schedule-form .first-launch-other-platform-toggle input[type="checkbox"] {
+      flex: 0 0 20px;
+      width: 20px !important;
+      min-width: 20px !important;
+      max-width: 20px !important;
+      height: 20px !important;
+      min-height: 20px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      accent-color: var(--primary);
+    }
+    .first-launch-other-platform-copy { display: grid; gap: 2px; min-width: 0; text-align: left; }
+    .first-launch-other-platform-copy strong { color: var(--text); font-size: 14px; line-height: 1.4; }
+    .first-launch-other-platform-copy small { color: var(--text-secondary); font-size: 12px; font-weight: 500; line-height: 1.4; }
+    .first-launch-other-platform-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 12px; border-top: 1px solid #d8e3f0; }
+    @media (max-width: 640px) {
+      .first-launch-other-platform { padding: 12px; }
+      .first-launch-other-platform-dates { grid-template-columns: 1fr; }
+    }
     /* Make the automatic-sync status readable in both light and dark themes. */
     .schedule-sync-countdown {
       border-color: #60a5fa !important;
@@ -211,7 +236,13 @@
               <span><input id="gamePmConfirmed" type="checkbox" /> AM 已確認（勾選並儲存後，自動建立行銷素材、UAT 上架公告與 PROD 上架公告待辦）</span>
             </label>
             <section class="first-launch-other-platform" id="firstLaunchOtherPlatform" hidden aria-label="其他平台開放排程">
-              <label><input id="firstLaunchOtherPlatformEnabled" type="checkbox" /> 設定其他平台開放排程</label>
+              <label class="first-launch-other-platform-toggle">
+                <input id="firstLaunchOtherPlatformEnabled" type="checkbox" />
+                <span class="first-launch-other-platform-copy">
+                  <strong>設定其他平台開放排程</strong>
+                  <small>收到公司通知後，再填寫 UAT 與 PORD 開放日期</small>
+                </span>
+              </label>
               <div class="first-launch-other-platform-dates" id="firstLaunchOtherPlatformDates" hidden>
                 <label><span>其他平台 UAT 開放日期</span><input id="firstLaunchOtherPlatformUatDate" type="date" /></label>
                 <label><span>其他平台 PORD 開放日期</span><input id="firstLaunchOtherPlatformProdDate" type="date" /></label>
