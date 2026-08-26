@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌 NEW｜OMNIPLAY 客服系統</title>
-  <meta name="log-new-ai-version" content="20260827-usage-cache1" />
+  <meta name="log-new-ai-version" content="20260827-verification1" />
   <link rel="stylesheet" href="../assets/styles.css?v=20260816-mobile-nav" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
@@ -1303,7 +1303,12 @@
       }
     }
 
-  </style>
+  
+    #ragicForm [data-subtable="items"] .subtable-row.has-ai-verification-warning {
+      outline: 2px solid #f59e0b;
+      outline-offset: 2px;
+    }
+</style>
 </head>
 <body class="log-new-page" data-reminder-module="log_new">
   <section class="app-shell" aria-label="客服系統主畫面">
@@ -1733,6 +1738,27 @@
       return ['客戶問題', '內部處理', '問題判斷', '目前進度', '後續待辦']
         .map((title) => `【${title}】\n${parts[title] || '對話或圖片未提供'}`)
         .join('\n\n');
+    };
+
+    const logNewCriticalValues = (value = '') => [...new Set(
+      (String(value).match(/\b(?:[A-Za-z]{1,8}[-_])?\d[\dA-Za-z_-]{3,}\b|(?:NT\$|US\$|\$)\s*\d[\d,.]*/gi) || [])
+        .map((token) => token.toLowerCase().replace(/[\s,]/g, ''))
+    )];
+    const validateLogNewAiResult = ({ raw = '', result = {}, source = '', hasImages = false } = {}) => {
+      const warnings = [];
+      const requiredMarkers = ['<<<ANALYSIS>>>', '<<<SUMMARY>>>', '<<<CUSTOMER_BRIEF>>>', '<<<SUPPORT_BRIEF>>>', '<<<END>>>'];
+      if (!requiredMarkers.every((marker) => raw.includes(marker))) warnings.push('AI 回傳格式不完整，請核對各欄位');
+      const outputText = [result.analysis, result.summary, result.customerBrief, result.supportBrief].filter(Boolean).join('\n');
+      const sourceValues = new Set(logNewCriticalValues(source));
+      const unexpectedValues = logNewCriticalValues(outputText).filter((token) => !sourceValues.has(token));
+      if (unexpectedValues.length) warnings.push(`AI 出現原始內容沒有的編號／金額：${unexpectedValues.slice(0, 8).join('、')}`);
+      if (hasImages) warnings.push('圖片中的玩家 ID、注單號、日期與金額仍需對照原圖確認');
+      if (!String(result.analysis || '').trim() || !String(result.summary || '').trim()) warnings.push('AI 分析或總結為空白');
+      return warnings;
+    };
+    const appendLogNewAiWarnings = (analysis = '', warnings = []) => {
+      if (!warnings.length) return analysis;
+      return `${String(analysis || '').trim()}\n\n【⚠️ 系統核對】\n${warnings.map((warning) => `・${warning}`).join('\n')}`.trim();
     };
 
     window.applyLogNewAiResult = (row, result = {}) => {
@@ -2431,7 +2457,7 @@
                   const imageResponse = await puter.ai.chat(
                     `請用繁體中文客觀辨識這張客服案件截圖。這是圖${imageIndex + 1}，圖片來源設定為「${imageSource}」。請列出畫面中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額、狀態與處理結果；看不清楚或不存在的資訊請寫未辨識，不可猜測。`,
                     await logNewImageMedia(images[imageIndex], imageIndex),
-                    { model: 'gpt-5.4-nano', temperature: 0.1, max_tokens: 250 }
+                    { model: 'gpt-5.4-nano', temperature: 0, max_tokens: 250 }
                   );
                   imageText = logNewAiResponseText(imageResponse);
                   writeLogNewAiCache('image', imageFingerprint, { text: imageText });
@@ -2445,7 +2471,7 @@
               }
               conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.map((item) => `${item.text}\n來源判斷：${item.owner}`).join('\n\n')}`;
             }
-            const prompt = `你是 OMNIPLAY 客服案件分析助手。必須依照下方唯一且完整的 OMNIPLAY 內部團隊名單辨識發言者。\n\nOMNIPLAY 內部團隊名單（只能用於判斷內外部，不能把未出現在對話中的名單人員寫入分析）：\n${logNewTeamDirectoryText}\n\n本段對話實際出現的發言者：${visibleSpeakers.join('、') || '無法辨識'}\n\n人員判斷規則（必須遵守）：\n1. 名單內的人才是 OMNIPLAY 內部人員；不在名單內的發言者一律視為客戶或外部窗口，不得寫成「可能是內部」、「未在名錄中需確認」或把外部人員列入【內部處理】。\n2. 比對姓名時忽略大小寫、emoji、空格、底線、連字號，以及商務、AM、PM、RD、IT、SRE、DBA、OP 等部門後綴。\n3. igaming-op 是 OMNIPLAY 客服帳號；其訊息結尾「-代碼」是客服人員代碼。分析內只能照原文寫 igaming-op 或該代碼，不得把代碼展開成對話中沒出現的姓名。\n4. 即使沒有 Excel、圖片或附件，也必須只依文字對話的發言者與內容完成內外部判斷。\n5. 團隊名單只供身分比對。分析中可出現的姓名僅限「本段對話實際出現的發言者」，不得加入名單中其他未發言的人。\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。只有實際有圖片時才能寫圖片內容；沒有圖片時，省略所有圖片段落，不得寫圖片推論。\n\n事實判斷規則（必須遵守）：\n1. 嚴格按照對話時間順序判斷「誰先提出／告知、誰轉請同仁查看、誰回覆」。不可預設一定是客戶先提出問題。\n2. 如果是 OMNIPLAY 先告知客戶異常或狀態，必須明確寫成「OMNIPLAY／igaming-op 主動告知客戶」，不可改寫成客戶反映。\n3. 只能寫對話或圖片明確出現的人、事件、數字、狀態、處理與回覆。不可自行補充原因、缺少資料、風險、確認結果、處理方案或下一步。\n4. 對話沒有要求補注單號、玩家 ID、遊戲、金額或其他資料時，禁止建議補資料。\n5. 客戶僅將訊息轉請自己的同仁查看時，只能寫「客戶方轉請同仁查看」及實際回覆，不得描述成 OMNIPLAY 內部處理。\n\n輸出規則：\n1. analysis 只保留有明確對話事實的段落，可使用【事件經過】、【客戶方回覆】、【目前進度】；沒有內容的【客戶問題】、【客戶圖片】、【內部處理】、【我方圖片】、【問題判斷】、【後續待辦】必須省略，不得用推測補滿。\n2. summary 最多 80 個中文字，只摘要已發生的事與目前明確回覆；對話未交代下一步時，不得自行新增下一步。\n3. customerBrief 最多 35 個中文字；若客戶沒有提出問題，應寫客戶實際動作或回覆，不得虛構客戶問題。\n4. supportBrief 最多 45 個中文字，只寫 OMNIPLAY 在對話中實際做過的事。\n5. 所有內容使用繁體中文，語意完整，不得輸出省略號、截斷句、emoji、特殊圖形或「�」字元。\n\n對話內容：\n${conversation}`;
+            const prompt = `你是 OMNIPLAY 客服案件分析助手。必須依照下方唯一且完整的 OMNIPLAY 內部團隊名單辨識發言者。\n\nOMNIPLAY 內部團隊名單（只能用於判斷內外部，不能把未出現在對話中的名單人員寫入分析）：\n${logNewTeamDirectoryText}\n\n本段對話實際出現的發言者：${visibleSpeakers.join('、') || '無法辨識'}\n\n人員判斷規則（必須遵守）：\n1. 名單內的人才是 OMNIPLAY 內部人員；不在名單內的發言者一律視為客戶或外部窗口，不得寫成「可能是內部」、「未在名錄中需確認」或把外部人員列入【內部處理】。\n2. 比對姓名時忽略大小寫、emoji、空格、底線、連字號，以及商務、AM、PM、RD、IT、SRE、DBA、OP 等部門後綴。\n3. igaming-op 是 OMNIPLAY 客服帳號；其訊息結尾「-代碼」是客服人員代碼。分析內只能照原文寫 igaming-op 或該代碼，不得把代碼展開成對話中沒出現的姓名。\n4. 即使沒有 Excel、圖片或附件，也必須只依文字對話的發言者與內容完成內外部判斷。\n5. 團隊名單只供身分比對。分析中可出現的姓名僅限「本段對話實際出現的發言者」，不得加入名單中其他未發言的人。\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。只有實際有圖片時才能寫圖片內容；沒有圖片時，省略所有圖片段落，不得寫圖片推論。\n\n事實判斷規則（必須遵守）：\n1. 嚴格按照對話時間順序判斷「誰先提出／告知、誰轉請同仁查看、誰回覆」。不可預設一定是客戶先提出問題。\n2. 如果是 OMNIPLAY 先告知客戶異常或狀態，必須明確寫成「OMNIPLAY／igaming-op 主動告知客戶」，不可改寫成客戶反映。\n3. 只能寫對話或圖片明確出現的人、事件、數字、狀態、處理與回覆。玩家 ID、注單號、遊戲 ID、日期、時間與金額必須逐字複製，不得改寫、補零、換算或猜測。不可自行補充原因、缺少資料、風險、確認結果、處理方案或下一步。\n4. 對話沒有要求補注單號、玩家 ID、遊戲、金額或其他資料時，禁止建議補資料。\n5. 客戶僅將訊息轉請自己的同仁查看時，只能寫「客戶方轉請同仁查看」及實際回覆，不得描述成 OMNIPLAY 內部處理。\n\n輸出規則：\n1. analysis 只保留有明確對話事實的段落，可使用【事件經過】、【客戶方回覆】、【目前進度】；沒有內容的【客戶問題】、【客戶圖片】、【內部處理】、【我方圖片】、【問題判斷】、【後續待辦】必須省略，不得用推測補滿。\n2. summary 最多 80 個中文字，只摘要已發生的事與目前明確回覆；對話未交代下一步時，不得自行新增下一步。\n3. customerBrief 最多 35 個中文字；若客戶沒有提出問題，應寫客戶實際動作或回覆，不得虛構客戶問題。\n4. supportBrief 最多 45 個中文字，只寫 OMNIPLAY 在對話中實際做過的事。\n5. 所有內容使用繁體中文，語意完整，不得輸出省略號、截斷句、emoji、特殊圖形或「�」字元。\n\n對話內容：\n${conversation}`;
             const finalPrompt = `${prompt}
 
 系統已完成發言者分類：${classifiedSpeakers || '無法辨識'}。必須直接採用此分類，不得自行改判。
@@ -2472,13 +2498,21 @@
 <<<END>>>`;
             const options = {
               model: 'gpt-5.4-nano',
-              temperature: 0.1,
+              temperature: 0,
               max_tokens: 600
             };
             const response = await puter.ai.chat(finalPrompt, options);
             const raw = logNewAiResponseText(response);
             const result = parseLogNewAiResponse(raw);
             result.analysis = mergeLogNewImageFindings(result.analysis, imageFindings);
+            result.verificationWarnings = validateLogNewAiResult({
+              raw,
+              result,
+              source: `${conversationText}\n${imageFindings.map((item) => item.text).join('\n')}`,
+              hasImages: images.length > 0
+            });
+            result.analysis = appendLogNewAiWarnings(result.analysis, result.verificationWarnings);
+            row.classList.toggle('has-ai-verification-warning', result.verificationWarnings.length > 0);
             window.applyLogNewAiResult(row, result);
             const brief = {
               customerBrief: result.customerBrief || '',
