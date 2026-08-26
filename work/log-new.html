@@ -2398,7 +2398,7 @@
             const job = jobs[index];
             const row = job.row;
             if (job.cached?.result) {
-              window.applyLogNewAiResult(row, job.cached.result);
+              // 保留使用者在畫面上手動修正過的分析文字；快取只用於避免重跑與彙整問題描述。
               briefs.push(job.cached.brief || {
                 customerBrief: job.cached.result.customerBrief || '',
                 supportBrief: job.cached.result.supportBrief || '',
