@@ -53,9 +53,13 @@
   const saveItems = () => localStorage.setItem(storageKey, JSON.stringify(items));
 
   function render() {
-    const active = items.filter((item) => !item.completed);
-    const completed = items.filter((item) => item.completed);
-    const ordered = [...active, ...completed];
+    const ordered = [...items].sort((a, b) => {
+      if (Boolean(a.completed) !== Boolean(b.completed)) return a.completed ? 1 : -1;
+      const aTime = a.completed ? a.completedAt : a.createdAt;
+      const bTime = b.completed ? b.completedAt : b.createdAt;
+      return new Date(bTime || 0).getTime() - new Date(aTime || 0).getTime();
+    });
+    const active = ordered.filter((item) => !item.completed);
     const count = document.querySelector('#personalNotificationCount');
     if (count) {
       count.textContent = String(active.length);
@@ -206,6 +210,7 @@
       } : { mode: 'none' },
       color: form.querySelector('[name="personalNotificationColor"]:checked')?.value || 'yellow',
       completed: old?.completed || false,
+      completedAt: old?.completedAt || '',
       createdAt: old?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       firedAt: old?.remindAt === (type === 'alarm' ? new Date(timeValue).toISOString() : '') ? old?.firedAt || '' : ''
@@ -221,7 +226,11 @@
     const item = items.find((entry) => entry.id === card.dataset.id);
     if (!item) return;
     if (button.dataset.action === 'edit') return openForm(item);
-    if (button.dataset.action === 'toggle') item.completed = !item.completed;
+    if (button.dataset.action === 'toggle') {
+      item.completed = !item.completed;
+      item.completedAt = item.completed ? new Date().toISOString() : '';
+      item.updatedAt = new Date().toISOString();
+    }
     if (button.dataset.action === 'delete') {
       if (!window.confirm(`確定刪除「${item.title}」？`)) return;
       items = items.filter((entry) => entry.id !== item.id);
