@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>日誌 NEW｜OMNIPLAY 客服系統</title>
+  <meta name="log-new-ai-version" content="20260827-usage-cache1" />
   <link rel="stylesheet" href="../assets/styles.css?v=20260816-mobile-nav" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
@@ -2191,14 +2192,52 @@
       return '';
     };
 
-    const logNewImageMedia = (source, index) => {
+    const logNewAiFastHash = (value = '') => {
+      const text = String(value);
+      let hash = 2166136261;
+      const step = Math.max(1, Math.floor(text.length / 4000));
+      for (let index = 0; index < text.length; index += step) {
+        hash ^= text.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      hash ^= text.length;
+      return (hash >>> 0).toString(36);
+    };
+    const logNewAiCacheKey = (type, fingerprint) => `omniplay-log-new-ai-v2:${type}:${fingerprint}`;
+    const readLogNewAiCache = (type, fingerprint) => {
+      try { return JSON.parse(localStorage.getItem(logNewAiCacheKey(type, fingerprint)) || 'null'); }
+      catch (_) { return null; }
+    };
+    const writeLogNewAiCache = (type, fingerprint, value) => {
+      try { localStorage.setItem(logNewAiCacheKey(type, fingerprint), JSON.stringify(value)); }
+      catch (error) { console.warn('AI 快取儲存失敗：', error); }
+    };
+    const logNewRowFingerprint = (row) => {
+      const conversation = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '';
+      const imageSource = row.querySelector('[data-subfield="image_source"]')?.value || '自動判斷';
+      const images = getLogNewRowImages(row);
+      return logNewAiFastHash(JSON.stringify({ conversation, imageSource, images }));
+    };
+    const logNewImageMedia = async (source, index) => {
       if (!String(source).startsWith('data:')) return source;
-      const [header, encoded = ''] = String(source).split(',', 2);
-      const mime = header.match(/^data:([^;]+)/)?.[1] || 'image/jpeg';
-      const binary = atob(encoded);
-      const bytes = new Uint8Array(binary.length);
-      for (let offset = 0; offset < binary.length; offset += 1) bytes[offset] = binary.charCodeAt(offset);
-      return new File([bytes], `log-new-image-${index + 1}.${mime.includes('png') ? 'png' : 'jpg'}`, { type: mime });
+      const original = String(source);
+      const image = await new Promise((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = () => reject(new Error(`圖${index + 1} 無法讀取`));
+        element.src = original;
+      });
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(image, 0, 0, width, height);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.86));
+      if (!blob) throw new Error(`圖${index + 1} 壓縮失敗`);
+      return new File([blob], `log-new-image-${index + 1}.jpg`, { type: 'image/jpeg' });
     };
 
     const inferLogNewImageOwner = (conversation, imageNumber, selectedSource) => {
@@ -2285,14 +2324,33 @@
       button.type = 'button';
       button.className = 'secondary';
       button.dataset.logNewAi = 'true';
-      button.textContent = '✨ AI 分析／重新整理';
-      button.title = '對話與對話圖片會送至 Puter AI；未登入時會先開啟 Puter 授權視窗。';
+      button.textContent = '✨ 分析新增內容';
+      button.title = '只分析新增或已修改的對話與圖片；未變更內容會沿用快取結果。';
+      const forceButton = document.createElement('button');
+      forceButton.type = 'button';
+      forceButton.className = 'ghost-button';
+      forceButton.dataset.logNewAiForce = 'true';
+      forceButton.textContent = '↻ 全部重新分析';
+      forceButton.title = '忽略快取並重新分析全部內容，會消耗較多 AI 額度。';
+      forceButton.addEventListener('click', () => {
+        if (!confirm('全部重新分析會再次消耗所有文字與圖片的 AI 額度，確定要繼續嗎？')) return;
+        button.dataset.forceAll = 'true';
+        button.click();
+      });
       button.addEventListener('click', async () => {
         const rows = [...section.querySelectorAll('.subtable-row')].filter((row) => row.querySelector('[data-subfield="conversation"]')?.value.trim() || getLogNewRowImages(row).length);
         if (!rows.length) return alert('請先貼上「對話」或加入「對話圖片」。');
+        const forceAll = button.dataset.forceAll === 'true';
+        delete button.dataset.forceAll;
+        const jobs = rows.map((row) => {
+          const fingerprint = logNewRowFingerprint(row);
+          return { row, fingerprint, cached: forceAll ? null : readLogNewAiCache('row', fingerprint) };
+        });
+        const pendingJobs = jobs.filter((job) => !job.cached);
+        if (!forceAll && !pendingJobs.length) return alert('內容沒有變更，已保留原本的 AI 分析，不會重複消耗額度。');
         if (!window.puter?.ai?.chat) return alert('免費 AI 載入失敗，請確認網路後重新整理頁面再試。');
         if (!window.puter?.auth?.isSignedIn || !window.puter?.auth?.signIn) return alert('Puter 登入功能載入失敗，請重新整理頁面再試。');
-        if (!confirm('即將把「對話」與「對話圖片」送至 Puter AI 進行分析。內容可能包含客戶資料，確定要繼續嗎？')) return;
+        if (!forceAll && !confirm(`將分析 ${pendingJobs.length} 筆新增或已修改內容；未變更內容不會重新送出。內容可能包含客戶資料，確定要繼續嗎？`)) return;
 
         const originalText = button.textContent;
         if (!puter.auth.isSignedIn()) {
@@ -2320,7 +2378,8 @@
         }
 
         button.disabled = true;
-        const totalUnits = rows.reduce((total, row) => total + getLogNewRowImages(row).length + 1, 0);
+        forceButton.disabled = true;
+        const totalUnits = Math.max(1, pendingJobs.reduce((total, job) => total + getLogNewRowImages(job.row).length + 1, 0));
         let completedUnits = 0;
         let progress = 0;
         let analysisSucceeded = false;
@@ -2335,8 +2394,19 @@
         }, 700);
         try {
           const briefs = [];
-          for (let index = 0; index < rows.length; index += 1) {
-            const row = rows[index];
+          for (let index = 0; index < jobs.length; index += 1) {
+            const job = jobs[index];
+            const row = job.row;
+            if (job.cached?.result) {
+              window.applyLogNewAiResult(row, job.cached.result);
+              briefs.push(job.cached.brief || {
+                customerBrief: job.cached.result.customerBrief || '',
+                supportBrief: job.cached.result.supportBrief || '',
+                startsWithInternal: false,
+                internalDepartment: '客服'
+              });
+              continue;
+            }
             const conversationText = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '（未提供文字對話）';
             const conversationEntries = logNewConversationEntries(conversationText);
             const visibleSpeakers = [...new Set(conversationEntries.map((entry) => entry.speaker).filter(Boolean))];
@@ -2355,14 +2425,20 @@
             const imageFindings = [];
             if (images.length) {
               for (let imageIndex = 0; imageIndex < images.length; imageIndex += 1) {
-                const imageResponse = await puter.ai.chat(
-                  `請用繁體中文客觀辨識這張客服案件截圖。這是圖${imageIndex + 1}，圖片來源設定為「${imageSource}」。請列出畫面中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額、狀態與處理結果；看不清楚或不存在的資訊請寫未辨識，不可猜測。`,
-                  logNewImageMedia(images[imageIndex], imageIndex),
-                  { model: 'gpt-5.4-nano', temperature: 0.1, max_tokens: 500 }
-                );
+                const imageFingerprint = logNewAiFastHash(`${imageSource}|${images[imageIndex]}`);
+                let imageText = forceAll ? '' : readLogNewAiCache('image', imageFingerprint)?.text || '';
+                if (!imageText) {
+                  const imageResponse = await puter.ai.chat(
+                    `請用繁體中文客觀辨識這張客服案件截圖。這是圖${imageIndex + 1}，圖片來源設定為「${imageSource}」。請列出畫面中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額、狀態與處理結果；看不清楚或不存在的資訊請寫未辨識，不可猜測。`,
+                    await logNewImageMedia(images[imageIndex], imageIndex),
+                    { model: 'gpt-5.4-nano', temperature: 0.1, max_tokens: 250 }
+                  );
+                  imageText = logNewAiResponseText(imageResponse);
+                  writeLogNewAiCache('image', imageFingerprint, { text: imageText });
+                }
                 imageFindings.push({
                   owner: inferLogNewImageOwner(conversationText, imageIndex + 1, imageSource),
-                  text: `圖${imageIndex + 1}：${logNewAiResponseText(imageResponse)}`
+                  text: `圖${imageIndex + 1}：${imageText}`
                 });
                 completedUnits += 1;
                 showProgress((completedUnits / totalUnits) * 92);
@@ -2397,19 +2473,21 @@
             const options = {
               model: 'gpt-5.4-nano',
               temperature: 0.1,
-              max_tokens: 900
+              max_tokens: 600
             };
             const response = await puter.ai.chat(finalPrompt, options);
             const raw = logNewAiResponseText(response);
             const result = parseLogNewAiResponse(raw);
             result.analysis = mergeLogNewImageFindings(result.analysis, imageFindings);
             window.applyLogNewAiResult(row, result);
-            briefs.push({
+            const brief = {
               customerBrief: result.customerBrief || '',
               supportBrief: result.supportBrief || '',
               startsWithInternal,
               internalDepartment
-            });
+            };
+            briefs.push(brief);
+            writeLogNewAiCache('row', job.fingerprint, { result, brief });
             completedUnits += 1;
             showProgress((completedUnits / totalUnits) * 98);
           }
@@ -2470,13 +2548,14 @@
           }
           analysisSucceeded = true;
           showProgress(100);
-          alert('AI 分析完成，已填入「AI分析」、「總結」及「問題描述」，請確認內容後再儲存。');
+          alert(`AI 分析完成：本次重新分析 ${pendingJobs.length} 筆，未變更內容沿用快取。請確認內容後再儲存。`);
         } catch (error) {
           console.error('日誌 NEW AI 分析失敗：', error);
           alert(`AI 分析失敗：${error?.message || '請稍後再試'}`);
         } finally {
           clearInterval(progressTimer);
           button.disabled = false;
+          forceButton.disabled = false;
           if (analysisSucceeded) {
             button.textContent = '✅ AI 分析完成 100%';
             setTimeout(() => { if (!button.disabled) button.textContent = originalText; }, 1800);
@@ -2486,6 +2565,7 @@
         }
       });
       actionGroup.appendChild(button);
+      actionGroup.appendChild(forceButton);
     };
 
     // 設計器儲存成功並關閉後重新載入，確保最新 Firebase 排版立刻套用到日誌 NEW。
