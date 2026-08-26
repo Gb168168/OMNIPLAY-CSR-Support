@@ -41,6 +41,11 @@ const gameChangeLogListEl = document.querySelector('#gameChangeLogList');
 const scheduleMoreMenu = document.querySelector('.schedule-more-menu');
 const gamePmConfirmedLabel = document.querySelector('#gamePmConfirmedLabel');
 const gamePmConfirmedInput = document.querySelector('#gamePmConfirmed');
+const firstLaunchOtherPlatform = document.querySelector('#firstLaunchOtherPlatform');
+const firstLaunchOtherPlatformEnabled = document.querySelector('#firstLaunchOtherPlatformEnabled');
+const firstLaunchOtherPlatformDates = document.querySelector('#firstLaunchOtherPlatformDates');
+const firstLaunchOtherPlatformUatDate = document.querySelector('#firstLaunchOtherPlatformUatDate');
+const firstLaunchOtherPlatformProdDate = document.querySelector('#firstLaunchOtherPlatformProdDate');
 
 const GAME_SCHEDULE_FEED_URL = 'https://script.google.com/macros/s/AKfycbyaTbkqtkBfAzbPNqCw8VEnh43VrNLpfYK3WR3TUNtIZF8_QCh6AOncZ6jG_LbxVyni9g/exec';
 const GAME_SCHEDULE_LABEL = { id: 'google-game-sheet', name: '遊戲上線', color: '#2563eb' };
@@ -64,17 +69,21 @@ const GAME_EVENT_META = {
   'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
   'uat-material': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
   'prod-launch': { labelId: 'google-game-prod', labelName: 'PORD', color: GAME_SCHEDULE_COLORS.prod },
+  'other-platform-uat': { labelId: 'google-game-other-platform-uat', labelName: '其他平台 UAT', color: GAME_SCHEDULE_COLORS.uat },
+  'other-platform-prod': { labelId: 'google-game-other-platform-prod', labelName: '其他平台 PORD', color: GAME_SCHEDULE_COLORS.prod },
   'first-launch': GAME_FIRST_LAUNCH_META,
   'exclusive-launch': GAME_EXCLUSIVE_META
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台上線|🔒 獨家平台|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台上線|🔒 獨家平台|其他平台 UAT|其他平台 PORD|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const LABEL_CATEGORY_ORDER = [
   '向 AM 確認',
   '行銷素材待辦',
   'UAT',
+  '其他平台 UAT',
   '⭐ 首發平台上線',
   '🔒 獨家平台',
+  '其他平台 PORD',
   'PORD',
   '問題/需求-代辦提醒'
 ];
@@ -285,6 +294,58 @@ const mergeScheduleGames = (existingGames = [], incomingGames = []) => {
 const gameScheduleDocSuffix = (game = {}) => String(game.gameId || '')
   .trim()
   .replace(/[^a-zA-Z0-9_-]+/g, '_');
+
+const syncFirstLaunchOtherPlatformSchedules = async (item, actor, enabled, uatDate, prodDate) => {
+  const games = getScheduleGames(item);
+  if (!games.length) throw new Error('此首發排程缺少遊戲資料。');
+  const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+  const targets = [
+    { eventType: 'other-platform-uat', date: uatDate, meta: GAME_EVENT_META['other-platform-uat'], content: '其他平台測試環境開放' },
+    { eventType: 'other-platform-prod', date: prodDate, meta: GAME_EVENT_META['other-platform-prod'], content: '其他平台正式環境開放' }
+  ];
+  const batch = scheduleDb.batch();
+
+  targets.forEach((target) => {
+    const displayMeta = resolveSavedScheduleMeta(target.meta);
+    batch.set(scheduleLabelCollection.doc(displayMeta.labelId), {
+      name: displayMeta.labelName,
+      color: displayMeta.color,
+      updatedAt,
+      source: 'google-game-sheet'
+    }, { merge: true });
+
+    games.forEach((game) => {
+      const suffix = gameScheduleDocSuffix(game);
+      if (!suffix) return;
+      const ref = scheduleCollection.doc(`game_${target.eventType.replace(/-/g, '_')}_${suffix}`);
+      if (!enabled) {
+        batch.set(ref, { deleted: true, updatedAt, updatedBy: actor }, { merge: true });
+        return;
+      }
+      const reminderAt = new Date(`${target.date}T09:00:00`);
+      batch.set(ref, {
+        eventType: target.eventType,
+        date: target.date,
+        title: `${displayMeta.labelName}｜${getGameTitle([game])}`,
+        content: target.content,
+        reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt),
+        labelId: displayMeta.labelId,
+        labelName: displayMeta.labelName,
+        labelColor: displayMeta.color,
+        repeat: 'none',
+        staffIds: [],
+        staffNames: [],
+        deleted: false,
+        source: 'first-launch-other-platform',
+        parentScheduleId: item.id,
+        games: [game],
+        updatedAt,
+        updatedBy: actor
+      }, { merge: true });
+    });
+  });
+  await batch.commit();
+};
 
 const createUatSchedules = async (item, actor) => {
   const games = Array.isArray(item?.games) && item.games.length
@@ -1177,7 +1238,15 @@ const openModal = (dateKey, scheduleId = null) => {
   toggleRepeatInterval();
   renderHistory(item?.history || []);
   const isPmConfirmation = item?.source === 'google-game-sheet' && item?.eventType === 'pm-confirmation';
+  const isFirstLaunch = item?.source === 'google-game-sheet' && item?.eventType === 'first-launch';
   if (gamePmConfirmedLabel) gamePmConfirmedLabel.hidden = !isPmConfirmation;
+  if (firstLaunchOtherPlatform) firstLaunchOtherPlatform.hidden = !isFirstLaunch;
+  if (firstLaunchOtherPlatformEnabled) firstLaunchOtherPlatformEnabled.checked = Boolean(item?.otherPlatformEnabled);
+  if (firstLaunchOtherPlatformUatDate) firstLaunchOtherPlatformUatDate.value = item?.otherPlatformUatDate || '';
+  if (firstLaunchOtherPlatformProdDate) firstLaunchOtherPlatformProdDate.value = item?.otherPlatformProdDate || '';
+  if (firstLaunchOtherPlatformDates) firstLaunchOtherPlatformDates.hidden = !firstLaunchOtherPlatformEnabled?.checked;
+  if (firstLaunchOtherPlatformUatDate) firstLaunchOtherPlatformUatDate.required = isFirstLaunch && Boolean(firstLaunchOtherPlatformEnabled?.checked);
+  if (firstLaunchOtherPlatformProdDate) firstLaunchOtherPlatformProdDate.required = isFirstLaunch && Boolean(firstLaunchOtherPlatformEnabled?.checked);
   if (gamePmConfirmedInput) {
     gamePmConfirmedInput.checked = Boolean(item?.pmConfirmedAt);
     gamePmConfirmedInput.disabled = !canEditSchedule;
@@ -1277,6 +1346,13 @@ const closePeriodPicker = () => {
   periodLabel?.setAttribute('aria-expanded', 'false');
 };
 
+const toggleFirstLaunchOtherPlatformDates = () => {
+  const enabled = Boolean(firstLaunchOtherPlatformEnabled?.checked);
+  if (firstLaunchOtherPlatformDates) firstLaunchOtherPlatformDates.hidden = !enabled;
+  if (firstLaunchOtherPlatformUatDate) firstLaunchOtherPlatformUatDate.required = enabled;
+  if (firstLaunchOtherPlatformProdDate) firstLaunchOtherPlatformProdDate.required = enabled;
+};
+firstLaunchOtherPlatformEnabled?.addEventListener('change', toggleFirstLaunchOtherPlatformDates);
 repeatSelect?.addEventListener('change', toggleRepeatInterval);
 periodLabel?.addEventListener('click', (event) => {
   event.stopPropagation();
@@ -1463,6 +1539,21 @@ formEl?.addEventListener('submit', async (event) => {
   else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
   if (!payload.title) return setMessage('請輸入標題。');
   const editingItem = scheduleList.find((entry) => entry.id === editingId);
+  const isEditingFirstLaunch = editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'first-launch';
+  const otherPlatformEnabled = isEditingFirstLaunch && Boolean(firstLaunchOtherPlatformEnabled?.checked);
+  const otherPlatformUatDate = firstLaunchOtherPlatformUatDate?.value || '';
+  const otherPlatformProdDate = firstLaunchOtherPlatformProdDate?.value || '';
+  if (otherPlatformEnabled && (!otherPlatformUatDate || !otherPlatformProdDate)) {
+    return setMessage('請完整填寫其他平台 UAT 與 PORD 開放日期。');
+  }
+  if (otherPlatformEnabled && otherPlatformProdDate < otherPlatformUatDate) {
+    return setMessage('其他平台 PORD 開放日期不能早於 UAT 開放日期。');
+  }
+  if (isEditingFirstLaunch) {
+    payload.otherPlatformEnabled = otherPlatformEnabled;
+    payload.otherPlatformUatDate = otherPlatformEnabled ? otherPlatformUatDate : firebase.firestore.FieldValue.delete();
+    payload.otherPlatformProdDate = otherPlatformEnabled ? otherPlatformProdDate : firebase.firestore.FieldValue.delete();
+  }
   const changes = editingItem ? buildScheduleChanges(editingItem, { ...payload, reminderAt, endAt }) : [];
   payload.history = firebase.firestore.FieldValue.arrayUnion({
     action,
@@ -1475,7 +1566,19 @@ formEl?.addEventListener('submit', async (event) => {
     await saveLabelIfNeeded(labelName, labelColor, selectedScheduleLabelId);
     if (editingId) await scheduleCollection.doc(editingId).update(payload);
     else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    if (editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
+    if (isEditingFirstLaunch) {
+      await syncFirstLaunchOtherPlatformSchedules(
+        editingItem,
+        user,
+        otherPlatformEnabled,
+        otherPlatformUatDate,
+        otherPlatformProdDate
+      );
+      if (otherPlatformEnabled) {
+        setStatus('已建立／更新其他平台 UAT 與 PORD 開放排程。', 'success');
+      }
+    }
+        if (editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
       const createdCount = await createUatSchedules(editingItem, user);
       if (!createdCount) throw new Error('沒有可建立的 UAT 資料待辦。');
       const successMessage = `AM 已確認，已建立／更新 ${createdCount} 筆流程待辦（行銷素材＋UAT 上架公告＋PROD 上架公告）。`;
