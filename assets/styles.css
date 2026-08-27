@@ -3798,9 +3798,9 @@ textarea,
   white-space: pre-wrap;
   word-break: break-word;
   padding: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: #fafafa;
+  background: var(--surface-muted);
 }
 .ragic-view-empty { color: var(--text-secondary); opacity: .75; }
 .ragic-view-images { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -3972,7 +3972,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fff;
+  background: var(--surface);
   z-index: 15;
   overflow-y: auto;
   display: flex;
@@ -4098,15 +4098,15 @@ body {
 .layout-settings-actions .danger { color: #d32f2f; border-color: #d32f2f; }
 
 /* Form toolbar and full-page overlay */
-.form-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid #e0e0e0; background: #fff; position: sticky; top: 0; z-index: 20; }
+.form-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 20; }
 .form-toolbar-left, .form-toolbar-right { display: flex; gap: 8px; align-items: center; }
-.form-toolbar-center { font-size: 16px; font-weight: 600; color: #333; }
-.form-toolbar button { padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; }
-.form-toolbar button:hover:not(:disabled) { background: #f0f0f0; }
+.form-toolbar-center { font-size: 16px; font-weight: 600; color: var(--text); }
+.form-toolbar button { padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 14px; }
+.form-toolbar button:hover:not(:disabled) { background: var(--surface-muted); }
 .form-toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
 .form-toolbar .btn-delete { color: #d32f2f; border-color: #d32f2f; }
-.form-container, .ragic-form-wrapper, .ragic-form-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #fff; z-index: 15; overflow-y: auto; display: flex; flex-direction: column; }
-.ragic-view-field-textarea .field-value, .form-view-mode .field-value-multiline, .ragic-view-field-textarea .ragic-view-value { max-height: 150px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; background: #fafafa; }
+.form-container, .ragic-form-wrapper, .ragic-form-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--surface); z-index: 15; overflow-y: auto; display: flex; flex-direction: column; }
+.ragic-view-field-textarea .field-value, .form-view-mode .field-value-multiline, .ragic-view-field-textarea .ragic-view-value { max-height: 150px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-muted); }
 .ragic-form-grid textarea { max-height: 150px; overflow-y: auto; }
 .form-view-mode .field-value img, .ragic-view-field .field-value img { cursor: pointer; transition: opacity 0.2s; }
 .form-view-mode .field-value img:hover, .ragic-view-field .field-value img:hover { opacity: 0.85; }
