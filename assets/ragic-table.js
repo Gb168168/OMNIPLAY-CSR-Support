@@ -17,7 +17,10 @@ const isLogModule = (config = RAGIC_STATE?.config) => ['log', 'workLogs'].includ
 const isLogNewModule = (config = RAGIC_STATE?.config) => ['log_new', 'workLogsNew'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '').trim() === '日誌 NEW';
 const isTrackingModule = (config = RAGIC_STATE?.config) => ['tracking', 'workTracking'].includes(String(config?.collection || config?.dataCollection || '')) || String(config?.title || '') === '對接追蹤';
 const isReminderEnabledField = (field = {}) => field.type === 'reminderEnabled' || field.key === 'reminder_enabled' || String(field.label || '').trim() === '啟用提醒';
+const isReportEnabledField = (field = {}) => field.type === 'reportEnabled' || ['linked_report', 'report_enabled', 'reportEnabled'].includes(String(field.key || '')) || String(field.label || '').trim() === '提報';
+const isReportLinkField = (field = {}) => field.type === 'reportLink' || ['reportLink', 'report_link'].includes(String(field.key || '')) || String(field.label || '').trim() === '提報連結';
 const isCheckedValue = (value) => value === true || value === 'true' || value === 1 || value === '1';
+const linkedReportForRecord = (record = {}) => window.ragicLinkedReports?.get(String(record.id)) || null;
 const reminderRecordValue = (record = {}, field = {}) => {
   if (isReminderEnabledField(field)) {
     const enabled = record[field.key] ?? record.reminder_enabled ?? record.reminderEnabled ?? false;
@@ -27,6 +30,8 @@ const reminderRecordValue = (record = {}, field = {}) => {
   if (field.type === 'reminderTime' || field.key === 'reminder_at' || String(field.label || '').trim() === '提醒時間') {
     return record[field.key] ?? record.reminder_at ?? record.reminderTime ?? '';
   }
+  if (isReportEnabledField(field) && linkedReportForRecord(record)) return true;
+  if (isReportLinkField(field) && linkedReportForRecord(record)) return linkedReportForRecord(record).url;
   return record[field.key];
 };
 const logFieldLayoutFor = (field = {}) => LOG_FIELD_LAYOUT_BY_LABEL[field.label] || null;
@@ -823,7 +828,11 @@ const listFields = () => {
 const listColumns = () => listFields().map((field) => field.key);
 const fieldByKey = (key) => getFields().find((field) => field.key === key) || listFields().find((field) => field.key === key);
 const recordListFieldValue = (record = {}, field = {}) => {
-  if (!field.listParentKey || !field.listSubfieldKey) return record[field.key];
+  if (!field.listParentKey || !field.listSubfieldKey) {
+    if (isReportEnabledField(field) && linkedReportForRecord(record)) return true;
+    if (isReportLinkField(field) && linkedReportForRecord(record)) return linkedReportForRecord(record).url;
+    return record[field.key];
+  }
   const rows = Array.isArray(record[field.listParentKey]) ? record[field.listParentKey] : [];
   const values = rows.map((row) => String(valueToText(row?.[field.listSubfieldKey] ?? '')));
   while (values.length && !values[values.length - 1].trim()) values.pop();
@@ -3141,6 +3150,14 @@ const renderTable = () => {
   });
   renderPagination();
   autoFitTrackingListColumns();
+};
+window.refreshRagicDisplay = () => {
+  applyFilters();
+  const record = currentRecord();
+  const formView = document.querySelector('#ragicFormView');
+  if (record && RAGIC_STATE.formMode === 'view' && formView && !formView.hidden) {
+    renderForm(record, { mode: 'view' });
+  }
 };
 const sortValue = (record, fieldKey) => {
   const field = fieldByKey(fieldKey);
