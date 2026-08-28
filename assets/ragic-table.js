@@ -252,12 +252,20 @@ const normalizeDateValue = (value) => {
   }
   return text;
 };
-const displayDate = (value) => value ? String(value).replace(/-/g, '/') : '';
+const displayDateText = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const match = text.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:[T\s]+(\d{1,2}):(\d{2}))?/);
+  if (!match) return text.replace('T', ' ').replace(/-/g, '/');
+  const date = `${match[1]}/${match[2].padStart(2, '0')}/${match[3].padStart(2, '0')}`;
+  return match[4] ? `${date} ${match[4].padStart(2, '0')}:${match[5]}` : date;
+};
+const displayDate = (value) => displayDateText(value);
 const displayDateTime = (value) => {
   if (!value) return '';
   if (typeof value?.toDate === 'function') return formatLocalDateTime(value.toDate());
   if (Number.isFinite(value?.seconds)) return formatLocalDateTime(new Date(value.seconds * 1000));
-  return String(value).replace('T', ' ').replace(/-/g, '/');
+  return displayDateText(value);
 };
 const dataCollectionName = (config) => config.dataCollection || COLLECTION_MAP[config.collection] || config.collection;
 const schemaCollectionName = (config) => config.schemaCollection || SCHEMA_MAP[dataCollectionName(config)] || `${dataCollectionName(config)}_schema`;
@@ -2510,7 +2518,7 @@ const renderDisplayValue = (field, value) => {
   if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field?.type)) return value === true || value === 'true' || value === '1' ? '是' : '否';
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '<span class="ragic-view-empty">—</span>';
   if (field?.type === 'date') return escapeHtml(displayDate(value)) || '<span class="ragic-view-empty">—</span>';
-  if (['datetime', 'createdDate', 'updatedDate'].includes(field?.type)) return escapeHtml(displayDateTime(value)) || '<span class="ragic-view-empty">—</span>';
+  if (['datetime', 'createdDate', 'updatedDate', 'reminderTime'].includes(field?.type)) return escapeHtml(displayDateTime(value)) || '<span class="ragic-view-empty">—</span>';
   if (['select', 'multiselect'].includes(field?.type)) return renderStyledOptionValue(field, value) || '<span class="ragic-view-empty">—</span>';
   const text = String(valueToText(value));
   return text ? escapeHtml(text).replace(/\n/g, '<br>') : '<span class="ragic-view-empty">—</span>';
@@ -2907,7 +2915,7 @@ const renderCell = (record, field) => {
   }
   if (field?.type === 'link') return value ? `<a class="ragic-link" href="${escapeHtml(value)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : '';
   if (field?.type === 'date') return escapeHtml(displayDate(value));
-  if (['datetime', 'createdDate', 'updatedDate'].includes(field?.type)) return escapeHtml(displayDateTime(value));
+  if (['datetime', 'createdDate', 'updatedDate', 'reminderTime'].includes(field?.type)) return escapeHtml(displayDateTime(value));
   if (['select', 'multiselect'].includes(field?.type)) return renderStyledOptionValue(field, value);
   if (field?.type === 'subtable') {
     const rows = Array.isArray(value) ? value : [];
