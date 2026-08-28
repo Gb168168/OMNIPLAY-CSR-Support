@@ -20,7 +20,8 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(3px);
       z-index: 1000;
       align-items: center;
       justify-content: center;
@@ -30,21 +31,23 @@
       display: flex;
     }
     .linked-report-modal-content {
-      background: white;
-      border-radius: 8px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
       max-width: 90%;
       width: 900px;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
     }
     .linked-report-modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 20px;
-      border-bottom: 1px solid #e5e7eb;
-      background: #f9fafb;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-muted);
     }
     .linked-report-modal-header h2 {
       margin: 0;
@@ -56,7 +59,7 @@
       border: none;
       font-size: 24px;
       cursor: pointer;
-      color: #666;
+      color: var(--text-secondary);
       padding: 0;
       width: 32px;
       height: 32px;
@@ -65,21 +68,21 @@
       justify-content: center;
     }
     .linked-report-modal-close:hover {
-      color: #000;
-      background: #e5e7eb;
-      border-radius: 4px;
+      color: var(--text);
+      background: var(--border);
+      border-radius: 8px;
     }
     .linked-report-form-wrapper {
       padding: 20px;
     }
     .linked-report-info {
-      background: #eff6ff;
-      border-left: 4px solid #3b82f6;
+      background: color-mix(in srgb, var(--primary) 12%, var(--surface-muted));
+      border-left: 4px solid var(--primary);
       padding: 12px 16px;
       margin-bottom: 20px;
       border-radius: 4px;
       font-size: 14px;
-      color: #1e40af;
+      color: var(--text);
     }
     .linked-report-form-grid {
       display: grid;
@@ -95,14 +98,16 @@
       font-size: 13px;
       font-weight: 500;
       margin-bottom: 6px;
-      color: #333;
+      color: var(--text-secondary);
     }
     .linked-report-form-field input,
     .linked-report-form-field select,
     .linked-report-form-field textarea {
       padding: 8px 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
+      color: var(--text);
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
       font-size: 14px;
       font-family: inherit;
     }
@@ -110,44 +115,47 @@
     .linked-report-form-field select:focus,
     .linked-report-form-field textarea:focus {
       outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
     }
-    .linked-report-form-field input[readonly] {
-      background: #f3f4f6;
-      color: #4b5563;
+    .linked-report-form-field input[readonly],
+    .linked-report-form-field select:disabled {
+      background: var(--surface-muted);
+      color: var(--text-secondary);
       cursor: not-allowed;
+      opacity: 1;
     }
     .linked-report-form-actions {
       display: flex;
       gap: 10px;
       justify-content: flex-end;
       margin-top: 20px;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid var(--border);
       padding-top: 20px;
     }
     .linked-report-form-actions button {
       padding: 8px 16px;
       border: none;
-      border-radius: 4px;
+      border-radius: 8px;
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
     }
     .linked-report-form-actions .btn-cancel {
-      background: #f3f4f6;
-      color: #374151;
+      background: var(--button-secondary-bg);
+      color: var(--button-secondary-text);
+      border: 1px solid var(--border);
     }
     .linked-report-form-actions .btn-cancel:hover {
-      background: #e5e7eb;
+      background: var(--surface-muted);
     }
     .linked-report-form-actions .btn-submit {
-      background: #3b82f6;
+      background: var(--primary);
       color: white;
     }
     .linked-report-form-actions .btn-submit:hover {
-      background: #2563eb;
+      background: var(--primary-hover);
     }
     /* 日誌 NEW 的處理紀錄固定在可捲動區，避免長對話把整頁撐得過長。 */
     #ragicForm [data-subtable="items"] > .ragic-table-wrap {
