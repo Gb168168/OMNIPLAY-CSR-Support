@@ -1150,6 +1150,74 @@
       font-size: 12px;
     }
 
+    /* 日誌 NEW 檢視模式：改為緊密資訊卡，避免設計器固定列造成大片空白。 */
+    .log-new-page #ragicForm .compact-view-grid {
+      gap: 12px !important;
+      padding: 16px !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 16px !important;
+      background: var(--surface) !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field {
+      grid-row: auto !important;
+      min-height: 72px !important;
+      padding: 12px 14px !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 12px !important;
+      background: var(--surface-muted) !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field .ragic-view-label {
+      margin-bottom: 7px !important;
+      color: var(--text-secondary) !important;
+      font-size: 12px !important;
+      line-height: 1.35 !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field .ragic-view-value,
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field .field-value {
+      min-height: 22px !important;
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      color: var(--text) !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      line-height: 1.55 !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-textarea {
+      min-height: 112px !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-image.is-empty-view-field,
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-file.is-empty-view-field {
+      display: none !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-pair-toggle {
+      min-height: 72px !important;
+      padding: 12px 14px !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
+      margin: 16px !important;
+      padding: 16px !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 16px !important;
+      background: var(--surface) !important;
+    }
+
+    @media (max-width: 768px) {
+      .log-new-page #ragicForm .compact-view-grid {
+        padding: 10px !important;
+        gap: 10px !important;
+      }
+      .log-new-page #ragicForm .compact-view-grid > .ragic-view-field {
+        grid-column: 1 / -1 !important;
+        min-height: 64px !important;
+      }
+      .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
+        margin: 12px 0 !important;
+        padding: 12px !important;
+      }
+    }
+
 
     /* 日誌 NEW 列表：問題描述完整保留表單換行，依實際行數撐高。 */
     .log-new-page #ragicListView .ragic-table th[data-field-key="issue"],
