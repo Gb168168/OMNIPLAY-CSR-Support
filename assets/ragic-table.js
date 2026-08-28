@@ -1587,6 +1587,12 @@ const createSingleSelectControl = (field, value = '', subfield = false) => {
 };
 
 const createControl = (field, value = '', subfield = false) => {
+  const forceNewLogReminderOff =
+    !subfield &&
+    isLogNewModule() &&
+    !RAGIC_STATE.currentId &&
+    isReminderEnabledField(field);
+
   if (field.type === 'reminderEnabled' || field.type === 'reportEnabled') {
     const input = document.createElement('input');
     input.type = 'checkbox';
@@ -1594,10 +1600,11 @@ const createControl = (field, value = '', subfield = false) => {
 
     if (subfield) input.dataset.subfield = field.key;
 
-    input.checked =
+    input.checked = !forceNewLogReminderOff && (
       value === true ||
       value === 'true' ||
-      value === '1';
+      value === '1'
+    );
 
     return input;
   }
@@ -1643,12 +1650,13 @@ const createControl = (field, value = '', subfield = false) => {
 
     if (subfield) input.dataset.subfield = field.key;
 
-    input.checked =
+    input.checked = !forceNewLogReminderOff && (
       value === true ||
       value === 'true' ||
       value === '1' ||
       ((value === '' || value == null) &&
-        field.defaultValue === true);
+        field.defaultValue === true)
+    );
 
     return input;
   }
