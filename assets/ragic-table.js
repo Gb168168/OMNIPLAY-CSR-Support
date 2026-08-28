@@ -2540,9 +2540,15 @@ const renderSubtableView = (field, rows = []) => {
 
 const renderViewForm = (form, record = {}) => {
   const fixedLogLayout = false;
+  const compactLogView = isLogNewModule();
   const grid = document.createElement('div');
   grid.className = `ragic-form-grid ragic-view-grid compact-view-grid${usesDenseFormLayout() ? ' dense-ragic-grid' : ''}`;
   applyFormGridLayout(grid);
+  if (compactLogView) {
+    grid.style.removeProperty('grid-template-columns');
+    grid.style.removeProperty('grid-template-rows');
+    grid.style.removeProperty('grid-auto-rows');
+  }
   getFields().filter((field) => {
     if (field.type === 'subtable') return false;
     return !fixedLogLayout || Boolean(logFieldLayoutFor(field));
@@ -2565,6 +2571,15 @@ const renderViewForm = (form, record = {}) => {
       item.classList.add('is-tracking-placeholder-field');
     }
     applyFormLayout(item, field);
+    if (compactLogView) {
+      item.style.removeProperty('width');
+      item.style.removeProperty('height');
+      item.style.removeProperty('min-height');
+      item.style.setProperty('--form-row', 'auto');
+      item.style.setProperty('--form-col', 'auto');
+      item.style.setProperty('--form-colspan', field.type === 'textarea' ? '2' : '1');
+      item.style.setProperty('--form-rowspan', '1');
+    }
     if (usesDenseFormLayout()) applyDenseFormLayout(item, field);
     if (usesDenseFormLayout()) {
       item.style.setProperty('--form-row', 'auto');
