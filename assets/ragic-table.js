@@ -823,7 +823,14 @@ const listFields = () => {
 const listColumns = () => listFields().map((field) => field.key);
 const fieldByKey = (key) => getFields().find((field) => field.key === key) || listFields().find((field) => field.key === key);
 const recordListFieldValue = (record = {}, field = {}) => {
-  if (!field.listParentKey || !field.listSubfieldKey) return record[field.key];
+  if (!field.listParentKey || !field.listSubfieldKey) {
+    const isReportField =
+      field.type === 'reportEnabled' ||
+      ['linked_report', 'report_enabled', 'reportEnabled'].includes(String(field.key || '')) ||
+      String(field.label || '').trim() === '提報';
+    if (isReportField && window.ragicLinkedReportSourceIds?.has(String(record.id))) return true;
+    return record[field.key];
+  }
   const rows = Array.isArray(record[field.listParentKey]) ? record[field.listParentKey] : [];
   const values = rows.map((row) => String(valueToText(row?.[field.listSubfieldKey] ?? '')));
   while (values.length && !values[values.length - 1].trim()) values.pop();
@@ -3142,6 +3149,7 @@ const renderTable = () => {
   renderPagination();
   autoFitTrackingListColumns();
 };
+window.refreshRagicTable = () => applyFilters();
 const sortValue = (record, fieldKey) => {
   const field = fieldByKey(fieldKey);
   const raw = recordListFieldValue(record, field || { key: fieldKey });
