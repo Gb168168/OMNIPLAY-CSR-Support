@@ -1406,6 +1406,15 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
   );
   const configuredByKey = new Map(configuredFields.map((field) => [String(field?.key || ''), field]));
   const savedKeys = new Set(savedFields.map((field) => String(field?.key || '')));
+  const savedLayoutKeys = new Set(Object.keys(savedLayout?.fields || {}));
+  // 舊版尚未保存 deletedFieldKeys：若同一排版版本中，預設欄位已同時從
+  // fields 與 formLayout 刪除，就視為使用者過去明確刪除；版本更新時仍允許補入新欄位。
+  if (savedFields.length && configuredVersion === savedVersion) {
+    configuredFields.forEach((field) => {
+      const key = String(field?.key || '');
+      if (key && !savedKeys.has(key) && !savedLayoutKeys.has(key)) deletedFieldKeys.add(key);
+    });
+  }
   const mergedFields = savedFields.length
     ? [
         ...savedFields.map((field) => ({
