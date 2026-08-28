@@ -19,7 +19,11 @@ const isTrackingModule = (config = RAGIC_STATE?.config) => ['tracking', 'workTra
 const isReminderEnabledField = (field = {}) => field.type === 'reminderEnabled' || field.key === 'reminder_enabled' || String(field.label || '').trim() === '啟用提醒';
 const isCheckedValue = (value) => value === true || value === 'true' || value === 1 || value === '1';
 const reminderRecordValue = (record = {}, field = {}) => {
-  if (isReminderEnabledField(field)) return true;
+  if (isReminderEnabledField(field)) {
+    const enabled = record[field.key] ?? record.reminder_enabled ?? record.reminderEnabled ?? false;
+    const reminderTime = record.reminder_at ?? record.reminderTime ?? '';
+    return Boolean(String(reminderTime).trim()) && isCheckedValue(enabled);
+  }
   if (field.type === 'reminderTime' || field.key === 'reminder_at' || String(field.label || '').trim() === '提醒時間') {
     return record[field.key] ?? record.reminder_at ?? record.reminderTime ?? '';
   }
@@ -2814,7 +2818,10 @@ const renderForm = (record = {}, { mode = record.id ? 'view' : 'edit' } = {}) =>
     renderViewForm(form, record);
   } else {
     const grid = document.createElement('div'); grid.className = `ragic-form-grid${usesDenseFormLayout() ? ' dense-ragic-grid' : ''}`; applyFormGridLayout(grid);
-    getFields().filter((field) => field.type !== 'subtable').forEach((field) => grid.appendChild(createField(field, record[field.key])));
+    getFields().filter((field) => field.type !== 'subtable').forEach((field) => {
+      const value = isReminderEnabledField(field) ? reminderRecordValue(record, field) : record[field.key];
+      grid.appendChild(createField(field, value));
+    });
     titleOnlyLayoutFields().forEach((field) => grid.appendChild(createTitleOnlyField(field, record)));
     if (usesDenseFormLayout()) groupDenseFieldPairs(grid);
     form.appendChild(grid);
