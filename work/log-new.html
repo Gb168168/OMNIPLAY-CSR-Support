@@ -1152,6 +1152,8 @@
 
     /* 日誌 NEW 檢視模式：改為緊密資訊卡，避免設計器固定列造成大片空白。 */
     .log-new-page #ragicForm .compact-view-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      grid-auto-flow: row dense !important;
       gap: 12px !important;
       padding: 16px !important;
       border: 1px solid var(--border) !important;
@@ -1160,6 +1162,7 @@
     }
     .log-new-page #ragicForm .compact-view-grid > .ragic-view-field {
       grid-row: auto !important;
+      grid-column: auto / span 1 !important;
       min-height: 72px !important;
       padding: 12px 14px !important;
       border: 1px solid var(--border) !important;
@@ -1185,6 +1188,7 @@
       line-height: 1.55 !important;
     }
     .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-textarea {
+      grid-column: auto / span 2 !important;
       min-height: 112px !important;
     }
     .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-image.is-empty-view-field,
@@ -1215,6 +1219,12 @@
       .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
         margin: 12px 0 !important;
         padding: 12px !important;
+      }
+    }
+
+    @media (min-width: 769px) and (max-width: 1180px) {
+      .log-new-page #ragicForm .compact-view-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       }
     }
 
