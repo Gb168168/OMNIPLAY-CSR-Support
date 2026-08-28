@@ -1407,11 +1407,18 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
         ...configuredFields.filter((field) => !savedKeys.has(String(field?.key || '')))
       ]
     : configuredFields;
+  const displayFields = isLogNewModule(config)
+    ? mergedFields
+        .filter((field) => String(field?.key || '') !== 'reportLink')
+        .map((field) => String(field?.key || '') === 'reminder_link'
+          ? { ...field, label: '提報連結', type: 'reportLink' }
+          : field)
+    : mergedFields;
   return {
     ...schema,
     // 已儲存的欄位設計（包含 width/manualWidth/listVisible/order）為主要來源；
     // config 僅補上尚未存在的新欄位，不能覆蓋使用者剛儲存的列表設定。
-    fields: mergedFields,
+    fields: displayFields,
     formLayout: forceConfiguredLayout || useConfiguredPreset
       ? config.formLayout
       : (hasSavedPositions ? savedLayout : config.formLayout)

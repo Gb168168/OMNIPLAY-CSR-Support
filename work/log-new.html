@@ -1501,8 +1501,7 @@
         { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', formRow: 5, formCol: 3 },
         { key: 'processing_department', label: '處理部門', type: 'select', options: ['技術', '商務'], formRow: 5, formCol: 4 },
-        { key: 'reminder_link', label: '提醒連結', type: 'link', formRow: 2, formCol: 7 },
-        { key: 'reportLink', label: '提報連結', type: 'reportLink', formRow: 5, formCol: 7 },
+        { key: 'reminder_link', label: '提報連結', type: 'reportLink', formRow: 2, formCol: 7 },
         { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 5, formRow: 7, formCol: 1, formColSpan: 7, fields: [
           { key: 'conversation', label: '對話', type: 'textarea', rows: 8, width: 420, placeholder: '請貼上客戶與客服的完整對話' },
           { key: 'technical_processing', label: '技術群處理', type: 'textarea', rows: 4, width: 300 },
@@ -1538,7 +1537,6 @@
           issue: { row: 4, col: 1, colSpan: 3, rowSpan: 2, height: 220 },
           note: { row: 4, col: 4, colSpan: 3, rowSpan: 2, height: 220 },
           processing_department: { row: 4, col: 7 },
-          reportLink: { row: 5, col: 7 },
           items: { row: 7, col: 1, colSpan: 7, height: 360 }
         }
       },
@@ -1671,6 +1669,7 @@
                 linked_report: true,
                 report_enabled: true,
                 reportEnabled: true,
+                reminder_link: reportUrl,
                 report_link: reportUrl,
                 reportLink: reportUrl
               });
