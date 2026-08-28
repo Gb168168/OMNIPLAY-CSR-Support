@@ -1150,6 +1150,20 @@
       font-size: 12px;
     }
 
+    /* 日誌 NEW 檢視：日期時間一律呈現為純文字，避免深色模式出現白色輸入框。 */
+    .log-new-page #ragicForm .ragic-view-field-date .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-field-datetime .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-field-createdDate .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-field-updatedDate .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-field-reminderTime .ragic-view-value {
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      color: var(--text) !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
 
     /* 日誌 NEW 列表：問題描述完整保留表單換行，依實際行數撐高。 */
     .log-new-page #ragicListView .ragic-table th[data-field-key="issue"],
