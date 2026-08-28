@@ -1538,6 +1538,16 @@
       listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time', 'serial']
     });
 
+    // 既有提報以 sourceLogId 對回原日誌，讓列表與檢視的「提報」狀態一致。
+    window.omniplayDb?.collection('report')?.onSnapshot((snapshot) => {
+      window.ragicLinkedReportSourceIds = new Set(
+        snapshot.docs
+          .map((doc) => String(doc.data()?.sourceLogId || '').trim())
+          .filter(Boolean)
+      );
+      window.refreshRagicTable?.();
+    }, (error) => console.warn('讀取提報連動狀態失敗：', error));
+
     // 連動提報功能
     window.linkedReportManager = {
       currentLogData: null,
@@ -1639,7 +1649,14 @@
           sourceLogId,
           sourceLogUrl,
           field_1783793471256_rn925: sourceLogUrl
-        }).then(() => {
+        }).then(async () => {
+          if (sourceLogId) {
+            try {
+              await window.omniplayDb.collection('log_new').doc(sourceLogId).update({ linked_report: true });
+            } catch (error) {
+              console.warn('提報已建立，但回寫日誌提報狀態失敗：', error);
+            }
+          }
           window.showRagicNotice?.('提報已成功提交！');
           this.closeModal();
         }).catch(error => {
