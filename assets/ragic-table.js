@@ -753,6 +753,9 @@ const normalizeSchema = (schema = {}) => {
     listVisibility,
     listOrder: Array.isArray(schema.listOrder)
       ? schema.listOrder.map((key) => String(key || '').trim()).filter(Boolean)
+      : [],
+    deletedFieldKeys: Array.isArray(schema.deletedFieldKeys)
+      ? [...new Set(schema.deletedFieldKeys.map((key) => String(key || '').trim()).filter(Boolean))]
       : []
   };
 };
@@ -1396,6 +1399,11 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
   const forceConfiguredLayout = config.forceConfigFormLayout === true;
   const configuredFields = defaultConfigFields(config);
   const savedFields = Array.isArray(schema.fields) ? schema.fields : [];
+  const deletedFieldKeys = new Set(
+    (Array.isArray(schema.deletedFieldKeys) ? schema.deletedFieldKeys : [])
+      .map((key) => String(key || '').trim())
+      .filter(Boolean)
+  );
   const configuredByKey = new Map(configuredFields.map((field) => [String(field?.key || ''), field]));
   const savedKeys = new Set(savedFields.map((field) => String(field?.key || '')));
   const mergedFields = savedFields.length
@@ -1404,7 +1412,10 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
           ...(configuredByKey.get(String(field?.key || '')) || {}),
           ...field
         })),
-        ...configuredFields.filter((field) => !savedKeys.has(String(field?.key || '')))
+        ...configuredFields.filter((field) => {
+          const key = String(field?.key || '');
+          return !savedKeys.has(key) && !deletedFieldKeys.has(key);
+        })
       ]
     : configuredFields;
   return {
@@ -4811,11 +4822,21 @@ const initRagicPage = async (config) => {
       fields
     );
 
+    const currentFieldKeys = new Set(fields.map((field) => String(field?.key || '')).filter(Boolean));
+    const configuredFieldKeys = defaultConfigFields(RAGIC_STATE.config)
+      .map((field) => String(field?.key || '').trim())
+      .filter(Boolean);
+    const deletedFieldKeys = [...new Set([
+      ...(RAGIC_STATE.schema?.deletedFieldKeys || []),
+      ...configuredFieldKeys.filter((key) => !currentFieldKeys.has(key))
+    ])].filter((key) => !currentFieldKeys.has(key));
+
     const nextSchema = normalizeSchema({
       fields,
       formLayout,
       listVisibility,
-      listOrder
+      listOrder,
+      deletedFieldKeys
     });
 
     RAGIC_STATE.schema = {
@@ -4831,6 +4852,7 @@ const initRagicPage = async (config) => {
         listWidthFull: RAGIC_STATE.schema.listWidthFull,
         listVisibility: RAGIC_STATE.schema.listVisibility,
         listOrder: RAGIC_STATE.schema.listOrder,
+        deletedFieldKeys: RAGIC_STATE.schema.deletedFieldKeys,
         updatedAt: RAGIC_STATE.schema.updatedAt
       },
       { merge: true }
