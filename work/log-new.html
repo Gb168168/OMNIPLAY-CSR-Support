@@ -1502,6 +1502,7 @@
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', formRow: 5, formCol: 3 },
         { key: 'processing_department', label: '處理部門', type: 'select', options: ['技術', '商務'], formRow: 5, formCol: 4 },
         { key: 'reminder_link', label: '提醒連結', type: 'link', formRow: 2, formCol: 7 },
+        { key: 'reportLink', label: '提報連結', type: 'reportLink', formRow: 5, formCol: 7 },
         { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 5, formRow: 7, formCol: 1, formColSpan: 7, fields: [
           { key: 'conversation', label: '對話', type: 'textarea', rows: 8, width: 420, placeholder: '請貼上客戶與客服的完整對話' },
           { key: 'technical_processing', label: '技術群處理', type: 'textarea', rows: 4, width: 300 },
@@ -1537,6 +1538,7 @@
           issue: { row: 4, col: 1, colSpan: 3, rowSpan: 2, height: 220 },
           note: { row: 4, col: 4, colSpan: 3, rowSpan: 2, height: 220 },
           processing_department: { row: 4, col: 7 },
+          reportLink: { row: 5, col: 7 },
           items: { row: 7, col: 1, colSpan: 7, height: 360 }
         }
       },
@@ -1545,6 +1547,20 @@
       fixedSortDir: 'desc',
       listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time', 'serial']
     });
+
+    // 既有提報以 sourceLogId 對回原日誌，同步顯示提報狀態與提報連結。
+    window.omniplayDb?.collection('report')?.onSnapshot((snapshot) => {
+      window.ragicLinkedReports = new Map(
+        snapshot.docs
+          .map((doc) => {
+            const sourceLogId = String(doc.data()?.sourceLogId || '').trim();
+            const url = new URL(`report.html?id=${encodeURIComponent(doc.id)}`, window.location.href).href;
+            return sourceLogId ? [sourceLogId, { id: doc.id, url }] : null;
+          })
+          .filter(Boolean)
+      );
+      window.refreshRagicDisplay?.();
+    }, (error) => console.warn('讀取提報連動狀態失敗：', error));
 
     // 連動提報功能
     window.linkedReportManager = {
@@ -1647,7 +1663,21 @@
           sourceLogId,
           sourceLogUrl,
           field_1783793471256_rn925: sourceLogUrl
-        }).then(() => {
+        }).then(async (reportRef) => {
+          const reportUrl = new URL(`report.html?id=${encodeURIComponent(reportRef.id)}`, window.location.href).href;
+          if (sourceLogId) {
+            try {
+              await window.omniplayDb.collection('log_new').doc(sourceLogId).update({
+                linked_report: true,
+                report_enabled: true,
+                reportEnabled: true,
+                report_link: reportUrl,
+                reportLink: reportUrl
+              });
+            } catch (error) {
+              console.warn('提報已建立，但回寫日誌提報狀態與連結失敗：', error);
+            }
+          }
           window.showRagicNotice?.('提報已成功提交！');
           this.closeModal();
         }).catch(error => {
