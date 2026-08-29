@@ -1397,8 +1397,15 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
   const savedVersion = String(savedLayout?.version || '');
   const useConfiguredPreset = Boolean(configuredVersion && configuredVersion !== savedVersion);
   const forceConfiguredLayout = config.forceConfigFormLayout === true;
-  const configuredFields = defaultConfigFields(config);
-  const savedFields = Array.isArray(schema.fields) ? schema.fields : [];
+  const excludedFieldKeys = new Set(
+    (Array.isArray(config.excludedFieldKeys) ? config.excludedFieldKeys : [])
+      .map((key) => String(key || '').trim())
+      .filter(Boolean)
+  );
+  const configuredFields = defaultConfigFields(config)
+    .filter((field) => !excludedFieldKeys.has(String(field?.key || '')));
+  const savedFields = (Array.isArray(schema.fields) ? schema.fields : [])
+    .filter((field) => !excludedFieldKeys.has(String(field?.key || '')));
   const deletedFieldKeys = new Set(
     (Array.isArray(schema.deletedFieldKeys) ? schema.deletedFieldKeys : [])
       .map((key) => String(key || '').trim())
@@ -1427,14 +1434,21 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
         })
       ]
     : configuredFields;
+  const selectedLayout = forceConfiguredLayout || useConfiguredPreset
+    ? config.formLayout
+    : (hasSavedPositions ? savedLayout : config.formLayout);
+  const filteredLayoutFields = Object.fromEntries(
+    Object.entries(selectedLayout?.fields || {})
+      .filter(([key]) => !excludedFieldKeys.has(String(key || '')))
+  );
   return {
     ...schema,
     // 已儲存的欄位設計（包含 width/manualWidth/listVisible/order）為主要來源；
     // config 僅補上尚未存在的新欄位，不能覆蓋使用者剛儲存的列表設定。
     fields: mergedFields,
-    formLayout: forceConfiguredLayout || useConfiguredPreset
-      ? config.formLayout
-      : (hasSavedPositions ? savedLayout : config.formLayout)
+    formLayout: selectedLayout
+      ? { ...selectedLayout, fields: filteredLayoutFields }
+      : selectedLayout
   };
 };
 
