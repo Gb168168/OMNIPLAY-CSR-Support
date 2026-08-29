@@ -1402,6 +1402,11 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
       .map((key) => String(key || '').trim())
       .filter(Boolean)
   );
+  const lockedFieldDefinitions = new Set(
+    (Array.isArray(config.lockedFieldDefinitions) ? config.lockedFieldDefinitions : [])
+      .map((key) => String(key || '').trim())
+      .filter(Boolean)
+  );
   const configuredFields = defaultConfigFields(config)
     .filter((field) => !excludedFieldKeys.has(String(field?.key || '')));
   const savedFields = (Array.isArray(schema.fields) ? schema.fields : [])
@@ -1424,10 +1429,16 @@ const mergeLogConfigFields = (schema = {}, config = {}) => {
   }
   const mergedFields = savedFields.length
     ? [
-        ...savedFields.map((field) => ({
-          ...(configuredByKey.get(String(field?.key || '')) || {}),
-          ...field
-        })),
+        ...savedFields.map((field) => {
+          const key = String(field?.key || '');
+          const configuredField = configuredByKey.get(key) || {};
+          const mergedField = { ...configuredField, ...field };
+          if (lockedFieldDefinitions.has(key) && configuredByKey.has(key)) {
+            mergedField.label = configuredField.label;
+            mergedField.type = configuredField.type;
+          }
+          return mergedField;
+        }),
         ...configuredFields.filter((field) => {
           const key = String(field?.key || '');
           return !savedKeys.has(key) && !deletedFieldKeys.has(key);
