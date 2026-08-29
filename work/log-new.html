@@ -1429,6 +1429,7 @@
       dataCollection: 'log_new',
       schemaCollection: 'log_new_schema',
       excludedFieldKeys: ['reportLink'],
+      lockedFieldDefinitions: ['updated_time'],
       fields: [
         { key: 'date', label: '日期', type: 'datetime', required: true, defaultNow: true, formRow: 1, formCol: 1 },
         { key: 'shift', label: '班別', type: 'select', required: true, options: ['早班', '晚班'], formRow: 1, formCol: 2 },
