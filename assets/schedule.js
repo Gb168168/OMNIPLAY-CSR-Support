@@ -130,12 +130,22 @@ const getGameTitle = (games = []) => games
   .filter(Boolean)
   .join('、');
 
+const getGameSpecialLabel = (games = []) => {
+  const notes = games.map((game) => String(game?.note1 || '').trim());
+  if (notes.some((note) => /首發/.test(note))) return GAME_FIRST_LAUNCH_META.labelName;
+  if (notes.some((note) => /獨家/.test(note))) return GAME_EXCLUSIVE_META.labelName;
+  return '';
+};
+
 const getScheduleDisplayTitle = (item = {}) => {
   const meta = getScheduleEventMeta(item);
   if (!meta) return item.title || '';
   const displayLabel = getScheduleDisplayLabel(item) || meta.labelName;
   const gameTitle = getGameTitle(getScheduleGames(item));
-  if (gameTitle) return `${displayLabel}｜${gameTitle}`;
+  const specialLabel = item.eventType === 'pm-confirmation'
+    ? getGameSpecialLabel(getScheduleGames(item))
+    : '';
+  if (gameTitle) return [displayLabel, specialLabel, gameTitle].filter(Boolean).join('｜');
   const titleBody = String(item.title || '').replace(GAME_TITLE_PREFIX_PATTERN, '').trim();
   const fallbackTitle = titleBody && !/^\d+\s*款遊戲$/.test(titleBody) ? titleBody : '未命名遊戲';
   return `${displayLabel}｜${fallbackTitle}`;
@@ -485,27 +495,6 @@ const normalizeFeedGame = (game = {}) => ({
   expectedOnlineDate: String(game.expectedOnlineDate || '').trim()
 });
 
-const parseFirstLaunchNoteRange = (note = '', referenceDate = null) => {
-  if (!(referenceDate instanceof Date) || Number.isNaN(referenceDate.getTime())) return null;
-  const normalized = String(note || '')
-    .replace(/[－—–]/g, '-')
-    .replace(/[～~]/g, '~')
-    .replace(/\s+/g, ' ');
-  const match = normalized.match(/(?:^|[^\d])(\d{1,2})\s*[\/.]\s*(\d{1,2})\s*(?:-|~|至|到)\s*(\d{1,2})\s*[\/.]\s*(\d{1,2})(?!\d)/);
-  if (!match) return null;
-  const year = referenceDate.getFullYear();
-  const start = new Date(year, Number(match[1]) - 1, Number(match[2]), 9, 0, 0, 0);
-  let end = new Date(year, Number(match[3]) - 1, Number(match[4]), 9, 0, 0, 0);
-  if (
-    start.getMonth() !== Number(match[1]) - 1 ||
-    start.getDate() !== Number(match[2]) ||
-    end.getMonth() !== Number(match[3]) - 1 ||
-    end.getDate() !== Number(match[4])
-  ) return null;
-  if (end < start) end = new Date(year + 1, Number(match[3]) - 1, Number(match[4]), 9, 0, 0, 0);
-  return { start, end };
-};
-
 const isGameIdLookupFailure = (value) => /查無\s*此?\s*game\s*id|game\s*id\s*(?:not\s*found|不存在)/i.test(String(value || '').trim());
 const isFirstLaunchGame = (game = {}, launchAt = null) => {
   if (!(launchAt instanceof Date) || launchAt < GAME_FIRST_LAUNCH_START_DATE) return false;
@@ -652,25 +641,18 @@ const syncGameSchedules = async () => {
         note1: game.note1 || '',
         expectedOnlineDate: game.expectedOnlineDate
       };
-      const noteRange = parseFirstLaunchNoteRange(normalizedGame.note1, launchAt);
       const firstLaunch = isFirstLaunchGame(normalizedGame, launchAt);
       const exclusive = isExclusiveGame(normalizedGame, launchAt);
+      const specialLabel = firstLaunch
+        ? GAME_FIRST_LAUNCH_META.labelName
+        : exclusive ? GAME_EXCLUSIVE_META.labelName : '';
       let definitions;
-      if (firstLaunch || exclusive) {
-        definitions = [{
-          idPrefix: firstLaunch ? 'game_first_launch' : 'game_exclusive',
-          eventType: firstLaunch ? 'first-launch' : 'exclusive-launch',
-          at: noteRange?.start || launchAt,
-          endAt: noteRange?.end || null,
-          meta: firstLaunch ? GAME_FIRST_LAUNCH_META : GAME_EXCLUSIVE_META,
-          contentPrefix: firstLaunch
-            ? '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
-            : '此遊戲包含獨家平台資訊：'
-        }];
-      } else if (launchAt >= GAME_WORKFLOW_START_DATE) {
+      if (launchAt >= GAME_WORKFLOW_START_DATE) {
         definitions = [{
           idPrefix: 'game_pm', eventType: 'pm-confirmation', at: subtractCalendarDays(launchAt, 14),
-          meta: GAME_EVENT_META['pm-confirmation'], contentPrefix: '請向 AM 確認下列遊戲上線資訊：'
+          meta: GAME_EVENT_META['pm-confirmation'],
+          titlePrefix: [GAME_EVENT_META['pm-confirmation'].labelName, specialLabel].filter(Boolean).join('｜'),
+          contentPrefix: '請向 AM 確認下列遊戲上線資訊：'
         }];
         if (isGameWorkflowConfirmed(normalizedGame)) {
           definitions.push(
@@ -737,7 +719,9 @@ const syncGameSchedules = async () => {
       const payload = {
         eventType: row.eventType,
         date: row.dateKey,
-        title: existingItem?.title || `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
+        title: row.titlePrefix
+          ? `${row.titlePrefix}｜${getGameTitle([row.game])}`
+          : existingItem?.title || `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
         content: row.game.note1
           ? `備註 1：${row.game.note1}\n\n${row.contentPrefix}\n${gameLine(row.game)}`
           : `${row.contentPrefix}\n${gameLine(row.game)}`,
