@@ -983,14 +983,25 @@ function updateDeleteLabelButton() {
 const renderLabelFilter = () => {
   if (!labelFilterSelect) return;
   const previousValue = activeLabelFilter;
-  const options = getUniqueLabels()
-    .map((label) => {
-      const value = label.id || label.name;
-      const selected = value === previousValue ? 'selected' : '';
-      const color = escapeHtml(label.color || '#3b82f6');
-      return `<option value="${escapeHtml(value)}" data-name="${escapeHtml(label.name)}" data-color="${color}" style="color:${color}" ${selected}>● ${escapeHtml(label.name)}</option>`;
-    }).join('');
-  labelFilterSelect.innerHTML = `<option value="">全部標籤</option>${options}`;
+  const labels = getUniqueLabels();
+  const groupedNames = new Set(LABEL_CATEGORY_GROUPS.flatMap((group) => group.names));
+  const labelByName = new Map(labels.map((label) => [label.name, label]));
+  const renderFilterOption = (label) => {
+    if (!label) return '';
+    const value = label.id || label.name;
+    const selected = value === previousValue ? 'selected' : '';
+    const color = escapeHtml(label.color || '#3b82f6');
+    return `<option value="${escapeHtml(value)}" data-name="${escapeHtml(label.name)}" data-color="${color}" style="color:${color}" ${selected}>● ${escapeHtml(label.name)}</option>`;
+  };
+  const problemOption = renderFilterOption(labelByName.get('問題/需求-代辦提醒'));
+  const groupedOptions = LABEL_CATEGORY_GROUPS.map((group) =>
+    `<option disabled>${escapeHtml(group.title)}</option>${group.names.map((name) => renderFilterOption(labelByName.get(name))).join('')}`
+  ).join('');
+  const extraOptions = labels
+    .filter((label) => label.name !== '問題/需求-代辦提醒' && !groupedNames.has(label.name))
+    .map(renderFilterOption)
+    .join('');
+  labelFilterSelect.innerHTML = `<option value="">全部標籤</option>${problemOption}${groupedOptions}${extraOptions}`;
   const stillExists = !previousValue || [...labelFilterSelect.options].some((option) => option.value === previousValue);
   activeLabelFilter = stillExists ? previousValue : '';
   labelFilterSelect.value = activeLabelFilter;
