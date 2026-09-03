@@ -656,18 +656,7 @@ const syncGameSchedules = async () => {
       const firstLaunch = isFirstLaunchGame(normalizedGame, launchAt);
       const exclusive = isExclusiveGame(normalizedGame, launchAt);
       let definitions;
-      if (firstLaunch || exclusive) {
-        definitions = [{
-          idPrefix: firstLaunch ? 'game_first_launch' : 'game_exclusive',
-          eventType: firstLaunch ? 'first-launch' : 'exclusive-launch',
-          at: noteRange?.start || launchAt,
-          endAt: noteRange?.end || null,
-          meta: firstLaunch ? GAME_FIRST_LAUNCH_META : GAME_EXCLUSIVE_META,
-          contentPrefix: firstLaunch
-            ? '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
-            : '此遊戲包含獨家平台資訊：'
-        }];
-      } else if (launchAt >= GAME_WORKFLOW_START_DATE) {
+      if (launchAt >= GAME_WORKFLOW_START_DATE) {
         definitions = [{
           idPrefix: 'game_pm', eventType: 'pm-confirmation', at: subtractCalendarDays(launchAt, 14),
           meta: GAME_EVENT_META['pm-confirmation'], contentPrefix: '請向 AM 確認下列遊戲上線資訊：'
@@ -684,6 +673,18 @@ const syncGameSchedules = async () => {
           idPrefix: 'game_prod', eventType: 'prod-launch', at: launchAt,
           meta: GAME_ONLINE_META, contentPrefix: '遊戲於今日上線：'
         }];
+      }
+      if (firstLaunch || exclusive) {
+        definitions.push({
+          idPrefix: firstLaunch ? 'game_first_launch' : 'game_exclusive',
+          eventType: firstLaunch ? 'first-launch' : 'exclusive-launch',
+          at: noteRange?.start || launchAt,
+          endAt: noteRange?.end || null,
+          meta: firstLaunch ? GAME_FIRST_LAUNCH_META : GAME_EXCLUSIVE_META,
+          contentPrefix: firstLaunch
+            ? '此遊戲為首發，其他平台請等待 AM 通知後再安排測試與正式環境：'
+            : '此遊戲包含獨家平台資訊：'
+        });
       }
       return definitions.map((definition) => {
         const dateKey = toDateKey(definition.at);
