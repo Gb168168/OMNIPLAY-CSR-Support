@@ -3405,6 +3405,18 @@ textarea,
 .col-menu-trigger.is-active {
   color: var(--primary);
 }
+.icon-actions-head.col-marker {
+  white-space: nowrap !important;
+}
+.icon-actions-head.col-marker .col-label {
+  max-width: none;
+  overflow: visible;
+}
+.icon-actions-head.col-marker .col-menu-trigger {
+  margin-left: 2px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
 .col-sort-indicator {
   margin-left: 3px;
   color: var(--primary);
