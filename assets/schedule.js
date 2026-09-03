@@ -60,7 +60,7 @@ const GAME_SCHEDULE_COLORS = {
 const GAME_SCHEDULE_START_DATE = new Date(2026, 0, 1, 0, 0, 0, 0);
 const GAME_WORKFLOW_START_DATE = new Date(2026, 6, 1, 0, 0, 0, 0);
 const GAME_FIRST_LAUNCH_START_DATE = new Date(2026, 7, 1, 0, 0, 0, 0);
-const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: 'PORD', color: GAME_SCHEDULE_COLORS.prod };
+const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: 'PROD', color: GAME_SCHEDULE_COLORS.prod };
 const GAME_FIRST_LAUNCH_META = { labelId: 'google-game-first-launch', labelName: '⭐ 首發平台上線', color: GAME_SCHEDULE_COLORS.firstLaunch };
 const GAME_EXCLUSIVE_META = { labelId: 'google-game-exclusive', labelName: '🔒 獨家平台', color: GAME_SCHEDULE_COLORS.exclusive };
 const GAME_EVENT_META = {
@@ -68,13 +68,13 @@ const GAME_EVENT_META = {
   'marketing-material': { labelId: 'google-game-marketing', labelName: '行銷素材待辦', color: GAME_SCHEDULE_COLORS.marketing },
   'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
   'uat-material': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
-  'prod-launch': { labelId: 'google-game-prod', labelName: 'PORD', color: GAME_SCHEDULE_COLORS.prod },
+  'prod-launch': { labelId: 'google-game-prod', labelName: 'PROD', color: GAME_SCHEDULE_COLORS.prod },
   'other-platform-uat': { labelId: 'google-game-other-platform-uat', labelName: '其他平台 UAT', color: GAME_SCHEDULE_COLORS.uat },
-  'other-platform-prod': { labelId: 'google-game-other-platform-prod', labelName: '其他平台 PORD', color: GAME_SCHEDULE_COLORS.prod },
+  'other-platform-prod': { labelId: 'google-game-other-platform-prod', labelName: '其他平台 PROD', color: GAME_SCHEDULE_COLORS.prod },
   'first-launch': GAME_FIRST_LAUNCH_META,
   'exclusive-launch': GAME_EXCLUSIVE_META
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台上線|🔒 獨家平台|其他平台 UAT|其他平台 PORD|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台上線|🔒 獨家平台|其他平台 UAT|其他平台 PROD|其他平台 PORD|PROD|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const LABEL_CATEGORY_ORDER = [
   '向 AM 確認',
@@ -83,8 +83,8 @@ const LABEL_CATEGORY_ORDER = [
   '其他平台 UAT',
   '⭐ 首發平台上線',
   '🔒 獨家平台',
-  '其他平台 PORD',
-  'PORD',
+  '其他平台 PROD',
+  'PROD',
   '問題/需求-代辦提醒'
 ];
 
@@ -93,7 +93,8 @@ const canonicalScheduleLabelName = (name = '') => {
   if (normalized === '向 PM 確認') return '向 AM 確認';
   if (normalized === '預計 PROD 上線') return 'PROD 上架公告';
   if (normalized === 'UAT／測試環境') return 'UAT';
-  if (normalized === '遊戲上線') return 'PORD';
+  if (normalized === '遊戲上線' || normalized === 'PORD') return 'PROD';
+  if (normalized === '其他平台 PORD') return '其他平台 PROD';
   if (normalized === '⭐ 首發／🔒 獨家平台') return '⭐ 首發平台上線';
   if (normalized === '代辦事項') return '問題/需求-代辦提醒';
   return normalized;
@@ -1536,10 +1537,10 @@ formEl?.addEventListener('submit', async (event) => {
   const otherPlatformUatDate = firstLaunchOtherPlatformUatDate?.value || '';
   const otherPlatformProdDate = firstLaunchOtherPlatformProdDate?.value || '';
   if (otherPlatformEnabled && (!otherPlatformUatDate || !otherPlatformProdDate)) {
-    return setMessage('請完整填寫其他平台 UAT 與 PORD 開放日期。');
+    return setMessage('請完整填寫其他平台 UAT 與 PROD 開放日期。');
   }
   if (otherPlatformEnabled && otherPlatformProdDate < otherPlatformUatDate) {
-    return setMessage('其他平台 PORD 開放日期不能早於 UAT 開放日期。');
+    return setMessage('其他平台 PROD 開放日期不能早於 UAT 開放日期。');
   }
   if (isEditingFirstLaunch) {
     payload.otherPlatformEnabled = otherPlatformEnabled;
@@ -1567,7 +1568,7 @@ formEl?.addEventListener('submit', async (event) => {
         otherPlatformProdDate
       );
       if (otherPlatformEnabled) {
-        setStatus('已建立／更新其他平台 UAT 與 PORD 開放排程。', 'success');
+        setStatus('已建立／更新其他平台 UAT 與 PROD 開放排程。', 'success');
       }
     }
         if (editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
