@@ -1012,7 +1012,9 @@ const scheduleMatchesActiveLabel = (item) => {
   if (!activeLabelFilter) return true;
   const selectedOption = labelFilterSelect?.selectedOptions?.[0];
   const selectedName = selectedOption?.dataset?.name || '';
-  return item.labelId === activeLabelFilter || item.labelName === selectedName || item.labelName === activeLabelFilter;
+  const displayName = getScheduleDisplayLabel(item);
+  if (selectedName) return displayName === selectedName;
+  return displayName === activeLabelFilter;
 };
 
 const scheduleHistoryFields = [
