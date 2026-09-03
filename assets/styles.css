@@ -11129,3 +11129,24 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   font-weight: 900;
   line-height: 1;
 }
+
+
+/* Keep the marker column identical across every desktop list page. */
+@media (min-width: 981px) {
+  .ragic-table th.col-marker,
+  .ragic-table td.col-marker {
+    box-sizing: border-box !important;
+    width: 72px !important;
+    min-width: 72px !important;
+    max-width: 72px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    text-align: center !important;
+  }
+
+  .ragic-table td.col-marker .marker-actions-row {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
