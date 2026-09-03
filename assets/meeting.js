@@ -259,8 +259,18 @@ const renderTabs = (tabs = meetingState.tabs) => {
 
 const currentRowsByKey = async (key) => readRows(key);
 
-const meetingFileUrl = (file) => file?.url || file?.dataUrl || file?.objectUrl || '';
-const isPreviewableMeetingFile = (file) => String(file?.type || '').startsWith('video/') || String(file?.type || '').startsWith('image/') || String(file?.type || '').includes('pdf');
+const meetingFileUrl = (file) => file?.url || file?.downloadURL || file?.downloadUrl || file?.dataUrl || file?.objectUrl || file?.src || file?.data || '';
+const meetingFileStoragePath = (file) => file?.path || file?.storagePath || file?.fullPath || '';
+const meetingFileType = (file) => {
+  const savedType = String(file?.type || file?.contentType || '').trim();
+  if (savedType) return savedType;
+  const name = String(file?.name || '').toLowerCase();
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name)) return 'image/*';
+  if (/\.(mov|mp4|m4v|webm|avi)$/.test(name)) return 'video/*';
+  if (/\.pdf$/.test(name)) return 'application/pdf';
+  return 'application/octet-stream';
+};
+const isPreviewableMeetingFile = (file) => meetingFileType(file).startsWith('video/') || meetingFileType(file).startsWith('image/') || meetingFileType(file).includes('pdf');
 const formatMeetingBytes = (bytes = 0) => {
   const size = Number(bytes) || 0;
   if (size < 1024) return `${size} B`;
@@ -277,8 +287,25 @@ const renderMeetingFiles = () => {
     const isPending = file.pending || file.file;
     const previewButton = href && isPreviewableMeetingFile(file) ? `<button class="secondary meeting-file-action" type="button" data-preview-file="${index}">預覽</button>` : '';
     const downloadButton = href ? `<button class="secondary meeting-file-action" type="button" data-download-file="${index}">下載</button>` : '';
-    return `<div class="meeting-file-item"><span class="meeting-file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>${previewButton}${downloadButton}${isPending ? `<span class="meeting-file-status">${escapeHtml(file.uploadStatus || '待儲存上傳')}</span>` : ''}<button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`;
+    const unavailableText = file.linkError || !meetingFileStoragePath(file) ? '無法取得檔案連結' : '連結載入中…';
+    const unavailable = !href && !isPending ? `<span class="meeting-file-status">${unavailableText}</span>` : '';
+    return `<div class="meeting-file-item"><span class="meeting-file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>${previewButton}${downloadButton}${isPending ? `<span class="meeting-file-status">${escapeHtml(file.uploadStatus || '待儲存上傳')}</span>` : unavailable}<button class="ghost danger" type="button" data-remove-file="${index}" aria-label="移除 ${escapeHtml(file.name)}">×</button></div>`;
   }).join('');
+};
+
+const hydrateMeetingFileUrls = async () => {
+  if (!meetingStorage) return;
+  const unresolvedFiles = meetingState.files.filter((file) => !meetingFileUrl(file) && meetingFileStoragePath(file));
+  if (!unresolvedFiles.length) return;
+  await Promise.all(unresolvedFiles.map(async (file) => {
+    try {
+      file.url = await meetingStorage.ref(meetingFileStoragePath(file)).getDownloadURL();
+    } catch (error) {
+      console.warn('會議附件連結載入失敗：', meetingFileStoragePath(file), error);
+      file.linkError = true;
+    }
+  }));
+  renderMeetingFiles();
 };
 
 
@@ -288,7 +315,7 @@ const openMeetingFilePreview = (file) => {
   const body = document.querySelector('#meetingFilePreviewBody');
   const url = meetingFileUrl(file);
   if (!modal || !title || !body || !url) return;
-  const type = String(file.type || '');
+  const type = meetingFileType(file);
   title.textContent = file.name || '檔案預覽';
   if (type.startsWith('video/')) {
     body.innerHTML = `<video class="meeting-file-preview-media" src="${escapeHtml(url)}" controls playsinline preload="metadata"></video>`;
@@ -477,6 +504,7 @@ const showForm = (record = {}) => {
   setSelectValue(document.querySelector('#meetingEveningAttendees'), record.eveningAttendees || []);
   meetingState.files = Array.isArray(record.files) ? [...record.files] : [];
   renderMeetingFiles();
+  hydrateMeetingFileUrls();
   renderTabs(normalizeTabs(record));
   switchTab(meetingState.activeTab);
   setFormEditable();
@@ -841,7 +869,7 @@ document.querySelector('#meetingFileList')?.addEventListener('click', (event) =>
   }
   const index = event.target.closest('[data-remove-file]')?.dataset.removeFile;
   if (index === undefined) return;
-  meetingState.files.splice(Number(index), 1);const [removedFile] = meetingState.files.splice(Number(index), 1);
+  const [removedFile] = meetingState.files.splice(Number(index), 1);
   if (removedFile?.objectUrl) URL.revokeObjectURL(removedFile.objectUrl);
   renderMeetingFiles();
 });
