@@ -174,9 +174,9 @@
                 <span><i style="--help-color:#f59e0b"></i>橘色：向 AM 確認</span>
                 <span><i style="--help-color:#14b8a6"></i>綠色：行銷素材待辦</span>
                 <span><i style="--help-color:#8b5cf6"></i>紫色：UAT</span>
-                <span><i style="--help-color:#8b5cf6"></i>紫色：⭐ 首發平台測試上線</span>
-                <span><i style="--help-color:#ec4899"></i>粉色：⭐ 首發平台正式上線</span>
-                <span><i style="--help-color:#ca8a04"></i>金色：🔒 獨家平台</span>
+                <span><i style="--help-color:#8b5cf6"></i>紫色：⭐ 首發平台 UAT／🔒 獨家平台 UAT</span>
+                <span><i style="--help-color:#ec4899"></i>粉色：⭐ 首發平台 PROD</span>
+                <span><i style="--help-color:#ca8a04"></i>金色：🔒 獨家平台 PROD</span>
                 <span><i style="--help-color:#2563eb"></i>藍色：PROD</span>
                 <span><b class="help-line is-dashed"></b>虛線：尚未發生</span>
                 <span><b class="help-line"></b>實心：時間已到或已發生</span>
@@ -190,7 +190,7 @@
                 <li>只匯入預計上線日期為 2026/01/01（含）之後，且有有效上線時間的遊戲。</li>
                 <li>2026/01～2026/06 的遊戲只在預計上線當日建立一列藍色「遊戲上線」資料。</li>
                 <li>2026/07/01 起的一般遊戲會先建立 AM 確認（前 14 天）；勾選「AM 已確認」並儲存後，才建立行銷素材（前 8 天）、UAT／測試環境（前 7 天）及上線當日資料。</li>
-                <li>2026/08/01 起會參照「備註 1」：含「首發」或「獨家」時，先在上線前 14 天建立「向 AM 確認」。首發遊戲勾選「AM 已確認」並儲存後，會建立「⭐ 首發平台測試上線」及「⭐ 首發平台正式上線」；獨家資訊則顯示「🔒 獨家平台」。完整備註也會同步到排程內容。</li>
+                <li>2026/08/01 起會參照「備註 1」：含「首發」或「獨家」時，先在上線前 14 天建立「向 AM 確認」。勾選「AM 已確認」並儲存後，首發遊戲會建立「⭐ 首發平台 UAT」及「⭐ 首發平台 PROD」；獨家遊戲會建立「🔒 獨家平台 UAT」及「🔒 獨家平台 PROD」。完整備註也會同步到排程內容。</li>
                 <li>首次補入的歷史上線與流程資料不列入「試算表變更」；完成匯入後的新修改才會記錄。</li>
               </ol>
               <p class="schedule-help-note">同步只處理試算表中的遊戲上線日期，不影響手動建立的排程。</p>
@@ -223,7 +223,7 @@
               <label><span>顏色</span><input id="scheduleLabelColor" type="color" value="#3b82f6" required /></label>
               <label><span>名稱</span><input id="scheduleLabelName" type="text" placeholder="可輸入標籤名稱" /></label>
               <label><span>類別</span><span class="schedule-label-category-control"><select id="scheduleLabelCategory" aria-label="選擇已設置標籤">
-                <option value="">自訂／新增標籤</option>
+                <option value="">自訂 / 新增標籤</option>
               </select><button class="schedule-label-delete" id="deleteScheduleLabelButton" type="button" aria-label="刪除選取的類別" title="刪除選取的類別" hidden>×</button></span></label>
             </div>
             <label><span>標題</span><input id="scheduleTitle" type="text" required autocomplete="off" /></label>
@@ -245,8 +245,8 @@
                 </span>
               </label>
               <div class="first-launch-other-platform-dates" id="firstLaunchOtherPlatformDates" hidden>
-                <label><span>其他平台 UAT上線日期</span><input id="firstLaunchOtherPlatformUatDate" type="date" /></label>
-                <label><span>其他平台 PROD上線日期</span><input id="firstLaunchOtherPlatformProdDate" type="date" /></label>
+                <label><span>其他平台 UAT 日期</span><input id="firstLaunchOtherPlatformUatDate" type="date" /></label>
+                <label><span>其他平台 PROD 日期</span><input id="firstLaunchOtherPlatformProdDate" type="date" /></label>
               </div>
             </section>
             <div class="label-row repeat-row">
