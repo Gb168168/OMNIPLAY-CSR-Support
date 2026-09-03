@@ -70,12 +70,12 @@ const GAME_EVENT_META = {
   'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
   'uat-material': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
   'prod-launch': { labelId: 'google-game-prod', labelName: 'PROD', color: GAME_SCHEDULE_COLORS.prod },
-  'other-platform-uat': { labelId: 'google-game-other-platform-uat', labelName: '其他平台 UAT', color: GAME_SCHEDULE_COLORS.uat },
-  'other-platform-prod': { labelId: 'google-game-other-platform-prod', labelName: '其他平台 PROD', color: GAME_SCHEDULE_COLORS.prod },
+  'other-platform-uat': { labelId: 'google-game-other-platform-uat', labelName: '其他平台 UAT上線', color: GAME_SCHEDULE_COLORS.uat },
+  'other-platform-prod': { labelId: 'google-game-other-platform-prod', labelName: '其他平台 PROD上線', color: GAME_SCHEDULE_COLORS.prod },
   'first-launch': GAME_FIRST_LAUNCH_META,
   'exclusive-launch': GAME_EXCLUSIVE_META
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台測試上線|⭐ 首發平台正式上線|⭐ 首發平台上線|🔒 獨家平台|其他平台 UAT|其他平台 PROD|其他平台 PORD|PROD|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台測試上線|⭐ 首發平台正式上線|⭐ 首發平台上線|🔒 獨家平台|其他平台 UAT上線|其他平台 PROD上線|其他平台 UAT|其他平台 PROD|其他平台 PORD|PROD|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const LABEL_CATEGORY_ORDER = [
   '向 AM 確認',
@@ -83,9 +83,9 @@ const LABEL_CATEGORY_ORDER = [
   'UAT',
   '⭐ 首發平台測試上線',
   '⭐ 首發平台正式上線',
-  '其他平台 UAT',
+  '其他平台 UAT上線',
   '🔒 獨家平台',
-  '其他平台 PROD',
+  '其他平台 PROD上線',
   'PROD',
   '問題/需求-代辦提醒'
 ];
@@ -96,7 +96,8 @@ const canonicalScheduleLabelName = (name = '') => {
   if (normalized === '預計 PROD 上線') return 'PROD 上架公告';
   if (normalized === 'UAT／測試環境') return 'UAT';
   if (normalized === '遊戲上線' || normalized === 'PORD') return 'PROD';
-  if (normalized === '其他平台 PORD') return '其他平台 PROD';
+  if (normalized === '其他平台 UAT') return '其他平台 UAT上線';
+  if (normalized === '其他平台 PROD' || normalized === '其他平台 PORD') return '其他平台 PROD上線';
   if (normalized === '⭐ 首發／🔒 獨家平台' || normalized === '⭐ 首發平台上線') return '⭐ 首發平台正式上線';
   if (normalized === '代辦事項') return '問題/需求-代辦提醒';
   return normalized;
@@ -1548,10 +1549,10 @@ formEl?.addEventListener('submit', async (event) => {
   const otherPlatformUatDate = firstLaunchOtherPlatformUatDate?.value || '';
   const otherPlatformProdDate = firstLaunchOtherPlatformProdDate?.value || '';
   if (otherPlatformEnabled && (!otherPlatformUatDate || !otherPlatformProdDate)) {
-    return setMessage('請完整填寫其他平台 UAT 與 PROD 開放日期。');
+    return setMessage('請完整填寫其他平台 UAT上線與 PROD上線日期。');
   }
   if (otherPlatformEnabled && otherPlatformProdDate < otherPlatformUatDate) {
-    return setMessage('其他平台 PROD 開放日期不能早於 UAT 開放日期。');
+    return setMessage('其他平台 PROD上線日期不能早於 UAT上線日期。');
   }
   if (isEditingFirstLaunch) {
     payload.otherPlatformEnabled = otherPlatformEnabled;
@@ -1579,7 +1580,7 @@ formEl?.addEventListener('submit', async (event) => {
         otherPlatformProdDate
       );
       if (otherPlatformEnabled) {
-        setStatus('已建立／更新其他平台 UAT 與 PROD 開放排程。', 'success');
+        setStatus('已建立／更新其他平台 UAT上線與 PROD上線排程。', 'success');
       }
     }
         if (editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
