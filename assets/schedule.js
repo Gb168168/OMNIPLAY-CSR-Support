@@ -54,16 +54,20 @@ const GAME_SCHEDULE_COLORS = {
   marketing: '#14b8a6',
   uat: '#8b5cf6',
   prod: '#2563eb',
+  firstLaunchUat: '#a855f7',
   firstLaunch: '#ec4899',
+  otherPlatformUat: '#06b6d4',
+  otherPlatformProd: '#4f46e5',
+  exclusiveUat: '#65a30d',
   exclusive: '#ca8a04'
 };
 const GAME_SCHEDULE_START_DATE = new Date(2026, 0, 1, 0, 0, 0, 0);
 const GAME_WORKFLOW_START_DATE = new Date(2026, 6, 1, 0, 0, 0, 0);
 const GAME_FIRST_LAUNCH_START_DATE = new Date(2026, 7, 1, 0, 0, 0, 0);
 const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: 'PROD', color: GAME_SCHEDULE_COLORS.prod };
-const GAME_FIRST_LAUNCH_UAT_META = { labelId: 'google-game-first-launch-uat', labelName: '⭐ 首發平台 UAT', color: GAME_SCHEDULE_COLORS.uat };
+const GAME_FIRST_LAUNCH_UAT_META = { labelId: 'google-game-first-launch-uat', labelName: '⭐ 首發平台 UAT', color: GAME_SCHEDULE_COLORS.firstLaunchUat };
 const GAME_FIRST_LAUNCH_META = { labelId: 'google-game-first-launch', labelName: '⭐ 首發平台 PROD', color: GAME_SCHEDULE_COLORS.firstLaunch };
-const GAME_EXCLUSIVE_UAT_META = { labelId: 'google-game-exclusive-uat', labelName: '🔒 獨家平台 UAT', color: GAME_SCHEDULE_COLORS.uat };
+const GAME_EXCLUSIVE_UAT_META = { labelId: 'google-game-exclusive-uat', labelName: '🔒 獨家平台 UAT', color: GAME_SCHEDULE_COLORS.exclusiveUat };
 const GAME_EXCLUSIVE_META = { labelId: 'google-game-exclusive', labelName: '🔒 獨家平台 PROD', color: GAME_SCHEDULE_COLORS.exclusive };
 const GAME_EVENT_META = {
   'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 AM 確認', color: GAME_SCHEDULE_COLORS.pm },
@@ -71,8 +75,8 @@ const GAME_EVENT_META = {
   'uat-announcement': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
   'uat-material': { labelId: 'google-game-uat', labelName: 'UAT', color: GAME_SCHEDULE_COLORS.uat },
   'prod-launch': { labelId: 'google-game-prod', labelName: 'PROD', color: GAME_SCHEDULE_COLORS.prod },
-  'other-platform-uat': { labelId: 'google-game-other-platform-uat', labelName: '其他平台 UAT', color: GAME_SCHEDULE_COLORS.uat },
-  'other-platform-prod': { labelId: 'google-game-other-platform-prod', labelName: '其他平台 PROD', color: GAME_SCHEDULE_COLORS.prod },
+  'other-platform-uat': { labelId: 'google-game-other-platform-uat', labelName: '其他平台 UAT', color: GAME_SCHEDULE_COLORS.otherPlatformUat },
+  'other-platform-prod': { labelId: 'google-game-other-platform-prod', labelName: '其他平台 PROD', color: GAME_SCHEDULE_COLORS.otherPlatformProd },
   'first-launch': GAME_FIRST_LAUNCH_META,
   'exclusive-launch': GAME_EXCLUSIVE_META
 };
