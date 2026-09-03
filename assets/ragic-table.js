@@ -1237,7 +1237,7 @@ const applyRagicColumnGroup = (table, fields = listFields()) => {
   const colgroup = document.createElement('colgroup');
   // 整張列表固定自動滿版；個別欄寬仍由欄位屬性設定控制。
   const totalWidth = Math.max(DEFAULT_LIST_WIDTH, table.parentElement?.clientWidth || 0);
-  const markerWidth = Math.min(50, totalWidth);
+  const markerWidth = Math.min(72, totalWidth);
   const columnClasses = fields.map((field) => ragicColumnClass(field));
   const compactAutoWidth = (field, columnClass) => {
     if (columnClass === 'col-date') return 175;
@@ -3166,7 +3166,7 @@ const renderTable = () => {
     [...tr.children].forEach((cell, index) => {
       const field = index > 0 ? fields[index - 1] : null;
       const manualWidth = field ? fieldColumnWidth(field) : null;
-      cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
+      cell.style.setProperty('min-width', `${index === 0 ? 72 : (manualWidth || 0)}px`, 'important');
       if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
       if (field) applyListCellAlignment(cell, field);
       const isDateColumn = cell.classList.contains('col-date');
@@ -3442,7 +3442,7 @@ const renderHeader = () => {
   [...headerRow.children].forEach((cell, index) => {
     const field = index > 0 ? listFields()[index - 1] : null;
     const manualWidth = field ? fieldColumnWidth(field) : null;
-    cell.style.setProperty('min-width', `${index === 0 ? 50 : (manualWidth || 0)}px`, 'important');
+    cell.style.setProperty('min-width', `${index === 0 ? 72 : (manualWidth || 0)}px`, 'important');
     if (manualWidth) cell.style.setProperty('width', `${manualWidth}px`, 'important');
     if (field) applyListCellAlignment(cell, field);
     const isDateColumn = cell.classList.contains('col-date');
