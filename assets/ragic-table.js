@@ -3419,8 +3419,7 @@ const renderHeader = () => {
   const markerFilter = normalizeFilterValue(RAGIC_STATE.filters[MARKER_FILTER_KEY]);
   const markerOptions = [
     ['fire', '🔥 所有人可看'],
-    ['pin', '📌 個人釘選'],
-    ['none', '未標記']
+    ['pin', '📌 個人釘選']
   ].map(([value, label]) => {
     const checked = Array.isArray(markerFilter) && markerFilter.includes(value) ? ' checked' : '';
     return `<label class="menu-item menu-checkbox"><input type="checkbox" data-menu-option="${MARKER_FILTER_KEY}" value="${value}"${checked}><span>${label}</span></label>`;
