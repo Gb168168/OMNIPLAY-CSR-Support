@@ -3252,9 +3252,21 @@ const updateColumnMenuStates = () => {
 };
 
 const normalizeFilterValue = (value) => Array.isArray(value) ? value.map((item) => String(item || '').trim()).filter(Boolean) : String(value || '').trim();
+const MARKER_FILTER_KEY = '__marker';
 const isSelectFilterField = (field = {}) => ['select', 'multiselect'].includes(field.type);
 
 const filterMatchesRecord = (record, fieldKey, filterValue) => {
+  if (fieldKey === MARKER_FILTER_KEY) {
+    const selected = Array.isArray(filterValue) ? filterValue : [filterValue];
+    const currentUser = currentRagicUser();
+    const hasFire = Boolean(record.fire);
+    const hasPin = Boolean(currentUser && record.pins?.[currentUser]);
+    return selected.some((value) => (
+      (value === 'fire' && hasFire)
+      || (value === 'pin' && hasPin)
+      || (value === 'none' && !hasFire && !hasPin)
+    ));
+  }
   const field = fieldByKey(fieldKey) || { key: fieldKey };
   const rawValue = recordListFieldValue(record, field);
   if (Array.isArray(filterValue)) {
@@ -3404,7 +3416,17 @@ const renderHeader = () => {
     applyRagicColumnGroup(table);
   }
   document.querySelector('#ragicFilterRow')?.remove();
-  headerRow.innerHTML = `<th class="icon-actions-head col-marker">標記</th>` + listFields().map((field) => {
+  const markerFilter = normalizeFilterValue(RAGIC_STATE.filters[MARKER_FILTER_KEY]);
+  const markerOptions = [
+    ['fire', '🔥 所有人可看'],
+    ['pin', '📌 個人釘選'],
+    ['none', '未標記']
+  ].map(([value, label]) => {
+    const checked = Array.isArray(markerFilter) && markerFilter.includes(value) ? ' checked' : '';
+    return `<label class="menu-item menu-checkbox"><input type="checkbox" data-menu-option="${MARKER_FILTER_KEY}" value="${value}"${checked}><span>${label}</span></label>`;
+  }).join('');
+  const markerHeader = `<th class="icon-actions-head col-marker col-menu-cell"><span class="col-label">標記</span><span class="col-menu-trigger" data-field="${MARKER_FILTER_KEY}" role="button" tabindex="0" aria-label="開啟標記欄位選單">▼</span><div class="col-menu-dropdown" data-menu="${MARKER_FILTER_KEY}" hidden><div class="menu-item" data-menu-action="clear-filter" data-field="${MARKER_FILTER_KEY}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div>${markerOptions}</div></th>`;
+  headerRow.innerHTML = markerHeader + listFields().map((field) => {
     const key = escapeHtml(field.key);
     const label = escapeHtml(field.label || field.key);
     const width = fieldColumnWidth(field);
