@@ -2805,6 +2805,19 @@ textarea,
 .dashboard-empty { grid-template-columns: 1fr; color: var(--muted); }
 .icon-actions-head, .icon-actions { min-width: 50px !important; text-align: center; white-space: nowrap; }
 .fire-btn, .pin-btn { cursor: pointer; font-size: 16px; opacity: 0.3; transition: opacity 0.2s; display: inline-block; padding: 2px 4px; }
+.marker-actions-row {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px;
+  white-space: nowrap !important;
+}
+.marker-actions-row > .fire-btn,
+.marker-actions-row > .pin-btn {
+  flex: 0 0 auto !important;
+}
 .fire-btn.active, .pin-btn.active { opacity: 1; }
 .fire-btn:hover, .pin-btn:hover { opacity: 0.7; }
 
