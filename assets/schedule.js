@@ -61,7 +61,8 @@ const GAME_SCHEDULE_START_DATE = new Date(2026, 0, 1, 0, 0, 0, 0);
 const GAME_WORKFLOW_START_DATE = new Date(2026, 6, 1, 0, 0, 0, 0);
 const GAME_FIRST_LAUNCH_START_DATE = new Date(2026, 7, 1, 0, 0, 0, 0);
 const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: 'PROD', color: GAME_SCHEDULE_COLORS.prod };
-const GAME_FIRST_LAUNCH_META = { labelId: 'google-game-first-launch', labelName: '⭐ 首發平台上線', color: GAME_SCHEDULE_COLORS.firstLaunch };
+const GAME_FIRST_LAUNCH_UAT_META = { labelId: 'google-game-first-launch-uat', labelName: '⭐ 首發平台測試上線', color: GAME_SCHEDULE_COLORS.uat };
+const GAME_FIRST_LAUNCH_META = { labelId: 'google-game-first-launch', labelName: '⭐ 首發平台正式上線', color: GAME_SCHEDULE_COLORS.firstLaunch };
 const GAME_EXCLUSIVE_META = { labelId: 'google-game-exclusive', labelName: '🔒 獨家平台', color: GAME_SCHEDULE_COLORS.exclusive };
 const GAME_EVENT_META = {
   'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 AM 確認', color: GAME_SCHEDULE_COLORS.pm },
@@ -74,14 +75,15 @@ const GAME_EVENT_META = {
   'first-launch': GAME_FIRST_LAUNCH_META,
   'exclusive-launch': GAME_EXCLUSIVE_META
 };
-const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台上線|🔒 獨家平台|其他平台 UAT|其他平台 PROD|其他平台 PORD|PROD|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
+const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發平台測試上線|⭐ 首發平台正式上線|⭐ 首發平台上線|🔒 獨家平台|其他平台 UAT|其他平台 PROD|其他平台 PORD|PROD|PORD|遊戲上線|向 AM 確認|PROD 上架公告|預計 PROD 上線|向行銷索取 UAT 公告資料|UAT 資料待辦|UAT 上架公告|UAT／測試環境|發送 UAT 環境上架公告|行銷素材待辦|向行銷索取遊戲素材)\s*[｜|]\s*/;
 
 const LABEL_CATEGORY_ORDER = [
   '向 AM 確認',
   '行銷素材待辦',
   'UAT',
+  '⭐ 首發平台測試上線',
+  '⭐ 首發平台正式上線',
   '其他平台 UAT',
-  '⭐ 首發平台上線',
   '🔒 獨家平台',
   '其他平台 PROD',
   'PROD',
@@ -95,22 +97,31 @@ const canonicalScheduleLabelName = (name = '') => {
   if (normalized === 'UAT／測試環境') return 'UAT';
   if (normalized === '遊戲上線' || normalized === 'PORD') return 'PROD';
   if (normalized === '其他平台 PORD') return '其他平台 PROD';
-  if (normalized === '⭐ 首發／🔒 獨家平台') return '⭐ 首發平台上線';
+  if (normalized === '⭐ 首發／🔒 獨家平台' || normalized === '⭐ 首發平台上線') return '⭐ 首發平台正式上線';
   if (normalized === '代辦事項') return '問題/需求-代辦提醒';
   return normalized;
 };
 
 const getScheduleEventMeta = (item = {}) => GAME_EVENT_META[item.eventType] || null;
 const getScheduleDisplayColor = (item = {}) => item.labelColor || getScheduleEventMeta(item)?.color || '#3b82f6';
-const getScheduleDisplayLabel = (item = {}) =>
-  canonicalScheduleLabelName(item.labelName) || getScheduleEventMeta(item)?.labelName || '';
+const scheduleHasFirstLaunchGame = (item = {}) => {
+  const games = Array.isArray(item.games) ? item.games : [];
+  return games.some((game) => /首發/.test(String(game?.note1 || '')));
+};
+const getScheduleDisplayLabel = (item = {}) => {
+  if (scheduleHasFirstLaunchGame(item)) {
+    if (item.eventType === 'uat-announcement' || item.eventType === 'uat-material') return GAME_FIRST_LAUNCH_UAT_META.labelName;
+    if (item.eventType === 'prod-launch') return GAME_FIRST_LAUNCH_META.labelName;
+  }
+  return canonicalScheduleLabelName(item.labelName) || getScheduleEventMeta(item)?.labelName || '';
+};
 const isFirstLaunchSchedule = (item = {}) => {
   if (item.eventType === 'first-launch') return true;
   const labels = [item.labelName, item.category, item.labelCategory]
     .map((value) => canonicalScheduleLabelName(value))
     .filter(Boolean);
-  if (labels.includes('⭐ 首發平台上線')) return true;
-  return /^\s*⭐\s*首發平台上線(?:\s*[｜|]|\s*$)/.test(String(item.title || ''));
+  if (labels.includes('⭐ 首發平台正式上線')) return true;
+  return /^\s*⭐\s*首發平台(?:正式)?上線(?:\s*[｜|]|\s*$)/.test(String(item.title || ''));
 };
 const getScheduleGames = (item = {}) => {
   if (Array.isArray(item.games) && item.games.length) return item.games;
@@ -658,8 +669,8 @@ const syncGameSchedules = async () => {
         if (isGameWorkflowConfirmed(normalizedGame)) {
           definitions.push(
             { idPrefix: 'game_marketing', eventType: 'marketing-material', at: subtractCalendarDays(launchAt, 8), meta: GAME_EVENT_META['marketing-material'], contentPrefix: '請行銷提供下列遊戲素材：' },
-            { idPrefix: 'game_uat', eventType: 'uat-announcement', at: subtractCalendarDays(launchAt, 7), meta: GAME_EVENT_META['uat-announcement'], contentPrefix: '請處理下列遊戲 UAT／測試環境排程：' },
-            { idPrefix: 'game_prod', eventType: 'prod-launch', at: launchAt, meta: GAME_ONLINE_META, contentPrefix: '遊戲於今日上線：' }
+            { idPrefix: 'game_uat', eventType: 'uat-announcement', at: subtractCalendarDays(launchAt, 7), meta: firstLaunch ? GAME_FIRST_LAUNCH_UAT_META : GAME_EVENT_META['uat-announcement'], forceLabelMeta: firstLaunch, contentPrefix: '請處理下列遊戲 UAT／測試環境排程：' },
+            { idPrefix: 'game_prod', eventType: 'prod-launch', at: launchAt, meta: firstLaunch ? GAME_FIRST_LAUNCH_META : GAME_ONLINE_META, forceLabelMeta: firstLaunch, contentPrefix: '遊戲於今日上線：' }
           );
         }
       } else {
@@ -698,7 +709,7 @@ const syncGameSchedules = async () => {
         && !desiredScheduleIds.has(item.id))
       .forEach((item) => batch.delete(scheduleCollection.doc(item.id)));
 
-    [GAME_EVENT_META['pm-confirmation'], GAME_EVENT_META['marketing-material'], GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META, GAME_FIRST_LAUNCH_META, GAME_EXCLUSIVE_META]
+    [GAME_EVENT_META['pm-confirmation'], GAME_EVENT_META['marketing-material'], GAME_EVENT_META['uat-announcement'], GAME_ONLINE_META, GAME_FIRST_LAUNCH_UAT_META, GAME_FIRST_LAUNCH_META, GAME_EXCLUSIVE_META]
       .filter((meta) => !labelList.some((label) => label.id === meta.labelId))
       .forEach((meta) => batch.set(scheduleLabelCollection.doc(meta.labelId), {
         name: meta.labelName,
@@ -722,13 +733,13 @@ const syncGameSchedules = async () => {
         date: row.dateKey,
         title: row.titlePrefix
           ? `${row.titlePrefix}｜${getGameTitle([row.game])}`
-          : existingItem?.title || `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
+          : row.forceLabelMeta ? `${displayMeta.labelName}｜${getGameTitle([row.game])}` : existingItem?.title || `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
         content: row.game.note1
           ? `備註 1：${row.game.note1}\n\n${row.contentPrefix}\n${gameLine(row.game)}`
           : `${row.contentPrefix}\n${gameLine(row.game)}`,
         reminderAt: firebase.firestore.Timestamp.fromDate(row.at),
-        labelId: existingItem?.labelId || displayMeta.labelId,
-        labelName: canonicalScheduleLabelName(existingItem?.labelName) || displayMeta.labelName,
+        labelId: row.forceLabelMeta ? displayMeta.labelId : existingItem?.labelId || displayMeta.labelId,
+        labelName: row.forceLabelMeta ? displayMeta.labelName : canonicalScheduleLabelName(existingItem?.labelName) || displayMeta.labelName,
         labelColor: existingItem?.labelColor || displayMeta.color,
         repeat: existingItem?.repeat || 'none',
         staffIds: [],
