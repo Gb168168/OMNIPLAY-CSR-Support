@@ -1,0 +1,63 @@
+name: Sync game schedule
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-schedule-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Open schedule page and run sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome_bin="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$chrome_bin" ]; then
+            echo "Chrome is unavailable on this runner."
+            exit 1
+          fi
+
+          page_url="https://gb168168.github.io/OMNIPLAY-CSR-Support/service/schedule.html?background-sync=1"
+          log_file="$RUNNER_TEMP/game-schedule-sync.log"
+          dom_file="$RUNNER_TEMP/game-schedule-sync.html"
+
+          set +e
+          timeout 120s "$chrome_bin" \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-dev-shm-usage \
+            --disable-background-networking=false \
+            --virtual-time-budget=90000 \
+            --dump-dom \
+            "$page_url" >"$dom_file" 2>"$log_file"
+          chrome_status=$?
+          set -e
+
+          if [ "$chrome_status" -ne 0 ] && [ "$chrome_status" -ne 124 ]; then
+            cat "$log_file"
+            exit "$chrome_status"
+          fi
+
+          if grep -Fq "同步遊戲排程失敗" "$log_file"; then
+            cat "$log_file"
+            exit 1
+          fi
+
+          if ! grep -Fq "排程表｜OMNIPLAY 客服系統" "$dom_file"; then
+            cat "$log_file"
+            echo "Schedule page did not load correctly."
+            exit 1
+          fi
+
+          echo "Schedule page stayed open long enough for its automatic sync to complete."
