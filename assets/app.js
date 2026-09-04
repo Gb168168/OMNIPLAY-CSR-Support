@@ -56,10 +56,11 @@ const renderSidebar = () => {
   // 任何登入/登出/導覽重構都必須原樣保留(見 AGENTS.md 規則 10)。
   // [2026-09-04 MyERP 搬遷] 舊入口 http://61.216.37.16:5173/portal 已停用(connection refused),
   // MyERP 新家 = https://erp.leavesys.net(實測 /portal 200)→ 不再依 hostname 推導,一律固定新網址。
+  // [2026-09-04 中魁] 新 ERP 上線後大家一律直開本站(github.io),舊的「github.io 不顯示返回鈕」
+  // 判斷會讓按鈕永遠消失 → 拿掉 hostname 判斷,返回鈕無條件顯示。
   const myerpPortalUrl = 'https://erp.leavesys.net/portal';
-  const myerpReturnLink = /github\.io$/i.test(location.hostname)
-    ? ''
-    : `<a class="myerp-return-btn" id="myerpReturnBtn" href="${myerpPortalUrl}" title="返回 MyERP 首頁"><span class="icon">⏎</span><span class="label">返回 MyERP</span></a>`;
+  // target="_top":若本站被 ERP 用 iframe 內嵌,返回時整頁跳出框架;直開時行為不變。
+  const myerpReturnLink = `<a class="myerp-return-btn" id="myerpReturnBtn" href="${myerpPortalUrl}" target="_top" title="返回 MyERP 首頁"><span class="icon">⏎</span><span class="label">返回 MyERP</span></a>`;
   sidebar.innerHTML = `
     <div class="sidebar-header">
       <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
