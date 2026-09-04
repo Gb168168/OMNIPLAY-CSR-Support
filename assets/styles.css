@@ -9124,6 +9124,32 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
+/* PROD alert detail must match the saved WYSIWYG layout. Keep the subtable
+   card at the designed grid size and scroll only its table content. */
+@media (min-width: 769px) {
+  .alert-page #ragicForm .compact-view-grid > .ragic-view-subtable-section {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  .alert-page #ragicForm .compact-view-grid > .ragic-view-subtable-section > .ragic-subtable-head {
+    position: static;
+    flex: 0 0 auto;
+  }
+
+  .alert-page #ragicForm .compact-view-grid > .ragic-view-subtable-section > .ragic-view-subtable-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    margin-bottom: 0;
+    overflow: auto !important;
+  }
+}
+
 @media (min-width: 769px) {
   #ragicForm .dense-ragic-grid > .dense-form-subtable:has(tbody > .subtable-auto-blank-row:only-child) {
     max-height: 140px !important;
