@@ -57,11 +57,12 @@ const renderSidebar = () => {
   sidebar.className = 'sidebar top-navigation';
   // ⛔ 死規則(2026-08-13 中魁):「返回 MyERP」導覽鈕不可移除/改名/改成登出;
   // 任何登入/登出/導覽重構都必須原樣保留(見 AGENTS.md 規則 10)。
-  // goldbricks.synology.me 的 5173 沒對外轉發(2026-08-13 實測死鏈),該域名改指公司固定 IP;其餘照本機 hostname。
-  const myerpPortalHost = /goldbricks\.synology\.me$/i.test(location.hostname) ? '61.216.37.16' : location.hostname;
+  // [2026-09-04 MyERP 搬遷] 舊入口 http://61.216.37.16:5173/portal 已停用(connection refused),
+  // MyERP 新家 = https://erp.leavesys.net(實測 /portal 200)→ 不再依 hostname 推導,一律固定新網址。
+  const myerpPortalUrl = 'https://erp.leavesys.net/portal';
   const myerpReturnLink = /github\.io$/i.test(location.hostname)
     ? ''
-    : `<a class="myerp-return-btn" id="myerpReturnBtn" href="http://${myerpPortalHost}:5173/portal" title="返回 MyERP 首頁"><span class="icon">⏎</span><span class="label">返回 MyERP</span></a>`;
+    : `<a class="myerp-return-btn" id="myerpReturnBtn" href="${myerpPortalUrl}" title="返回 MyERP 首頁"><span class="icon">⏎</span><span class="label">返回 MyERP</span></a>`;
   sidebar.innerHTML = `
     <div class="sidebar-header">
       <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
