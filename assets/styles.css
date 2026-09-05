@@ -11190,3 +11190,53 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     justify-content: center !important;
   }
 }
+
+
+/* ===== 2026-09 會議紀錄欄位比例優化 ===== */
+/* 列表在寬螢幕維持適合掃讀的寬度，避免六欄被平均拉得過寬。 */
+#meetingListView .meeting-list-table {
+  width: min(100%, 1080px);
+  margin-inline: auto;
+  table-layout: fixed;
+}
+#meetingListView .meeting-list-table th:nth-child(1) { width: 14%; }
+#meetingListView .meeting-list-table th:nth-child(2) { width: 18%; }
+#meetingListView .meeting-list-table th:nth-child(3) { width: 12%; }
+#meetingListView .meeting-list-table th:nth-child(4),
+#meetingListView .meeting-list-table th:nth-child(5) { width: 18%; }
+#meetingListView .meeting-list-table th:nth-child(6) { width: 20%; }
+
+/* 基本資訊在桌機改為三欄，縮短視線移動距離。 */
+@media (min-width: 1200px) {
+  .meeting-info-table {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .meeting-info-cell {
+    grid-template-columns: 92px minmax(0, 1fr);
+    min-height: 52px;
+  }
+  .meeting-info-cell:nth-child(2n) {
+    border-right: 1px solid var(--border);
+  }
+  .meeting-info-cell:nth-child(3n) {
+    border-right: 0;
+  }
+  .meeting-info-files {
+    grid-column: span 2;
+    border-right: 1px solid var(--border);
+  }
+  .meeting-info-note {
+    grid-column: auto;
+    border-right: 0;
+  }
+  .meeting-info-cell label {
+    padding: 10px 12px;
+  }
+}
+
+/* 一般筆電保留兩欄，但壓縮標題欄，讓資料比例更自然。 */
+@media (min-width: 901px) and (max-width: 1199px) {
+  .meeting-info-cell {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+}
