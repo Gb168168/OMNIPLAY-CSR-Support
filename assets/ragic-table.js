@@ -515,7 +515,12 @@ const compactEmptyLayoutRows = (layout = {}, enabled = false) => {
 };
 
 const resolvedFormLayout = (config = RAGIC_STATE.config) => compactEmptyLayoutRows(
-  normalizeDesignerFormLayout(RAGIC_STATE.schema?.formLayout || config?.formLayout, getFields()),
+  normalizeDesignerFormLayout(
+    config?.enforceConfigLayout
+      ? config?.formLayout
+      : (RAGIC_STATE.schema?.formLayout || config?.formLayout),
+    getFields()
+  ),
   Boolean(config?.compactEmptyRows)
 );
 
