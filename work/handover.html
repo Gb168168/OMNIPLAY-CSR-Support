@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>交接｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260905-handover-redesign" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260905-handover-layout-fix" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
   <meta name="theme-color" content="#3B82F6" />
@@ -64,7 +64,8 @@
     initRagicPage({
       title: '交接',
       collection: 'workHandover',
-      compactEmptyColumns: true,
+      compactEmptyColumns: false,
+      forceConfigFormLayout: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
         { key: 'shift', label: '班別', type: 'select', options: ['早班', '晚班'], formRow: 1, formCol: 2 },
