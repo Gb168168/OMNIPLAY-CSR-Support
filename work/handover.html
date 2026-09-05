@@ -59,12 +59,11 @@
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260906-designer-sync"></script>
+  <script src="../assets/ragic-table.js?v=20260906-designer-fields-sync"></script>
   <script>
     initRagicPage({
       title: '交接',
       collection: 'workHandover',
-      enforceConfigFields: true,
       fields: [
         { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
         { key: 'shift', label: '班別', type: 'select', options: ['早班', '晚班'], formRow: 1, formCol: 2 },
