@@ -11438,3 +11438,62 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
+
+/* 交接表單：固定正式排版，避免舊設計器尺寸把欄位擠在左側 */
+@media (min-width: 1101px) {
+  .handover-page #ragicForm .ragic-form-grid {
+    width: 100% !important;
+    max-width: none !important;
+    grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+  }
+  .handover-page #ragicForm .ragic-form-grid > .form-field {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+  .handover-page #ragicForm [data-field-key="date"] { grid-column: 1 / span 2 !important; grid-row: 1 !important; }
+  .handover-page #ragicForm [data-field-key="shift"] { grid-column: 3 / span 1 !important; grid-row: 1 !important; }
+  .handover-page #ragicForm [data-field-key="department"] { grid-column: 4 / span 2 !important; grid-row: 1 !important; }
+  .handover-page #ragicForm [data-field-key="category"] { grid-column: 6 / span 2 !important; grid-row: 1 !important; }
+  .handover-page #ragicForm [data-field-key="status"] { grid-column: 8 / span 1 !important; grid-row: 1 !important; }
+  .handover-page #ragicForm [data-field-key="publisher"] { grid-column: 9 / span 2 !important; grid-row: 1 !important; }
+
+  .handover-page #ragicForm [data-field-key="item"] {
+    grid-column: 1 / span 7 !important;
+    grid-row: 2 !important;
+    height: 220px !important;
+  }
+  .handover-page #ragicForm [data-field-key="image"] {
+    grid-column: 8 / span 3 !important;
+    grid-row: 2 !important;
+    height: 220px !important;
+  }
+  .handover-page #ragicForm [data-field-key="note"] {
+    grid-column: 1 / span 7 !important;
+    grid-row: 3 !important;
+    height: 150px !important;
+  }
+  .handover-page #ragicForm [data-field-key="attachment"] {
+    grid-column: 8 / span 3 !important;
+    grid-row: 3 !important;
+    height: 150px !important;
+  }
+
+  .handover-page #ragicForm [data-field-key="link"] { grid-column: 1 / span 4 !important; grid-row: 4 !important; }
+  .handover-page #ragicForm [data-field-key="reminder_enabled"] { grid-column: 5 / span 2 !important; grid-row: 4 !important; }
+  .handover-page #ragicForm [data-field-key="reminder_at"] { grid-column: 7 / span 4 !important; grid-row: 4 !important; }
+
+  .handover-page #ragicForm [data-field-key="finisher"] { grid-column: 1 / span 2 !important; grid-row: 5 !important; }
+  .handover-page #ragicForm [data-field-key="completed_at"] { grid-column: 3 / span 2 !important; grid-row: 5 !important; }
+  .handover-page #ragicForm [data-field-key="serial"] { grid-column: 5 / span 1 !important; grid-row: 5 !important; }
+  .handover-page #ragicForm [data-field-key="updated_time"] { grid-column: 6 / span 2 !important; grid-row: 5 !important; }
+  .handover-page #ragicForm [data-field-key="createdAt"] { grid-column: 8 / span 3 !important; grid-row: 5 !important; }
+}
+.handover-page #ragicForm [data-field-key="reminder_enabled"] {
+  min-width: 150px !important;
+}
+.handover-page #ragicForm [data-field-key="reminder_enabled"] .ragic-view-value,
+.handover-page #ragicForm [data-field-key="reminder_enabled"].ragic-view-field-pair-toggle {
+  writing-mode: horizontal-tb !important;
+  white-space: nowrap !important;
+}
