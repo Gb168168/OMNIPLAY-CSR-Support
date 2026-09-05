@@ -11493,3 +11493,158 @@ body.handover-page #ragicForm .ragic-view-field-pair-toggle > .field-value::befo
   background: #22a65a;
   flex: 0 0 auto;
 }
+
+/* 交接表單：依使用者核准 mockup 套用純視覺樣式，不改設計器排版 */
+body.handover-page #ragicFormView {
+  background: #f6f8fb !important;
+}
+body.handover-page #ragicForm {
+  padding: 24px 20px !important;
+}
+body.handover-page #ragicForm .ragic-form-grid {
+  column-gap: 12px !important;
+  row-gap: 10px !important;
+}
+
+/* 編輯模式：移除外框卡片，讓標題與單一控制框成為一組 */
+body.handover-page #ragicForm .ragic-field {
+  overflow: visible !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+body.handover-page #ragicForm .ragic-field > span {
+  display: block !important;
+  height: 18px !important;
+  margin: 0 0 4px 2px !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 18px !important;
+}
+body.handover-page #ragicForm .ragic-field input:not([type="checkbox"]):not([type="file"]),
+body.handover-page #ragicForm .ragic-field textarea,
+body.handover-page #ragicForm .ragic-field select,
+body.handover-page #ragicForm .ragic-field .single-select-display,
+body.handover-page #ragicForm .ragic-field .multi-select-display {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+  padding: 9px 12px !important;
+  border: 1px solid #d6e0eb !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #172033 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 22px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .025) !important;
+}
+body.handover-page #ragicForm .ragic-field textarea {
+  height: calc(100% - 22px) !important;
+  resize: vertical !important;
+}
+body.handover-page #ragicForm .ragic-field:focus-within input:not([type="checkbox"]):not([type="file"]),
+body.handover-page #ragicForm .ragic-field:focus-within textarea,
+body.handover-page #ragicForm .ragic-field:focus-within .single-select-display,
+body.handover-page #ragicForm .ragic-field:focus-within .multi-select-display {
+  border-color: #4f8df7 !important;
+  box-shadow: 0 0 0 3px rgba(79, 141, 247, .12) !important;
+}
+
+/* 狀態欄位保留單一、輕量的藍色重點 */
+body.handover-page #ragicForm .ragic-field[data-field-key="status"] .single-select-display,
+body.handover-page #ragicForm .ragic-field[data-field-key="status"] select {
+  border-color: #60a5fa !important;
+  background: #f4f8ff !important;
+}
+
+/* 編輯模式的啟用提醒：現代橫向 toggle */
+body.handover-page #ragicForm .ragic-field-pair-toggle {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: 42px !important;
+  padding-top: 20px !important;
+}
+body.handover-page #ragicForm .ragic-field-pair-toggle > span {
+  order: 2;
+  height: auto !important;
+  margin: 0 !important;
+  line-height: 22px !important;
+  white-space: nowrap !important;
+}
+body.handover-page #ragicForm .ragic-field-pair-toggle > input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  position: relative;
+  order: 1;
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #cbd5e1 !important;
+  cursor: pointer;
+  transition: background .18s ease;
+}
+body.handover-page #ragicForm .ragic-field-pair-toggle > input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .24);
+  transition: transform .18s ease;
+}
+body.handover-page #ragicForm .ragic-field-pair-toggle > input[type="checkbox"]:checked {
+  background: #3b82f6 !important;
+}
+body.handover-page #ragicForm .ragic-field-pair-toggle > input[type="checkbox"]:checked::after {
+  transform: translateX(18px);
+}
+
+/* 圖片與檔案：乾淨的虛線上傳區 */
+body.handover-page #ragicForm .ragic-field-image .image-upload-area,
+body.handover-page #ragicForm .ragic-field-file .image-upload-area {
+  height: calc(100% - 22px) !important;
+  min-height: 86px !important;
+  padding: 14px !important;
+  border: 1px dashed #cbd8e8 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+body.handover-page #ragicForm .image-upload-area button,
+body.handover-page #ragicForm .image-upload-area .secondary {
+  min-height: 32px !important;
+  padding: 5px 10px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: #334155 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+/* 查看模式沿用相同字體、邊框與留白語言 */
+body.handover-page #ragicForm .ragic-view-field {
+  padding: 12px !important;
+  border: 1px solid #dbe3ec !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, .035) !important;
+}
+body.handover-page #ragicForm .ragic-view-field-textarea > .ragic-view-value {
+  border-color: #d6e0eb !important;
+  border-radius: 8px !important;
+  background: #fbfcfe !important;
+}
