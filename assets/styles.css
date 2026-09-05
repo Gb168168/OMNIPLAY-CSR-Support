@@ -11648,3 +11648,52 @@ body.handover-page #ragicForm .ragic-view-field-textarea > .ragic-view-value {
   border-radius: 8px !important;
   background: #fbfcfe !important;
 }
+
+/* 交接查看：依核准預覽固定提醒標題在上、狀態膠囊在下 */
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-pair-toggle {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 4px !important;
+  padding: 10px 12px !important;
+  box-sizing: border-box !important;
+}
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-pair-toggle > .ragic-view-label {
+  order: 1 !important;
+  flex: 0 0 auto !important;
+  display: block !important;
+  width: 100% !important;
+  height: 16px !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  white-space: nowrap !important;
+}
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-pair-toggle > .ragic-view-value,
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-pair-toggle > .field-value {
+  order: 2 !important;
+  flex: 0 0 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  margin: 0 !important;
+  padding: 2px 9px !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #e8f7ee !important;
+  color: #187044 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 20px !important;
+  writing-mode: horizontal-tb !important;
+  white-space: nowrap !important;
+}
