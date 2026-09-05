@@ -11255,3 +11255,33 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     grid-template-columns: 96px minmax(0, 1fr);
   }
 }
+
+
+/* 會議編輯頁操作按鈕固定橫向排列 */
+#meetingFormView > .ragic-form-toolbar .topbar-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  width: auto !important;
+  margin-left: auto;
+  gap: 8px;
+}
+#meetingFormView > .ragic-form-toolbar .topbar-actions > button {
+  flex: 0 0 auto;
+  width: auto !important;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  #meetingFormView > .ragic-form-toolbar {
+    align-items: flex-start !important;
+  }
+  #meetingFormView > .ragic-form-toolbar .topbar-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    width: 100% !important;
+    margin-left: 0;
+  }
+}
