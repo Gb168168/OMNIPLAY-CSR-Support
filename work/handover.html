@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>交接｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260905-handover-flow-layout" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260905-handover-final-layout" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
   <meta name="theme-color" content="#3B82F6" />
@@ -59,29 +59,8 @@
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="../assets/ragic-table.js?v=20260906-visible-columns"></script>
+  <script src="../assets/ragic-table.js?v=20260905-handover-field-roles"></script>
   <script>
-    // Schema 欄位 key 可能曾由設計器修改；依畫面標籤補上穩定的版面角色。
-    const tagHandoverFields = () => {
-      const roles = {
-        '日期': 'date', '班別': 'shift', '部門': 'department', '分類': 'category',
-        '狀態': 'status', '發佈者': 'publisher', '交接內容': 'item', '交接事項': 'item',
-        '備註': 'note', '圖片': 'image', '檔案': 'attachment', '連結': 'link',
-        '啟用提醒': 'reminder-enabled', '提醒時間': 'reminder-at', '完成者': 'finisher',
-        '完成時間': 'completed-at', '編號': 'serial', '更新時間': 'updated-time',
-        '建立時間': 'created-at'
-      };
-      document.querySelectorAll('#ragicForm .form-field').forEach((field) => {
-        const label = field.querySelector('.ragic-view-label')?.textContent
-          || field.querySelector(':scope > span')?.textContent
-          || '';
-        const role = roles[String(label).trim()];
-        if (role) field.dataset.handoverRole = role;
-      });
-    };
-    const handoverForm = document.querySelector('#ragicForm');
-    new MutationObserver(() => requestAnimationFrame(tagHandoverFields))
-      .observe(handoverForm, { childList: true, subtree: true });
     initRagicPage({
       title: '交接',
       collection: 'workHandover',

@@ -11504,3 +11504,15 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   body.handover-page #ragicForm [data-handover-role="updated-time"] { grid-column: span 2 !important; order: 53; }
   body.handover-page #ragicForm [data-handover-role="created-at"] { grid-column: span 3 !important; order: 54; }
 }
+
+/* 交接提醒欄位永遠維持橫向，避免核取狀態被壓成直排 */
+body.handover-page #ragicForm [data-handover-role="reminder-enabled"] {
+  min-width: 0 !important;
+  writing-mode: horizontal-tb !important;
+}
+body.handover-page #ragicForm [data-handover-role="reminder-enabled"] .ragic-view-value,
+body.handover-page #ragicForm [data-handover-role="reminder-enabled"].ragic-view-field-pair-toggle {
+  width: auto !important;
+  writing-mode: horizontal-tb !important;
+  white-space: nowrap !important;
+}
