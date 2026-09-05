@@ -232,9 +232,18 @@ const renderList = () => {
   }).join('');
 };
 
+const updateMeetingUrl = (id = '') => {
+  const url = new URL(window.location.href);
+  if (id) url.searchParams.set('id', id);
+  else url.searchParams.delete('id');
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+};
+
 const showList = () => {
   document.querySelector('#meetingFormView').hidden = true;
   document.querySelector('#meetingListView').hidden = false;
+  meetingState.currentId = null;
+  updateMeetingUrl();
 };
 
 
@@ -486,6 +495,7 @@ const saveMeetingTableDesign = async () => {
 
 const showForm = (record = {}) => {
   meetingState.currentId = record.id || null;
+  updateMeetingUrl(meetingState.currentId || '');
   meetingState.activeTab = makeTabKey(normalizeTabs(record)[0]?.name || DEFAULT_MEETING_TABS[0], 0);
   document.querySelector('#meetingListView').hidden = true;
   document.querySelector('#meetingFormView').hidden = false;
