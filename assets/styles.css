@@ -11307,50 +11307,134 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 
 
 
-/* 交接表單柔和分類色 */
+/* 交接表單：單一色系、清楚層級與完整寬度 */
 .handover-page #ragicFormView {
-  background:
-    radial-gradient(circle at 8% 0%, rgba(59, 130, 246, .08), transparent 28%),
-    radial-gradient(circle at 92% 8%, rgba(139, 92, 246, .07), transparent 26%),
-    var(--surface);
+  overflow: hidden;
+  border: 1px solid #dbe3ee;
+  border-radius: 18px;
+  background: #f7f9fc;
+  box-shadow: 0 16px 44px rgba(15, 23, 42, .08);
 }
-.handover-page #ragicForm .form-field {
-  border-color: color-mix(in srgb, var(--primary) 18%, var(--border)) !important;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, .045);
+.handover-page #ragicFormView > .ragic-form-toolbar {
+  min-height: 64px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
 }
-.handover-page #ragicForm .form-field .ragic-view-label,
-.handover-page #ragicForm .form-field > span {
-  color: #475569;
+.handover-page #ragicFormView > .ragic-form-toolbar h2 {
+  color: #0f172a;
+  font-size: 18px;
   font-weight: 800;
 }
-.handover-page #ragicForm .form-field[data-field-key="date"],
-.handover-page #ragicForm .form-field[data-field-key="department"],
-.handover-page #ragicForm .form-field[data-field-key="category"],
-.handover-page #ragicForm .form-field[data-field-key="publisher"],
-.handover-page #ragicForm .form-field[data-field-key="finisher"] {
-  background: color-mix(in srgb, #dbeafe 48%, var(--surface)) !important;
+.handover-page #ragicForm {
+  padding: 20px;
 }
-.handover-page #ragicForm .form-field[data-field-key="status"],
-.handover-page #ragicForm .form-field[data-field-key="completed_at"] {
-  background: color-mix(in srgb, #dcfce7 48%, var(--surface)) !important;
+.handover-page #ragicForm .ragic-form-grid {
+  gap: 12px;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
 }
-.handover-page #ragicForm .form-field[data-field-key="reminder_enabled"],
-.handover-page #ragicForm .form-field[data-field-key="reminder_at"] {
-  background: color-mix(in srgb, #fef3c7 58%, var(--surface)) !important;
+.handover-page #ragicForm .form-field,
+.handover-page #ragicForm .ragic-view-field {
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid #dce4ef !important;
+  border-radius: 12px;
+  background: #fff !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
-.handover-page #ragicForm .form-field[data-field-key="item"] {
-  background: color-mix(in srgb, #ffedd5 48%, var(--surface)) !important;
+.handover-page #ragicForm .form-field:focus-within {
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
 }
-.handover-page #ragicForm .form-field[data-field-key="note"] {
-  background: color-mix(in srgb, #f3e8ff 48%, var(--surface)) !important;
+.handover-page #ragicForm .form-field .ragic-view-label,
+.handover-page #ragicForm .form-field > span,
+.handover-page #ragicForm .ragic-view-field > .ragic-view-label {
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: .02em;
+}
+.handover-page #ragicForm .ragic-view-field > .ragic-view-value {
+  color: #172033;
+  font-size: 14px !important;
+  font-weight: 600;
+  line-height: 1.55;
+}
+.handover-page #ragicForm .form-field input,
+.handover-page #ragicForm .form-field textarea,
+.handover-page #ragicForm .form-field select,
+.handover-page #ragicForm .single-select-display {
+  color: #172033;
+  border-color: #dce4ef;
+  background: #fff;
+}
+.handover-page #ragicForm .form-field[data-field-key="item"],
+.handover-page #ragicForm .form-field[data-field-key="note"],
+.handover-page #ragicForm .ragic-view-field[data-field-key="item"],
+.handover-page #ragicForm .ragic-view-field[data-field-key="note"] {
+  border-top: 3px solid #3b82f6 !important;
 }
 .handover-page #ragicForm .form-field[data-field-key="image"],
-.handover-page #ragicForm .form-field[data-field-key="attachment"] {
-  background: color-mix(in srgb, #cffafe 38%, var(--surface)) !important;
+.handover-page #ragicForm .form-field[data-field-key="attachment"],
+.handover-page #ragicForm .ragic-view-field[data-field-key="image"],
+.handover-page #ragicForm .ragic-view-field[data-field-key="attachment"] {
+  background: #fbfcfe !important;
+  border-style: dashed !important;
 }
-.handover-page #ragicForm .form-field[data-field-key="serial"],
-.handover-page #ragicForm .form-field[data-field-key="createdAt"],
-.handover-page #ragicForm .form-field[data-field-key="updated_time"],
-.handover-page #ragicForm .form-field[data-field-key="link"] {
-  background: color-mix(in srgb, #e2e8f0 42%, var(--surface)) !important;
+.handover-page #ragicForm .form-field[data-field-key="status"],
+.handover-page #ragicForm .ragic-view-field[data-field-key="status"] {
+  border-color: #93c5fd !important;
+  background: #eff6ff !important;
 }
+.handover-page #ragicForm .form-field[data-field-key="reminder_enabled"],
+.handover-page #ragicForm .form-field[data-field-key="reminder_at"],
+.handover-page #ragicForm .ragic-view-field[data-field-key="reminder_enabled"],
+.handover-page #ragicForm .ragic-view-field[data-field-key="reminder_at"] {
+  background: #f8fafc !important;
+}
+.handover-page #ragicForm .is-empty-view-field .ragic-view-value {
+  color: #a7b1c0;
+  font-weight: 500;
+}
+.handover-page #ragicFormView > .ragic-actions {
+  margin: 0;
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+}
+@media (max-width: 1100px) {
+  .handover-page #ragicForm .ragic-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .handover-page #ragicForm .form-field,
+  .handover-page #ragicForm .ragic-view-field {
+    grid-column: span 1 !important;
+    grid-row: auto !important;
+  }
+  .handover-page #ragicForm .form-field[data-field-key="item"],
+  .handover-page #ragicForm .form-field[data-field-key="note"],
+  .handover-page #ragicForm .form-field[data-field-key="image"],
+  .handover-page #ragicForm .form-field[data-field-key="attachment"],
+  .handover-page #ragicForm .ragic-view-field[data-field-key="item"],
+  .handover-page #ragicForm .ragic-view-field[data-field-key="note"],
+  .handover-page #ragicForm .ragic-view-field[data-field-key="image"],
+  .handover-page #ragicForm .ragic-view-field[data-field-key="attachment"] {
+    grid-column: 1 / -1 !important;
+  }
+}
+@media (max-width: 640px) {
+  .handover-page #ragicForm {
+    padding: 12px;
+  }
+  .handover-page #ragicForm .ragic-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .handover-page #ragicForm .form-field,
+  .handover-page #ragicForm .ragic-view-field {
+    grid-column: 1 / -1 !important;
+  }
+}
+
