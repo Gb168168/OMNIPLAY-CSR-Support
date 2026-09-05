@@ -11437,3 +11437,59 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     grid-column: 1 / -1 !important;
   }
 }
+
+/* 交接檢視：統一所有欄位文字，不影響設計表格儲存的尺寸與位置 */
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field > .ragic-view-label {
+  margin-bottom: 7px !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field > .ragic-view-value,
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field > .ragic-view-value *,
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field > .field-value,
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field > .field-value * {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+}
+
+/* 啟用提醒改為正常的橫向狀態膠囊 */
+body.handover-page #ragicForm .ragic-view-field-pair-toggle {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
+body.handover-page #ragicForm .ragic-view-field-pair-toggle > .ragic-view-value,
+body.handover-page #ragicForm .ragic-view-field-pair-toggle > .field-value {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  padding: 3px 10px !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #e8f7ee !important;
+  color: #187044 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 20px !important;
+  writing-mode: horizontal-tb !important;
+  white-space: nowrap !important;
+}
+body.handover-page #ragicForm .ragic-view-field-pair-toggle > .ragic-view-value::before,
+body.handover-page #ragicForm .ragic-view-field-pair-toggle > .field-value::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #22a65a;
+  flex: 0 0 auto;
+}
