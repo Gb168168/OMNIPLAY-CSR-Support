@@ -11214,7 +11214,7 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     border-right: 1px solid var(--border);
   }
   .meeting-info-note {
-    grid-column: auto;
+    grid-column: span 2;
     border-right: 0;
   }
   .meeting-info-cell label {
@@ -11224,16 +11224,17 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 
 @media (min-width: 1200px) and (max-width: 1599px) {
   .meeting-info-table {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .meeting-info-cell {
     grid-template-columns: 92px minmax(0, 1fr);
     min-height: 52px;
+    border-right: 1px solid var(--border);
   }
   .meeting-info-cell:nth-child(2n) {
     border-right: 1px solid var(--border);
   }
-  .meeting-info-cell:nth-child(3n) {
+  .meeting-info-cell:nth-child(4n) {
     border-right: 0;
   }
   .meeting-info-files {
@@ -11241,7 +11242,7 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     border-right: 1px solid var(--border);
   }
   .meeting-info-note {
-    grid-column: auto;
+    grid-column: span 2;
     border-right: 0;
   }
   .meeting-info-cell label {
@@ -11284,4 +11285,19 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     width: 100% !important;
     margin-left: 0;
   }
+}
+
+
+/* 日期與時間共用同一格 */
+.meeting-datetime-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, .85fr);
+  gap: 1px;
+  min-width: 0;
+  height: 100%;
+  background: var(--border);
+}
+.meeting-datetime-fields > input {
+  width: 100%;
+  min-width: 0;
 }
