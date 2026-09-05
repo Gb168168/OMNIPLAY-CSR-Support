@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>交接｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260906-handover-colors" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260905-handover-redesign" />
   <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
   <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
   <meta name="theme-color" content="#3B82F6" />
@@ -86,28 +86,28 @@
         { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 }
       ],
       formLayout: {
-        version: 'handover-view-v8',
+        version: 'handover-view-v9',
         columns: 10,
         rows: 5,
         fields: {
           date: { row: 1, col: 1, colSpan: 2 },
-          shift: { row: 1, col: 3, colSpan: 2 },
-          department: { row: 1, col: 5, colSpan: 1 },
-          category: { row: 1, col: 6, colSpan: 1 },
-          status: { row: 1, col: 7, colSpan: 2 },
+          shift: { row: 1, col: 3, colSpan: 1 },
+          department: { row: 1, col: 4, colSpan: 2 },
+          category: { row: 1, col: 6, colSpan: 2 },
+          status: { row: 1, col: 8, colSpan: 1 },
           publisher: { row: 1, col: 9, colSpan: 2 },
-          finisher: { row: 2, col: 1, colSpan: 2 },
-          completed_at: { row: 2, col: 3, colSpan: 2 },
-          link: { row: 2, col: 5, colSpan: 4 },
-          serial: { row: 2, col: 9, colSpan: 2 },
-          reminder_enabled: { row: 3, col: 1, colSpan: 2 },
-          reminder_at: { row: 3, col: 3, colSpan: 3 },
-          updated_time: { row: 3, col: 6, colSpan: 2 },
-          createdAt: { row: 3, col: 8, colSpan: 3 },
-          item: { row: 4, col: 1, colSpan: 6, height: 176 },
-          note: { row: 4, col: 7, colSpan: 4, height: 176 },
-          image: { row: 5, col: 1, colSpan: 5, height: 110 },
-          attachment: { row: 5, col: 6, colSpan: 5, height: 110 }
+          item: { row: 2, col: 1, colSpan: 7, height: 220 },
+          image: { row: 2, col: 8, colSpan: 3, height: 220 },
+          note: { row: 3, col: 1, colSpan: 7, height: 150 },
+          attachment: { row: 3, col: 8, colSpan: 3, height: 150 },
+          link: { row: 4, col: 1, colSpan: 4 },
+          reminder_enabled: { row: 4, col: 5, colSpan: 2 },
+          reminder_at: { row: 4, col: 7, colSpan: 4 },
+          finisher: { row: 5, col: 1, colSpan: 2 },
+          completed_at: { row: 5, col: 3, colSpan: 2 },
+          serial: { row: 5, col: 5, colSpan: 1 },
+          updated_time: { row: 5, col: 6, colSpan: 2 },
+          createdAt: { row: 5, col: 8, colSpan: 3 }
         }
       },
       listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'completed_at', 'image', 'attachment', 'updated_time', 'createdAt', 'serial']
