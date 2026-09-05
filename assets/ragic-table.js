@@ -514,14 +514,28 @@ const compactEmptyLayoutRows = (layout = {}, enabled = false) => {
   return { ...layout, rows: orderedRows.length, fields };
 };
 
-const resolvedFormLayout = (config = RAGIC_STATE.config) => compactEmptyLayoutRows(
-  normalizeDesignerFormLayout(
-    config?.enforceConfigLayout
-      ? config?.formLayout
-      : (RAGIC_STATE.schema?.formLayout || config?.formLayout),
-    getFields()
+const compactEmptyLayoutColumns = (layout = {}, enabled = false) => {
+  if (!enabled) return layout;
+  const usedColumns = Object.values(layout.fields || {}).reduce((maximum, item) => {
+    const col = Math.max(1, Number(item?.col) || 1);
+    const span = Math.max(1, Number(item?.colSpan) || 1);
+    return Math.max(maximum, col + span - 1);
+  }, 0);
+  if (!usedColumns || usedColumns >= Number(layout.columns || 0)) return layout;
+  return { ...layout, columns: usedColumns };
+};
+
+const resolvedFormLayout = (config = RAGIC_STATE.config) => compactEmptyLayoutColumns(
+  compactEmptyLayoutRows(
+    normalizeDesignerFormLayout(
+      config?.enforceConfigLayout
+        ? config?.formLayout
+        : (RAGIC_STATE.schema?.formLayout || config?.formLayout),
+      getFields()
+    ),
+    Boolean(config?.compactEmptyRows)
   ),
-  Boolean(config?.compactEmptyRows)
+  Boolean(config?.compactEmptyColumns)
 );
 
 const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
