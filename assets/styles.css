@@ -11497,3 +11497,42 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   writing-mode: horizontal-tb !important;
   white-space: nowrap !important;
 }
+
+/* 交接表單：覆蓋既有檢視規則所讀取的定位變數 */
+@media (min-width: 769px) {
+  body.handover-page #ragicForm .compact-view-grid,
+  body.handover-page #ragicForm .ragic-form-grid {
+    width: 100% !important;
+    max-width: none !important;
+    grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+    grid-template-rows: 78px 220px 150px 78px 78px !important;
+  }
+  body.handover-page #ragicForm [data-field-key] {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    --form-rowspan: 1 !important;
+  }
+
+  body.handover-page #ragicForm [data-field-key="date"] { --form-row: 1 !important; --form-col: 1 !important; --form-colspan: 2 !important; }
+  body.handover-page #ragicForm [data-field-key="shift"] { --form-row: 1 !important; --form-col: 3 !important; --form-colspan: 1 !important; }
+  body.handover-page #ragicForm [data-field-key="department"] { --form-row: 1 !important; --form-col: 4 !important; --form-colspan: 2 !important; }
+  body.handover-page #ragicForm [data-field-key="category"] { --form-row: 1 !important; --form-col: 6 !important; --form-colspan: 2 !important; }
+  body.handover-page #ragicForm [data-field-key="status"] { --form-row: 1 !important; --form-col: 8 !important; --form-colspan: 1 !important; }
+  body.handover-page #ragicForm [data-field-key="publisher"] { --form-row: 1 !important; --form-col: 9 !important; --form-colspan: 2 !important; }
+
+  body.handover-page #ragicForm [data-field-key="item"] { --form-row: 2 !important; --form-col: 1 !important; --form-colspan: 7 !important; }
+  body.handover-page #ragicForm [data-field-key="image"] { --form-row: 2 !important; --form-col: 8 !important; --form-colspan: 3 !important; }
+  body.handover-page #ragicForm [data-field-key="note"] { --form-row: 3 !important; --form-col: 1 !important; --form-colspan: 7 !important; }
+  body.handover-page #ragicForm [data-field-key="attachment"] { --form-row: 3 !important; --form-col: 8 !important; --form-colspan: 3 !important; }
+
+  body.handover-page #ragicForm [data-field-key="link"] { --form-row: 4 !important; --form-col: 1 !important; --form-colspan: 4 !important; }
+  body.handover-page #ragicForm [data-field-key="reminder_enabled"] { --form-row: 4 !important; --form-col: 5 !important; --form-colspan: 2 !important; }
+  body.handover-page #ragicForm [data-field-key="reminder_at"] { --form-row: 4 !important; --form-col: 7 !important; --form-colspan: 4 !important; }
+
+  body.handover-page #ragicForm [data-field-key="finisher"] { --form-row: 5 !important; --form-col: 1 !important; --form-colspan: 2 !important; }
+  body.handover-page #ragicForm [data-field-key="completed_at"] { --form-row: 5 !important; --form-col: 3 !important; --form-colspan: 2 !important; }
+  body.handover-page #ragicForm [data-field-key="serial"] { --form-row: 5 !important; --form-col: 5 !important; --form-colspan: 1 !important; }
+  body.handover-page #ragicForm [data-field-key="updated_time"] { --form-row: 5 !important; --form-col: 6 !important; --form-colspan: 2 !important; }
+  body.handover-page #ragicForm [data-field-key="createdAt"] { --form-row: 5 !important; --form-col: 8 !important; --form-colspan: 3 !important; }
+}
