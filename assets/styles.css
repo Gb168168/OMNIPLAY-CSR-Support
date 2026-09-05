@@ -11193,8 +11193,36 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 
 
 /* ===== 2026-09 會議紀錄欄位比例優化 ===== */
-/* 基本資訊在桌機改為三欄，縮短視線移動距離。 */
-@media (min-width: 1200px) {
+/* 會議基本資料依畫面寬度使用緊湊欄位比例。 */
+@media (min-width: 1600px) {
+  .meeting-info-table {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .meeting-info-cell {
+    grid-template-columns: 92px minmax(0, 1fr);
+    min-height: 52px;
+    border-right: 1px solid var(--border);
+  }
+  .meeting-info-cell:nth-child(2n) {
+    border-right: 1px solid var(--border);
+  }
+  .meeting-info-cell:nth-child(4n) {
+    border-right: 0;
+  }
+  .meeting-info-files {
+    grid-column: span 2;
+    border-right: 1px solid var(--border);
+  }
+  .meeting-info-note {
+    grid-column: auto;
+    border-right: 0;
+  }
+  .meeting-info-cell label {
+    padding: 10px 12px;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1599px) {
   .meeting-info-table {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -11221,7 +11249,7 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
-/* 一般筆電保留兩欄，但壓縮標題欄，讓資料比例更自然。 */
+/* 一般筆電保留兩欄，但壓縮標題欄。 */
 @media (min-width: 901px) and (max-width: 1199px) {
   .meeting-info-cell {
     grid-template-columns: 96px minmax(0, 1fr);
