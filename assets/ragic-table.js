@@ -516,11 +516,16 @@ const compactEmptyLayoutRows = (layout = {}, enabled = false) => {
 
 const compactEmptyLayoutColumns = (layout = {}, enabled = false) => {
   if (!enabled) return layout;
-  const usedColumns = Object.values(layout.fields || {}).reduce((maximum, item) => {
-    const col = Math.max(1, Number(item?.col) || 1);
-    const span = Math.max(1, Number(item?.colSpan) || 1);
-    return Math.max(maximum, col + span - 1);
-  }, 0);
+  const visibleFieldKeys = new Set(
+    getFields().map((field) => String(field?.key || '')).filter(Boolean)
+  );
+  const usedColumns = Object.entries(layout.fields || {})
+    .filter(([key]) => visibleFieldKeys.has(String(key)))
+    .reduce((maximum, [, item]) => {
+      const col = Math.max(1, Number(item?.col) || 1);
+      const span = Math.max(1, Number(item?.colSpan) || 1);
+      return Math.max(maximum, col + span - 1);
+    }, 0);
   if (!usedColumns || usedColumns >= Number(layout.columns || 0)) return layout;
   return { ...layout, columns: usedColumns };
 };
