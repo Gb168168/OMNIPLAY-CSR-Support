@@ -4926,6 +4926,21 @@ const initRagicPage = async (config) => {
     renderHeader();
     applyFilters();
 
+    // 設計儲存後立即重建目前開啟的檢視表單，
+    // 避免畫面繼續保留儲存前的舊欄位座標。
+    const activeFormView = document.querySelector('#ragicFormView');
+    const activeRecord = RAGIC_STATE.records.find(
+      (record) => String(record.id) === String(RAGIC_STATE.currentId)
+    );
+    if (
+      activeFormView &&
+      !activeFormView.hidden &&
+      RAGIC_STATE.formMode === 'view' &&
+      activeRecord
+    ) {
+      renderForm(activeRecord, { mode: 'view' });
+    }
+
     if (close) closeDesigner();
 
     alert('表格設計已儲存');
