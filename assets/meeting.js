@@ -517,6 +517,27 @@ const renderRows = (key, rows = []) => {
   data.forEach((row, index) => setSelectValue(body.querySelector(`[data-row-index="${index}"] [data-field="proposer"]`), row.proposer || ''));
 };
 
+
+const appendAndFocusMeetingRow = (body) => {
+  if (!body) return;
+  const key = body.dataset.tabBody;
+  const index = body.querySelectorAll('tr').length;
+  body.insertAdjacentHTML('beforeend', rowTemplate(key, index, {}));
+  const nextRow = body.querySelector(`[data-row-index="${index}"]`);
+  setSelectValue(nextRow?.querySelector('[data-field="proposer"]'), '');
+  setFormEditable();
+  nextRow?.querySelector('[data-field="proposer"]')?.focus();
+};
+
+const focusFirstIncompleteMeetingField = (row) => {
+  const requiredFields = ['proposer', 'content', 'solution'];
+  const missing = requiredFields
+    .map((field) => row.querySelector(`[data-field="${field}"]`))
+    .find((control) => !control?.value?.trim());
+  missing?.focus();
+  return Boolean(missing);
+};
+
 const normalizeMeetingImages = (value) => Array.isArray(value) ? value.filter(Boolean) : (value ? [value] : []);
 
 const rowTemplate = (key, index, row = {}) => `
@@ -787,6 +808,18 @@ document.querySelector('#meetingForm')?.addEventListener('click', (event) => {
     input.focus();
   }
 });
+document.querySelector('#meetingForm')?.addEventListener('keydown', (event) => {
+  const solution = event.target.closest('textarea[data-field="solution"]');
+  if (!solution || event.key !== 'Enter' || event.shiftKey || event.isComposing || !canEditMeeting()) return;
+  event.preventDefault();
+  const row = solution.closest('tr');
+  const body = row?.closest('[data-tab-body]');
+  if (!row || !body || focusFirstIncompleteMeetingField(row)) return;
+  const rows = [...body.querySelectorAll('tr')];
+  if (row === rows[rows.length - 1]) appendAndFocusMeetingRow(body);
+  else row.nextElementSibling?.querySelector('[data-field="proposer"]')?.focus();
+});
+
 document.querySelector('#meetingForm')?.addEventListener('change', async (event) => {
   const input = event.target.closest('[data-field="image"]');
   if (!input?.files?.[0]) return;
