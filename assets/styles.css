@@ -11301,3 +11301,12 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   width: 100%;
   min-width: 0;
 }
+
+
+/* 交接表單：清除舊設計儲存的固定欄寬，避免跨格重疊 */
+.handover-page #ragicForm .ragic-form-grid > .form-field {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
