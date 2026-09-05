@@ -587,6 +587,7 @@ const applyFormLayout = (element, field = {}) => {
   const configuredRowSpan = normalizeFormLayoutNumber(layoutItem.rowSpan ?? field.formRowSpan, { max: activeLayout.rows || 10, fallback: 1 });
   const rowSpan = configuredRowSpan;
   element.classList.add('form-field');
+  element.dataset.fieldKey = field.key || '';
   element.dataset.type = field.type || 'text';
   if (row || col) element.classList.add('has-form-layout');
   element.classList.toggle('field-value-multiline', field.type === 'textarea');
