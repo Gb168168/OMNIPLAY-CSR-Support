@@ -594,20 +594,8 @@ const applyFormGridLayout = (grid, config = RAGIC_STATE.config) => {
   return grid;
 };
 
-const HANDOVER_FIELD_ROLES = {
-  '日期': 'date', '班別': 'shift', '部門': 'department', '分類': 'category',
-  '狀態': 'status', '發佈者': 'publisher', '交接內容': 'item', '交接事項': 'item',
-  '備註': 'note', '圖片': 'image', '檔案': 'attachment', '連結': 'link',
-  '啟用提醒': 'reminder-enabled', '提醒時間': 'reminder-at', '完成者': 'finisher',
-  '完成時間': 'completed-at', '編號': 'serial', '更新時間': 'updated-time',
-  '建立時間': 'created-at'
-};
 const applyFormLayout = (element, field = {}) => {
   if (!element) return element;
-  if (document.body.classList.contains('handover-page')) {
-    const role = HANDOVER_FIELD_ROLES[String(field.label || '').trim()];
-    if (role) element.dataset.handoverRole = role;
-  }
   const activeLayout = resolvedFormLayout(RAGIC_STATE.config);
   const layoutItem = activeLayout.fields?.[field.key] || {};
   const row = normalizeFormLayoutNumber(layoutItem.row ?? field.formRow);
