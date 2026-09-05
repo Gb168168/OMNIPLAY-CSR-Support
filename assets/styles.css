@@ -11305,3 +11305,52 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 
 
 
+
+
+/* 交接表單柔和分類色 */
+.handover-page #ragicFormView {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(59, 130, 246, .08), transparent 28%),
+    radial-gradient(circle at 92% 8%, rgba(139, 92, 246, .07), transparent 26%),
+    var(--surface);
+}
+.handover-page #ragicForm .form-field {
+  border-color: color-mix(in srgb, var(--primary) 18%, var(--border)) !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .045);
+}
+.handover-page #ragicForm .form-field .ragic-view-label,
+.handover-page #ragicForm .form-field > span {
+  color: #475569;
+  font-weight: 800;
+}
+.handover-page #ragicForm .form-field[data-field-key="date"],
+.handover-page #ragicForm .form-field[data-field-key="department"],
+.handover-page #ragicForm .form-field[data-field-key="category"],
+.handover-page #ragicForm .form-field[data-field-key="publisher"],
+.handover-page #ragicForm .form-field[data-field-key="finisher"] {
+  background: color-mix(in srgb, #dbeafe 48%, var(--surface)) !important;
+}
+.handover-page #ragicForm .form-field[data-field-key="status"],
+.handover-page #ragicForm .form-field[data-field-key="completed_at"] {
+  background: color-mix(in srgb, #dcfce7 48%, var(--surface)) !important;
+}
+.handover-page #ragicForm .form-field[data-field-key="reminder_enabled"],
+.handover-page #ragicForm .form-field[data-field-key="reminder_at"] {
+  background: color-mix(in srgb, #fef3c7 58%, var(--surface)) !important;
+}
+.handover-page #ragicForm .form-field[data-field-key="item"] {
+  background: color-mix(in srgb, #ffedd5 48%, var(--surface)) !important;
+}
+.handover-page #ragicForm .form-field[data-field-key="note"] {
+  background: color-mix(in srgb, #f3e8ff 48%, var(--surface)) !important;
+}
+.handover-page #ragicForm .form-field[data-field-key="image"],
+.handover-page #ragicForm .form-field[data-field-key="attachment"] {
+  background: color-mix(in srgb, #cffafe 38%, var(--surface)) !important;
+}
+.handover-page #ragicForm .form-field[data-field-key="serial"],
+.handover-page #ragicForm .form-field[data-field-key="createdAt"],
+.handover-page #ragicForm .form-field[data-field-key="updated_time"],
+.handover-page #ragicForm .form-field[data-field-key="link"] {
+  background: color-mix(in srgb, #e2e8f0 42%, var(--surface)) !important;
+}
