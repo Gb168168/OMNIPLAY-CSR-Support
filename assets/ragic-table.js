@@ -1402,7 +1402,7 @@ const cellTooltipText = (record, field) => {
 const renderIconActions = (record = {}) => {
   const currentUser = currentRagicUser();
   const pinned = Boolean(currentUser && record.pins?.[currentUser]);
-  return `<td class="icon-actions col-marker marker-cell">
+  return `<td class="icon-actions col-marker marker-cell" data-label="標記">
     <span class="marker-actions-row">
       <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="所有人可看">🔥</span>
       <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">📌</span>
@@ -3188,7 +3188,7 @@ const renderTable = () => {
       const title = columnClass === 'col-content' ? ` title="${escapeHtml(cellTooltipText(record, field))}"` : '';
       const width = fieldColumnWidth(field);
       const style = columnWidthStyle(width);
-      return `<td class="${columnClass}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${typeAttr}${style}${title}>${renderCell(record, field)}</td>`;
+      return `<td class="${columnClass}" data-label="${escapeHtml(field.label || field.key)}" data-doc-id="${escapeHtml(record.id)}" data-field-key="${escapeHtml(field.key)}"${typeAttr}${style}${title}>${renderCell(record, field)}</td>`;
     }).join('');
     [...tr.children].forEach((cell, index) => {
       const field = index > 0 ? fields[index - 1] : null;
