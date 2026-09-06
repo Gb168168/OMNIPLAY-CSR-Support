@@ -11698,7 +11698,7 @@ body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-pair-toggle >
   white-space: nowrap !important;
 }
 
-/* 交接多行文字：依核准預覽讓查看與編輯內框使用完整高度 */
+/* 交接多行文字：內框完整跟隨設計表格儲存的欄位高度 */
 body.handover-page #ragicForm .ragic-view-field-textarea {
   display: flex !important;
   flex-direction: column !important;
@@ -11710,10 +11710,10 @@ body.handover-page #ragicForm .ragic-view-field-textarea > .ragic-view-label {
 }
 body.handover-page #ragicForm .ragic-view-field-textarea > .ragic-view-value,
 body.handover-page #ragicForm .ragic-view-field-textarea > .field-value {
-  flex: 1 1 auto !important;
+  flex: 1 1 0 !important;
   width: 100% !important;
   height: auto !important;
-  min-height: 112px !important;
+  min-height: 0 !important;
   max-height: none !important;
   padding: 10px 12px !important;
   box-sizing: border-box !important;
@@ -11721,22 +11721,21 @@ body.handover-page #ragicForm .ragic-view-field-textarea > .field-value {
   white-space: pre-wrap !important;
 }
 
-/* 編輯模式：textarea 成為真正的多行輸入區，而非單行高度 */
+/* 編輯模式同樣只填滿外層高度，不另寫死 textarea 高度 */
 body.handover-page #ragicForm .ragic-field-textarea {
   display: flex !important;
   flex-direction: column !important;
   align-items: stretch !important;
-  min-height: 146px !important;
   box-sizing: border-box !important;
 }
 body.handover-page #ragicForm .ragic-field-textarea > span {
   flex: 0 0 18px !important;
 }
 body.handover-page #ragicForm .ragic-field-textarea > textarea {
-  flex: 1 1 auto !important;
+  flex: 1 1 0 !important;
   width: 100% !important;
   height: auto !important;
-  min-height: 120px !important;
+  min-height: 0 !important;
   max-height: none !important;
   padding: 10px 12px !important;
   box-sizing: border-box !important;
