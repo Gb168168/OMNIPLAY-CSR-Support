@@ -11743,3 +11743,11 @@ body.handover-page #ragicForm .ragic-field-textarea > textarea {
   resize: vertical !important;
   line-height: 1.55 !important;
 }
+
+/* 交接多行欄位：外框必須撐滿設計表格分配的網格高度 */
+body.handover-page #ragicForm .ragic-form-grid > .ragic-field-textarea,
+body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-textarea {
+  align-self: stretch !important;
+  height: 100% !important;
+  max-height: none !important;
+}
