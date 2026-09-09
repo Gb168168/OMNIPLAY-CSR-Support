@@ -32,6 +32,7 @@ const periodPicker = document.querySelector('#schedulePeriodPicker');
 const yearSelect = document.querySelector('#scheduleYearSelect');
 const monthPicker = document.querySelector('#scheduleMonthPicker');
 const labelFilterSelect = document.querySelector('#scheduleLabelFilter');
+const scheduleSearchInput = document.querySelector('#scheduleSearchInput');
 const syncGameScheduleButton = document.querySelector('#syncGameScheduleButton');
 const scheduleSyncControls = document.querySelector('#scheduleSyncControls');
 const scheduleSyncCountdown = document.querySelector('#scheduleSyncCountdown');
@@ -214,6 +215,7 @@ let unsubscribeSchedules = null;
 let unsubscribeLabels = null;
 let unsubscribeLeave = null;
 let activeLabelFilter = '';
+let activeScheduleSearch = '';
 let scheduleDataLoaded = false;
 let gameScheduleSyncing = false;
 let gameScheduleAutoTimer = null;
@@ -877,7 +879,7 @@ const getRepeatStepDays = (item) => {
   return 0;
 };
 
-const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) => !item.deleted && scheduleMatchesActiveLabel(item)).reduce((groups, item) => {
+const getScheduleOccurrencesByDay = (start, end) => scheduleList.filter((item) => !item.deleted && scheduleMatchesActiveLabel(item) && scheduleMatchesSearch(item)).reduce((groups, item) => {
   const original = parseDateValue(item.reminderAt) || new Date(`${item.date}T00:00:00`);
   if (!(original instanceof Date) || Number.isNaN(original.getTime())) return groups;
   const legacyEndDate = String(item.endDate || '').trim();
@@ -1015,6 +1017,19 @@ const scheduleMatchesActiveLabel = (item) => {
   const displayName = getScheduleDisplayLabel(item);
   if (selectedName) return displayName === selectedName;
   return displayName === activeLabelFilter;
+};
+
+const scheduleMatchesSearch = (item) => {
+  if (!activeScheduleSearch) return true;
+  const searchableText = [
+    item.title,
+    item.content,
+    item.labelName,
+    item.gameId,
+    item.sourceGameId,
+    item.id
+  ].filter(Boolean).join(' ').toLocaleLowerCase('zh-Hant');
+  return searchableText.includes(activeScheduleSearch);
 };
 
 const scheduleHistoryFields = [
@@ -1485,6 +1500,10 @@ colorInput?.addEventListener('input', syncLabelCategorySelection);
 labelNameInput?.addEventListener('input', syncLabelCategorySelection);
 
 labelFilterSelect?.addEventListener('change', () => { activeLabelFilter = labelFilterSelect.value; renderCalendar(); });
+scheduleSearchInput?.addEventListener('input', () => {
+  activeScheduleSearch = scheduleSearchInput.value.trim().toLocaleLowerCase('zh-Hant');
+  renderCalendar();
+});
 
 document.querySelector('#prevSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() - 1); else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() - 1); else currentDate.setDate(currentDate.getDate() - 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
 document.querySelector('#nextSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() + 1); else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
