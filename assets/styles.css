@@ -11908,3 +11908,85 @@ body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-textarea {
     min-width: 0;
   }
 }
+
+
+.schedule-search-wrap {
+  position: relative;
+  flex: 0 1 300px;
+  width: min(300px, 22vw);
+  min-width: 210px;
+}
+.schedule-search-wrap .schedule-search-field {
+  width: 100%;
+  min-width: 0;
+}
+.schedule-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: min(420px, 86vw);
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, .22);
+}
+.schedule-search-results[hidden] { display: none; }
+.schedule-search-result {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.schedule-search-result:hover,
+.schedule-search-result:focus-visible {
+  outline: 0;
+  background: var(--surface-muted);
+}
+.schedule-search-result-date {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+.schedule-search-result-main {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.schedule-search-result-main strong,
+.schedule-search-result-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.schedule-search-result-main strong { font-size: 14px; }
+.schedule-search-result-main small { color: var(--text-secondary); font-size: 12px; }
+.schedule-search-empty {
+  margin: 0;
+  padding: 14px 10px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .schedule-heading-actions .schedule-search-wrap {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+  .schedule-search-results {
+    right: auto;
+    left: 0;
+    width: 100%;
+  }
+}
