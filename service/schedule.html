@@ -105,6 +105,10 @@
             <button class="secondary-button schedule-period-step" id="nextSchedulePeriod" type="button" aria-label="下一個期間" title="下一個期間">›</button>
           </div>
           <div class="schedule-heading-actions">
+            <label class="schedule-search-field">
+              <span class="schedule-search-icon" aria-hidden="true">⌕</span>
+              <input id="scheduleSearchInput" type="search" placeholder="搜尋遊戲名稱、ID或標籤" aria-label="搜尋排程" autocomplete="off" />
+            </label>
             <div class="view-switch" aria-label="檢視切換">
               <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
               <button class="ghost-button" id="yearViewButton" type="button" data-view="year">年</button>
