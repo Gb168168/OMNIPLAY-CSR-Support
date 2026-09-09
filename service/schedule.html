@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>排程表｜OMNIPLAY 客服系統</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=20260909-schedule-search1" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260909-schedule-search2" />
   <style>
     .day-agenda-heading-actions { display: flex; align-items: center; gap: 8px; }
     .day-agenda-heading-actions .primary-button { min-height: 38px; padding: 7px 12px; white-space: nowrap; }
@@ -105,10 +105,13 @@
             <button class="secondary-button schedule-period-step" id="nextSchedulePeriod" type="button" aria-label="下一個期間" title="下一個期間">›</button>
           </div>
           <div class="schedule-heading-actions">
-            <label class="schedule-search-field">
-              <span class="schedule-search-icon" aria-hidden="true">⌕</span>
-              <input id="scheduleSearchInput" type="search" placeholder="搜尋遊戲名稱、ID或標籤" aria-label="搜尋排程" autocomplete="off" />
-            </label>
+            <div class="schedule-search-wrap">
+              <label class="schedule-search-field">
+                <span class="schedule-search-icon" aria-hidden="true">⌕</span>
+                <input id="scheduleSearchInput" type="search" placeholder="搜尋遊戲名稱、ID或標籤" aria-label="搜尋排程" aria-controls="scheduleSearchResults" aria-expanded="false" autocomplete="off" />
+              </label>
+              <div class="schedule-search-results" id="scheduleSearchResults" role="listbox" aria-label="排程搜尋結果" hidden></div>
+            </div>
             <div class="view-switch" aria-label="檢視切換">
               <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
               <button class="ghost-button" id="yearViewButton" type="button" data-view="year">年</button>
@@ -289,6 +292,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
-  <script src="../assets/schedule.js?v=20260909-schedule-search1"></script>
+  <script src="../assets/schedule.js?v=20260909-schedule-search2"></script>
 </body>
 </html>
