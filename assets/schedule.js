@@ -33,6 +33,7 @@ const yearSelect = document.querySelector('#scheduleYearSelect');
 const monthPicker = document.querySelector('#scheduleMonthPicker');
 const labelFilterSelect = document.querySelector('#scheduleLabelFilter');
 const scheduleSearchInput = document.querySelector('#scheduleSearchInput');
+const scheduleSearchResults = document.querySelector('#scheduleSearchResults');
 const syncGameScheduleButton = document.querySelector('#syncGameScheduleButton');
 const scheduleSyncControls = document.querySelector('#scheduleSyncControls');
 const scheduleSyncCountdown = document.querySelector('#scheduleSyncCountdown');
@@ -1032,6 +1033,33 @@ const scheduleMatchesSearch = (item) => {
   return searchableText.includes(activeScheduleSearch);
 };
 
+const scheduleSearchDate = (item) => parseDateValue(item.reminderAt) ||
+  (/^\d{4}-\d{2}-\d{2}$/.test(String(item.date || '')) ? new Date(`${item.date}T00:00:00`) : null);
+
+const renderScheduleSearchResults = () => {
+  if (!scheduleSearchInput || !scheduleSearchResults) return;
+  if (!activeScheduleSearch) {
+    scheduleSearchResults.hidden = true;
+    scheduleSearchResults.innerHTML = '';
+    scheduleSearchInput.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  const matches = scheduleList
+    .filter((item) => !item.deleted && scheduleMatchesSearch(item))
+    .map((item) => ({ item, date: scheduleSearchDate(item) }))
+    .filter((entry) => entry.date && !Number.isNaN(entry.date.getTime()))
+    .sort((a, b) => a.date - b.date)
+    .slice(0, 12);
+  scheduleSearchResults.innerHTML = matches.length
+    ? matches.map(({ item, date }) => `<button class="schedule-search-result" type="button" role="option" data-id="${escapeHtml(item.id)}" data-date="${toDateKey(date)}">
+        <span class="schedule-search-result-date">${escapeHtml(date.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }))}</span>
+        <span class="schedule-search-result-main"><strong>${escapeHtml(item.title || '未命名排程')}</strong><small>${escapeHtml(item.labelName || '未分類')}</small></span>
+      </button>`).join('')
+    : '<p class="schedule-search-empty">找不到符合的排程</p>';
+  scheduleSearchResults.hidden = false;
+  scheduleSearchInput.setAttribute('aria-expanded', 'true');
+};
+
 const scheduleHistoryFields = [
   ['title', '標題'],
   ['content', '內容'],
@@ -1249,6 +1277,7 @@ const subscribeSchedules = () => {
     });
     scheduleDataLoaded = true;
     startAutomaticGameScheduleSync();
+    renderScheduleSearchResults();
     renderCalendar();
     openScheduleFromQuery();
     setStatus('資料已載入。', 'success');
@@ -1502,7 +1531,29 @@ labelNameInput?.addEventListener('input', syncLabelCategorySelection);
 labelFilterSelect?.addEventListener('change', () => { activeLabelFilter = labelFilterSelect.value; renderCalendar(); });
 scheduleSearchInput?.addEventListener('input', () => {
   activeScheduleSearch = scheduleSearchInput.value.trim().toLocaleLowerCase('zh-Hant');
+  renderScheduleSearchResults();
   renderCalendar();
+});
+scheduleSearchInput?.addEventListener('focus', renderScheduleSearchResults);
+scheduleSearchResults?.addEventListener('click', (event) => {
+  const result = event.target.closest('.schedule-search-result');
+  if (!result) return;
+  const targetDate = new Date(`${result.dataset.date}T00:00:00`);
+  if (Number.isNaN(targetDate.getTime())) return;
+  currentDate = new Date(targetDate);
+  selectedDate = new Date(targetDate);
+  viewMode = 'month';
+  document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('is-active', item.dataset.view === 'month'));
+  scheduleSearchResults.hidden = true;
+  scheduleSearchInput.setAttribute('aria-expanded', 'false');
+  subscribeLeave();
+  renderCalendar();
+});
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.schedule-search-wrap') && scheduleSearchResults) {
+    scheduleSearchResults.hidden = true;
+    scheduleSearchInput?.setAttribute('aria-expanded', 'false');
+  }
 });
 
 document.querySelector('#prevSchedulePeriod')?.addEventListener('click', () => { if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() - 1); else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() - 1); else currentDate.setDate(currentDate.getDate() - 7); selectedDate = new Date(currentDate); subscribeLeave(); renderCalendar(); });
