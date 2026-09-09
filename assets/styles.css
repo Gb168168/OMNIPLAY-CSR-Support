@@ -11868,3 +11868,43 @@ body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-textarea {
     grid-column: 1 / -1;
   }
 }
+
+
+/* Schedule calendar search */
+.schedule-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(300px, 22vw);
+  min-width: 210px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+.schedule-search-field:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+.schedule-search-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+.schedule-search-field input::placeholder { color: var(--text-secondary); }
+.schedule-search-field input::-webkit-search-cancel-button { cursor: pointer; }
+
+@media (max-width: 1100px) {
+  .schedule-heading-actions .schedule-search-field {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+}
