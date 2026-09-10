@@ -57,6 +57,9 @@
       background: #fee2e2 !important;
       color: #991b1b !important;
     }
+    /* Keep the change-log dialog above the fixed navigation so its top border stays visible. */
+    #gameChangeLogModal { z-index: 10001; }
+    .game-change-log-card { border-color: #dbe4f0; }
     .schedule-history-changes { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 4px; }
     .schedule-history-changes p { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 7px 8px; border-radius: 8px; background: var(--surface-muted); }
     .schedule-history-changes p b { color: var(--text-secondary); }
