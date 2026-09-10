@@ -60,12 +60,23 @@
     /* Keep the change-log dialog above the fixed navigation so its top border stays visible. */
     #gameChangeLogModal { z-index: 10001; }
     .game-change-log-card { border-color: #dbe4f0; }
+    #gameChangeLogModal .modal-heading { align-items: center; }
+    .game-change-log-title { min-width: 0; }
+    .game-change-log-heading-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .game-change-log-search { position: relative; display: flex; align-items: center; width: min(230px, 32vw); }
+    .game-change-log-search span { position: absolute; left: 12px; color: #64748b; pointer-events: none; }
+    .game-change-log-search input { width: 100%; min-height: 38px; padding: 8px 12px 8px 32px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #172033; font: inherit; }
+    .game-change-log-search input:focus { outline: 2px solid rgba(59, 130, 246, .24); border-color: #3b82f6; }
     .schedule-history-changes { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 4px; }
     .schedule-history-changes p { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 7px 8px; border-radius: 8px; background: var(--surface-muted); }
     .schedule-history-changes p b { color: var(--text-secondary); }
     .schedule-history-changes p span, .schedule-history-changes p strong { overflow-wrap: anywhere; white-space: pre-wrap; }
     .schedule-history-changes p i { color: var(--text-muted); font-style: normal; }
     @media (max-width: 640px) {
+      #gameChangeLogModal .modal-heading { align-items: stretch; flex-direction: column; gap: 12px; }
+      .game-change-log-heading-controls { width: 100%; margin-left: 0; }
+      .game-change-log-search { flex: 1; width: auto; }
+      .game-change-log-heading-controls .icon-button { flex: none; }
       .schedule-history-changes p { grid-template-columns: 1fr; }
       .schedule-history-changes p i { transform: rotate(90deg); justify-self: start; }
     }
@@ -145,11 +156,17 @@
       <div class="modal-backdrop" id="gameChangeLogModal" aria-hidden="true">
         <section class="modal-card game-change-log-card" role="dialog" aria-modal="true" aria-labelledby="gameChangeLogTitle">
           <div class="modal-heading">
-            <div>
+            <div class="game-change-log-title">
               <h2 id="gameChangeLogTitle">試算表變更紀錄</h2>
               <p>排程頁開啟時會自動同步，並每 5 分鐘檢查一次。</p>
             </div>
-            <button class="icon-button" id="closeGameChangeLog" type="button" aria-label="關閉試算表變更紀錄">✕</button>
+            <div class="game-change-log-heading-controls">
+              <label class="game-change-log-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="gameChangeLogSearchInput" type="search" placeholder="搜尋遊戲名稱、ID或變更內容" aria-label="搜尋試算表變更紀錄" autocomplete="off" />
+              </label>
+              <button class="icon-button" id="closeGameChangeLog" type="button" aria-label="關閉試算表變更紀錄">✕</button>
+            </div>
           </div>
           <div class="game-change-log-list" id="gameChangeLogList"><p class="history-empty">載入中...</p></div>
         </section>
