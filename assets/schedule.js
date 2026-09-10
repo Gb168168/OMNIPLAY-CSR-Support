@@ -40,6 +40,8 @@ const scheduleSyncCountdown = document.querySelector('#scheduleSyncCountdown');
 const gameChangeLogButton = document.querySelector('#gameChangeLogButton');
 const gameChangeLogModalEl = document.querySelector('#gameChangeLogModal');
 const gameChangeLogListEl = document.querySelector('#gameChangeLogList');
+const gameChangeLogSearchInput = document.querySelector('#gameChangeLogSearchInput');
+let gameChangeLogChanges = [];
 const scheduleMoreMenu = document.querySelector('.schedule-more-menu');
 const gamePmConfirmedLabel = document.querySelector('#gamePmConfirmedLabel');
 const gamePmConfirmedInput = document.querySelector('#gamePmConfirmed');
@@ -800,6 +802,35 @@ const formatGameChangeTime = (value) => {
   }).format(date);
 };
 
+const getGameChangeSearchText = (change) => [
+  change.gameId,
+  change.gameName,
+  change.fieldLabel,
+  change.oldValue,
+  change.newValue,
+  formatGameChangeTime(change.changedAt)
+].filter(Boolean).join(' ').toLocaleLowerCase('zh-Hant');
+
+const renderGameChangeLog = () => {
+  if (!gameChangeLogListEl) return;
+  const keyword = String(gameChangeLogSearchInput?.value || '').trim().toLocaleLowerCase('zh-Hant');
+  const filteredChanges = keyword
+    ? gameChangeLogChanges.filter((change) => getGameChangeSearchText(change).includes(keyword))
+    : gameChangeLogChanges;
+  if (!filteredChanges.length) {
+    gameChangeLogListEl.innerHTML = `<p class="history-empty">${keyword ? '找不到符合的變更紀錄。' : '目前沒有有效的試算表變更。'}</p>`;
+    return;
+  }
+  gameChangeLogListEl.innerHTML = filteredChanges.map((change) => {
+    const gameTitle = `${change.gameId || '—'}${change.gameName ? `（${change.gameName}）` : ''}`;
+    return `<article class="game-change-log-item">
+      <div class="game-change-log-heading"><strong>${escapeHtml(gameTitle)}</strong><time>${escapeHtml(formatGameChangeTime(change.changedAt))}</time></div>
+      <p><b>${escapeHtml(change.fieldLabel || '資料')}</b></p>
+      <div class="game-change-values"><span><small>更改前</small>${escapeHtml(change.oldValue || '（空白）')}</span><i>→</i><strong><small>更改後</small>${escapeHtml(change.newValue || '（空白）')}</strong></div>
+    </article>`;
+  }).join('');
+};
+
 const closeGameChangeLog = () => {
   gameChangeLogModalEl?.classList.remove('is-open');
   gameChangeLogModalEl?.setAttribute('aria-hidden', 'true');
@@ -808,6 +839,8 @@ const closeGameChangeLog = () => {
 const openGameChangeLog = async () => {
   gameChangeLogModalEl?.classList.add('is-open');
   gameChangeLogModalEl?.setAttribute('aria-hidden', 'false');
+  if (gameChangeLogSearchInput) gameChangeLogSearchInput.value = '';
+  gameChangeLogChanges = [];
   if (!gameChangeLogListEl || !scheduleGameChangeCollection) return;
   gameChangeLogListEl.innerHTML = '<p class="history-empty">載入中...</p>';
   try {
@@ -816,21 +849,10 @@ const openGameChangeLog = async () => {
       gameChangeLogListEl.innerHTML = '<p class="history-empty">目前沒有偵測到試算表變更。</p>';
       return;
     }
-    const visibleChanges = snapshot.docs
+    gameChangeLogChanges = snapshot.docs
       .map((doc) => doc.data())
       .filter((change) => !isGameIdLookupFailure(change.newValue));
-    if (!visibleChanges.length) {
-      gameChangeLogListEl.innerHTML = '<p class="history-empty">目前沒有有效的試算表變更。</p>';
-      return;
-    }
-    gameChangeLogListEl.innerHTML = visibleChanges.map((change) => {
-      const gameTitle = `${change.gameId || '—'}${change.gameName ? `（${change.gameName}）` : ''}`;
-      return `<article class="game-change-log-item">
-        <div class="game-change-log-heading"><strong>${escapeHtml(gameTitle)}</strong><time>${escapeHtml(formatGameChangeTime(change.changedAt))}</time></div>
-        <p><b>${escapeHtml(change.fieldLabel || '資料')}</b></p>
-        <div class="game-change-values"><span><small>更改前</small>${escapeHtml(change.oldValue || '（空白）')}</span><i>→</i><strong><small>更改後</small>${escapeHtml(change.newValue || '（空白）')}</strong></div>
-      </article>`;
-    }).join('');
+    renderGameChangeLog();
   } catch (error) {
     console.error('讀取試算表變更紀錄失敗：', error);
     gameChangeLogListEl.innerHTML = '<p class="history-empty">變更紀錄載入失敗，請稍後再試。</p>';
@@ -1570,6 +1592,7 @@ gameChangeLogButton?.addEventListener('click', () => {
   scheduleMoreMenu?.removeAttribute('open');
   openGameChangeLog();
 });
+gameChangeLogSearchInput?.addEventListener('input', renderGameChangeLog);
 document.querySelector('#closeGameChangeLog')?.addEventListener('click', closeGameChangeLog);
 gameChangeLogModalEl?.addEventListener('click', (event) => {
   if (event.target === gameChangeLogModalEl) closeGameChangeLog();
