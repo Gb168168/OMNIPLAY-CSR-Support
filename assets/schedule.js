@@ -745,16 +745,19 @@ const syncGameSchedules = async () => {
     rows.forEach((row) => {
       const displayMeta = resolveSavedScheduleMeta(row.meta);
       const existingItem = scheduleList.find((item) => item.id === row.id);
+      const preserveManualReminder = Boolean(existingItem?.manualReminderAt && existingItem?.reminderAt);
       const payload = {
         eventType: row.eventType,
-        date: row.dateKey,
+        date: preserveManualReminder ? existingItem.date : row.dateKey,
         title: row.titlePrefix
           ? `${row.titlePrefix}｜${getGameTitle([row.game])}`
           : row.forceLabelMeta ? `${displayMeta.labelName}｜${getGameTitle([row.game])}` : existingItem?.title || `${displayMeta.labelName}｜${getGameTitle([row.game])}`,
         content: row.game.note1
           ? `備註 1：${row.game.note1}\n\n${row.contentPrefix}\n${gameLine(row.game)}`
           : `${row.contentPrefix}\n${gameLine(row.game)}`,
-        reminderAt: firebase.firestore.Timestamp.fromDate(row.at),
+        reminderAt: preserveManualReminder
+          ? existingItem.reminderAt
+          : firebase.firestore.Timestamp.fromDate(row.at),
         labelId: row.forceLabelMeta ? displayMeta.labelId : existingItem?.labelId || displayMeta.labelId,
         labelName: row.forceLabelMeta ? displayMeta.labelName : canonicalScheduleLabelName(existingItem?.labelName) || displayMeta.labelName,
         labelColor: existingItem?.labelColor || displayMeta.color,
@@ -1672,6 +1675,10 @@ formEl?.addEventListener('submit', async (event) => {
   else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
   if (!payload.title) return setMessage('請輸入標題。');
   const editingItem = scheduleList.find((entry) => entry.id === editingId);
+  const existingReminderAt = parseDateValue(editingItem?.reminderAt);
+  if (editingItem?.source === 'google-game-sheet' && existingReminderAt && existingReminderAt.getTime() !== reminderAt.getTime()) {
+    payload.manualReminderAt = true;
+  }
   const isEditingFirstLaunch = isFirstLaunchSchedule(editingItem);
   const otherPlatformEnabled = isEditingFirstLaunch && Boolean(firstLaunchOtherPlatformEnabled?.checked);
   const otherPlatformUatDate = firstLaunchOtherPlatformUatDate?.value || '';
