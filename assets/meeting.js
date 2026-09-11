@@ -198,21 +198,21 @@ const setFormEditable = () => {
 const meetingStatusInfo = (record = {}) => {
   const manualStatus = String(record.status || '');
   const manual = {
-    completed: { key: 'completed', label: '已完成', icon: '✅' },
+    completed: { key: 'completed', label: '已完成', icon: '' },
     postponed: { key: 'postponed', label: '延期', icon: '⏸️' },
-    cancelled: { key: 'cancelled', label: '取消', icon: '❌' }
+    cancelled: { key: 'cancelled', label: '取消', icon: '' }
   };
   if (manual[manualStatus]) return manual[manualStatus];
   const dateText = String(record.date || '');
   const timeText = String(record.time || '00:00');
   const meetingAt = new Date(`${dateText}T${timeText || '00:00'}`);
-  if (!dateText || Number.isNaN(meetingAt.getTime())) return { key: 'scheduled', label: '待召開', icon: '🗓️' };
+  if (!dateText || Number.isNaN(meetingAt.getTime())) return { key: 'scheduled', label: '待召開', icon: '' };
   const now = new Date();
   if (!manualStatus && meetingAt < new Date(now.getFullYear(), now.getMonth(), now.getDate())) return manual.completed;
   const minutesUntil = (meetingAt.getTime() - now.getTime()) / 60000;
-  if (minutesUntil > 30) return { key: 'scheduled', label: '待召開', icon: '🗓️' };
-  if (minutesUntil > 0) return { key: 'soon', label: '即將開始', icon: '🔔' };
-  return { key: 'active', label: '進行中', icon: '🟢' };
+  if (minutesUntil > 30) return { key: 'scheduled', label: '待召開', icon: '' };
+  if (minutesUntil > 0) return { key: 'soon', label: '即將開始', icon: '' };
+  return { key: 'active', label: '進行中', icon: '' };
 };
 
 const renderList = () => {

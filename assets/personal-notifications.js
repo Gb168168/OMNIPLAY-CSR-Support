@@ -68,7 +68,7 @@
     list.innerHTML = ordered.length ? ordered.map((item) => `
       <article class="personal-note color-${escapeHtml(item.color || 'yellow')} ${item.completed ? 'is-completed' : ''}" data-id="${escapeHtml(item.id)}">
         <div class="personal-note-topline">
-          <span class="personal-note-kind">${item.type === 'alarm' ? '⏰ 鬧鐘' : '📝 便利貼'}</span>
+          <span class="personal-note-kind">${item.type === 'alarm' ? '鬧鐘' : '便利貼'}</span>
           ${item.type === 'alarm' && item.remindAt ? `<time datetime="${escapeHtml(item.remindAt)}">${escapeHtml(formatDateTime(item.remindAt))}</time>` : ''}
         </div>
         ${item.type === 'alarm' && repeatLabel(item) ? `<small class="personal-note-repeat">↻ ${escapeHtml(repeatLabel(item))}</small>` : ''}
@@ -76,8 +76,8 @@
         ${item.content ? `<p>${escapeHtml(item.content).replace(/\n/g, '<br>')}</p>` : ''}
         <div class="personal-note-actions">
           <button type="button" data-action="toggle">${item.completed ? '↩ 恢復' : '✓ 完成'}</button>
-          <button type="button" data-action="edit">✏️ 編輯</button>
-          <button type="button" data-action="delete">🗑 刪除</button>
+          <button type="button" data-action="edit">編輯</button>
+          <button type="button" data-action="delete">刪除</button>
         </div>
       </article>
     `).join('') : '<p class="personal-notification-empty">目前沒有個人通知，按「新增」建立第一張便利貼。</p>';
@@ -153,11 +153,11 @@
       });
       showPersonalAlarm();
     } else {
-      window.alert(`⏰ 個人提醒\n\n${item.title}${item.content ? `\n${item.content}` : ''}`);
+      window.alert(`個人提醒\n\n${item.title}${item.content ? `\n${item.content}` : ''}`);
     }
     if ('Notification' in window && Notification.permission === 'granted') {
       const registration = await navigator.serviceWorker?.ready;
-      registration?.showNotification(`⏰ ${item.title}`, {
+      registration?.showNotification(item.title, {
         body: alarmText,
         icon: 'assets/icon-192.png',
         badge: 'assets/icon-192.png',

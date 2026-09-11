@@ -157,7 +157,7 @@
           <p>每日客服作業日誌。</p>
         </div>
         <div class="topbar-actions">
-          <button class="secondary" id="designTableButton" type="button">⚙️ 設計表格</button>
+          <button class="secondary" id="designTableButton" type="button">設計表格</button>
           <div class="user-pill">● 已連線 Firebase</div>
         </div>
       </header>
@@ -193,7 +193,7 @@
       </div>
       <div class="linked-report-form-wrapper">
         <div class="linked-report-info">
-          💡 提示：下方欄位已自動填入日誌中的相關信息，您可以調整後提交。
+          提示：下方欄位已自動填入日誌中的相關信息，您可以調整後提交。
         </div>
         <div class="linked-report-form-grid" id="linkedReportFormGrid"></div>
         <div class="linked-report-form-actions">
@@ -361,7 +361,7 @@
           { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
           { key: 'category', label: '部門（由日誌處理部門帶入）', type: 'select', value: sourceDepartment, options: ['技術', '商務'], locked: true },
           { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
-          { key: 'content', label: '級數', type: 'select', value: '', options: ['一級 ☢︎', '二級 ⚠︎', '三級 ⛑︎'] },
+          { key: 'content', label: '級數', type: 'select', value: '', options: ['一級', '二級', '三級'] },
           { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', value: logRecord.customer || '' },
           { key: 'status', label: '狀態（由日誌帶入）', type: 'select', value: logRecord.status || '', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], locked: true },
           { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'select', value: sessionStorage.getItem('omniplayStaffName') || logRecord.contact || '', options: ['佳臻', '晴心', '澄希', '茗雅', '中魁', 'Rondo', '于慧', '芯瑜', '志忠'] },

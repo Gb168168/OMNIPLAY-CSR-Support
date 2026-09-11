@@ -15,27 +15,27 @@ const sidebar = document.querySelector('#sidebar');
 const isIndexPage = /(^|\/)index\.html$/.test(window.location.pathname) || window.location.pathname.endsWith('/');
 const sidebarPath = (path) => isIndexPage ? path : `../${path}`;
 const sidebarItems = [
-  { label: '首頁', icon: '🏠', href: 'index.html', className: 'home-link' },
-  { title: '客服內部', icon: '👥', id: 'serviceGroupTitle', items: [
-    { label: '休假表', icon: '🌴', href: 'service/leave.html' },
-    { label: '排程表', icon: '📅', href: 'service/schedule.html' },
-    { label: 'KPI', icon: '📊', href: 'service/kpi.html' }
+  { label: '首頁', icon: '', href: 'index.html', className: 'home-link' },
+  { title: '客服內部', icon: '', id: 'serviceGroupTitle', items: [
+    { label: '休假表', icon: '', href: 'service/leave.html' },
+    { label: '排程表', icon: '', href: 'service/schedule.html' },
+    { label: 'KPI', icon: '', href: 'service/kpi.html' }
   ] },
-  { title: '作業管理', icon: '🗂️', id: 'workGroupTitle', items: [
-    { label: '日誌', icon: '📒', href: 'work/log.html' },
-    { label: '日誌 NEW', icon: '✨', href: 'work/log-new.html' },
-    { label: '收件匣', icon: '📥', href: 'work/inbox.html' },
-    { label: '交接', icon: '🤝', href: 'work/handover.html' },
-    { label: '提報', icon: '📣', href: 'work/report.html' },
-    { label: '對接追蹤', icon: '🔎', href: 'work/tracking.html' },
-    { label: 'PROD告警紀錄', icon: '🚨', href: 'work/alert.html' }
+  { title: '作業管理', icon: '', id: 'workGroupTitle', items: [
+    { label: '日誌', icon: '', href: 'work/log.html' },
+    { label: '日誌 NEW', icon: '', href: 'work/log-new.html' },
+    { label: '收件匣', icon: '', href: 'work/inbox.html' },
+    { label: '交接', icon: '', href: 'work/handover.html' },
+    { label: '提報', icon: '', href: 'work/report.html' },
+    { label: '對接追蹤', icon: '', href: 'work/tracking.html' },
+    { label: 'PROD告警紀錄', icon: '', href: 'work/alert.html' }
   ] },
-  { title: '會議歷程', icon: '📁', id: 'meetingGroupTitle', items: [
-    { label: '會議紀錄', icon: '📝', href: 'meeting/meeting.html' }
+  { title: '會議歷程', icon: '', id: 'meetingGroupTitle', items: [
+    { label: '會議紀錄', icon: '', href: 'meeting/meeting.html' }
   ] },
-  { title: '資料庫', icon: '🧠', id: 'resourceGroupTitle', items: [
-    { label: '知識庫', icon: '📚', href: 'resource/knowledge.html' },
-    { label: 'AI 資料庫', icon: '🤖', href: 'resource/ai-database.html' }
+  { title: '資料庫', icon: '', id: 'resourceGroupTitle', items: [
+    { label: '知識庫', icon: '', href: 'resource/knowledge.html' },
+    { label: 'AI 資料庫', icon: '', href: 'resource/ai-database.html' }
   ] }
   ];
 const isActiveSidebarHref = (href) => (href === 'index.html' && isIndexPage) || window.location.pathname.split('/').pop() === href.split('/').pop();
@@ -64,7 +64,7 @@ const renderSidebar = () => {
   sidebar.innerHTML = `
     <div class="sidebar-header">
       <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
-      <strong class="mobile-current-page" aria-current="page">${activePage?.icon || '🏠'} ${activePage?.label || '首頁'}</strong>
+      <strong class="mobile-current-page" aria-current="page">${activePage?.label || '首頁'}</strong>
       <button class="toggle-btn mobile-menu-btn" id="sidebarToggle" type="button" aria-label="展開功能表">☰</button>
     </div>
     ${activeGroup ? `<nav class="mobile-quick-nav" aria-label="${activeGroup.title}快速功能列">
@@ -84,7 +84,7 @@ const renderSidebar = () => {
     </nav>
     <div class="sidebar-footer" id="sidebarUserFooter">
       ${myerpReturnLink}
-      <div class="theme-switch-row"><span>☀️淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button"></button><span>🌙深色</span></div>
+      <div class="theme-switch-row"><span>淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button" aria-label="切換顯示主題"></button><span>深色</span></div>
     </div>
   `;
 };
@@ -106,18 +106,18 @@ const THEME_STORAGE_KEY = 'omniplayTheme';
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'omniplaySidebarCollapsed';
 const getStoredTheme = () => localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
 const MENU_ICON_MAP = {
-  '休假表': '🌴',
-  '排程表': '📅',
-  'KPI': '📊',
-  '日誌': '📒',
-  '交接': '🤝',
-  '提報': '📣',
-  '對接追蹤': '🔎',
-  'PROD告警紀錄': '🚨',
-  'Game List 管理': '🎮',
-  '會議紀錄': '📝',
-  '知識庫': '📚',
-  'AI 資料庫': '🤖'
+  '休假表': '',
+  '排程表': '',
+  'KPI': '',
+  '日誌': '',
+  '交接': '',
+  '提報': '',
+  '對接追蹤': '',
+  'PROD告警紀錄': '',
+  'Game List 管理': '',
+  '會議紀錄': '',
+  '知識庫': '',
+  'AI 資料庫': ''
 };
 
 const applyTheme = (theme) => {

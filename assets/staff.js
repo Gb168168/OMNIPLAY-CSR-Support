@@ -33,7 +33,7 @@ const toggleModal = (isOpen) => {
     editingStaffId = null;
     setMessage('');
     if (passwordInput) passwordInput.type = 'password';
-    if (passwordToggle) passwordToggle.textContent = '👁️';
+    if (passwordToggle) passwordToggle.textContent = '顯示';
   }
 };
 
@@ -86,7 +86,7 @@ const renderStaff = (staffList) => {
         ${secretVisible ? `<td>
           <div class="password-cell">
             <span>${escapeHtml(passwordText)}</span>
-            <button class="icon-button" type="button" data-action="toggle-password" data-id="${staff.id}" aria-label="切換密碼顯示">${passwordVisible ? '🙈' : '👁️'}</button>
+            <button class="icon-button" type="button" data-action="toggle-password" data-id="${staff.id}" aria-label="切換密碼顯示">${passwordVisible ? '隱藏' : '顯示'}</button>
           </div>
         </td>` : ''}
         <td>${escapeHtml(staff.shift || '早班')}</td>
@@ -96,7 +96,7 @@ const renderStaff = (staffList) => {
           <div class="table-actions">
             ${protectedOmniplay || !editable ? '' : `<button class="secondary-button" type="button" data-action="toggle-status" data-id="${staff.id}">${staff.status === '停用' ? '啟用' : '停用'}</button>`}
             ${editable ? `<button class="secondary-button" type="button" data-action="edit" data-id="${staff.id}">編輯</button>` : ''}
-            ${protectedOmniplay || !window.isOmniplayAdmin?.() ? '' : `<button class="secondary-button" type="button" data-action="permissions" data-id="${staff.id}">⚙️ 權限管理</button>`}
+            ${protectedOmniplay || !window.isOmniplayAdmin?.() ? '' : `<button class="secondary-button" type="button" data-action="permissions" data-id="${staff.id}">權限管理</button>`}
             ${protectedOmniplay || !deletable ? '' : `<button class="danger-button" type="button" data-action="delete" data-id="${staff.id}">刪除</button>`}
           </div>
         </td>
@@ -259,7 +259,7 @@ staffModal?.addEventListener('click', (event) => {
 passwordToggle?.addEventListener('click', () => {
   const isHidden = passwordInput.type === 'password';
   passwordInput.type = isHidden ? 'text' : 'password';
-  passwordToggle.textContent = isHidden ? '🙈' : '👁️';
+  passwordToggle.textContent = isHidden ? '隱藏' : '顯示';
 });
 
 window.permissionReady?.then(() => { applyStaffPermissionUi(); renderStaff(staffCache); });

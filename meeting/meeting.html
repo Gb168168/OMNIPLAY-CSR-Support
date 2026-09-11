@@ -24,7 +24,7 @@
       <section class="ragic-card" id="meetingListView" aria-label="會議紀錄列表">
         <div class="ragic-toolbar">
           <div><h2>會議紀錄列表</h2><p>顯示所有會議紀錄，點選任一列即可編輯。</p></div>
-          <div class="topbar-actions"><button class="secondary" id="designMeetingTableButton" type="button" hidden>⚙️ 設計表格</button><button class="primary" id="newRecordButton" type="button">+ 新增</button></div>
+          <div class="topbar-actions"><button class="secondary" id="designMeetingTableButton" type="button" hidden>設計表格</button><button class="primary" id="newRecordButton" type="button">+ 新增</button></div>
         </div>
         <div class="ragic-table-wrap">
           <table class="ragic-table meeting-list-table">
@@ -37,7 +37,7 @@
       </section>
       
       <section class="ragic-card" id="meetingFormView" aria-label="會議紀錄編輯" hidden>
-        <div class="ragic-form-toolbar"><h2 id="meetingFormTitle">新增會議紀錄</h2><div class="topbar-actions"><button class="secondary" id="staffSettingsButton" type="button">⚙️ 人員設定</button><button class="ghost danger" id="deleteMeetingButton" type="button">刪除</button><button class="primary" id="saveMeetingButton" form="meetingForm" type="submit">儲存</button><button class="secondary" id="backToListButton" type="button">返回列表</button></div></div>
+        <div class="ragic-form-toolbar"><h2 id="meetingFormTitle">新增會議紀錄</h2><div class="topbar-actions"><button class="secondary" id="staffSettingsButton" type="button">人員設定</button><button class="ghost danger" id="deleteMeetingButton" type="button">刪除</button><button class="primary" id="saveMeetingButton" form="meetingForm" type="submit">儲存</button><button class="secondary" id="backToListButton" type="button">返回列表</button></div></div>
         <form id="meetingForm" class="meeting-form">
           <section class="meeting-info-table" aria-label="基本資訊">
             <div class="meeting-info-cell meeting-info-datetime"><label for="meetingDate">日期／時間</label><div class="meeting-datetime-fields"><input id="meetingDate" type="date" required><input id="meetingTime" type="time" required aria-label="時間"></div></div>

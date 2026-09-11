@@ -100,14 +100,14 @@ if (!document.querySelector('#ragicColumnMenuRuntimeStyles')) {
 
 const SUBFIELD_TYPE_GROUPS = [
   {
-    label: '📝 文字',
+    label: '文字',
     types: [
       { value: 'text', label: '單行' },
       { value: 'textarea', label: '多行' }
     ]
   },
   {
-    label: '🕐 時間',
+    label: '時間',
     types: [
       { value: 'date', label: '日期' },
       { value: 'datetime', label: '日期時間' },
@@ -116,38 +116,38 @@ const SUBFIELD_TYPE_GROUPS = [
     ]
   },
   {
-    label: '📋 下拉',
+    label: '下拉',
     types: [
       { value: 'select', label: '單選' },
       { value: 'multiselect', label: '多選' }
     ]
   },
   {
-    label: '🔗 連結',
+    label: '連結',
     types: [
       { value: 'link', label: '連結' }
     ]
   },
   {
-    label: '🖼️ 圖片',
+    label: '圖片',
     types: [
       { value: 'image', label: '圖片' }
     ]
   },
   {
-    label: '📎 檔案',
+    label: '檔案',
     types: [
       { value: 'file', label: '檔案' }
     ]
   },
   {
-    label: '🔢 編號',
+    label: '編號',
     types: [
       { value: 'serial', label: '編號' }
     ]
   },
   {
-    label: '📊 子表格',
+    label: '子表格',
     types: [
       { value: 'subtable', label: '子表格' }
     ]
@@ -159,14 +159,14 @@ const SUBFIELD_TYPES =
 
 const FIELD_TYPE_GROUPS = [
   {
-    label: '📝 文字',
+    label: '文字',
     types: [
       { value: 'text', label: '單行文字' },
       { value: 'textarea', label: '多行文字' }
     ]
   },
   {
-    label: '🕐 時間',
+    label: '時間',
     types: [
       { value: 'date', label: '日期' },
       { value: 'datetime', label: '日期時間' },
@@ -175,14 +175,14 @@ const FIELD_TYPE_GROUPS = [
     ]
   },
   {
-    label: '📋 下拉選單',
+    label: '下拉選單',
     types: [
       { value: 'select', label: '單選' },
       { value: 'multiselect', label: '多選' }
     ]
   },
   {
-    label: '🔗 連結與附件',
+    label: '連結與附件',
     types: [
       { value: 'link', label: '連結' },
       { value: 'image', label: '圖片' },
@@ -190,7 +190,7 @@ const FIELD_TYPE_GROUPS = [
     ]
   },
   {
-    label: '📊 其他',
+    label: '其他',
     types: [
       { value: 'serial', label: '編號' },
       { value: 'subtable', label: '子表格' }
@@ -987,7 +987,7 @@ const attachSubfieldFormatEditor = (row, field = {}) => {
   const render = () => {
     let styles = {};
     try { styles = JSON.parse(hidden.value || '{}'); } catch { styles = {}; }
-    editor.innerHTML = `<summary>🎨 欄位格式</summary><section><strong>標題格式</strong>${textFormatToolbarHtml('headerStyle', styles.headerStyle)}</section><section><strong>內容格式</strong>${textFormatToolbarHtml('contentStyle', styles.contentStyle)}</section>`;
+    editor.innerHTML = `<summary>欄位格式</summary><section><strong>標題格式</strong>${textFormatToolbarHtml('headerStyle', styles.headerStyle)}</section><section><strong>內容格式</strong>${textFormatToolbarHtml('contentStyle', styles.contentStyle)}</section>`;
   };
   const update = (toolbar) => {
     let styles = {};
@@ -1404,8 +1404,8 @@ const renderIconActions = (record = {}) => {
   const pinned = Boolean(currentUser && record.pins?.[currentUser]);
   return `<td class="icon-actions col-marker marker-cell" data-label="標記">
     <span class="marker-actions-row">
-      <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="所有人可看">🔥</span>
-      <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">📌</span>
+      <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="所有人可看">公開</span>
+      <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">釘選</span>
     </span>
   </td>`;
 };
@@ -2127,7 +2127,7 @@ const showFilePreview = (payload, container) => {
   preview.className = 'ragic-file-preview ragic-download-preview image-preview-item';
   preview.href = src;
   preview.download = file.name || 'download';
-  preview.innerHTML = `<span>📎 ${escapeHtml(file.name || '檔案')}</span><small>${escapeHtml(formatFileSize(file.size))}</small>`;
+  preview.innerHTML = `<span>附件：${escapeHtml(file.name || '檔案')}</span><small>${escapeHtml(formatFileSize(file.size))}</small>`;
   preview.appendChild(createRemoveButton(fieldKey, '刪除檔案', container));
   container.appendChild(preview);
 };
@@ -2745,7 +2745,7 @@ const renderFormToolbar = () => {
   legacyToolbar.innerHTML = `<div class="form-toolbar-left"><button class="pager-btn" id="ragicPrevRecord" type="button">&lt; 上一筆</button><button class="pager-btn" id="ragicNextRecord" type="button">下一筆 &gt;</button></div><div class="form-toolbar-center ragic-form-title">${escapeHtml(modeLabel)}：${escapeHtml(formDisplayName())}</div><div class="form-toolbar-right"></div>`;
   const actions = legacyToolbar.querySelector('.form-toolbar-right');
   if (RAGIC_STATE.currentId && RAGIC_STATE.formMode !== 'edit' && canUse('edit')) {
-    actions.insertAdjacentHTML('beforeend', '<button class="edit-btn" id="ragicEditRecord" type="button">✏️編輯</button>');
+    actions.insertAdjacentHTML('beforeend', '<button class="edit-btn" id="ragicEditRecord" type="button">編輯</button>');
   }
   if (!RAGIC_STATE.currentId || RAGIC_STATE.formMode === 'edit') {
     actions.insertAdjacentHTML('beforeend', '<button class="btn-secondary" id="ragicCancelEdit" type="button">取消</button>');
@@ -2962,7 +2962,7 @@ const renderFileCell = (value, label = '圖片') => {
     return `<img class="ragic-thumbnail" src="${escapeHtml(src)}" alt="${escapeHtml(label)}" title="點擊放大檢視">`;
   }
   if (!src) return '';
-  return `<a class="ragic-file-link" href="${escapeHtml(src)}" target="_blank" rel="noopener" download="${escapeHtml(name || 'download')}">📎 ${escapeHtml(name || src)}${escapeHtml(size)}</a>`;
+  return `<a class="ragic-file-link" href="${escapeHtml(src)}" target="_blank" rel="noopener" download="${escapeHtml(name || 'download')}">附件：${escapeHtml(name || src)}${escapeHtml(size)}</a>`;
 };
 
 const renderTrackingRecordText = (value) => {
@@ -3004,7 +3004,7 @@ const renderCell = (record, field) => {
     return `<span class="ragic-list-subtable-lines">${escapeHtml(String(valueToText(value)))}</span>`;
   }
   if (field?.type === 'image' || field?.type === 'file') return renderFileCell(value, field.label || '圖片');
-  if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">📎 ${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
+  if (field?.type === 'file') return value ? `<a class="ragic-file-link" href="${escapeHtml(value.data || value)}" download="${escapeHtml(value.name || 'download')}">附件：${escapeHtml(value.name || '檔案')} ${escapeHtml(value.size ? `(${formatFileSize(value.size)})` : '')}</a>` : '';
   if (['checkbox', 'boolean', 'reminderEnabled', 'reportEnabled'].includes(field?.type)) {
     const checked = isCheckedValue(value);
     return checked ? '<span class="ragic-list-checkmark" aria-label="是">✓</span>' : '';
@@ -3445,8 +3445,8 @@ const renderHeader = () => {
   document.querySelector('#ragicFilterRow')?.remove();
   const markerFilter = normalizeFilterValue(RAGIC_STATE.filters[MARKER_FILTER_KEY]);
   const markerOptions = [
-    ['fire', '🔥 所有人可看'],
-    ['pin', '📌 個人釘選']
+    ['fire', '所有人可看'],
+    ['pin', '個人釘選']
   ].map(([value, label]) => {
     const checked = Array.isArray(markerFilter) && markerFilter.includes(value) ? ' checked' : '';
     return `<label class="menu-item menu-checkbox"><input type="checkbox" data-menu-option="${MARKER_FILTER_KEY}" value="${value}"${checked}><span>${label}</span></label>`;
@@ -3460,7 +3460,7 @@ const renderHeader = () => {
     const fixedSortKey = String(RAGIC_STATE.config?.fixedSortKey || '');
     const sortControls = fixedSortKey
       ? (String(field.key || '') === fixedSortKey
-        ? `<div class="menu-item" aria-disabled="true">🔒 <span>固定依${escapeHtml(fieldByKey(fixedSortKey)?.label || fixedSortKey)}由新到舊</span></div>`
+        ? `<div class="menu-item" aria-disabled="true"><span>固定依${escapeHtml(fieldByKey(fixedSortKey)?.label || fixedSortKey)}由新到舊</span></div>`
         : '')
       : `<div class="menu-item" data-menu-action="sort-asc" data-field="${key}">↑ <span>從A到Z排序</span></div><div class="menu-item" data-menu-action="sort-desc" data-field="${key}">↓ <span>從Z到A排序</span></div>`;
     return `<th class="${ragicColumnClass(field)}${field.type === 'textarea' ? ' col-textarea' : ''} col-menu-cell" data-type="${escapeHtml(field.type || '')}" data-field-key="${key}"${style}><span class="col-label">${label}</span><span class="col-menu-trigger" data-field="${key}" role="button" tabindex="0" aria-label="開啟${label}欄位選單">▼</span><span class="col-sort-indicator"></span><div class="col-menu-dropdown" data-menu="${key}" hidden>${sortControls}<div class="menu-item" data-menu-action="clear-filter" data-field="${key}">✕ <span>清除篩選條件</span></div><div class="menu-divider"></div>${renderColumnFilterControls(field)}</div></th>`;
@@ -3554,7 +3554,7 @@ const designerPreviewValue = (field = {}, rowIndex = 0) => {
   const samples = ['範例文字', '第二筆範例', '第三筆範例'];
   if (field.type === 'date' || field.type === 'datetime' || field.type === 'createdDate' || field.type === 'updatedDate') return '2026/07/13';
   if (field.type === 'select' || field.type === 'multiselect') return options[0] || '選項一';
-  if (field.type === 'image') return '🖼️';
+  if (field.type === 'image') return '圖片';
   if (field.type === 'link') return 'https://example.com';
   if (field.type === 'serial') return `#${String(rowIndex + 1).padStart(3, '0')}`;
   if (field.type === 'file') return '附件.pdf';
@@ -4031,7 +4031,7 @@ const createDesignerViewField = (field = {}, item = {}) => {
     element.classList.toggle('is-checked', isToggle && Boolean(value));
     element.innerHTML = `<div class="ragic-view-label" style="${textStyleCss(field.headerStyle)}">${escapeHtml(field.label || field.key)}</div><div class="ragic-view-value field-value" style="${textStyleCss(field.contentStyle)}">${isReminderEnabledField(field) ? '已啟用' : (isToggle ? '' : renderDisplayValue(field, value))}</div>`;
   }
-  element.insertAdjacentHTML('beforeend', '<span class="layout-drag-grip" title="拖曳欄位" aria-label="拖曳欄位">⠿</span><button class="settings-btn" type="button" title="設定">⚙️</button><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>');
+  element.insertAdjacentHTML('beforeend', '<span class="layout-drag-grip" title="拖曳欄位" aria-label="拖曳欄位">⠿</span><button class="settings-btn" type="button" title="設定">設定</button><button class="remove-btn" type="button" title="移除">×</button><span class="resize-handle-right" data-resize="col"></span><span class="resize-handle-bottom" data-resize="row"></span><span class="resize-handle-corner" data-resize="both"></span>');
   return element;
 };
 const renderLayoutDesigner = () => {
@@ -4045,7 +4045,7 @@ const renderLayoutDesigner = () => {
   const rowsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.rows === n ? 'selected' : ''}>${n}</option>`).join('');
   const colsSelect = [...Array(10)].map((_, i) => i + 1).map((n) => `<option value="${n}" ${layout.columns === n ? 'selected' : ''}>${n}</option>`).join('');
   const placed = placedLayoutKeys(layout);
-  const fieldLibrary = fields.map((field) => `<div class="layout-field-chip layout-library-item ${placed.has(field.key) ? 'is-placed' : 'is-unplaced'} ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><span class="layout-library-copy"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small></span><button class="settings-btn" type="button" aria-label="編輯欄位">⚙️</button></div>`).join('') || '<span class="layout-empty">尚未建立欄位</span>';
+  const fieldLibrary = fields.map((field) => `<div class="layout-field-chip layout-library-item ${placed.has(field.key) ? 'is-placed' : 'is-unplaced'} ${field.type === 'subtable' ? 'layout-field-chip-subtable' : ''}" draggable="false" data-field-key="${escapeHtml(field.key)}"><span class="layout-chip-grip">⠿</span><span class="layout-library-copy"><b>${escapeHtml(field.label || field.key)}</b><small>${escapeHtml(layoutFieldTypeLabel(field.type))}</small></span><button class="settings-btn" type="button" aria-label="編輯欄位">設定</button></div>`).join('') || '<span class="layout-empty">尚未建立欄位</span>';
   const normalFieldTypeButtons = FIELD_TYPES.map((type) => `
   <button
     class="layout-type-button"
@@ -4689,7 +4689,7 @@ const handoverSchemaFallback = () => makeDefaultSchema({
     { key: 'shift', label: '班別', type: 'select', options: ['早班', '晚班'] },
     { key: 'department', label: '部門', type: 'text' },
     { key: 'category', label: '分類', type: 'text' },
-    { key: 'status', label: '狀態', type: 'select', options: ['已完成', '處理中', '必看⚠️'] },
+    { key: 'status', label: '狀態', type: 'select', options: ['已完成', '處理中', '必看'] },
     { key: 'item', label: '交接事項', type: 'textarea' },
     { key: 'note', label: '備註', type: 'textarea' },
     { key: 'publisher', label: '建立者', type: 'text' },
@@ -4988,7 +4988,7 @@ const initRagicPage = async (config) => {
     button.className = 'secondary';
     button.id = 'designTableButton';
     button.type = 'button';
-    button.textContent = '⚙️ 設計表格';
+    button.textContent = '設計表格';
     button.hidden = false;
     button.disabled = false;
     if (listToolbar && button.parentElement !== listToolbar) listToolbar.insertBefore(button, newRecordButton || null);

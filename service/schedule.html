@@ -137,11 +137,11 @@
               <summary class="secondary-button" aria-label="開啟更多排程功能">⋯ 更多</summary>
               <div class="schedule-more-popover">
                 <div class="schedule-sync-controls" id="scheduleSyncControls" hidden>
-                  <button class="schedule-more-action" id="syncGameScheduleButton" type="button">🔄 同步遊戲排程</button>
+                  <button class="schedule-more-action" id="syncGameScheduleButton" type="button">同步遊戲排程</button>
                   <span class="schedule-sync-countdown" id="scheduleSyncCountdown" aria-live="polite">下次自動同步 05:00</span>
                 </div>
-                <button class="schedule-more-action" id="gameChangeLogButton" type="button">📝 試算表變更</button>
-                <button class="schedule-more-action schedule-help-button" id="openScheduleHelp" type="button">❔ 使用說明</button>
+                <button class="schedule-more-action" id="gameChangeLogButton" type="button">試算表變更</button>
+                <button class="schedule-more-action schedule-help-button" id="openScheduleHelp" type="button">使用說明</button>
               </div>
             </details>
           </div>
@@ -183,7 +183,7 @@
           </div>
           <div class="schedule-help-content">
             <section>
-              <h3>📅 基本操作</h3>
+              <h3>基本操作</h3>
               <ol>
                 <li>使用月份兩側的箭頭切換日期，或點擊月份直接選擇年月。</li>
                 <li>點日期空白處可新增排程；點排程項目可查看或編輯。填寫結束日期後，月曆會以長條橫跨整段日期。</li>
@@ -191,11 +191,11 @@
               </ol>
             </section>
             <section>
-              <h3>🔢 每日事項顯示</h3>
+              <h3>每日事項顯示</h3>
               <p>月檢視每個日期顯示前 2 筆。第 3 筆開始，日期旁會出現總數圓圈；圓圈會配合當天標籤顏色，不同類別則以多色顯示。點日期空白處或圓圈即可查看當天全部排程。</p>
             </section>
             <section>
-              <h3>🎨 標籤、標題與框線</h3>
+              <h3>標籤、標題與框線</h3>
               <p class="schedule-help-label-note">標籤區可選擇顏色、輸入名稱；已設置過的標籤會收納在「類別」下拉選單。遊戲排程顯示「工作類型｜遊戲 ID (遊戲名稱)」。</p>
               <div class="schedule-help-legends">
                 <span><i style="--help-color:#f59e0b"></i>橘色：向 AM 確認</span>
@@ -205,22 +205,22 @@
                 <span><i style="--help-color:#ec4899"></i>粉色：⭐ 首發平台 PROD</span>
                 <span><i style="--help-color:#06b6d4"></i>青色：其他平台 UAT</span>
                 <span><i style="--help-color:#4f46e5"></i>靛藍：其他平台 PROD</span>
-                <span><i style="--help-color:#65a30d"></i>草綠：🔒 獨家平台 UAT</span>
-                <span><i style="--help-color:#ca8a04"></i>金色：🔒 獨家平台 PROD</span>
+                <span><i style="--help-color:#65a30d"></i>草綠：獨家平台 UAT</span>
+                <span><i style="--help-color:#ca8a04"></i>金色：獨家平台 PROD</span>
                 <span><i style="--help-color:#2563eb"></i>藍色：PROD</span>
                 <span><b class="help-line is-dashed"></b>虛線：尚未發生</span>
                 <span><b class="help-line"></b>實心：時間已到或已發生</span>
               </div>
             </section>
             <section>
-              <h3>🔄 同步遊戲排程</h3>
+              <h3>同步遊戲排程</h3>
               <ol>
                 <li>開啟排程表時會自動讀取 Google 遊戲上線表，之後每 5 分鐘同步一次；也可按「同步遊戲排程」立即更新。</li>
                 <li>按「試算表變更」可查看遊戲、變更欄位及原值 → 新值。</li>
                 <li>只匯入預計上線日期為 2026/01/01（含）之後，且有有效上線時間的遊戲。</li>
                 <li>2026/01～2026/06 的遊戲只在預計上線當日建立一列藍色「遊戲上線」資料。</li>
                 <li>2026/07/01 起的一般遊戲會先建立 AM 確認（前 14 天）；勾選「AM 已確認」並儲存後，才建立行銷素材（前 8 天）、UAT／測試環境（前 7 天）及上線當日資料。</li>
-                <li>2026/08/01 起會參照「備註 1」：含「首發」或「獨家」時，先在上線前 14 天建立「向 AM 確認」。勾選「AM 已確認」並儲存後，首發遊戲會建立「⭐ 首發平台 UAT」及「⭐ 首發平台 PROD」；獨家遊戲會建立「🔒 獨家平台 UAT」及「🔒 獨家平台 PROD」。完整備註也會同步到排程內容。</li>
+                <li>2026/08/01 起會參照「備註 1」：含「首發」或「獨家」時，先在上線前 14 天建立「向 AM 確認」。勾選「AM 已確認」並儲存後，首發遊戲會建立「首發平台 UAT」及「首發平台 PROD」；獨家遊戲會建立「獨家平台 UAT」及「獨家平台 PROD」。完整備註也會同步到排程內容。</li>
                 <li>首次補入的歷史上線與流程資料不列入「試算表變更」；完成匯入後的新修改才會記錄。</li>
               </ol>
               <p class="schedule-help-note">同步只處理試算表中的遊戲上線日期，不影響手動建立的排程。</p>

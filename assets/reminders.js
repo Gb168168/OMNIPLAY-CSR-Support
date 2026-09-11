@@ -39,7 +39,7 @@
   const ensureUi = () => {
     document.querySelector('#enableReminderButton')?.remove();
     if (!document.querySelector('#reminderAlarmModal')) {
-      document.body.insertAdjacentHTML('beforeend', `<div class="reminder-alarm" id="reminderAlarmModal" hidden><div class="reminder-alarm-card" role="alertdialog" aria-modal="true"><div class="reminder-alarm-icon">⏰</div><h2 id="reminderAlarmTitle">提醒時間到了</h2><p id="reminderAlarmText"></p><div class="reminder-alarm-actions"><button class="secondary" id="reminderSnoozeButton" type="button">稍後 5 分鐘</button><button class="primary" id="reminderStopButton" type="button">停止鈴聲</button></div></div></div>`);
+      document.body.insertAdjacentHTML('beforeend', `<div class="reminder-alarm" id="reminderAlarmModal" hidden><div class="reminder-alarm-card" role="alertdialog" aria-modal="true"><h2 id="reminderAlarmTitle">提醒時間到了</h2><p id="reminderAlarmText"></p><div class="reminder-alarm-actions"><button class="secondary" id="reminderSnoozeButton" type="button">稍後 5 分鐘</button><button class="primary" id="reminderStopButton" type="button">停止鈴聲</button></div></div></div>`);
       document.querySelector('#reminderStopButton').addEventListener('click', stopAlarm);
       document.querySelector('#reminderSnoozeButton').addEventListener('click', snoozeAlarm);
     }

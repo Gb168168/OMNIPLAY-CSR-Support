@@ -280,7 +280,7 @@ const updateTodayWorking = () => {
     if (!workingSource) return;
     const externalPerson = externalPeople[name] || externalPeople[workingSource] || {};
     const hasPhoneDuty = sources.some((sourceName) => dashboardHasPhoneDuty(sourceName, todayNumber));
-    const displayName = `${name}${hasPhoneDuty ? '📱' : ''}`;
+    const displayName = `${name}${hasPhoneDuty ? '（值機）' : ''}`;
     groups[normalizeDashboardShift(externalPerson.shift)].push(displayName);
   });
   const rows = Object.entries(groups).filter(([, names]) => names.length > 0).map(([shift, names]) => `<div class="today-working-row"><span>${shift} - </span>${escapeDashboardHtml(names.join('、'))}</div>`);
@@ -403,7 +403,7 @@ const shiftRecordItems = (
       if (!activity) return null;
 
      return {
-    icon: isFireRecord(record) ? '🔥' : icon,
+    icon: '',
     time: formatRecordTime(activity.at),
     type,
     href: withRecordLink(href, record.id),
@@ -427,7 +427,7 @@ const scheduleItems = () => scheduleOccurrencesForDay().map((item) => {
     ? item.labelColor
     : '#3b82f6';
   return {
-    icon: '📅',
+    icon: '',
     time: allDay ? '全天' : `${pad2(item.occurrenceAt.getHours())}:${pad2(item.occurrenceAt.getMinutes())}`,
     type: '排程表',
     href: withRecordLink('service/schedule.html', item.id),
@@ -458,7 +458,7 @@ const reminderItems = (
       const reminderAt = recordReminderAt(record);
 
       return {
-          icon: icon || '⏰',
+          icon: '',
           time:formatRecordTime(reminderAt),
           type,
           href:withRecordLink(href,record.id),
@@ -475,15 +475,15 @@ const reminderItems = (
 };
 
 const todoSectionDefinitions = [
-  { key: 'service', label: '👥客服內部', types: ['排程表'] },
-  { key: 'work', label: '🗂️作業管理', types: ['日誌', '日誌 NEW', '收件匣', '交接', '提報', '對接追蹤', 'PROD告警紀錄'] },
-  { key: 'meeting', label: '📁會議歷程', types: ['會議紀錄'] },
-  { key: 'database', label: '🧠資料庫', types: ['知識庫', 'AI 資料庫'] }
+  { key: 'service', label: '客服內部', types: ['排程表'] },
+  { key: 'work', label: '作業管理', types: ['日誌', '日誌 NEW', '收件匣', '交接', '提報', '對接追蹤', 'PROD告警紀錄'] },
+  { key: 'meeting', label: '會議歷程', types: ['會議紀錄'] },
+  { key: 'database', label: '資料庫', types: ['知識庫', 'AI 資料庫'] }
 ];
 const todoTypeLabels = {
-  '排程表': '📅排程表', '日誌': '📒日誌', '日誌 NEW': '✨日誌 NEW', '收件匣': '📥收件匣',
-  '交接': '🤝交接', '提報': '📣提報', '對接追蹤': '🔎對接追蹤', 'PROD告警紀錄': '🚨PROD告警紀錄',
-  '會議紀錄': '📝會議紀錄', '知識庫': '📚知識庫', 'AI 資料庫': '🤖AI 資料庫'
+  '排程表': '排程表', '日誌': '日誌', '日誌 NEW': '日誌 NEW', '收件匣': '收件匣',
+  '交接': '交接', '提報': '提報', '對接追蹤': '對接追蹤', 'PROD告警紀錄': 'PROD告警紀錄',
+  '會議紀錄': '會議紀錄', '知識庫': '知識庫', 'AI 資料庫': 'AI 資料庫'
 };
 const todoSectionByKey = (key) => todoSectionDefinitions.find((section) => section.key === key);
 
@@ -578,13 +578,13 @@ const renderTodoList = () => {
   const items = [
     ...shiftRecordItems(dashboardState.handovers, {
       type: '交接',
-      icon: '📋',
+      icon: '',
       href: 'work/handover.html',
       fallback: '交接事項'
     }),
     ...shiftRecordItems(dashboardState.logs, {
       type: '日誌 NEW',
-      icon: '✨',
+      icon: '',
       href: 'work/log-new.html',
       fallback: '日誌 NEW'
     }),
@@ -595,38 +595,38 @@ const renderTodoList = () => {
     }),
     ...shiftRecordItems(dashboardState.reports, {
       type: '提報',
-      icon: '📌',
+      icon: '',
       href: 'work/report.html',
       fallback: '提報追蹤'
     }),
     ...shiftRecordItems(dashboardState.tracking, {
       type: '對接追蹤',
-      icon: '🔎',
+      icon: '',
       href: 'work/tracking.html',
       fallback: '對接追蹤',
       detailsFormatter: trackingTodoDetails
     }),
     ...shiftRecordItems(dashboardState.meetings, {
       type: '會議紀錄',
-      icon: '📝',
+      icon: '',
       href: 'meeting/meeting.html',
       fallback: '會議紀錄'
     }),
     ...reminderItems(dashboardState.handovers, {
       type: '交接',
-      icon: '📋',
+      icon: '',
       href: 'work/handover.html',
       fallback: '交接事項'
     }),
     ...reminderItems(dashboardState.reports, {
       type: '提報',
-      icon: '📌',
+      icon: '',
       href: 'work/report.html',
       fallback: '提報追蹤'
     }),
     ...reminderItems(dashboardState.tracking, {
       type: '對接追蹤',
-      icon: '🔎',
+      icon: '',
       href: 'work/tracking.html',
       fallback: '對接追蹤'
     }),
@@ -656,7 +656,7 @@ const renderTodoList = () => {
 
     if (item.type === '排程表') {
       const rangeSuffix = item.scheduleDateRange ? `｜${escapeDashboardHtml(item.scheduleDateRange)}` : '';
-      return `<strong>📅排程表 ${escapeDashboardHtml(item.title)}${rangeSuffix}</strong>`;
+      return `<strong>排程表 ${escapeDashboardHtml(item.title)}${rangeSuffix}</strong>`;
     }
 
     if (!details) {
@@ -707,11 +707,11 @@ const renderTodoList = () => {
                     ● ${escapeDashboardHtml(item.scheduleLabel)}
                    </span>`
                 : ''}
-              ${item.isCreated ? '<span class="todo-tag created">🆕 建立</span>' : ''}
-              ${item.isUpdated ? '<span class="todo-tag updated">✏️ 更新</span>' : ''}
+              ${item.isCreated ? '<span class="todo-tag created">建立</span>' : ''}
+              ${item.isUpdated ? '<span class="todo-tag updated">更新</span>' : ''}
               ${item.reminderEnabled
                 ? `<span class="todo-tag reminder">
-                    ⏰ ${escapeDashboardHtml(formatRecordTime(item.reminderTime))} 提醒
+                    ${escapeDashboardHtml(formatRecordTime(item.reminderTime))} 提醒
                    </span>`
                 : ''
                }
