@@ -424,7 +424,7 @@ const loadExternalLeave = async () => {
     setLeaveSyncTime(new Date(), false);
     if (leaveSourceStatus) {
       leaveSourceStatus.textContent = externalMaxDays === null
-        ? '⚠ 已連動休假資料，但缺少可休天數'
+        ? '已連動休假資料，但缺少可休天數'
         : '● 已連動公司休假系統';
     }
     staffList = sortStaffForLeave(staffList);
@@ -498,7 +498,7 @@ const renderDayCell = (staff, day) => {
   const holiday = getHolidayName(day);
   const marker = record.label ? '' : record.type === 'required' ? '<span class="leave-marker is-required">▲</span>' : record.type === 'leave' ? '<span class="leave-marker">▲</span>' : '';
   const leaveLabel = record.label ? `<span class="external-leave-label">${escapeHtml(record.label)}</span>` : '';
-  const specials = (record.specials || []).map((item) => item === 'phone' ? '📱' : item === 'event' ? (record.externalSymbol || '★') : '').join('');
+  const specials = (record.specials || []).map((item) => item === 'phone' ? '值機' : item === 'event' ? '公司活動' : '').join('、');
   return `<td class="leave-day ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''} ${isTodayDay(day) ? 'is-today' : ''}" data-staff-id="${staff.id}" data-day="${day}" title="${escapeHtml(holiday)}">
     <button type="button" class="leave-cell-button" data-action="toggle-leave" aria-label="${escapeHtml(canonicalLeaveStaffName(staff.name))} ${day} 號休假狀態"${editableAttribute()}>${marker}${leaveLabel}<span class="special-icons">${specials}</span></button>
   </td>`;

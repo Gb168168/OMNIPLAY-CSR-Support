@@ -69,10 +69,10 @@ const GAME_SCHEDULE_START_DATE = new Date(2026, 0, 1, 0, 0, 0, 0);
 const GAME_WORKFLOW_START_DATE = new Date(2026, 6, 1, 0, 0, 0, 0);
 const GAME_FIRST_LAUNCH_START_DATE = new Date(2026, 7, 1, 0, 0, 0, 0);
 const GAME_ONLINE_META = { labelId: 'google-game-prod', labelName: 'PROD', color: GAME_SCHEDULE_COLORS.prod };
-const GAME_FIRST_LAUNCH_UAT_META = { labelId: 'google-game-first-launch-uat', labelName: '⭐ 首發平台 UAT', color: GAME_SCHEDULE_COLORS.firstLaunchUat };
-const GAME_FIRST_LAUNCH_META = { labelId: 'google-game-first-launch', labelName: '⭐ 首發平台 PROD', color: GAME_SCHEDULE_COLORS.firstLaunch };
-const GAME_EXCLUSIVE_UAT_META = { labelId: 'google-game-exclusive-uat', labelName: '🔒 獨家平台 UAT', color: GAME_SCHEDULE_COLORS.exclusiveUat };
-const GAME_EXCLUSIVE_META = { labelId: 'google-game-exclusive', labelName: '🔒 獨家平台 PROD', color: GAME_SCHEDULE_COLORS.exclusive };
+const GAME_FIRST_LAUNCH_UAT_META = { labelId: 'google-game-first-launch-uat', labelName: '首發平台 UAT', color: GAME_SCHEDULE_COLORS.firstLaunchUat };
+const GAME_FIRST_LAUNCH_META = { labelId: 'google-game-first-launch', labelName: '首發平台 PROD', color: GAME_SCHEDULE_COLORS.firstLaunch };
+const GAME_EXCLUSIVE_UAT_META = { labelId: 'google-game-exclusive-uat', labelName: '獨家平台 UAT', color: GAME_SCHEDULE_COLORS.exclusiveUat };
+const GAME_EXCLUSIVE_META = { labelId: 'google-game-exclusive', labelName: '獨家平台 PROD', color: GAME_SCHEDULE_COLORS.exclusive };
 const GAME_EVENT_META = {
   'pm-confirmation': { labelId: 'google-game-pm', labelName: '向 AM 確認', color: GAME_SCHEDULE_COLORS.pm },
   'marketing-material': { labelId: 'google-game-marketing', labelName: '行銷素材待辦', color: GAME_SCHEDULE_COLORS.marketing },
@@ -88,8 +88,8 @@ const GAME_TITLE_PREFIX_PATTERN = /^(?:⭐ 首發／🔒 獨家平台|⭐ 首發
 
 const LABEL_CATEGORY_GROUPS = [
   { title: '-------流程-------', names: ['向 AM 確認', '行銷素材待辦', 'UAT', 'PROD'] },
-  { title: '-------首發-------', names: ['⭐ 首發平台 UAT', '⭐ 首發平台 PROD', '其他平台 UAT', '其他平台 PROD'] },
-  { title: '-------獨家-------', names: ['🔒 獨家平台 UAT', '🔒 獨家平台 PROD'] }
+  { title: '-------首發-------', names: ['首發平台 UAT', '首發平台 PROD', '其他平台 UAT', '其他平台 PROD'] },
+  { title: '-------獨家-------', names: ['獨家平台 UAT', '獨家平台 PROD'] }
 ];
 const LABEL_CATEGORY_ORDER = [
   '問題/需求-代辦提醒',
@@ -104,9 +104,13 @@ const canonicalScheduleLabelName = (name = '') => {
   if (normalized === '遊戲上線' || normalized === 'PORD') return 'PROD';
   if (normalized === '其他平台 UAT上線') return '其他平台 UAT';
   if (normalized === '其他平台 PROD上線' || normalized === '其他平台 PORD') return '其他平台 PROD';
-  if (['⭐ 首發／🔒 獨家平台', '⭐ 首發平台上線', '⭐ 首發平台正式上線'].includes(normalized)) return '⭐ 首發平台 PROD';
-  if (normalized === '⭐ 首發平台測試上線') return '⭐ 首發平台 UAT';
-  if (normalized === '🔒 獨家平台') return '🔒 獨家平台 PROD';
+  if (normalized === '⭐ 首發平台 UAT') return '首發平台 UAT';
+  if (normalized === '⭐ 首發平台 PROD') return '首發平台 PROD';
+  if (normalized === '🔒 獨家平台 UAT') return '獨家平台 UAT';
+  if (normalized === '🔒 獨家平台 PROD') return '獨家平台 PROD';
+  if (['⭐ 首發／🔒 獨家平台', '⭐ 首發平台上線', '⭐ 首發平台正式上線'].includes(normalized)) return '首發平台 PROD';
+  if (normalized === '⭐ 首發平台測試上線') return '首發平台 UAT';
+  if (normalized === '🔒 獨家平台') return '獨家平台 PROD';
   if (normalized === '代辦事項') return '問題/需求-代辦提醒';
   return normalized;
 };
@@ -784,7 +788,7 @@ const syncGameSchedules = async () => {
   } finally {
     gameScheduleSyncing = false;
     syncGameScheduleButton?.removeAttribute('disabled');
-    if (syncGameScheduleButton) syncGameScheduleButton.textContent = '🔄 同步遊戲排程';
+    if (syncGameScheduleButton) syncGameScheduleButton.textContent = '同步遊戲排程';
     startGameScheduleCountdown();
   }
 };
@@ -1396,7 +1400,7 @@ const showSpecials = (type, anchor) => {
     if (Number(day) !== selectedDate.getDate()) return '';
     return staffList.find((staff) => staff.id === staffId)?.name;
   }).filter(Boolean);
-  tooltipEl.innerHTML = `<strong>${type === 'phone' ? '📱 值公務機' : '🎰 公司活動'}｜${escapeHtml(toDateKey(selectedDate))}</strong><p>${names.length ? names.map(escapeHtml).join('、') : '當天沒有名單'}</p>`;
+  tooltipEl.innerHTML = `<strong>${type === 'phone' ? '值公務機' : '公司活動'}｜${escapeHtml(toDateKey(selectedDate))}</strong><p>${names.length ? names.map(escapeHtml).join('、') : '當天沒有名單'}</p>`;
   const rect = anchor.getBoundingClientRect();
   tooltipEl.style.right = `${Math.max(16, window.innerWidth - rect.right)}px`;
   tooltipEl.style.top = `${rect.bottom + 8}px`;
