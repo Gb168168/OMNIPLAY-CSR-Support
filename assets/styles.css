@@ -9909,8 +9909,31 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
 }
 
 
-/* 2026-08-16: Center desktop primary links without overlapping the brand or controls. */
+/* Keep both desktop navigation rows centered on the viewport, independently of
+   the brand width on the left and account controls on the right. */
 @media (min-width: 1201px) {
+  .sidebar.top-navigation {
+    grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr) !important;
+  }
+
+  .sidebar.top-navigation .sidebar-header {
+    justify-self: start;
+  }
+
+  .sidebar.top-navigation .top-nav-primary-links {
+    grid-column: 2 !important;
+    width: max-content !important;
+    justify-self: center;
+  }
+
+  .sidebar.top-navigation .top-nav-secondary {
+    grid-column: 1 / -1 !important;
+  }
+
+  .sidebar.top-navigation .sidebar-footer {
+    justify-self: end;
+  }
+
   .sidebar.top-navigation .top-nav-primary-links > :first-child {
     margin-left: auto !important;
   }
