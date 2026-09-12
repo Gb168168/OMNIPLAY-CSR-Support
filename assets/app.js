@@ -40,10 +40,11 @@ const sidebarItems = [
   ];
 const isActiveSidebarHref = (href) => (href === 'index.html' && isIndexPage) || window.location.pathname.split('/').pop() === href.split('/').pop();
 const currentSidebarGroup = () => sidebarItems.slice(1).find((group) => group.items.some((item) => isActiveSidebarHref(item.href))) || null;
+const renderSidebarIcon = (icon) => icon ? `<span class="icon">${icon}</span>` : '';
 const renderSidebarLink = (item) => {
   const classes = [item.className || 'sidebar-sub-item'];
   if (isActiveSidebarHref(item.href)) classes.push('is-active');
-  return `<a class="${classes.join(' ')}" href="${sidebarPath(item.href)}"><span class="icon">${item.icon}</span><span class="label">${item.label}</span></a>`;
+  return `<a class="${classes.join(' ')}" href="${sidebarPath(item.href)}">${renderSidebarIcon(item.icon)}<span class="label">${item.label}</span></a>`;
 };
 const renderSidebar = () => {
   if (!sidebar) return;
@@ -73,11 +74,11 @@ const renderSidebar = () => {
     <nav class="menu" aria-label="主功能表">
       <div class="top-nav-primary-links">
         ${renderSidebarLink(sidebarItems[0])}
-        ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}" aria-controls="${group.id}Menu" aria-expanded="false"><span class="icon">${group.icon}</span><span class="label">${group.title}</span><span class="mobile-category-caret" aria-hidden="true">›</span></a>`).join('')}
+        ${sidebarItems.slice(1).map((group) => `<a class="top-nav-category${group === activeGroup ? ' is-active' : ''}" data-group="${group.id}" href="${sidebarPath(group.items[0].href)}" aria-controls="${group.id}Menu" aria-expanded="false">${renderSidebarIcon(group.icon)}<span class="label">${group.title}</span><span class="mobile-category-caret" aria-hidden="true">›</span></a>`).join('')}
       </div>
       <div class="top-nav-secondary">
         ${sidebarItems.slice(1).map((group) => `<section class="sidebar-group${group === activeGroup ? ' is-current-group' : ''}" data-group="${group.id}" aria-labelledby="${group.id}" id="${group.id}Menu">
-          <h2 class="sidebar-group-title" id="${group.id}"><span class="icon">${group.icon}</span><span class="label">${group.title}</span></h2>
+          <h2 class="sidebar-group-title" id="${group.id}">${renderSidebarIcon(group.icon)}<span class="label">${group.title}</span></h2>
           <div class="top-nav-submenu">${group.items.map(renderSidebarLink).join('')}</div>
         </section>`).join('')}
       </div>

@@ -11995,3 +11995,18 @@ body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-textarea {
     width: 100%;
   }
 }
+
+
+/* Emoji-free navigation: center labels independently from the category caret. */
+@media (min-width: 769px) {
+  .sidebar.top-navigation .home-link,
+  .sidebar.top-navigation .top-nav-category,
+  .sidebar.top-navigation .top-nav-submenu .sidebar-sub-item {
+    justify-content: center;
+  }
+
+  .sidebar.top-navigation .top-nav-category .mobile-category-caret {
+    position: absolute;
+    right: 8px;
+  }
+}
