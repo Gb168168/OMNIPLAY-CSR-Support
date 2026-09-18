@@ -1404,8 +1404,8 @@ const renderIconActions = (record = {}) => {
   const pinned = Boolean(currentUser && record.pins?.[currentUser]);
   return `<td class="icon-actions col-marker marker-cell" data-label="標記">
     <span class="marker-actions-row">
-      <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="所有人可看">公開</span>
-      <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">釘選</span>
+      <span class="fire-btn ${record.fire ? 'active' : ''}" data-icon-action="fire" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="所有人可看">🔥</span>
+      <span class="pin-btn ${pinned ? 'active' : ''}" data-icon-action="pin" data-doc-id="${escapeHtml(record.id)}" role="button" tabindex="0" title="個人釘選">📌</span>
     </span>
   </td>`;
 };
