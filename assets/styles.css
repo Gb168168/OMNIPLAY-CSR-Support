@@ -12049,3 +12049,18 @@ body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-textarea {
     right: 8px;
   }
 }
+
+/* Keep the native file picker button without its browser-generated filename text. */
+.meeting-file-upload > input[type="file"],
+.meeting-detail-table .image-upload-area > input[type="file"] {
+  width: 96px;
+  max-width: 96px;
+  flex: 0 0 96px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0;
+}
+.meeting-file-upload > input[type="file"]::file-selector-button,
+.meeting-detail-table .image-upload-area > input[type="file"]::file-selector-button {
+  font-size: 13px;
+}
