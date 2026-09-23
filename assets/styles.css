@@ -11258,6 +11258,15 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
   }
 }
 
+/* 會議日期／時間欄名在緊湊四欄版面維持單行。 */
+@media (min-width: 1200px) {
+  .meeting-info-datetime > label {
+    padding-inline: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+}
+
 /* 一般筆電保留兩欄，但壓縮標題欄。 */
 @media (min-width: 901px) and (max-width: 1199px) {
   .meeting-info-cell {
