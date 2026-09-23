@@ -520,11 +520,22 @@ const showForm = (record = {}) => {
   setFormEditable();
 };
 
+const resizeMeetingTextarea = (textarea) => {
+  if (!textarea || textarea.offsetParent === null) return;
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+};
+
+const resizeMeetingTextareas = (container) => {
+  container?.querySelectorAll('.meeting-detail-table textarea').forEach(resizeMeetingTextarea);
+};
+
 const renderRows = (key, rows = []) => {
   const body = document.querySelector(`[data-tab-body="${key}"]`);
   const data = rows.length ? [...rows, {}] : [{}];
   body.innerHTML = data.map((row, index) => rowTemplate(key, index, row)).join('');
   data.forEach((row, index) => setSelectValue(body.querySelector(`[data-row-index="${index}"] [data-field="proposer"]`), row.proposer || ''));
+  resizeMeetingTextareas(body);
 };
 
 
@@ -584,6 +595,7 @@ const switchTab = (key) => {
   meetingState.activeTab = key;
   document.querySelectorAll('[data-meeting-tab]').forEach((button) => button.classList.toggle('is-active', button.dataset.meetingTab === key));
   document.querySelectorAll('[data-tab-panel]').forEach((panel) => { panel.hidden = panel.dataset.tabPanel !== key; });
+  resizeMeetingTextareas(document.querySelector(`[data-tab-panel="${key}"]`));
 };
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
@@ -844,8 +856,13 @@ document.querySelector('#meetingForm')?.addEventListener('keydown', (event) => {
 });
 
 document.querySelector('#meetingForm')?.addEventListener('input', (event) => {
-  if (event.target.matches('[data-tab-body] textarea')) appendBlankMeetingRowIfNeeded(event.target);
+  if (event.target.matches('[data-tab-body] textarea')) {
+    resizeMeetingTextarea(event.target);
+    appendBlankMeetingRowIfNeeded(event.target);
+  }
 });
+
+window.addEventListener('resize', () => resizeMeetingTextareas(document.querySelector('#meetingTabPanels')));
 
 document.querySelector('#meetingForm')?.addEventListener('change', async (event) => {
   if (event.target.matches('[data-tab-body] select')) appendBlankMeetingRowIfNeeded(event.target);
