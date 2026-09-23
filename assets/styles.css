@@ -1138,6 +1138,7 @@ button:hover { transform: translateY(-1px); }
 }
 
 .schedule-meta p { margin: 0; }
+.schedule-meta:not(:has(> :not([hidden]))) { display: none; }
 .schedule-status[data-type="success"] { color: var(--primary); }
 .schedule-status[data-type="error"] { color: #fecaca; }
 
