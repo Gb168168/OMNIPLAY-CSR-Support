@@ -178,7 +178,7 @@ const setFormEditable = () => {
   });
   document.querySelectorAll('[data-attendee-toggle]').forEach((button) => { button.disabled = !editable; });
   updateAttendeeDropdowns();
-  document.querySelectorAll('[data-add-row], [data-delete-row], #saveMeetingButton, #addMeetingTabButton, [data-delete-tab], #staffSettingsButton').forEach((button) => {
+  document.querySelectorAll('[data-delete-row], #saveMeetingButton, #addMeetingTabButton, [data-delete-tab], #staffSettingsButton').forEach((button) => {
     button.hidden = !editable;
     button.disabled = !editable;
   });
@@ -259,7 +259,7 @@ const renderTabs = (tabs = meetingState.tabs) => {
   }).join('') + '<button class="meeting-tab meeting-tab-add" type="button" id="addMeetingTabButton">＋</button>';
   panelsEl.innerHTML = meetingState.tabs.map((tab, index) => {
     const key = makeTabKey(tab.name, index);
-    return `<div class="meeting-tab-panel" data-tab-panel="${escapeHtml(key)}" ${key === meetingState.activeTab ? '' : 'hidden'}><div class="ragic-subtable-head"><h3>${escapeHtml(tab.name)}</h3><button class="secondary" type="button" data-add-row="${escapeHtml(key)}">+ 新增一列</button></div><div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="${escapeHtml(key)}"></tbody></table></div></div>`;
+    return `<div class="meeting-tab-panel" data-tab-panel="${escapeHtml(key)}" ${key === meetingState.activeTab ? '' : 'hidden'}><div class="ragic-table-wrap"><table class="meeting-detail-table"><thead><tr><th>提出者</th><th>內容</th><th>解決</th><th>備註</th><th>圖片</th><th>操作</th></tr></thead><tbody data-tab-body="${escapeHtml(key)}"></tbody></table></div></div>`;
   }).join('');
   meetingState.tabs.forEach((tab, index) => renderRows(makeTabKey(tab.name, index), tab.rows || []));
   // 分頁內容每次重建後，同步刷新新增、刪除等操作按鈕的顯示狀態。
@@ -522,13 +522,13 @@ const showForm = (record = {}) => {
 
 const renderRows = (key, rows = []) => {
   const body = document.querySelector(`[data-tab-body="${key}"]`);
-  const data = rows.length ? rows : [{}];
+  const data = rows.length ? [...rows, {}] : [{}];
   body.innerHTML = data.map((row, index) => rowTemplate(key, index, row)).join('');
   data.forEach((row, index) => setSelectValue(body.querySelector(`[data-row-index="${index}"] [data-field="proposer"]`), row.proposer || ''));
 };
 
 
-const appendAndFocusMeetingRow = (body) => {
+const appendAndFocusMeetingRow = (body, focus = true) => {
   if (!body) return;
   const key = body.dataset.tabBody;
   const index = body.querySelectorAll('tr').length;
@@ -536,7 +536,19 @@ const appendAndFocusMeetingRow = (body) => {
   const nextRow = body.querySelector(`[data-row-index="${index}"]`);
   setSelectValue(nextRow?.querySelector('[data-field="proposer"]'), '');
   setFormEditable();
-  nextRow?.querySelector('[data-field="proposer"]')?.focus();
+  if (focus) nextRow?.querySelector('[data-field="proposer"]')?.focus();
+};
+
+const appendBlankMeetingRowIfNeeded = (control) => {
+  if (!canEditMeeting()) return;
+  const row = control?.closest('tr');
+  const body = row?.closest('[data-tab-body]');
+  if (!body || row !== body.lastElementChild) return;
+  const hasValue = [...row.querySelectorAll('[data-field]')].some((field) =>
+    field.dataset.field === 'image'
+      ? normalizeMeetingImages(JSON.parse(field.dataset.imageValues || '[]')).length > 0
+      : Boolean(field.value?.trim()));
+  if (hasValue) appendAndFocusMeetingRow(body, false);
 };
 
 const focusFirstIncompleteMeetingField = (row) => {
@@ -650,6 +662,7 @@ const processImageFile = async (file, container) => {
     const url = await uploadMeetingImageOriginal(file);
     preview.remove();
     showImagePreview(url, container);
+    appendBlankMeetingRowIfNeeded(container.querySelector('[data-field="image"]'));
   } finally {
     URL.revokeObjectURL(objectUrl);
     preview.remove();
@@ -830,7 +843,12 @@ document.querySelector('#meetingForm')?.addEventListener('keydown', (event) => {
   else row.nextElementSibling?.querySelector('[data-field="proposer"]')?.focus();
 });
 
+document.querySelector('#meetingForm')?.addEventListener('input', (event) => {
+  if (event.target.matches('[data-tab-body] textarea')) appendBlankMeetingRowIfNeeded(event.target);
+});
+
 document.querySelector('#meetingForm')?.addEventListener('change', async (event) => {
+  if (event.target.matches('[data-tab-body] select')) appendBlankMeetingRowIfNeeded(event.target);
   const input = event.target.closest('[data-field="image"]');
   if (!input?.files?.[0]) return;
   try {
@@ -864,28 +882,13 @@ document.querySelector('#meetingForm')?.addEventListener('click', async (event) 
     removeButton.closest('.ragic-file-preview')?.remove();
     return;
   }
-  const addKey = event.target.closest('[data-add-row]')?.dataset.addRow;
-  if (addKey && canEditMeeting()) {
-    try {
-      const currentRows = await Promise.all([...document.querySelectorAll(`[data-tab-body="${addKey}"] tr`)].map(async (row) => {
-        const item = {};
-        for (const field of detailFields) {
-          if (field === 'image') {
-            const control = row.querySelector('[data-field="image"]');
-            item.image = normalizeMeetingImages(control?.dataset.imageValues ? JSON.parse(control.dataset.imageValues) : []);
-          } else {
-            item[field] = row.querySelector(`[data-field="${field}"]`)?.value || '';
-          }
-        }
-        return item;
-      }));
-      renderRows(addKey, [...currentRows, {}]);
-    } catch (error) {
-      alert(error.message || '圖片處理失敗，請稍後再試。');
-    }
-  }
   const deleteKey = event.target.closest('[data-delete-row]')?.dataset.deleteRow;
-  if (deleteKey && canEditMeeting()) event.target.closest('tr')?.remove();
+  if (deleteKey && canEditMeeting()) {
+    const body = event.target.closest('[data-tab-body]');
+    event.target.closest('tr')?.remove();
+    if (body && !body.querySelector('tr')) renderRows(deleteKey);
+    else appendBlankMeetingRowIfNeeded(body?.lastElementChild?.querySelector('[data-field]'));
+  }
   const image = event.target.closest('[data-image]')?.dataset.image;
   if (image) openImagePreview(image);
 });
