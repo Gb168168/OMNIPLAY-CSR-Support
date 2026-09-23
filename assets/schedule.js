@@ -1201,8 +1201,8 @@ const renderCalendar = () => {
       .map((day) => {
         const key = toDateKey(day);
         const items = (schedulesByDay[key] || []).sort(sortCalendarItems);
-        const count = items.length > 2 ? `<span class="mobile-agenda-more">＋${items.length - 2}</span>` : '';
-        const events = items.slice(0, 2).map(calendarEventHtml).join('');
+        const count = items.length > 3 ? `<span class="mobile-agenda-more">＋${items.length - 3}</span>` : '';
+        const events = items.slice(0, 3).map(calendarEventHtml).join('');
         return `<button class="calendar-day mobile-agenda-day weekday-${day.getDay()} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}" data-item-count="${items.length}">
           <span class="mobile-agenda-date"><strong>${day.getDate()}</strong><small>週${weekdays[day.getDay()]}</small></span>
           <span class="day-events">${events || '<span class="mobile-agenda-empty">沒有排程</span>'}</span>${count}
@@ -1217,10 +1217,10 @@ const renderCalendar = () => {
     const items = (schedulesByDay[key] || []).sort(sortCalendarItems);
     const otherMonth = day.getMonth() !== currentDate.getMonth() && viewMode === 'month';
     const countBadgeBackground = getDayCountBackground(items);
-    const countBadge = items.length > 2
+    const countBadge = items.length > 3
       ? `<span class="day-count" style="--day-count-bg:${escapeHtml(countBadgeBackground)}" title="點擊查看本日全部 ${items.length} 則事項">${items.length}</span>`
       : '';
-    const visibleItems = items.slice(0, 2);
+    const visibleItems = items.slice(0, 3);
     return `<button class="calendar-day weekday-${day.getDay()} ${otherMonth ? 'is-muted' : ''} ${isSameDay(day, today) ? 'is-today' : ''} ${isSameDay(day, selectedDate) ? 'is-selected' : ''}" type="button" data-date="${key}" data-item-count="${items.length}">
       <span class="day-heading"><span class="day-number">${day.getDate()}</span>${countBadge}</span>
       <span class="day-events" aria-label="本日 ${items.length} 則事項">${visibleItems.map(calendarEventHtml).join('')}</span>
