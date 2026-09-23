@@ -2694,6 +2694,7 @@ textarea,
 .meeting-detail-table th:nth-child(4) { width: 15%; }
 .meeting-detail-table th:nth-child(5) { width: 10%; }
 .meeting-detail-table th:nth-child(6) { width: 7%; }
+.meeting-detail-table textarea { overflow-y: hidden; resize: none; }
 .meeting-detail-table textarea[data-field="content"],
 .meeting-detail-table textarea[data-field="solution"] { min-height: 80px; }
 .meeting-detail-table textarea[data-field="note"] { min-height: 60px; }
