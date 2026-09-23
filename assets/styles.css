@@ -11219,28 +11219,39 @@ body .app-shell:has(.mobile-quick-nav) > .main-content {
     border-right: 0;
   }
   .meeting-info-files {
-    grid-column: span 1;
+    grid-column: span 2;
     border-right: 1px solid var(--border);
   }
   .meeting-info-note {
-    grid-column: span 3;
+    grid-column: span 2;
     border-right: 0;
   }
   .meeting-info-files .meeting-file-upload {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
     min-height: 64px;
     padding: 8px;
-    gap: 6px;
+    gap: 8px;
+  }
+  .meeting-info-files .meeting-file-upload > div:first-child { white-space: nowrap; }
+  .meeting-info-files .meeting-file-upload > input[type="file"] {
+    flex: 0 0 210px;
+    width: 210px;
+    height: auto;
+    min-height: 0;
+  }
+  .meeting-info-files .meeting-file-list {
+    flex: 1 1 300px;
+    min-width: 0;
   }
   .meeting-info-files .meeting-file-item {
     max-width: 100%;
     min-width: 0;
-    flex-wrap: wrap;
-    border-radius: 14px;
+    white-space: nowrap;
   }
-  .meeting-info-files .meeting-file-name {
-    min-width: 0;
-    flex: 1 1 120px;
-  }
+  .meeting-info-files .meeting-file-name { min-width: 0; }
+
   .meeting-info-cell label {
     padding: 10px 12px;
   }
