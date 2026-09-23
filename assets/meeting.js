@@ -581,7 +581,7 @@ const rowTemplate = (key, index, row = {}) => `
     <td><textarea data-field="note" rows="2">${escapeHtml(row.note || '')}</textarea></td>
     <td>
       <div class="image-upload-area" tabindex="0">
-        <div>選擇檔案 或 Ctrl+V 貼上圖片</div>
+        <div>Ctrl+V 貼上圖片</div>
         <input data-field="image" type="file" accept="image/*" multiple data-image-values="${escapeHtml(JSON.stringify(normalizeMeetingImages(row.images ?? row.image)))}">
         <div class="meeting-image-preview-list">${normalizeMeetingImages(row.images ?? row.image).map((image) => `<span class="ragic-file-preview meeting-image-preview image-upload-preview" data-image="${escapeHtml(image)}"><img src="${escapeHtml(image)}" alt="圖片預覽"><span>檢視</span><button class="image-preview-remove" type="button" aria-label="移除圖片">×</button></span>`).join('')}</div>
       </div>
