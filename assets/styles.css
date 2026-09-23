@@ -4473,6 +4473,13 @@ body {
   overflow: visible;
 }
 
+@media (min-width: 1600px) {
+  #meetingFormView:not([hidden]) {
+    width: min(100%, 1440px);
+    margin-inline: auto;
+  }
+}
+
 #meetingFormView > .meeting-form {
   min-height: auto;
   overflow: visible;
