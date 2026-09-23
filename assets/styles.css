@@ -2672,7 +2672,7 @@ textarea,
 }
 .meeting-tab-panel { background: var(--surface); }
 .meeting-detail-table {
-  width: 100%;
+  width: min(100%, 1280px);
   min-width: 980px;
   table-layout: fixed;
   border-collapse: collapse;
@@ -2694,6 +2694,14 @@ textarea,
 .meeting-detail-table th:nth-child(4) { width: 15%; }
 .meeting-detail-table th:nth-child(5) { width: 10%; }
 .meeting-detail-table th:nth-child(6) { width: 7%; }
+@media (min-width: 1200px) {
+  .meeting-detail-table th:nth-child(1) { width: 10%; }
+  .meeting-detail-table th:nth-child(2) { width: 28%; }
+  .meeting-detail-table th:nth-child(3) { width: 28%; }
+  .meeting-detail-table th:nth-child(4) { width: 14%; }
+  .meeting-detail-table th:nth-child(5) { width: 13%; }
+  .meeting-detail-table th:nth-child(6) { width: 7%; }
+}
 .meeting-detail-table textarea { overflow-y: hidden; resize: none; }
 .meeting-detail-table textarea[data-field="content"],
 .meeting-detail-table textarea[data-field="solution"] { min-height: 80px; }
