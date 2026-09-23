@@ -2425,6 +2425,8 @@ textarea,
   overflow: hidden;
   background: var(--table-row);
 }
+.meeting-info-table:has(.multi-select-dropdown.show) { overflow: visible; }
+.meeting-info-cell:has(.multi-select-dropdown.show) { position: relative; z-index: 2; }
 .meeting-info-cell {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
