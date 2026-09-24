@@ -143,7 +143,9 @@ const populateStaffSelects = () => {
   const options = staffOptions();
   document.querySelectorAll('[data-staff-select]').forEach((select) => {
     const values = [...select.selectedOptions].map((option) => option.value);
-    select.innerHTML = select.multiple ? options : `<option value="">請選擇</option>${options}`;
+    const historical = values.filter((value) => value && !staffNames().includes(value))
+      .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+    select.innerHTML = (select.multiple ? '' : '<option value="">請選擇</option>') + options + historical;
     [...select.options].forEach((option) => { option.selected = values.includes(option.value); });
     updateAttendeeDropdown(select);
   });
@@ -235,6 +237,11 @@ const setSelectValue = (control, value) => {
     return;
   }
   const values = Array.isArray(value) ? value : [value].filter(Boolean);
+  if (control.hasAttribute('data-staff-select')) {
+    values.forEach((name) => {
+      if (name && ![...control.options].some((option) => option.value === name)) control.add(new Option(name, name));
+    });
+  }
   [...control.options].forEach((option) => { option.selected = values.includes(option.value); });
   updateAttendeeDropdown(control);
 };
@@ -579,7 +586,10 @@ const showForm = (record = {}) => {
   document.querySelector('#meetingDate').value = record.date || today();
   document.querySelector('#meetingTime').value = record.time || currentTime();
   populateLocationSelect();
-  document.querySelector('#meetingLocation').value = MEETING_LOCATIONS.includes(record.location) ? record.location : MEETING_LOCATIONS[0];
+  const locationSelect = document.querySelector('#meetingLocation');
+  if (record.location && !MEETING_LOCATIONS.includes(record.location)) locationSelect.add(new Option(record.location, record.location));
+  if (record.id && !record.location) locationSelect.add(new Option('請選擇', ''), 0);
+  locationSelect.value = record.location || (record.id ? '' : MEETING_LOCATIONS[0]);
   document.querySelector('#meetingSerial').value = record.serial || record.number || getNextSerial();
   document.querySelector('#meetingStatus').value = record.status || (meetingStatusInfo(record).key === 'completed' ? 'completed' : 'auto');
   syncPostponedRequiredFields();
@@ -863,6 +873,8 @@ const initMeetingPage = async () => {
   }, (error) => console.error('讀取人員設定失敗：', error));
   meetingCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
     meetingState.records = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    meetingState.recordsReady = true;
+    document.dispatchEvent(new Event('meeting-records-ready'));
     renderList();
     openMeetingFromQuery();
     setFormEditable();
