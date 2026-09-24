@@ -24,7 +24,7 @@
       <section class="ragic-card" id="meetingListView" aria-label="會議紀錄列表">
         <div class="ragic-toolbar">
           <div><h2>會議紀錄列表</h2><p>顯示所有會議紀錄，點選任一列即可編輯。</p></div>
-          <div class="topbar-actions"><button class="secondary" id="designMeetingTableButton" type="button" hidden>設計表格</button><button class="primary" id="newRecordButton" type="button">+ 新增</button></div>
+          <div class="topbar-actions"><button class="secondary" id="designMeetingTableButton" type="button" hidden>設計表格</button><button class="secondary" id="importMeetingButton" type="button" hidden>匯入會議紀錄</button><input id="importMeetingInput" type="file" accept=".json,application/json" hidden><button class="primary" id="newRecordButton" type="button">+ 新增</button></div>
         </div>
         <div class="ragic-table-wrap">
           <table class="ragic-table meeting-list-table">
@@ -104,6 +104,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
-  <script src="../assets/meeting.js?v=20260924-weekly-meetings"></script>
+  <script src="../assets/meeting.js?v=20260924-weekly-meetings"></script>\n  <script src="../assets/meeting-import.js?v=20260924-ragic-import"></script>
 </body>
 </html>
