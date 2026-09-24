@@ -561,6 +561,14 @@ const saveMeetingTableDesign = async () => {
   alert('會議紀錄表格設計已儲存');
 };
 
+const syncPostponedRequiredFields = () => {
+  const postponed = document.querySelector('#meetingStatus')?.value === 'postponed';
+  for (const id of ['meetingChair', 'meetingRecorder']) {
+    const control = document.querySelector(`#${id}`);
+    if (control) control.required = !postponed;
+  }
+};
+
 const showForm = (record = {}) => {
   meetingState.currentId = record.id || null;
   updateMeetingUrl(meetingState.currentId || '');
@@ -574,6 +582,7 @@ const showForm = (record = {}) => {
   document.querySelector('#meetingLocation').value = MEETING_LOCATIONS.includes(record.location) ? record.location : MEETING_LOCATIONS[0];
   document.querySelector('#meetingSerial').value = record.serial || record.number || getNextSerial();
   document.querySelector('#meetingStatus').value = record.status || (meetingStatusInfo(record).key === 'completed' ? 'completed' : 'auto');
+  syncPostponedRequiredFields();
   document.querySelector('#meetingNote').value = record.note || '';
   populateStaffSelects();
   setSelectValue(document.querySelector('#meetingChair'), record.chair || '');
@@ -861,6 +870,7 @@ const initMeetingPage = async () => {
   });
 };
 
+document.querySelector('#meetingStatus')?.addEventListener('change', syncPostponedRequiredFields);
 document.querySelector('#newRecordButton')?.addEventListener('click', () => showForm());
 document.querySelector('#backToListButton')?.addEventListener('click', showList);
 document.querySelector('#meetingTableBody')?.addEventListener('click', (event) => {
