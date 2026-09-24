@@ -292,7 +292,11 @@ const meetingStatusInfo = (record = {}) => {
 
 const renderList = () => {
   const body = document.querySelector('#meetingTableBody');
-  body.innerHTML = meetingState.records.map((record) => {
+  body.innerHTML = [...meetingState.records]
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '')
+      || (b.time || '').localeCompare(a.time || '')
+      || (b.serial || b.number || '').localeCompare(a.serial || a.number || ''))
+    .map((record) => {
     const status = meetingStatusInfo(record);
     return `
     <tr class="meeting-status-row meeting-status-${status.key}" data-id="${escapeHtml(record.id)}" tabindex="0">
