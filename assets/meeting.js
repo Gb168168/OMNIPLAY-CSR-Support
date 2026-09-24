@@ -51,6 +51,74 @@ const getNextSerial = () => {
   return `MTG-${String(max + 1).padStart(6, '0')}`;
 };
 
+// One month of Wednesday 19:30 meetings, keyed by their originally planned date.
+const weeklyMeetingDates = (year, monthIndex) => {
+  const dates = [];
+  const days = new Date(year, monthIndex + 1, 0).getDate();
+  for (let day = 1; day <= days; day += 1) {
+    if (new Date(year, monthIndex, day).getDay() !== 3) continue;
+    dates.push(`${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+  }
+  return dates;
+};
+const nextWeeklyDate = (date) => {
+  const next = new Date(`${date}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 7);
+  return next.toISOString().slice(0, 10);
+};
+const isWeeklyMeeting = (record) => record.time === '19:30'
+  && /^\d{4}-\d{2}-\d{2}$/.test(record.date || '')
+  && new Date(`${record.date}T12:00:00Z`).getUTCDay() === 3;
+let generatingMeetingMonth = false;
+const generatedMeetingMonths = new Set();
+const ensureCurrentMonthMeetings = async () => {
+  if (generatingMeetingMonth || !canEditMeeting() || !meetingCollection) return;
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  if (generatedMeetingMonths.has(monthKey)) return;
+  generatingMeetingMonth = true;
+  try {
+    const known = new Set(meetingState.records.filter(isWeeklyMeeting).map((record) => record.date));
+    meetingState.records.forEach((record) => {
+      if (record.weeklyScheduledFor) known.add(record.weeklyScheduledFor);
+    });
+    let nextSerialNumber = Number(getNextSerial().match(/\d+$/)?.[0] || 1);
+    for (const date of weeklyMeetingDates(now.getFullYear(), now.getMonth())) {
+      if (known.has(date)) continue;
+      const recordRef = meetingCollection.doc(`weekly-${date}`);
+      if ((await recordRef.get()).exists) continue;
+      await recordRef.set({
+        date, time: '19:30', status: 'auto',
+        serial: `MTG-${String(nextSerialNumber++).padStart(6, '0')}`,
+        weeklyScheduledFor: date,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      known.add(date);
+    }
+    generatedMeetingMonths.add(monthKey);
+  } catch (error) {
+    console.error('產生當月週三例會失敗：', error);
+  } finally {
+    generatingMeetingMonth = false;
+  }
+};
+
+// Move later Wednesday meetings from the end backward so their content stays with each record.
+const planWeeklyPostponement = (date, currentId) => {
+  const later = meetingState.records.filter((record) => record.id !== currentId
+    && isWeeklyMeeting(record) && record.date > date
+    && !['cancelled', 'completed', 'postponed'].includes(record.status));
+  const movingIds = new Set(later.map((record) => record.id));
+  const targetDates = new Set([nextWeeklyDate(date), ...later.map((record) => nextWeeklyDate(record.date))]);
+  if (targetDates.size !== later.length + 1
+    || meetingState.records.some((record) => record.id !== currentId && !movingIds.has(record.id)
+      && record.time === '19:30' && targetDates.has(record.date))) {
+    throw new Error('後續週三 19:30 已有其他會議，請先調整衝突的日期，再設定延期。');
+  }
+  return later.sort((a, b) => b.date.localeCompare(a.date));
+};
+
 const staffNames = () => meetingState.staff.map((staff) => typeof staff === 'string' ? staff : staffName(staff)).filter(Boolean);
 const staffOptions = () => staffNames().map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
 const staffDatalistOptions = () => staffNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join('');
@@ -789,6 +857,7 @@ const initMeetingPage = async () => {
     renderList();
     openMeetingFromQuery();
     setFormEditable();
+    void ensureCurrentMonthMeetings();
   });
 };
 
@@ -976,8 +1045,25 @@ document.querySelector('#meetingForm')?.addEventListener('submit', async (event)
   saveButton.disabled = true;
   saveButton.textContent = '儲存中...';
   let meetingSaved = false;
+  const shiftedRecords = [];
   try {
     const data = await readForm();
+    const previous = existingRecord();
+    if (data.status === 'postponed' && previous.status !== 'postponed' && isWeeklyMeeting(data)) {
+      const originalDate = data.date;
+      const later = planWeeklyPostponement(originalDate, meetingState.currentId);
+      for (const record of later) {
+        await meetingCollection.doc(record.id).set({
+          date: nextWeeklyDate(record.date),
+          weeklyScheduledFor: record.weeklyScheduledFor || record.date,
+          updatedAt: new Date()
+        }, { merge: true });
+        shiftedRecords.push(record);
+      }
+      data.date = nextWeeklyDate(originalDate);
+      data.status = 'auto';
+      data.weeklyScheduledFor = previous.weeklyScheduledFor || originalDate;
+    }
     data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
     let recordRef;
     if (meetingState.currentId) {
@@ -1001,6 +1087,19 @@ document.querySelector('#meetingForm')?.addEventListener('submit', async (event)
     showList();
   } catch (error) {
     console.error(error);
+    if (!meetingSaved) {
+      for (const record of shiftedRecords.reverse()) {
+        try {
+          await meetingCollection.doc(record.id).set({
+            date: record.date,
+            weeklyScheduledFor: record.weeklyScheduledFor || record.date,
+            updatedAt: new Date()
+          }, { merge: true });
+        } catch (rollbackError) {
+          console.error('還原延期排程失敗：', rollbackError);
+        }
+      }
+    }
     alert(meetingSaved ? `會議內容已儲存，但附件上傳失敗：${error.message || '請稍後再試。'}` : (error.message || '儲存失敗，請稍後再試。'));
   } finally {
     saveButton.disabled = false;
