@@ -285,7 +285,11 @@ const meetingStatusInfo = (record = {}) => {
 
 const renderList = () => {
   const body = document.querySelector('#meetingTableBody');
-  body.innerHTML = meetingState.records.map((record) => {
+  // Sort on every render so new records and date changes keep their meeting-date position.
+  const records = [...meetingState.records].sort((a, b) =>
+    String(b.date || '').localeCompare(String(a.date || ''))
+    || String(b.time || '').localeCompare(String(a.time || '')));
+  body.innerHTML = records.map((record) => {
     const status = meetingStatusInfo(record);
     return `
     <tr class="meeting-status-row meeting-status-${status.key}" data-id="${escapeHtml(record.id)}" tabindex="0">
