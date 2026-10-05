@@ -280,9 +280,9 @@ const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(current
   const partner = phoneDutyPartners[canonicalLeaveStaffName(staff.name)];
   if (!partner || !isWorkingForFlexible(externalRecordFor(staff.name, day))) return false;
   if (!hasPhoneDuty(partner, day)) return false;
-  // 星期三早、晚班皆不可彈性早退。
+  // 星期三僅早班不可彈性早退；晚班不受星期三限制。
   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-  return date.getDay() !== 3;
+  return !(getStaffShift(staff) === '早' && date.getDay() === 3);
 });
 const renderSummaryGroup = (shift, mode) => {
   const rows = staffList
