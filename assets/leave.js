@@ -64,6 +64,12 @@ currentMonth.setDate(1);
 let staffList = [];
 let leaveData = { records: {}, quotas: {}, shifts: {}, quota: 8 };
 let externalLeaveData = {};
+// 2026-10-05 中魁:公司休假系統「本月公告」標「補薪」的日期(例:10/10 國慶日 補薪、10/25 光復節 補薪),
+// 由後端鏡射 /api/ext/leave 的 payMakeupDays 提供。null=無法確認(還沒載入 / 讀不到 / 沒給)→ 彈性早退暫停;
+// Set=確定(空的=確定這個月沒有)。⛔ 不可把「不知道」當成「沒有」。
+let externalPayMakeupDays = null;
+// 這個月的假表讀取狀態:loading=還在讀(不秀「無法確認」);success / error=讀完了(補薪日還是 null 就秀警告)。
+let externalLeaveLoadState = 'loading';
 let externalMaxDays = null;
 let externalLeaveLoadToken = 0;
 let shiftLoadToken = 0;
@@ -275,17 +281,12 @@ const buildPhoneDutyPlan = () => {
 const hasPhoneDuty = (name, day) =>
   buildPhoneDutyPlan().get(canonicalLeaveStaffName(name))?.has(Number(day)) === true;
 
-// 2026-10-05 中魁拍板:公告標示「補薪」的日期(經公司休假系統鏡射,當日任何人的格子帶「補薪」字樣)=補薪日,早晚班全員不得彈性早退。
-// ⚠️「補(天)」是補休不是補薪 → 只認「補薪」兩字連寫,不可放寬成單一「補」字。
-// 掃全部鏡射人員(不限四位客服),免得補薪日標在別人列上漏判。
-const isPayMakeupDay = (day) => Object.values(externalLeaveData || {}).some((person) => {
-  const record = person?.days?.[dayKey(day)];
-  if (!record) return false;
-  if (typeof record !== 'object') return /補薪/.test(String(record));
-  return Object.values(record).some((value) => Array.isArray(value)
-    ? value.some((item) => /補薪/.test(String(item ?? '')))
-    : /補薪/.test(String(value ?? '')));
-});
+// 2026-10-05 中魁拍板:公告標示「補薪」的日期=補薪日,早晚班全員不得彈性早退。
+// 來源=後端鏡射 /api/ext/leave 的 payMakeupDays(公司休假系統「本月公告」):
+//   [日期…]=確定有、[]=確定沒有、null 或沒有這個欄位=無法確認 → 該月彈性早退整個暫停(寧可不給,不可錯給)。
+// ⛔ 不要再從請假格子找「補薪」字樣:實測全年格子都沒有這兩字(10/05 移除)。
+const payMakeupUnknown = () => externalPayMakeupDays === null;
+const isPayMakeupDay = (day) => externalPayMakeupDays !== null && externalPayMakeupDays.has(Number(day));
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
   if (mode === 'phone') return hasPhoneDuty(staff.name, day);
   const partner = phoneDutyPartners[canonicalLeaveStaffName(staff.name)];
@@ -294,7 +295,8 @@ const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(current
   // 星期三僅早班不可彈性早退;晚班不受星期三限制。(中魁 2026-10-05 確認維持)
   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
   if (getStaffShift(staff) === '早' && date.getDay() === 3) return false;
-  // 公告標示「補薪」的日期(由正式鏡射資料提供):早晚班皆不得彈性早退。
+  // 公告標示「補薪」的日期:早晚班皆不得彈性早退;補薪日無法確認時整月暫停。
+  if (payMakeupUnknown()) return false;
   return !isPayMakeupDay(day);
 });
 const renderSummaryGroup = (shift, mode) => {
@@ -309,6 +311,20 @@ const renderSummaryGroup = (shift, mode) => {
 const renderMonthlySummaries = () => {
   if (phoneDutySummary) phoneDutySummary.innerHTML = renderSummaryGroup('早', 'phone') + renderSummaryGroup('晚', 'phone');
   if (flexibleLeaveSummary) flexibleLeaveSummary.innerHTML = renderSummaryGroup('早', 'flexible') + renderSummaryGroup('晚', 'flexible');
+  // 2026-10-05 中魁:補薪日秀在「彈性早退」卡片標題下(沒有補薪日就不顯示)
+  const payMakeupNote = document.getElementById('payMakeupNote');
+  if (payMakeupNote) {
+    const month = currentMonth.getMonth() + 1;
+    const days = Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => isPayMakeupDay(day));
+    // 讀完了(成功或失敗)但補薪日無法確認 → 一定要秀警告;還在讀就先不秀。
+    if (payMakeupUnknown() && externalLeaveLoadState !== 'loading') {
+      payMakeupNote.textContent = '⚠️ 補薪日暫時無法確認，彈性早退先暫停顯示';
+      payMakeupNote.hidden = false;
+    } else {
+      payMakeupNote.textContent = days.length ? `本月補薪日：${days.map((day) => `${month}/${day}`).join('、')}（早晚班皆不可彈性早退）` : '';
+      payMakeupNote.hidden = !days.length;
+    }
+  }
 };
 
 const getRecord = (staffId, day) => {
@@ -357,6 +373,7 @@ const loadExternalLeave = async () => {
   ];
   try {
     const validPayloads = [];
+    let primaryPayload = null; // 主來源(後端鏡射)的回應;補薪日只認它
     let lastError = null;
     for (const source of sources) {
       try {
@@ -373,6 +390,7 @@ const loadExternalLeave = async () => {
           throw new Error('同步來源不是指定月份的休假人員資料');
         }
         validPayloads.push(candidate);
+        if (source === sources[0]) primaryPayload = candidate;
       } catch (error) {
         lastError = error;
       }
@@ -429,6 +447,11 @@ const loadExternalLeave = async () => {
     }
     if (!payload) throw lastError || new Error('假表來源皆無回應');
     if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
+    // 補薪日只認主來源(後端鏡射);備援沒有這項資訊,也不可跨來源合併 → 主來源沒給 = 無法確認(null)。
+    externalPayMakeupDays = Array.isArray(primaryPayload?.payMakeupDays)
+      ? new Set(primaryPayload.payMakeupDays.map(Number).filter((day) => Number.isInteger(day) && day >= 1 && day <= 31))
+      : null;
+    externalLeaveLoadState = 'success';
     externalLeaveData = Object.fromEntries(Object.entries(payload.people || {})
       .filter(([name]) => leaveStaffNames.includes(canonicalLeaveStaffName(name)))
       .map(([name, person]) => [name, normalizeExternalPerson(person)])
@@ -446,6 +469,8 @@ const loadExternalLeave = async () => {
   } catch (error) {
     if (token !== externalLeaveLoadToken) return;
     externalLeaveData = {};
+    externalPayMakeupDays = null;
+    externalLeaveLoadState = 'error';
     externalMaxDays = null;
     console.error('同步外部假表失敗：', error);
     setLeaveSyncTime(lastSuccessfulLeaveSyncAt, true);
@@ -484,7 +509,10 @@ const renderHeader = () => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     const weekend = [0, 6].includes(date.getDay());
     const holiday = getHolidayName(day);
-    return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''} ${isTodayDay(day) ? 'is-today' : ''}" aria-current="${isTodayDay(day) ? 'date' : 'false'}" title="${escapeHtml(holiday)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}</small></th>`;
+    // 2026-10-05 中魁:補薪日秀在表頭(跟擋彈性早退同一個判斷)
+    const payMakeup = isPayMakeupDay(day);
+    const headerTitle = [holiday, payMakeup ? '補薪日(早晚班皆不可彈性早退)' : ''].filter(Boolean).join(' / ');
+    return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''} ${payMakeup ? 'is-pay-makeup' : ''} ${isTodayDay(day) ? 'is-today' : ''}" aria-current="${isTodayDay(day) ? 'date' : 'false'}" title="${escapeHtml(headerTitle)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}${payMakeup ? '<br><b class="pay-makeup-tag">補薪</b>' : ''}</small></th>`;
   }).join('');
   leaveTableHead.innerHTML = `<tr><th class="sticky-col name-col">姓名 / 班別</th>${dayHeaders}</tr>`;
 };
@@ -569,6 +597,8 @@ const subscribeMonth = () => {
   if (!leaveCollection) return;
   setStatus('載入休假表資料中...', 'info');
   externalLeaveData = {};
+  externalPayMakeupDays = null;
+  externalLeaveLoadState = 'loading';
   externalMaxDays = null;
   loadExternalLeave();
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
