@@ -36,7 +36,9 @@
     'report', 'report_schema',
     'log', 'log_schema',
     'log_new', 'log_new_schema',
-    'staff', 'permissions'
+    'staff', 'permissions',
+    // 2026-10-05 移除 Firebase 第 2 段 batch1:對接追蹤改走後端 API(資料已搬、後端已開放)
+    'tracking', 'tracking_schema'
   ]);
 
   const realDb = window.omniplayDb; // Firebase 原本的 Firestore(未路由的 collection 繼續用)
