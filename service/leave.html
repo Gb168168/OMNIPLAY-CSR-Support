@@ -17,6 +17,8 @@
     .leave-summary-cards { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .leave-summary-card { min-width: 0; max-height: 132px; overflow: auto; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
     .leave-summary-card h3 { margin: 0 0 7px; font-size: 17px; line-height: 1.35; }
+    .leave-paymakeup-note { margin: -3px 0 7px; font-size: 14px; font-weight: 700; color: #f59e0b; }
+    .pay-makeup-tag { color: #f59e0b; font-weight: 700; }
     .leave-summary-card-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; font-size: 15px; line-height: 1.65; }
     .leave-summary-shift > strong { display: block; margin-bottom: 3px; font-size: 15px; }
     .leave-summary-shift ul { margin: 0; padding-left: 18px; }
@@ -154,6 +156,7 @@
             </section>
             <section class="leave-summary-card">
               <h3>彈性早退（W3早班／補薪日全班 皆禁早退）</h3>
+              <p class="leave-paymakeup-note" id="payMakeupNote" hidden></p>
               <div class="leave-summary-card-content" id="flexibleLeaveSummary">載入中...</div>
             </section>
           </div>
@@ -182,6 +185,6 @@
   <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
-  <script src="../assets/leave.js?v=20261005-flexible-wed-paymakeup"></script>
+  <script src="../assets/leave.js?v=20261005-paymakeup-failclosed"></script>
 </body>
 </html>
