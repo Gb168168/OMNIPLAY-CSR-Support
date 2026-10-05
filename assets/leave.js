@@ -280,8 +280,8 @@ const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(current
   const partner = phoneDutyPartners[canonicalLeaveStaffName(staff.name)];
   if (!partner || !isWorkingForFlexible(externalRecordFor(staff.name, day))) return false;
   if (!hasPhoneDuty(partner, day)) return false;
-  const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-  return !(getStaffShift(staff) === '早' && date.getDay() === 3);
+  // 星期三會議限制不應排除非值公務機者；符合出勤條件且由搭檔值機即可早退。
+  return true;
 });
 const renderSummaryGroup = (shift, mode) => {
   const rows = staffList
