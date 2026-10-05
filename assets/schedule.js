@@ -1651,8 +1651,10 @@ dayAgendaListEl?.addEventListener('click', (event) => {
   openModal(toDateKey(selectedDate), item.dataset.id);
 });
 
+let scheduleSaveInProgress = false;
 formEl?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (scheduleSaveInProgress) return;
   if (!canEditSchedule) return setMessage('您沒有編輯權限。');
   if (!scheduleCollection) return setMessage('Firebase 尚未完成初始化，無法儲存排程。');
   const reminderAt = new Date(document.querySelector('#scheduleReminderAt').value);
@@ -1679,6 +1681,8 @@ formEl?.addEventListener('submit', async (event) => {
   else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
   if (!payload.title) return setMessage('請輸入標題。');
   const editingItem = scheduleList.find((entry) => entry.id === editingId);
+  const confirmGameWorkflow = editingItem?.source === 'google-game-sheet'
+    && editingItem?.eventType === 'pm-confirmation' && Boolean(gamePmConfirmedInput?.checked);
   const existingReminderAt = parseDateValue(editingItem?.reminderAt);
   if (editingItem?.source === 'google-game-sheet' && existingReminderAt && existingReminderAt.getTime() !== reminderAt.getTime()) {
     payload.manualReminderAt = true;
@@ -1699,18 +1703,25 @@ formEl?.addEventListener('submit', async (event) => {
     payload.otherPlatformProdDate = otherPlatformEnabled ? otherPlatformProdDate : firebase.firestore.FieldValue.delete();
   }
   const changes = editingItem ? buildScheduleChanges(editingItem, { ...payload, reminderAt, endAt }) : [];
-  payload.history = firebase.firestore.FieldValue.arrayUnion({
+  if (!editingItem || changes.length) payload.history = firebase.firestore.FieldValue.arrayUnion({
     action,
     userId: user.id,
     userName: user.name,
     at: firebase.firestore.Timestamp.fromDate(new Date()),
     changes
   });
+  const saveButton = document.querySelector('#saveScheduleButton');
+  const originalSaveText = saveButton?.textContent;
+  scheduleSaveInProgress = true;
+  if (saveButton) { saveButton.disabled = true; saveButton.textContent = '儲存中…'; }
+  let saveStage = '儲存排程';
+  setMessage('儲存中，請稍候…', 'info');
   try {
     await saveLabelIfNeeded(labelName, labelColor, selectedScheduleLabelId);
     if (editingId) await scheduleCollection.doc(editingId).update(payload);
     else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
     if (isEditingFirstLaunch) {
+      saveStage = '建立其他平台排程';
       await syncFirstLaunchOtherPlatformSchedules(
         editingItem,
         user,
@@ -1722,7 +1733,9 @@ formEl?.addEventListener('submit', async (event) => {
         setStatus('已建立／更新其他平台 UAT 與 PROD 排程。', 'success');
       }
     }
-        if (editingItem?.source === 'google-game-sheet' && editingItem?.eventType === 'pm-confirmation' && gamePmConfirmedInput?.checked) {
+    if (confirmGameWorkflow) {
+      saveStage = '建立行銷素材、UAT 與 PROD 待辦';
+      if (saveButton) saveButton.textContent = '建立流程待辦中…';
       const createdCount = await createUatSchedules(editingItem, user);
       if (!createdCount) throw new Error('沒有可建立的 UAT 資料待辦。');
       const successMessage = `AM 已確認，已建立／更新 ${createdCount} 筆流程待辦（行銷素材＋UAT 上架公告＋PROD 上架公告）。`;
@@ -1730,7 +1743,18 @@ formEl?.addEventListener('submit', async (event) => {
       window.alert(successMessage);
     }
     closeModal(true);
-  } catch (error) { console.error('儲存排程失敗：', error); setMessage('儲存排程失敗，請稍後再試。'); }
+  } catch (error) {
+    console.error('儲存排程失敗：', error);
+    const reason = error?.message || '未提供錯誤原因';
+    const code = error?.code ? `（${error.code}）` : '';
+    const message = `${saveStage}失敗${code}：${reason}\n尚未完成全部儲存流程，請保留表單並重試。`;
+    setMessage(message);
+    messageEl?.scrollIntoView({ block: 'nearest' });
+    window.alert(message);
+  } finally {
+    scheduleSaveInProgress = false;
+    if (saveButton) { saveButton.disabled = !canEditSchedule; saveButton.textContent = originalSaveText; }
+  }
 });
 
 deleteButton?.addEventListener('click', async () => {
