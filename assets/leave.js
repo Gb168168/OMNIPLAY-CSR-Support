@@ -275,14 +275,27 @@ const buildPhoneDutyPlan = () => {
 const hasPhoneDuty = (name, day) =>
   buildPhoneDutyPlan().get(canonicalLeaveStaffName(name))?.has(Number(day)) === true;
 
+// 2026-10-05 中魁拍板:公告標示「補薪」的日期(經公司休假系統鏡射,當日任何人的格子帶「補薪」字樣)=補薪日,早晚班全員不得彈性早退。
+// ⚠️「補(天)」是補休不是補薪 → 只認「補薪」兩字連寫,不可放寬成單一「補」字。
+// 掃全部鏡射人員(不限四位客服),免得補薪日標在別人列上漏判。
+const isPayMakeupDay = (day) => Object.values(externalLeaveData || {}).some((person) => {
+  const record = person?.days?.[dayKey(day)];
+  if (!record) return false;
+  if (typeof record !== 'object') return /補薪/.test(String(record));
+  return Object.values(record).some((value) => Array.isArray(value)
+    ? value.some((item) => /補薪/.test(String(item ?? '')))
+    : /補薪/.test(String(value ?? '')));
+});
 const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
   if (mode === 'phone') return hasPhoneDuty(staff.name, day);
   const partner = phoneDutyPartners[canonicalLeaveStaffName(staff.name)];
   if (!partner || !isWorkingForFlexible(externalRecordFor(staff.name, day))) return false;
   if (!hasPhoneDuty(partner, day)) return false;
-  // 星期三僅早班不可彈性早退；晚班不受星期三限制。
+  // 星期三僅早班不可彈性早退;晚班不受星期三限制。(中魁 2026-10-05 確認維持)
   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-  return !(getStaffShift(staff) === '早' && date.getDay() === 3);
+  if (getStaffShift(staff) === '早' && date.getDay() === 3) return false;
+  // 公告標示「補薪」的日期(由正式鏡射資料提供):早晚班皆不得彈性早退。
+  return !isPayMakeupDay(day);
 });
 const renderSummaryGroup = (shift, mode) => {
   const rows = staffList
