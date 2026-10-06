@@ -329,9 +329,8 @@ const renderSummaryGroup = (shift, mode) => {
         const partner = phonePairForName(me)?.members.find((name) => name !== me);
         const soloDays = partner ? Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1)
           .filter((day) => isWorkingRecord(externalRecordFor(me, day)) && !isWorkingRecord(externalRecordFor(partner, day))).length : 0;
-        // 2026-10-06 中魁:滑鼠移上去看明細
-        const detail = `自己一人上班 ${soloDays} 天 + 兩人上班值機 ${days.length} 天`;
-        total = `<span class="leave-summary-total" title="${detail}">（共 ${soloDays + days.length} 次）</span>`;
+        // (2026-10-06 中魁:只要卡片上的一行說明,不要滑鼠移上去看明細 → 拿掉 title 提示)
+        total = `<span class="leave-summary-total">（共 ${soloDays + days.length} 次）</span>`;
       }
       return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}${total}</li>`;
     }).join('');
