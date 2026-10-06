@@ -319,7 +319,9 @@ const renderSummaryGroup = (shift, mode) => {
     .filter((staff) => getStaffShift(staff) === shift && canonicalLeaveStaffName(staff.name) !== '余中魁')
     .map((staff) => {
       const days = summaryDaysFor(staff, mode);
-      return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}</li>`;
+      // 2026-10-06 中魁:值公務機在人員後方加「共 N 次」
+      const total = mode === 'phone' ? `<span class="leave-summary-total">（共 ${days.length} 次）</span>` : '';
+      return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}${total}</li>`;
     }).join('');
   return `<div class="leave-summary-shift"><strong>${shift === '早' ? '早班' : '晚班'}：</strong><ul>${rows}</ul></div>`;
 };
