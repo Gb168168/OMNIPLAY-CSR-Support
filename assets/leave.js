@@ -102,6 +102,8 @@ const parsePayMakeupDays = (raw, monthKeyText) => {
   if (!Array.isArray(raw)) return null;
   const match = /^(\d{4})-(\d{2})$/.exec(String(monthKeyText || ''));
   if (!match) return null;
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null; // GPT 第 2 輪 P1:2026-13、2026-00 不是月份
   const lastDay = new Date(Number(match[1]), Number(match[2]), 0).getDate();
   const days = raw.map((value) => (typeof value === 'string' && value.trim() !== '' ? Number(value) : value));
   if (!days.every((day) => typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= lastDay)) return null;

@@ -1330,8 +1330,28 @@ const subscribeLabels = () => {
 //   ・新增排程:同一個 session 固定用同一個文件 ID(先產生好再 set)→ 就算第一次其實寫成功、只是回應逾時,
 //     重試也只會覆蓋同一份,不會多一筆
 //   ・其他平台排程 / 流程待辦本來就用固定文件 ID(遊戲 + 日期)寫入,重做只會覆蓋同一批
+//   ・(GPT 第 2 輪)新增排程的文件 ID 還要撐過「重新整理 / 關掉再開」:寫入**之前**先把 { 文件 ID, 表單內容 }
+//     記到 localStorage,整段成功才清掉。重開後填一樣的內容再存 → 沿用同一個 ID(set 覆蓋,不會多一筆);
+//     重開新增表單時,若上次那筆其實已經在月曆上,直接提示「已存進去了」。
+//     編輯排程本來就撐得過重新整理:用原本的 ID update,而且重載後的修改比對是零 → 不會多一筆修改紀錄。
 let scheduleSaveSession = 0;
 let pendingScheduleSave = null; // { session, docId, mainKey }
+const PENDING_NEW_SCHEDULE_KEY = 'omniplayPendingNewSchedule';
+const PENDING_NEW_SCHEDULE_TTL_MS = 24 * 60 * 60 * 1000;
+const readPendingNewSchedule = (userId) => {
+  try {
+    const entry = JSON.parse(localStorage.getItem(PENDING_NEW_SCHEDULE_KEY) || 'null');
+    if (!entry || typeof entry.docId !== 'string' || typeof entry.formKey !== 'string') return null;
+    if (entry.userId !== userId || !(Date.now() - Number(entry.savedAt) < PENDING_NEW_SCHEDULE_TTL_MS)) return null;
+    return entry;
+  } catch (error) { return null; }
+};
+const writePendingNewSchedule = (entry) => {
+  try {
+    if (entry) localStorage.setItem(PENDING_NEW_SCHEDULE_KEY, JSON.stringify(entry));
+    else localStorage.removeItem(PENDING_NEW_SCHEDULE_KEY);
+  } catch (error) { /* 無痕模式等存不了:退回只在同一個表單內防重複 */ }
+};
 const openModal = (dateKey, scheduleId = null) => {
   editingId = scheduleId;
   scheduleSaveSession += 1;
@@ -1379,6 +1399,11 @@ const openModal = (dateKey, scheduleId = null) => {
   document.querySelector('#saveScheduleButton')?.toggleAttribute('hidden', !canEditSchedule);
   document.querySelector('#saveScheduleButton')?.toggleAttribute('disabled', !canEditSchedule);
   scheduleFormInitialSnapshot = serializeScheduleForm();
+  if (!scheduleId) {
+    const pendingNew = readPendingNewSchedule(currentUser().id);
+    const landed = pendingNew && scheduleList.find((entry) => entry.id === pendingNew.docId);
+    if (landed) setMessage(`上次新增的「${landed.title || '排程'}」其實已經存進去了(月曆上看得到),不用再新增一次。`, 'info');
+  }
   modalEl.classList.add('is-open');
   modalEl.setAttribute('aria-hidden', 'false');
 };
@@ -1729,16 +1754,24 @@ formEl?.addEventListener('submit', async (event) => {
   let saveStage = '儲存排程';
   setMessage('儲存中，請稍候…', 'info');
   // 2026-10-06(#411 重試不可重複寫入,見 openModal 上方說明)
+  const formKey = serializeScheduleForm();
   if (!pendingScheduleSave || pendingScheduleSave.session !== scheduleSaveSession) {
-    pendingScheduleSave = { session: scheduleSaveSession, docId: editingId || scheduleCollection.doc().id, mainKey: null };
+    // 新增:同一個人、24 小時內、表單內容一模一樣的未完成新增 → 沿用那個 ID(撐過重新整理 / 關掉再開)
+    const pendingNew = editingId ? null : readPendingNewSchedule(user.id);
+    const docId = editingId || (pendingNew?.formKey === formKey ? pendingNew.docId : scheduleCollection.doc().id);
+    pendingScheduleSave = { session: scheduleSaveSession, docId, mainKey: null };
   }
-  const mainKey = `${editingId || ''}|${serializeScheduleForm()}`;
+  const mainKey = `${editingId || ''}|${formKey}`;
   const mainAlreadySaved = pendingScheduleSave.mainKey === mainKey;
   try {
     await saveLabelIfNeeded(labelName, labelColor, selectedScheduleLabelId);
     if (!mainAlreadySaved) {
       if (editingId) await scheduleCollection.doc(editingId).update(payload);
-      else await scheduleCollection.doc(pendingScheduleSave.docId).set({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      else {
+        // 先記再寫:寫入其實成功、只是回應逾時,重新整理後也找得回這個 ID
+        writePendingNewSchedule({ docId: pendingScheduleSave.docId, formKey, userId: user.id, savedAt: Date.now() });
+        await scheduleCollection.doc(pendingScheduleSave.docId).set({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      }
       pendingScheduleSave.mainKey = mainKey;
     }
     if (isEditingFirstLaunch) {
@@ -1763,6 +1796,7 @@ formEl?.addEventListener('submit', async (event) => {
       setStatus(successMessage, 'success');
       window.alert(successMessage);
     }
+    if (!editingId && readPendingNewSchedule(user.id)?.docId === pendingScheduleSave.docId) writePendingNewSchedule(null);
     closeModal(true);
   } catch (error) {
     console.error('儲存排程失敗：', error);
