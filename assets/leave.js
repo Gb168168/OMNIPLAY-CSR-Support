@@ -302,17 +302,42 @@ const hasPhoneDuty = (name, day) =>
 // ⛔ 不要再從請假格子找「補薪」字樣:實測全年格子都沒有這兩字(10/05 移除)。
 const payMakeupUnknown = () => externalPayMakeupDays === null;
 const isPayMakeupDay = (day) => externalPayMakeupDays !== null && externalPayMakeupDays.has(Number(day));
-const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
-  if (mode === 'phone') return hasPhoneDuty(staff.name, day);
+// 彈性早退的禁止規則(誰都一樣):星期三早班、補薪日、補薪日無法確認
+const flexibleBanned = (staff, day) => {
+  // 星期三僅早班不可彈性早退;晚班不受星期三限制。(中魁 2026-10-05 確認維持)
+  const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+  if (getStaffShift(staff) === '早' && date.getDay() === 3) return true;
+  // 公告標示「補薪」的日期:早晚班皆不得彈性早退;補薪日無法確認時整月暫停。
+  if (payMakeupUnknown()) return true;
+  return isPayMakeupDay(day);
+};
+// 原本的規則:自己上班 + 搭檔值公務機 + 沒有被禁止
+const baseFlexibleDay = (staff, day) => {
   const partner = phoneDutyPartners[canonicalLeaveStaffName(staff.name)];
   if (!partner || !isWorkingForFlexible(externalRecordFor(staff.name, day))) return false;
   if (!hasPhoneDuty(partner, day)) return false;
-  // 星期三僅早班不可彈性早退;晚班不受星期三限制。(中魁 2026-10-05 確認維持)
-  const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-  if (getStaffShift(staff) === '早' && date.getDay() === 3) return false;
-  // 公告標示「補薪」的日期:早晚班皆不得彈性早退;補薪日無法確認時整月暫停。
-  if (payMakeupUnknown()) return false;
-  return !isPayMakeupDay(day);
+  return !flexibleBanned(staff, day);
+};
+// 2026-10-06 中魁:彈性早退「讓」—— 值機不變,只把某天的彈性早退讓給同組另一人(例:郭澄希 26 號讓給鄭晴心)
+//   存在 leaveData.flexibleOverrides[組別_日期] = 接收的人;只有「那天原本屬於對方」而且「接收的人當天能早退」才生效,
+//   否則照原規則(對方日後請假等,讓的設定自動失效,不會變成兩個人都沒有或都有)
+const staffByName = (name) => staffList.find((item) => canonicalLeaveStaffName(item.name) === name);
+const canReceiveFlexible = (staff, day) => Boolean(staff) && isWorkingForFlexible(externalRecordFor(staff.name, day)) && !flexibleBanned(staff, day);
+const effectiveFlexibleYield = (name, day) => {
+  const pair = phonePairForName(name);
+  if (!pair) return null;
+  const target = (leaveData.flexibleOverrides || {})[phoneOverrideKey(pair, day)];
+  if (!pair.members.includes(target)) return null;
+  const giver = pair.members.find((member) => member !== target);
+  const giverStaff = staffByName(giver);
+  if (!giverStaff || !baseFlexibleDay(giverStaff, day) || !canReceiveFlexible(staffByName(target), day)) return null;
+  return { giver, target };
+};
+const summaryDaysFor = (staff, mode) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1).filter((day) => {
+  if (mode === 'phone') return hasPhoneDuty(staff.name, day);
+  const yieldInfo = effectiveFlexibleYield(canonicalLeaveStaffName(staff.name), day);
+  if (yieldInfo) return yieldInfo.target === canonicalLeaveStaffName(staff.name);
+  return baseFlexibleDay(staff, day);
 });
 const renderSummaryGroup = (shift, mode) => {
   const rows = staffList
@@ -332,7 +357,11 @@ const renderSummaryGroup = (shift, mode) => {
         // (2026-10-06 中魁:只要卡片上的一行說明,不要滑鼠移上去看明細 → 拿掉 title 提示)
         total = `<span class="leave-summary-total">（共 ${soloDays + days.length} 次）</span>`;
       }
-      return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}${total}</li>`;
+      // 2026-10-06 中魁:彈性早退被「讓」到的日期標「(讓)」
+      const shown = mode === 'flexible'
+        ? days.map((day) => (effectiveFlexibleYield(canonicalLeaveStaffName(staff.name), day)?.target === canonicalLeaveStaffName(staff.name) ? `${day}(讓)` : day))
+        : days;
+      return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${shown.length ? shown.join('、') : '—'}${total}</li>`;
     }).join('');
   return `<div class="leave-summary-shift"><strong>${shift === '早' ? '早班' : '晚班'}：</strong><ul>${rows}</ul></div>`;
 };
@@ -520,6 +549,7 @@ const saveMonthData = async () => {
       records: leaveData.records || {},
       quotas: leaveData.quotas || {},
       phoneOverrides: leaveData.phoneOverrides || {},
+      flexibleOverrides: leaveData.flexibleOverrides || {}, // 2026-10-06 彈性早退「讓」
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     setStatus('已自動儲存休假表。', 'success');
@@ -632,7 +662,7 @@ const subscribeMonth = () => {
   externalMaxDays = null;
   loadExternalLeave();
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
-    leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, phoneOverrides: {} };
+    leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {} };
     staffList = sortStaffForLeave(staffList);
     render();
     loadMonthlyShifts();
@@ -679,6 +709,32 @@ const toggleSpecial = (staffId, day, specialType) => {
   const key = `${staffId}_${dayKey(day)}`;
   leaveData.records ||= {};
   const staff = staffList.find((item) => item.id === staffId);
+  if (specialType === 'flexible') {
+    // 2026-10-06 中魁:彈性早退「讓」。點接收的人那天的格子 → 讓給他;再點一次(或點原本的人)→ 取消
+    const pair = phonePairForName(staff?.name);
+    if (!pair) return;
+    leaveData.flexibleOverrides ||= {};
+    const overrideKey = phoneOverrideKey(pair, numericDay);
+    const clickedName = canonicalLeaveStaffName(staff.name);
+    const current = leaveData.flexibleOverrides[overrideKey];
+    if (current) {
+      delete leaveData.flexibleOverrides[overrideKey];
+    } else {
+      const giver = staffByName(pair.members.find((name) => name !== clickedName));
+      if (!giver || !baseFlexibleDay(giver, numericDay)) {
+        setStatus(`${numericDay} 號對方沒有彈性早退,沒有可以讓的。`, 'error');
+        return;
+      }
+      if (!canReceiveFlexible(staff, numericDay)) {
+        setStatus(`${numericDay} 號 ${clickedName} 不能彈性早退(沒上班 / 週三早班 / 補薪日)。`, 'error');
+        return;
+      }
+      leaveData.flexibleOverrides[overrideKey] = clickedName;
+    }
+    render();
+    queueSave();
+    return;
+  }
   if (specialType === 'phone') {
     const pair = phonePairForName(staff?.name);
     if (!pair) return;
