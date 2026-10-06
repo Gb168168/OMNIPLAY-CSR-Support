@@ -541,6 +541,22 @@ const queueSave = () => {
   saveTimer = setTimeout(saveMonthData, 280);
 };
 
+// FRIDAY 10/06 C2:「讓」只更新 flexibleOverrides 裡那一個鍵(update + 欄位路徑),不整份覆蓋文件;
+//   文件還不存在時 update 會失敗 → 改走原本的整份存檔。⚠️ 開著舊版頁面的人之後若整份存檔仍會洗掉「讓」→ 上線時請有編輯權的人 Ctrl+F5
+const saveFlexibleOverride = async (key, value) => {
+  if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
+  try {
+    await leaveCollection.doc(monthKey(currentMonth)).update({
+      [`flexibleOverrides.${key}`]: value || firebase.firestore.FieldValue.delete(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if (value) setStatus(`已把 ${key.split('_')[1]} 號的彈性早退讓給 ${value}。`, 'success');
+  } catch (error) {
+    console.warn('單一欄位儲存失敗,改用整份存檔:', error);
+    queueSave();
+  }
+};
+
 const saveMonthData = async () => {
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
   try {
@@ -716,9 +732,11 @@ const toggleSpecial = (staffId, day, specialType) => {
     leaveData.flexibleOverrides ||= {};
     const overrideKey = phoneOverrideKey(pair, numericDay);
     const clickedName = canonicalLeaveStaffName(staff.name);
-    const current = leaveData.flexibleOverrides[overrideKey];
-    if (current) {
+    // FRIDAY 10/06:只有「當下生效中的讓」才當成取消;資料裡失效的舊設定(例如值機改過)直接覆寫成新設定
+    const activeYield = effectiveFlexibleYield(clickedName, numericDay);
+    if (activeYield) {
       delete leaveData.flexibleOverrides[overrideKey];
+      setStatus(`已取消 ${numericDay} 號的彈性早退讓渡。`, 'success');
     } else {
       const giver = staffByName(pair.members.find((name) => name !== clickedName));
       if (!giver || !baseFlexibleDay(giver, numericDay)) {
@@ -732,7 +750,7 @@ const toggleSpecial = (staffId, day, specialType) => {
       leaveData.flexibleOverrides[overrideKey] = clickedName;
     }
     render();
-    queueSave();
+    saveFlexibleOverride(overrideKey, leaveData.flexibleOverrides[overrideKey]);
     return;
   }
   if (specialType === 'phone') {
