@@ -1323,8 +1323,19 @@ const subscribeLabels = () => {
   }, (error) => console.error('讀取標籤失敗：', error));
 };
 
+// 2026-10-06 GPT release gate(#411 重試不可重複寫入):
+// 一次「開著的表單」= 一個 session。存檔是多段的(主排程 → 其他平台排程 → 流程待辦),前段成功、後段失敗時
+// 會叫人「重試」;重試時:
+//   ・主排程已經存成功、而且表單內容沒變 → 跳過主排程這一步,直接從失敗那一步續跑(不再多一筆修改紀錄)
+//   ・新增排程:同一個 session 固定用同一個文件 ID(先產生好再 set)→ 就算第一次其實寫成功、只是回應逾時,
+//     重試也只會覆蓋同一份,不會多一筆
+//   ・其他平台排程 / 流程待辦本來就用固定文件 ID(遊戲 + 日期)寫入,重做只會覆蓋同一批
+let scheduleSaveSession = 0;
+let pendingScheduleSave = null; // { session, docId, mainKey }
 const openModal = (dateKey, scheduleId = null) => {
   editingId = scheduleId;
+  scheduleSaveSession += 1;
+  pendingScheduleSave = null;
   const item = scheduleList.find((entry) => entry.id === scheduleId);
   formEl.reset();
   setMessage('');
@@ -1390,6 +1401,7 @@ const closeModal = (force = false) => {
   modalEl.setAttribute('aria-hidden', 'true');
   editingId = null;
   scheduleFormInitialSnapshot = '';
+  pendingScheduleSave = null;
   return true;
 };
 
@@ -1716,10 +1728,19 @@ formEl?.addEventListener('submit', async (event) => {
   if (saveButton) { saveButton.disabled = true; saveButton.textContent = '儲存中…'; }
   let saveStage = '儲存排程';
   setMessage('儲存中，請稍候…', 'info');
+  // 2026-10-06(#411 重試不可重複寫入,見 openModal 上方說明)
+  if (!pendingScheduleSave || pendingScheduleSave.session !== scheduleSaveSession) {
+    pendingScheduleSave = { session: scheduleSaveSession, docId: editingId || scheduleCollection.doc().id, mainKey: null };
+  }
+  const mainKey = `${editingId || ''}|${serializeScheduleForm()}`;
+  const mainAlreadySaved = pendingScheduleSave.mainKey === mainKey;
   try {
     await saveLabelIfNeeded(labelName, labelColor, selectedScheduleLabelId);
-    if (editingId) await scheduleCollection.doc(editingId).update(payload);
-    else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    if (!mainAlreadySaved) {
+      if (editingId) await scheduleCollection.doc(editingId).update(payload);
+      else await scheduleCollection.doc(pendingScheduleSave.docId).set({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      pendingScheduleSave.mainKey = mainKey;
+    }
     if (isEditingFirstLaunch) {
       saveStage = '建立其他平台排程';
       await syncFirstLaunchOtherPlatformSchedules(

@@ -94,6 +94,19 @@ const isTodayDay = (day) => {
     Number(day) === today.getDate();
 };
 const daysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+// 2026-10-06 GPT release gate:補薪日只要有任何一天不是「該月真的存在的日期」(非整數、<1、超過當月天數,
+// 例 4/31、2/30),就整月當「無法確認」(null)→ 彈性早退暫停並顯示警告(fail-closed)。
+// 不可默默丟掉那一天:那通常代表公告打錯字,真正該擋的那天反而沒被擋。
+// 回傳 Set(確定;空的=確定沒有)或 null(無法確認)。monthKeyText = 'YYYY-MM'。
+const parsePayMakeupDays = (raw, monthKeyText) => {
+  if (!Array.isArray(raw)) return null;
+  const match = /^(\d{4})-(\d{2})$/.exec(String(monthKeyText || ''));
+  if (!match) return null;
+  const lastDay = new Date(Number(match[1]), Number(match[2]), 0).getDate();
+  const days = raw.map((value) => (typeof value === 'string' && value.trim() !== '' ? Number(value) : value));
+  if (!days.every((day) => typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= lastDay)) return null;
+  return new Set(days);
+};
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
 }[char]));
@@ -448,9 +461,8 @@ const loadExternalLeave = async () => {
     if (!payload) throw lastError || new Error('假表來源皆無回應');
     if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
     // 補薪日只認主來源(後端鏡射);備援沒有這項資訊,也不可跨來源合併 → 主來源沒給 = 無法確認(null)。
-    externalPayMakeupDays = Array.isArray(primaryPayload?.payMakeupDays)
-      ? new Set(primaryPayload.payMakeupDays.map(Number).filter((day) => Number.isInteger(day) && day >= 1 && day <= 31))
-      : null;
+    // 2026-10-06:任何一天不存在(例 4/31)→ 整月無法確認,不再只濾 1~31(GPT release gate R3)
+    externalPayMakeupDays = parsePayMakeupDays(primaryPayload?.payMakeupDays, targetMonth);
     externalLeaveLoadState = 'success';
     externalLeaveData = Object.fromEntries(Object.entries(payload.people || {})
       .filter(([name]) => leaveStaffNames.includes(canonicalLeaveStaffName(name)))
