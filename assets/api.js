@@ -38,7 +38,14 @@
     'log_new', 'log_new_schema',
     'staff', 'permissions',
     // 2026-10-05 移除 Firebase 第 2 段 batch1:對接追蹤改走後端 API(資料已搬、後端已開放)
-    'tracking', 'tracking_schema'
+    'tracking', 'tracking_schema',
+    // 2026-10-06 移除 Firebase 第 2 段 batch2:告警 / 知識庫 / AI 資料庫 / KPI(都走 ragic-table,跟交接同一套)
+    // + 會議文字與會議設定(會議附件仍在 Firebase Storage,只存路徑;附件另排)
+    'alert', 'alert_schema',
+    'knowledge', 'knowledge_schema',
+    'ai_database', 'ai_database_schema',
+    'kpi', 'kpi_schema',
+    'meeting', 'meetingSettings'
   ]);
 
   const realDb = window.omniplayDb; // Firebase 原本的 Firestore(未路由的 collection 繼續用)
