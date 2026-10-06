@@ -1356,6 +1356,8 @@ const writePendingNewSchedule = (entry) => {
     return true;
   } catch (error) { return false; }
 };
+const PENDING_STORAGE_RISK_MESSAGE = '這個瀏覽器沒辦法暫存存檔進度(例如無痕模式或儲存空間不足)。\n如果這次存檔中途失敗,重新整理後再存,可能會多一筆。\n\n確定要繼續存檔嗎?';
+const PENDING_STORAGE_CANCEL_MESSAGE = '已取消存檔,沒有寫入任何資料。建議改用一般視窗(非無痕)再新增。';
 const pendingStorageAvailable = () => {
   try {
     localStorage.setItem(`${PENDING_NEW_SCHEDULE_KEY}.probe`, '1');
@@ -1766,9 +1768,11 @@ formEl?.addEventListener('submit', async (event) => {
     changes
   });
   // GPT 第 3 輪:瀏覽器記不了存檔進度(無痕模式等)→ 新增前明講,讓人決定要不要繼續,不默默失去保護
-  if (!editingId && !(pendingScheduleSave && pendingScheduleSave.session === scheduleSaveSession) && !pendingStorageAvailable()
-    && !window.confirm('這個瀏覽器沒辦法暫存存檔進度(例如無痕模式)。\n如果這次存檔中途失敗,重新整理後再存,可能會多一筆。\n\n確定要繼續存檔嗎?')) {
-    return setMessage('已取消存檔。建議改用一般視窗(非無痕)再新增。');
+  // GPT 第 4 輪:探針過了、正式寫紀錄時才失敗(空間不足等)也一樣要問 → 見下方 recordPendingOrConfirm
+  let storageRiskAccepted = false;
+  if (!editingId && !(pendingScheduleSave && pendingScheduleSave.session === scheduleSaveSession) && !pendingStorageAvailable()) {
+    if (!window.confirm(PENDING_STORAGE_RISK_MESSAGE)) return setMessage(PENDING_STORAGE_CANCEL_MESSAGE);
+    storageRiskAccepted = true;
   }
   const saveButton = document.querySelector('#saveScheduleButton');
   const originalSaveText = saveButton?.textContent;
@@ -1782,8 +1786,17 @@ formEl?.addEventListener('submit', async (event) => {
     // 新增:同一個人、24 小時內、表單內容一模一樣的未完成新增 → 沿用那個 ID(撐過重新整理 / 關掉再開)
     const pendingNew = editingId ? null : readPendingNewSchedule(user.id);
     const docId = editingId || (pendingNew?.formKey === formKey ? pendingNew.docId : scheduleCollection.doc().id);
-    pendingScheduleSave = { session: scheduleSaveSession, docId, mainKey: null };
+    pendingScheduleSave = { session: scheduleSaveSession, docId, mainKey: null, storageRiskAccepted };
   }
+  if (storageRiskAccepted) pendingScheduleSave.storageRiskAccepted = true;
+  // 寫入前一定要先把進度紀錄寫成功;寫不成功 → 問人(同一個表單只問一次),不答應就不寫
+  const recordPendingOrConfirm = () => {
+    if (writePendingNewSchedule({ docId: pendingScheduleSave.docId, formKey, userId: user.id, savedAt: Date.now() })) return true;
+    if (pendingScheduleSave.storageRiskAccepted) return true;
+    if (!window.confirm(PENDING_STORAGE_RISK_MESSAGE)) return false;
+    pendingScheduleSave.storageRiskAccepted = true;
+    return true;
+  };
   const mainKey = `${editingId || ''}|${formKey}`;
   const mainAlreadySaved = pendingScheduleSave.mainKey === mainKey;
   try {
@@ -1793,7 +1806,7 @@ formEl?.addEventListener('submit', async (event) => {
       else {
         const newData = { ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
         // 先記再寫:寫入其實成功、只是回應逾時,重新整理後也找得回這個 ID
-        writePendingNewSchedule({ docId: pendingScheduleSave.docId, formKey, userId: user.id, savedAt: Date.now() });
+        if (!recordPendingOrConfirm()) { setMessage(PENDING_STORAGE_CANCEL_MESSAGE); return; }
         if (!(await createScheduleIfAbsent(pendingScheduleSave.docId, newData))) {
           // 這個 ID 已經有排程 = 上次其實存成功了。絕不覆蓋,讓人選:不再新增 / 另外新增一筆
           const landedTitle = scheduleList.find((entry) => entry.id === pendingScheduleSave.docId)?.title || newData.title || '排程';
@@ -1805,7 +1818,7 @@ formEl?.addEventListener('submit', async (event) => {
             return;
           }
           pendingScheduleSave.docId = scheduleCollection.doc().id;
-          writePendingNewSchedule({ docId: pendingScheduleSave.docId, formKey, userId: user.id, savedAt: Date.now() });
+          if (!recordPendingOrConfirm()) { setMessage(PENDING_STORAGE_CANCEL_MESSAGE); return; }
           if (!(await createScheduleIfAbsent(pendingScheduleSave.docId, newData))) throw new Error('新的排程編號已被使用,請再按一次儲存');
         }
       }
