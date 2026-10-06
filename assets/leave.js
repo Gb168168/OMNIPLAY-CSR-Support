@@ -540,7 +540,8 @@ const renderHeader = () => {
     const headerTitle = [holiday, payMakeup ? '補薪日(早晚班皆不可彈性早退)' : ''].filter(Boolean).join(' / ');
     return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''} ${payMakeup ? 'is-pay-makeup' : ''} ${isTodayDay(day) ? 'is-today' : ''}" aria-current="${isTodayDay(day) ? 'date' : 'false'}" title="${escapeHtml(headerTitle)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}${payMakeup ? '<br><b class="pay-makeup-tag">補薪</b>' : ''}</small></th>`;
   }).join('');
-  leaveTableHead.innerHTML = `<tr><th class="sticky-col name-col">姓名 / 班別</th>${dayHeaders}</tr>`;
+  // 2026-10-06 中魁:比照公司休假系統(尚堉假表),每人最後加「已排」欄
+  leaveTableHead.innerHTML = `<tr><th class="sticky-col name-col">姓名 / 班別</th>${dayHeaders}<th class="leave-scheduled-col" title="當月休假 + 必休天數(不含調、補、公司活動)">已排</th></tr>`;
 };
 
 const renderBody = () => {
@@ -553,7 +554,9 @@ const renderBody = () => {
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
       <th class="sticky-col name-col" scope="row">
         <span>${escapeHtml(canonicalLeaveStaffName(staff.name) || staff.code || '未命名')} / ${escapeHtml(getShift(staff))}</span>
-      </th>${cells}</tr>`;
+      </th>${cells}<td class="leave-scheduled-col">${used}</td></tr>`;
+    // ↑ 已排 = leaveCount:休假 + 必休、沒有額外標註(調 / 補(天)等不算)、公司活動不算;
+    //   公司連動人員讀 /api/ext/leave(尚堉假表),10 月核對 4 人都是 10,與尚堉「已排」一致(中魁 10/06)
   }).join('');
 
   leaveTableBody.innerHTML = rows;
