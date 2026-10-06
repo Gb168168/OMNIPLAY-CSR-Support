@@ -21,7 +21,6 @@
     .leave-paymakeup-note { margin: -3px 0 6px; font-size: 12px; font-weight: 600; color: #f59e0b; } /* 2026-10-06 中魁:提醒字體稍小 */
     .pay-makeup-tag { color: #f59e0b; font-weight: 700; }
     .leave-duty-note { margin: -3px 0 6px; font-size: 12px; color: var(--muted, #94a3b8); } /* 2026-10-06 共 N 次的說明 */
-    .leave-summary-total { cursor: help; }
     .leave-scheduled-col { min-width: 52px; text-align: center; font-weight: 700; white-space: nowrap; } /* 2026-10-06 已排欄 */
     .leave-summary-total { margin-left: 4px; font-size: 13px; color: var(--muted, #94a3b8); white-space: nowrap; } /* 2026-10-06 值公務機總次數 */
     .leave-summary-card-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; font-size: 15px; line-height: 1.65; }
@@ -157,7 +156,7 @@
           <div class="leave-summary-cards" aria-label="當月排班摘要">
             <section class="leave-summary-card">
               <h3>值公務機</h3>
-              <p class="leave-duty-note">共 N 次 = 自己一人上班的天數 + 兩人都上班、輪到自己值機的天數(滑鼠移到次數上可看明細)</p>
+              <p class="leave-duty-note">共 N 次 = 自己一人上班的天數 + 兩人都上班、輪到自己值機的天數</p>
               <div class="leave-summary-card-content" id="phoneDutySummary">載入中...</div>
             </section>
             <section class="leave-summary-card">
@@ -191,6 +190,6 @@
   <script src="../assets/firebase-init.js?v=20261006-ts-shim"></script><script src="../assets/api.js?v=20261006-fb-batch2"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
-  <script src="../assets/leave.js?v=20261006-duty-explain"></script>
+  <script src="../assets/leave.js?v=20261006-duty-note"></script>
 </body>
 </html>
