@@ -319,7 +319,19 @@ const renderSummaryGroup = (shift, mode) => {
     .filter((staff) => getStaffShift(staff) === shift && canonicalLeaveStaffName(staff.name) !== '余中魁')
     .map((staff) => {
       const days = summaryDaysFor(staff, mode);
-      return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}</li>`;
+      // 2026-10-06 中魁:值公務機在人員後方加「共 N 次」
+      //   N = 自己一個人上班的天數(自己整天上班、搭檔沒有整天上班 → 公務機自己顧)+ 兩人都上班且排到自己值機的天數(days)
+      //   整天上班 = isWorkingRecord(跟值機排班的資格判斷同一套)
+      //   10 月核對(中魁確認):宋佳臻 12+2=14、熊茗雅 11+6=17、鄭晴心 13+4=17、郭澄希 10+4=14
+      let total = '';
+      if (mode === 'phone') {
+        const me = canonicalLeaveStaffName(staff.name);
+        const partner = phonePairForName(me)?.members.find((name) => name !== me);
+        const soloDays = partner ? Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1)
+          .filter((day) => isWorkingRecord(externalRecordFor(me, day)) && !isWorkingRecord(externalRecordFor(partner, day))).length : 0;
+        total = `<span class="leave-summary-total">（共 ${soloDays + days.length} 次）</span>`;
+      }
+      return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}${total}</li>`;
     }).join('');
   return `<div class="leave-summary-shift"><strong>${shift === '早' ? '早班' : '晚班'}：</strong><ul>${rows}</ul></div>`;
 };
@@ -528,7 +540,8 @@ const renderHeader = () => {
     const headerTitle = [holiday, payMakeup ? '補薪日(早晚班皆不可彈性早退)' : ''].filter(Boolean).join(' / ');
     return `<th class="day-col ${weekend ? 'is-weekend' : ''} ${holiday ? 'is-holiday' : ''} ${payMakeup ? 'is-pay-makeup' : ''} ${isTodayDay(day) ? 'is-today' : ''}" aria-current="${isTodayDay(day) ? 'date' : 'false'}" title="${escapeHtml(headerTitle)}"><span>${day}</span><small>${weekdayNames[date.getDay()]}${holiday ? `<br>${escapeHtml(holiday)}` : ''}${payMakeup ? '<br><b class="pay-makeup-tag">補薪</b>' : ''}</small></th>`;
   }).join('');
-  leaveTableHead.innerHTML = `<tr><th class="sticky-col name-col">姓名 / 班別</th>${dayHeaders}</tr>`;
+  // 2026-10-06 中魁:比照公司休假系統(尚堉假表),每人最後加「已排」欄
+  leaveTableHead.innerHTML = `<tr><th class="sticky-col name-col">姓名 / 班別</th>${dayHeaders}<th class="leave-scheduled-col" title="當月休假 + 必休天數(不含調、補、公司活動)">已排</th></tr>`;
 };
 
 const renderBody = () => {
@@ -541,7 +554,9 @@ const renderBody = () => {
     return `<tr data-staff-id="${staff.id}" class="${overQuota ? 'is-over-quota' : ''}">
       <th class="sticky-col name-col" scope="row">
         <span>${escapeHtml(canonicalLeaveStaffName(staff.name) || staff.code || '未命名')} / ${escapeHtml(getShift(staff))}</span>
-      </th>${cells}</tr>`;
+      </th>${cells}<td class="leave-scheduled-col">${used}</td></tr>`;
+    // ↑ 已排 = leaveCount:休假 + 必休、沒有額外標註(調 / 補(天)等不算)、公司活動不算;
+    //   公司連動人員讀 /api/ext/leave(尚堉假表),10 月核對 4 人都是 10,與尚堉「已排」一致(中魁 10/06)
   }).join('');
 
   leaveTableBody.innerHTML = rows;
