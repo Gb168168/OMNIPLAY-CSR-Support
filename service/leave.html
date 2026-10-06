@@ -15,9 +15,10 @@
     .leave-sync-time.is-error { border-color: #fecaca; background: #fef2f2; }
     .leave-sync-time.is-error span { color: #b91c1c; }
     .leave-summary-cards { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .leave-summary-card { min-width: 0; max-height: 132px; overflow: auto; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    /* 2026-10-06 中魁:不要卷軸 —— 卡片依內容長高,不再固定 132px + overflow:auto */
+    .leave-summary-card { min-width: 0; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
     .leave-summary-card h3 { margin: 0 0 7px; font-size: 17px; line-height: 1.35; }
-    .leave-paymakeup-note { margin: -3px 0 7px; font-size: 14px; font-weight: 700; color: #f59e0b; }
+    .leave-paymakeup-note { margin: -3px 0 6px; font-size: 12px; font-weight: 600; color: #f59e0b; } /* 2026-10-06 中魁:提醒字體稍小 */
     .pay-makeup-tag { color: #f59e0b; font-weight: 700; }
     .leave-summary-card-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; font-size: 15px; line-height: 1.65; }
     .leave-summary-shift > strong { display: block; margin-bottom: 3px; font-size: 15px; }
@@ -155,7 +156,7 @@
               <div class="leave-summary-card-content" id="phoneDutySummary">載入中...</div>
             </section>
             <section class="leave-summary-card">
-              <h3>彈性早退（W3早班／補薪日全班 皆禁早退）</h3>
+              <h3>彈性早退（週三早班、補薪日全天不可早退）</h3>
               <p class="leave-paymakeup-note" id="payMakeupNote" hidden></p>
               <div class="leave-summary-card-content" id="flexibleLeaveSummary">載入中...</div>
             </section>
