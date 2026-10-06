@@ -319,14 +319,17 @@ const renderSummaryGroup = (shift, mode) => {
     .filter((staff) => getStaffShift(staff) === shift && canonicalLeaveStaffName(staff.name) !== '余中魁')
     .map((staff) => {
       const days = summaryDaysFor(staff, mode);
-      // 2026-10-06 中魁:值公務機在人員後方加「共 N 次」,N = 整月上班天數 − 值機天數
-      //   上班 = isWorkingForFlexible(沒有請假 / 必休 / 公司活動;只請幾小時部分假也算上班)
-      //   10 月核對(中魁確認):鄭晴心 21−4=17、郭澄希 18−4=14、宋佳臻 20−2=18、熊茗雅 19−6=13
+      // 2026-10-06 中魁:值公務機在人員後方加「共 N 次」
+      //   N = 自己一個人上班的天數(自己整天上班、搭檔沒有整天上班 → 公務機自己顧)+ 兩人都上班且排到自己值機的天數(days)
+      //   整天上班 = isWorkingRecord(跟值機排班的資格判斷同一套)
+      //   10 月核對(中魁確認):宋佳臻 12+2=14、熊茗雅 11+6=17、鄭晴心 13+4=17、郭澄希 10+4=14
       let total = '';
       if (mode === 'phone') {
-        const workDays = Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1)
-          .filter((day) => isWorkingForFlexible(externalRecordFor(staff.name, day))).length;
-        total = `<span class="leave-summary-total">（共 ${workDays - days.length} 次）</span>`;
+        const me = canonicalLeaveStaffName(staff.name);
+        const partner = phonePairForName(me)?.members.find((name) => name !== me);
+        const soloDays = partner ? Array.from({ length: daysInMonth(currentMonth) }, (_, index) => index + 1)
+          .filter((day) => isWorkingRecord(externalRecordFor(me, day)) && !isWorkingRecord(externalRecordFor(partner, day))).length : 0;
+        total = `<span class="leave-summary-total">（共 ${soloDays + days.length} 次）</span>`;
       }
       return `<li><strong>${escapeHtml(canonicalLeaveStaffName(staff.name))}：</strong>${days.length ? days.join('、') : '—'}${total}</li>`;
     }).join('');
