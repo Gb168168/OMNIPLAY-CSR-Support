@@ -22,6 +22,24 @@
 (function () {
   'use strict';
 
+  // 2026-10-07:舊的靜態網站(github.io)停用。資料已全部搬到公司後端,這個網址還開著的頁面會把舊資料寫回
+  //   舊資料庫(10/07 15:02 實際發生過)⇒ 在這裡切斷資料庫入口、整頁蓋上停用通知。公司內網的正式站網址不同,不受影響。
+  if (typeof location !== 'undefined' && /(^|\.)github\.io$/i.test(location.hostname || '')) {
+    window.omniplayDb = null;
+    window.omniplayStorage = null;
+    const showRetired = () => {
+      const box = document.createElement('div');
+      box.setAttribute('role', 'alert');
+      box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;'
+        + 'background:#0f172a;color:#f8fafc;font:18px/1.7 system-ui,sans-serif;text-align:center;padding:24px';
+      box.innerHTML = '<div><h1 style="font-size:26px;margin:0 0 12px">這個舊網址已停用</h1>'
+        + '<p style="margin:0">OMNIPLAY 客服系統已搬到公司內部,請從 MyERP 入口進入。</p></div>';
+      document.body.appendChild(box);
+    };
+    if (document.body) showRetired(); else document.addEventListener('DOMContentLoaded', showRetired);
+    return;
+  }
+
   const DEFAULT_API_BASE = ''; // ← 正式切換時填公司 API 網址;空字串 = 維持 Firebase
   // localStorage 開關只認 localhost(FRIDAY 8/10:防同 origin 其他專案 XSS 把 API 位址指到攻擊者伺服器)
   const stored = localStorage.getItem('csrApiBase') || '';
