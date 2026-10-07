@@ -4,6 +4,8 @@ const scheduleLabelCollection = scheduleDb?.collection('scheduleLabels');
 const scheduleStaffCollection = scheduleDb?.collection('staff');
 const scheduleLeaveCollection = scheduleDb?.collection('leave');
 const scheduleGameChangeCollection = scheduleDb?.collection('scheduleGameChanges');
+// 2026-10-07 batch4(Firebase 移除):排程表是否已改走後端 —— 以 api.js 的路由表為準(開關沒撥 = 照舊走 Firebase)
+const scheduleOnBackend = () => window.csrApiIsRouted?.('schedule') === true && typeof window.csrApiFetch === 'function';
 
 const calendarEl = document.querySelector('#scheduleCalendar');
 const periodLabel = document.querySelector('#schedulePeriodLabel');
@@ -380,7 +382,7 @@ const syncFirstLaunchOtherPlatformSchedules = async (item, actor, enabled, uatDa
         date: target.date,
         title: `${displayMeta.labelName}｜${getGameTitle([game])}`,
         content: target.content,
-        reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt),
+        reminderAt, // 2026-10-07 batch4:直接存 Date(Firebase 存成 Timestamp、後端墊片轉 ISO 字串;讀取端 parseDateValue 兩種都吃)
         labelId: displayMeta.labelId,
         labelName: displayMeta.labelName,
         labelColor: displayMeta.color,
@@ -451,59 +453,71 @@ const createUatSchedules = async (item, actor) => {
     )
     .map((entry) => entry.id);
 
-  await scheduleDb.runTransaction(async (transaction) => {
-    const legacyRefs = groups.map((target) => scheduleCollection.doc(target.legacyId));
-    const legacySnapshots = await Promise.all(legacyRefs.map((ref) => transaction.get(ref)));
-    staleWorkflowIds.forEach((id) => transaction.delete(scheduleCollection.doc(id)));
+  // 2026-10-07 batch4(Firebase 移除):原本整段包在 scheduleDb.runTransaction 裡。api.js 的 runTransaction
+  // 一律走 Firebase,schedule 切到後端後會變成「讀寫不同邊」(transaction 寫進 Firebase、畫面讀後端),所以改成
+  // 逐筆讀寫。⚠️ 非原子:中途失敗會留下部分結果;順序刻意安排成「重做 / 後端同步能自己補齊」——
+  //   ① 先把「向 AM 確認」這筆標成已確認(pmConfirmedAt)。後端每 5 分鐘的同步看到它已確認,本來就會自己建
+  //     行銷素材 / UAT / PROD 三類待辦;所以後面任何一步失敗,最慢下一輪後端同步會補上,重按儲存也只會覆蓋同一批 ID。
+  //     反過來(先建待辦、最後才標已確認)若最後一步失敗,後端同步會把那些待辦當成「不該存在」刪掉。
+  //   ② 類別標籤 → ③ 逐筆寫待辦(固定 ID、merge)→ ④ 刪掉舊版合併列與過時列(後端 DELETE = 軟刪除)。
+  // 競態:如果後端同步剛好在 ① 之前讀了資料、在 ③ 之後才寫回,它會把剛建的待辦刪掉;下一輪(≤5 分鐘)看到已確認又會建回來。
+  const legacyRefs = groups.map((target) => scheduleCollection.doc(target.legacyId));
+  const legacySnapshots = await Promise.all(legacyRefs.map((ref) => ref.get()));
 
-    [marketingMeta, uatMeta, prodMeta]
-      .filter((meta) => !labelList.some((label) => label.id === meta.labelId))
-      .forEach((meta) => {
-        transaction.set(scheduleLabelCollection.doc(meta.labelId), {
-          name: meta.labelName,
-          color: meta.color,
-          updatedAt,
-          source: 'google-game-sheet'
-        }, { merge: true });
-      });
-
-    groups.forEach((target, index) => {
-      const displayMeta = resolveSavedScheduleMeta(target.meta);
-      const legacyGames = legacySnapshots[index].exists ? legacySnapshots[index].data()?.games : [];
-      const rowGames = mergeScheduleGames(legacyGames, target.group.games);
-      rowGames.forEach((game) => {
-        const suffix = gameScheduleDocSuffix(game);
-        if (!suffix) return;
-        const rowRef = scheduleCollection.doc(`${target.idPrefix}_${suffix}`);
-        transaction.set(rowRef, {
-          eventType: target.eventType,
-          date: target.dateKey,
-          title: `${displayMeta.labelName}｜${getGameTitle([game])}`,
-          content: `${target.contentPrefix}\n${gameLine(game)}`,
-          reminderAt: firebase.firestore.Timestamp.fromDate(target.group.reminderAt),
-          labelId: displayMeta.labelId,
-          labelName: displayMeta.labelName,
-          labelColor: displayMeta.color,
-          repeat: 'none',
-          staffIds: [],
-          staffNames: [],
-          deleted: false,
-          source: 'google-game-sheet',
-          games: [game],
-          updatedAt,
-          updatedBy: actor
-        }, { merge: true });
-      });
-      if (legacySnapshots[index].exists) transaction.delete(legacyRefs[index]);
-    });
-
-    transaction.update(scheduleCollection.doc(item.id), {
-      pmConfirmedAt: updatedAt,
-      pmConfirmedBy: actor,
-      updatedAt,
-      updatedBy: actor
-    });
+  await scheduleCollection.doc(item.id).update({
+    pmConfirmedAt: updatedAt,
+    pmConfirmedBy: actor,
+    updatedAt,
+    updatedBy: actor
   });
+
+  for (const meta of [marketingMeta, uatMeta, prodMeta].filter((entry) => !labelList.some((label) => label.id === entry.labelId))) {
+    await scheduleLabelCollection.doc(meta.labelId).set({
+      name: meta.labelName,
+      color: meta.color,
+      updatedAt,
+      source: 'google-game-sheet'
+    }, { merge: true });
+  }
+
+  const writtenRowIds = new Set();
+  for (const [index, target] of groups.entries()) {
+    const displayMeta = resolveSavedScheduleMeta(target.meta);
+    const legacyGames = legacySnapshots[index].exists ? legacySnapshots[index].data()?.games : [];
+    const rowGames = mergeScheduleGames(legacyGames, target.group.games);
+    for (const game of rowGames) {
+      const suffix = gameScheduleDocSuffix(game);
+      if (!suffix) continue;
+      const rowId = `${target.idPrefix}_${suffix}`;
+      writtenRowIds.add(rowId);
+      await scheduleCollection.doc(rowId).set({
+        eventType: target.eventType,
+        date: target.dateKey,
+        title: `${displayMeta.labelName}｜${getGameTitle([game])}`,
+        content: `${target.contentPrefix}\n${gameLine(game)}`,
+        reminderAt: target.group.reminderAt, // batch4:Date(不再用 Timestamp.fromDate)
+        labelId: displayMeta.labelId,
+        labelName: displayMeta.labelName,
+        labelColor: displayMeta.color,
+        repeat: 'none',
+        staffIds: [],
+        staffNames: [],
+        deleted: false,
+        source: 'google-game-sheet',
+        games: [game],
+        updatedAt,
+        updatedBy: actor
+      }, { merge: true });
+    }
+  }
+
+  // 原本 transaction 裡是「先排刪除、後排寫入」→ 同一個 ID 兩者都有時最後結果是寫入;逐筆版改成最後才刪,要跳過剛寫的,語意才一樣
+  for (const id of staleWorkflowIds) {
+    if (!writtenRowIds.has(id)) await scheduleCollection.doc(id).delete();
+  }
+  for (const [index, ref] of legacyRefs.entries()) {
+    if (legacySnapshots[index].exists) await ref.delete();
+  }
   return groups.reduce((count, target) => count + target.group.games.length, 0);
 };
 
@@ -627,6 +641,12 @@ const renderGameScheduleCountdown = () => {
     scheduleSyncCountdown.textContent = 'Google Sheets 同步中…';
     return;
   }
+  if (scheduleOnBackend()) {
+    scheduleSyncCountdown.textContent = gameScheduleLastFailed
+      ? '手動同步失敗｜後端仍會每 5 分鐘自動同步'
+      : '後端每 5 分鐘自動同步';
+    return;
+  }
   const remaining = Math.max(0, (gameScheduleNextSyncAt || Date.now() + GAME_SCHEDULE_SYNC_INTERVAL_MS) - Date.now());
   scheduleSyncCountdown.textContent = gameScheduleLastFailed
     ? `同步失敗｜5 分鐘後自動重試 ${formatGameScheduleCountdown(remaining)}`
@@ -640,7 +660,41 @@ const startGameScheduleCountdown = (delay = GAME_SCHEDULE_SYNC_INTERVAL_MS) => {
   gameScheduleCountdownTimer = window.setInterval(renderGameScheduleCountdown, 1000);
 };
 
+// 2026-10-07 batch4:schedule 走後端時,遊戲上架同步改由後端做(POST /api/admin/game-schedule-sync,
+// 背景每 5 分鐘、台北時區)。前端不再自己抓 Google 表、不再批次寫入 —— 按鈕只是「請後端現在跑一輪」,跑完重新載入。
+const GAME_SCHEDULE_BACKEND_SYNC_PATH = '/api/admin/game-schedule-sync';
+const syncGameSchedulesViaBackend = async () => {
+  if (!canEditSchedule || gameScheduleSyncing) return;
+  gameScheduleSyncing = true;
+  renderGameScheduleCountdown();
+  syncGameScheduleButton?.setAttribute('disabled', '');
+  if (syncGameScheduleButton) syncGameScheduleButton.textContent = '同步中…';
+  setStatus('正在請後端同步 Google 遊戲排程…', 'info');
+  try {
+    // csrApiFetch = api.js 的 apiFetch:同一個後端位址、同一個登入 token(Authorization: Bearer)
+    const result = await window.csrApiFetch(GAME_SCHEDULE_BACKEND_SYNC_PATH, { method: 'POST' });
+    if (result?.__notFound) throw new Error('後端還沒開放遊戲排程同步(404)');
+    if (!result || result.ok !== true) throw new Error(result?.reason || '後端同步沒有成功');
+    gameScheduleLastFailed = false;
+    const stats = result.stats || {};
+    const num = (value) => Number(value) || 0;
+    subscribeSchedules(); // 重新載入(輪詢立刻抓一次,不用等 15 秒)
+    subscribeLabels();
+    setStatus(`遊戲排程同步完成：新增 ${num(stats.insert)} 筆、更新 ${num(stats.update)} 筆、移除 ${num(stats.delete)} 筆，記錄 ${num(stats.changes)} 項後續變更。`, 'success');
+  } catch (error) {
+    gameScheduleLastFailed = true;
+    console.error('後端同步遊戲排程失敗：', error);
+    setStatus(`同步遊戲排程失敗：${error.message || error}`, 'error');
+  } finally {
+    gameScheduleSyncing = false;
+    syncGameScheduleButton?.removeAttribute('disabled');
+    if (syncGameScheduleButton) syncGameScheduleButton.textContent = '同步遊戲排程';
+    renderGameScheduleCountdown();
+  }
+};
+
 const syncGameSchedules = async () => {
+  if (scheduleOnBackend()) return syncGameSchedulesViaBackend(); // batch4:前端那份同步在後端模式下絕不執行
   if (!canEditSchedule || !scheduleCollection || !scheduleLabelCollection || gameScheduleSyncing) return;
   gameScheduleSyncing = true;
   renderGameScheduleCountdown();
@@ -761,7 +815,7 @@ const syncGameSchedules = async () => {
           : `${row.contentPrefix}\n${gameLine(row.game)}`,
         reminderAt: preserveManualReminder
           ? existingItem.reminderAt
-          : firebase.firestore.Timestamp.fromDate(row.at),
+          : row.at, // batch4:Date
         labelId: row.forceLabelMeta ? displayMeta.labelId : existingItem?.labelId || displayMeta.labelId,
         labelName: row.forceLabelMeta ? displayMeta.labelName : canonicalScheduleLabelName(existingItem?.labelName) || displayMeta.labelName,
         labelColor: existingItem?.labelColor || displayMeta.color,
@@ -774,7 +828,7 @@ const syncGameSchedules = async () => {
         updatedAt: syncedAt,
         updatedBy: actor
       };
-      if (row.endAt) payload.endAt = firebase.firestore.Timestamp.fromDate(row.endAt);
+      if (row.endAt) payload.endAt = row.endAt;
       batch.set(scheduleCollection.doc(row.id), payload, { merge: true });
     });
 
@@ -794,6 +848,8 @@ const syncGameSchedules = async () => {
 };
 
 const startAutomaticGameScheduleSync = () => {
+  // batch4:後端模式 = 後端每 5 分鐘自己同步,前端不開計時器(只有開關沒撥、還在 Firebase 時才保留舊的前端自動同步)
+  if (scheduleOnBackend()) { renderGameScheduleCountdown(); return; }
   if (!scheduleDataLoaded || !canEditSchedule || gameScheduleAutoTimer) return;
   startGameScheduleCountdown(800);
   window.setTimeout(() => syncGameSchedules(), 800);
@@ -1365,13 +1421,23 @@ const pendingStorageAvailable = () => {
     return true;
   } catch (error) { return false; }
 };
-// GPT 第 3 輪:新增排程**絕不覆蓋**既有文件 —— 用 transaction「不存在才建立」;已存在回 false,交給人決定
-const createScheduleIfAbsent = (docId, data) => scheduleDb.runTransaction(async (transaction) => {
+// GPT 第 3 輪:新增排程**絕不覆蓋**既有文件 ——「不存在才建立」;已存在回 false,交給人決定
+// 2026-10-07 batch4:原本用 runTransaction,但 api.js 的 transaction 一律走 Firebase → schedule 切後端後會寫錯邊。
+// 改成先 get、不存在才 set。⚠️ 非原子:get 與 set 之間若有人用**同一個 ID** 建立,會被覆蓋;
+// 這個 ID 是本機產生的 20 碼亂數(只有同一個人重試才會撞),實務上只剩「同一人兩個分頁同時按儲存」這種情況。
+const createScheduleIfAbsent = async (docId, data) => {
   const docRef = scheduleCollection.doc(docId);
-  if ((await transaction.get(docRef)).exists) return false;
-  transaction.set(docRef, data);
+  if ((await docRef.get()).exists) return false;
+  await docRef.set(data);
   return true;
-});
+};
+// 2026-10-07 batch4:歷程原本用 FieldValue.arrayUnion(後端墊片不支援)→ 改成「讀目前文件、接在後面、整個陣列寫回」。
+// ⚠️ 非原子:兩個人幾乎同時改同一筆,後寫的會蓋掉先寫那筆的歷程項目(排程內容本身不受影響)。
+const appendScheduleHistory = async (docId, entry) => {
+  const snapshot = await scheduleCollection.doc(docId).get();
+  const current = snapshot.exists ? snapshot.data()?.history : null;
+  return [...(Array.isArray(current) ? current : []), entry];
+};
 const openModal = (dateKey, scheduleId = null) => {
   editingId = scheduleId;
   scheduleSaveSession += 1;
@@ -1727,15 +1793,17 @@ formEl?.addEventListener('submit', async (event) => {
     date: toDateKey(reminderAt), labelColor, labelName, repeat,
     title: document.querySelector('#scheduleTitle').value.trim(),
     content: document.querySelector('#scheduleContent').value.trim(),
-    reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt),
+    reminderAt, // batch4:直接存 Date(不再用 Timestamp.fromDate;讀取端 parseDateValue 吃 Timestamp 也吃 ISO 字串)
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, deleted: false
   };
   if (endAt && endAt <= reminderAt) return setMessage('結束時間必須晚於提醒開始時間。');
-  if (endAt) payload.endAt = firebase.firestore.Timestamp.fromDate(endAt);
-  else if (editingId) payload.endAt = firebase.firestore.FieldValue.delete();
-  if (editingId) payload.endDate = firebase.firestore.FieldValue.delete();
+  // batch4:「刪掉欄位」原本用 FieldValue.delete()(後端墊片不支援)→ 改寫 null;讀取端一律把 null 當「沒有」
+  //   (endAt → parseDateValue(null)=null、endDate → `|| ''`、repeatInterval → `|| 1`、其他平台日期 → `|| ''`)
+  if (endAt) payload.endAt = endAt;
+  else if (editingId) payload.endAt = null;
+  if (editingId) payload.endDate = null;
   if (repeat === 'custom') payload.repeatInterval = repeatInterval;
-  else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
+  else if (editingId) payload.repeatInterval = null;
   if (!payload.title) return setMessage('請輸入標題。');
   const editingItem = scheduleList.find((entry) => entry.id === editingId);
   const confirmGameWorkflow = editingItem?.source === 'google-game-sheet'
@@ -1756,17 +1824,14 @@ formEl?.addEventListener('submit', async (event) => {
   }
   if (isEditingFirstLaunch) {
     payload.otherPlatformEnabled = otherPlatformEnabled;
-    payload.otherPlatformUatDate = otherPlatformEnabled ? otherPlatformUatDate : firebase.firestore.FieldValue.delete();
-    payload.otherPlatformProdDate = otherPlatformEnabled ? otherPlatformProdDate : firebase.firestore.FieldValue.delete();
+    payload.otherPlatformUatDate = otherPlatformEnabled ? otherPlatformUatDate : null;
+    payload.otherPlatformProdDate = otherPlatformEnabled ? otherPlatformProdDate : null;
   }
   const changes = editingItem ? buildScheduleChanges(editingItem, { ...payload, reminderAt, endAt }) : [];
-  if (!editingItem || changes.length) payload.history = firebase.firestore.FieldValue.arrayUnion({
-    action,
-    userId: user.id,
-    userName: user.name,
-    at: firebase.firestore.Timestamp.fromDate(new Date()),
-    changes
-  });
+  // batch4:歷程這一筆先備好,真正寫入前才「讀目前歷程 + 接在後面」(見 appendScheduleHistory);新增的排程歷程就是這一筆
+  const historyEntry = (!editingItem || changes.length)
+    ? { action, userId: user.id, userName: user.name, at: new Date(), changes }
+    : null;
   // GPT 第 3 輪:瀏覽器記不了存檔進度(無痕模式等)→ 新增前明講,讓人決定要不要繼續,不默默失去保護
   // GPT 第 4 輪:探針過了、正式寫紀錄時才失敗(空間不足等)也一樣要問 → 見下方 recordPendingOrConfirm
   let storageRiskAccepted = false;
@@ -1802,9 +1867,11 @@ formEl?.addEventListener('submit', async (event) => {
   try {
     await saveLabelIfNeeded(labelName, labelColor, selectedScheduleLabelId);
     if (!mainAlreadySaved) {
-      if (editingId) await scheduleCollection.doc(editingId).update(payload);
-      else {
-        const newData = { ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+      if (editingId) {
+        const editPayload = historyEntry ? { ...payload, history: await appendScheduleHistory(editingId, historyEntry) } : payload;
+        await scheduleCollection.doc(editingId).update(editPayload);
+      } else {
+        const newData = { ...payload, ...(historyEntry ? { history: [historyEntry] } : {}), createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
         // 先記再寫:寫入其實成功、只是回應逾時,重新整理後也找得回這個 ID
         if (!recordPendingOrConfirm()) { setMessage(PENDING_STORAGE_CANCEL_MESSAGE); return; }
         if (!(await createScheduleIfAbsent(pendingScheduleSave.docId, newData))) {
@@ -1866,7 +1933,9 @@ deleteButton?.addEventListener('click', async () => {
   if (!canDeleteSchedule) return setMessage('您沒有刪除權限。');
   if (!editingId || !scheduleCollection || !confirm('確定要刪除此排程嗎？')) return;
   const user = currentUser();
-  await scheduleCollection.doc(editingId).update({ deleted: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, history: firebase.firestore.FieldValue.arrayUnion({ action: '刪除', userId: user.id, userName: user.name, at: firebase.firestore.Timestamp.fromDate(new Date()) }) });
+  // batch4:arrayUnion → 讀目前歷程、接一筆「刪除」再寫回;刪除本身仍是軟刪除(deleted: true),文件留著
+  const history = await appendScheduleHistory(editingId, { action: '刪除', userId: user.id, userName: user.name, at: new Date() });
+  await scheduleCollection.doc(editingId).update({ deleted: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, history });
   closeModal(true);
 });
 

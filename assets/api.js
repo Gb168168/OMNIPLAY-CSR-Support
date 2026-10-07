@@ -47,7 +47,10 @@
     'kpi', 'kpi_schema',
     'meeting', 'meetingSettings',
     // 2026-10-07 移除 Firebase 第 2 段 batch3:休假表(月份文件 + 班別文件;值機 / 讓 的手動調整都在月份文件裡)
-    'leave'
+    'leave',
+    // 2026-10-07 移除 Firebase 第 2 段 batch4:排程表(schedule.js 已拿掉 transaction / arrayUnion / FieldValue.delete;
+    // 遊戲上架同步改由後端 POST /api/admin/game-schedule-sync 每 5 分鐘跑)
+    'schedule', 'scheduleLabels', 'scheduleGameChanges'
   ]);
 
   const realDb = window.omniplayDb; // Firebase 原本的 Firestore(未路由的 collection 繼續用)
@@ -91,7 +94,7 @@
     if (value instanceof Date) return value.toISOString();
     if (value && typeof value.toDate === 'function') return value.toDate().toISOString(); // Firestore Timestamp
     // 其他 FieldValue 哨兵(arrayUnion/increment/delete)墊片不支援,直接擋下以免序列化成垃圾寫進資料庫
-    // (FRIDAY 8/10;目前只有排班 schedule 在用這些,而 schedule 不得路由 — 它還用到 batch/runTransaction)
+    // (FRIDAY 8/10;當時只有排班 schedule 在用這些。2026-10-07 batch4 schedule.js 已全部改掉才路由;擋板保留當防呆)
     // 2026-10-07:compat SDK 10.x 的 FieldValue 是一層包裝,_methodName 在 _delegate 裡 —— 原本只看外層,
     //   delete() / arrayUnion() 會被當成一般物件序列化寫進資料庫(實測)。兩層都要看。
     const sentinelName = value && typeof value === 'object' ? (value._methodName || value._delegate?._methodName) : '';
@@ -318,6 +321,7 @@
     },
     runTransaction: (fn) => realDb?.runTransaction(fn)
   };
-  window.csrApiFetch = apiFetch; // 給 app.js 登入用
+  window.csrApiFetch = apiFetch; // 給 app.js 登入用(batch4 起 schedule.js 的「同步遊戲排程」也用它打後端)
+  window.csrApiIsRouted = (name) => ROUTED.has(name); // 2026-10-07 batch4:讓頁面知道某個 collection 現在走哪邊
   console.info('[csr-api] 後端切換已啟用:', base, '路由 collection:', [...ROUTED].join(', '));
 })();
