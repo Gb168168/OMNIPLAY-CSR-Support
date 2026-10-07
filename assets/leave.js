@@ -77,6 +77,8 @@ let unsubscribeStaff = null;
 let unsubscribeLeave = null;
 let activeSpecialMode = null;
 let saveTimer = null;
+let leaveSavePending = false;   // 2026-10-07 FRIDAY C1:有排隊中的整份存檔
+let leaveSaveInFlight = 0;      // 2026-10-07 FRIDAY C1:正在送出的存檔數
 let lastSuccessfulLeaveSyncAt = null;
 let nextLeaveSyncAt = Date.now() + 5 * 60 * 1000;
 const LEAVE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -538,27 +540,35 @@ const loadExternalLeave = async () => {
 
 const queueSave = () => {
   clearTimeout(saveTimer);
+  leaveSavePending = true;
   saveTimer = setTimeout(saveMonthData, 280);
 };
 
-// FRIDAY 10/06 C2:「讓」只更新 flexibleOverrides 裡那一個鍵(update + 欄位路徑),不整份覆蓋文件;
+// FRIDAY 10/06 C2:「讓」只更新 flexibleOverrides 這一個欄位,不整份覆蓋文件;
 //   文件還不存在時 update 會失敗 → 改走原本的整份存檔。⚠️ 開著舊版頁面的人之後若整份存檔仍會洗掉「讓」→ 上線時請有編輯權的人 Ctrl+F5
+// 2026-10-07 batch3(休假表改走後端):後端的部分更新不支援「刪除」標記 ⇒ 改成整個 flexibleOverrides 物件一起寫
+//   (仍然只動這一個欄位;取消 = 物件裡少了那個鍵)。Firebase 與後端都適用。
 const saveFlexibleOverride = async (key, value) => {
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
+  leaveSaveInFlight += 1;
   try {
     await leaveCollection.doc(monthKey(currentMonth)).update({
-      [`flexibleOverrides.${key}`]: value || firebase.firestore.FieldValue.delete(),
+      flexibleOverrides: { ...(leaveData.flexibleOverrides || {}) },
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     if (value) setStatus(`已把 ${key.split('_')[1]} 號的彈性早退讓給 ${value}。`, 'success');
   } catch (error) {
     console.warn('單一欄位儲存失敗,改用整份存檔:', error);
     queueSave();
+  } finally {
+    leaveSaveInFlight -= 1;
   }
 };
 
 const saveMonthData = async () => {
+  leaveSavePending = false;
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
+  leaveSaveInFlight += 1;
   try {
     await leaveCollection.doc(monthKey(currentMonth)).set({
       month: monthKey(currentMonth),
@@ -572,6 +582,8 @@ const saveMonthData = async () => {
   } catch (error) {
     console.error('儲存休假表失敗：', error);
     setStatus('儲存休假表失敗，請稍後再試。', 'error');
+  } finally {
+    leaveSaveInFlight -= 1;
   }
 };
 
@@ -678,6 +690,9 @@ const subscribeMonth = () => {
   externalMaxDays = null;
   loadExternalLeave();
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
+    // 2026-10-07 FRIDAY C1:改走後端後「即時更新」變成每 15 秒輪詢。自己還有排隊中 / 存檔中的修改時,
+    //   先不要用伺服器版本整份換掉 leaveData(否則剛點的那一格會被蓋回去);存完後下一輪輪詢自然會拿到最新版
+    if (leaveSavePending || leaveSaveInFlight > 0) return;
     leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {} };
     staffList = sortStaffForLeave(staffList);
     render();
