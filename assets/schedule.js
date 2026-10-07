@@ -231,6 +231,8 @@ let gameScheduleAutoTimer = null;
 let gameScheduleCountdownTimer = null;
 let gameScheduleNextSyncAt = null;
 let gameScheduleLastFailed = false;
+let gameScheduleBackendStatus = null; // null = 還沒讀到;{ error } = 讀不到;否則 = 後端回的 { enabled, interval, last }
+let gameScheduleStatusTimer = null;
 let scheduleFormInitialSnapshot = '';
 let selectedScheduleLabelId = '';
 const GAME_SCHEDULE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -642,9 +644,12 @@ const renderGameScheduleCountdown = () => {
     return;
   }
   if (scheduleOnBackend()) {
-    scheduleSyncCountdown.textContent = gameScheduleLastFailed
-      ? '手動同步失敗｜後端仍會每 5 分鐘自動同步'
-      : '後端每 5 分鐘自動同步';
+    // r1(FRIDAY B2):不寫死「每 5 分鐘」,照後端 GET /api/admin/game-schedule-sync 回的 enabled / last 顯示
+    const text = describeBackendSyncStatus(gameScheduleBackendStatus);
+    const lastFailed = gameScheduleBackendStatus?.last && gameScheduleBackendStatus.last.ok !== true;
+    scheduleSyncCountdown.classList.toggle('is-error', gameScheduleLastFailed || Boolean(lastFailed));
+    scheduleSyncCountdown.textContent = gameScheduleLastFailed ? `手動同步失敗｜${text}` : text;
+    scheduleSyncCountdown.setAttribute('title', lastFailed ? String(gameScheduleBackendStatus.last.reason || '') : '');
     return;
   }
   const remaining = Math.max(0, (gameScheduleNextSyncAt || Date.now() + GAME_SCHEDULE_SYNC_INTERVAL_MS) - Date.now());
@@ -663,6 +668,31 @@ const startGameScheduleCountdown = (delay = GAME_SCHEDULE_SYNC_INTERVAL_MS) => {
 // 2026-10-07 batch4:schedule 走後端時,遊戲上架同步改由後端做(POST /api/admin/game-schedule-sync,
 // 背景每 5 分鐘、台北時區)。前端不再自己抓 Google 表、不再批次寫入 —— 按鈕只是「請後端現在跑一輪」,跑完重新載入。
 const GAME_SCHEDULE_BACKEND_SYNC_PATH = '/api/admin/game-schedule-sync';
+const GAME_SCHEDULE_STATUS_REFRESH_MS = 2 * 60 * 1000;
+
+function describeBackendSyncStatus(status) {
+  if (!status) return '後端同步狀態讀取中…';
+  if (status.error) return '讀不到後端同步狀態';
+  const base = status.enabled === true ? '後端自動同步已開啟' : '後端自動同步未開啟';
+  const last = status.last;
+  if (!last || !last.at) return status.enabled === true ? `${base}｜尚無執行紀錄` : base;
+  return `${base}｜上次 ${formatGameChangeTime(last.at)} ${last.ok === true ? '成功' : '失敗'}`;
+}
+
+const refreshBackendSyncStatus = async () => {
+  if (!scheduleOnBackend()) return;
+  try {
+    const result = await window.csrApiFetch(GAME_SCHEDULE_BACKEND_SYNC_PATH, { method: 'GET' });
+    gameScheduleBackendStatus = result && !result.__notFound
+      ? { enabled: result.enabled === true, interval: result.interval, last: result.last || null }
+      : { error: true };
+  } catch (error) {
+    console.warn('讀取後端同步狀態失敗：', error);
+    gameScheduleBackendStatus = { error: true };
+  }
+  renderGameScheduleCountdown();
+};
+
 const syncGameSchedulesViaBackend = async () => {
   if (!canEditSchedule || gameScheduleSyncing) return;
   gameScheduleSyncing = true;
@@ -674,6 +704,12 @@ const syncGameSchedulesViaBackend = async () => {
     // csrApiFetch = api.js 的 apiFetch:同一個後端位址、同一個登入 token(Authorization: Bearer)
     const result = await window.csrApiFetch(GAME_SCHEDULE_BACKEND_SYNC_PATH, { method: 'POST' });
     if (result?.__notFound) throw new Error('後端還沒開放遊戲排程同步(404)');
+    if (result?.busy === true) {
+      // r1(FRIDAY B2):上一輪(背景或別人按的)還在跑 = 正常狀況,當一般提示,不算失敗
+      gameScheduleLastFailed = false;
+      setStatus('上一輪遊戲排程同步還在跑，跑完畫面會自動更新；稍後再按一次即可。', 'info');
+      return;
+    }
     if (!result || result.ok !== true) throw new Error(result?.reason || '後端同步沒有成功');
     gameScheduleLastFailed = false;
     const stats = result.stats || {};
@@ -690,6 +726,7 @@ const syncGameSchedulesViaBackend = async () => {
     syncGameScheduleButton?.removeAttribute('disabled');
     if (syncGameScheduleButton) syncGameScheduleButton.textContent = '同步遊戲排程';
     renderGameScheduleCountdown();
+    refreshBackendSyncStatus(); // 「上次同步」時間跟著更新
   }
 };
 
@@ -848,8 +885,15 @@ const syncGameSchedules = async () => {
 };
 
 const startAutomaticGameScheduleSync = () => {
-  // batch4:後端模式 = 後端每 5 分鐘自己同步,前端不開計時器(只有開關沒撥、還在 Firebase 時才保留舊的前端自動同步)
-  if (scheduleOnBackend()) { renderGameScheduleCountdown(); return; }
+  // batch4:後端模式 = 同步由後端做(有沒有開自動、多久一次看後端設定),前端不開同步計時器,只每 2 分鐘讀一次狀態
+  if (scheduleOnBackend()) {
+    renderGameScheduleCountdown();
+    if (canEditSchedule && !gameScheduleStatusTimer) {
+      refreshBackendSyncStatus();
+      gameScheduleStatusTimer = window.setInterval(refreshBackendSyncStatus, GAME_SCHEDULE_STATUS_REFRESH_MS);
+    }
+    return;
+  }
   if (!scheduleDataLoaded || !canEditSchedule || gameScheduleAutoTimer) return;
   startGameScheduleCountdown(800);
   window.setTimeout(() => syncGameSchedules(), 800);
@@ -1761,6 +1805,7 @@ scheduleHelpModalEl?.addEventListener('click', (event) => {
 window.addEventListener('beforeunload', () => {
   if (gameScheduleAutoTimer) window.clearInterval(gameScheduleAutoTimer);
   if (gameScheduleCountdownTimer) window.clearInterval(gameScheduleCountdownTimer);
+  if (gameScheduleStatusTimer) window.clearInterval(gameScheduleStatusTimer);
 });
 
 document.querySelector('#closeDayAgendaModal')?.addEventListener('click', closeDayAgenda);
