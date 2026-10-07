@@ -91,8 +91,11 @@
     if (value && typeof value.toDate === 'function') return value.toDate().toISOString(); // Firestore Timestamp
     // 其他 FieldValue 哨兵(arrayUnion/increment/delete)墊片不支援,直接擋下以免序列化成垃圾寫進資料庫
     // (FRIDAY 8/10;目前只有排班 schedule 在用這些,而 schedule 不得路由 — 它還用到 batch/runTransaction)
-    if (value && typeof value === 'object' && value._methodName && !isServerTimestamp(value)) {
-      throw new Error('墊片不支援的 FieldValue:' + value._methodName + '(此 collection 不應路由到 API)');
+    // 2026-10-07:compat SDK 10.x 的 FieldValue 是一層包裝,_methodName 在 _delegate 裡 —— 原本只看外層,
+    //   delete() / arrayUnion() 會被當成一般物件序列化寫進資料庫(實測)。兩層都要看。
+    const sentinelName = value && typeof value === 'object' ? (value._methodName || value._delegate?._methodName) : '';
+    if (sentinelName && !isServerTimestamp(value)) {
+      throw new Error('墊片不支援的 FieldValue:' + sentinelName + '(此 collection 不應路由到 API)');
     }
     if (Array.isArray(value)) return value.map(encodeValue);
     if (value && typeof value === 'object' && value.constructor === Object) {
