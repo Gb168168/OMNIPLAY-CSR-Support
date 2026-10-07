@@ -684,13 +684,21 @@ const refreshBackendSyncStatus = async () => {
   try {
     const result = await window.csrApiFetch(GAME_SCHEDULE_BACKEND_SYNC_PATH, { method: 'GET' });
     gameScheduleBackendStatus = result && !result.__notFound
-      ? { enabled: result.enabled === true, interval: result.interval, last: result.last || null }
+      ? { enabled: result.enabled === true, interval: result.interval, last: result.last || null, canTrigger: result.canTrigger }
       : { error: true };
   } catch (error) {
     console.warn('讀取後端同步狀態失敗：', error);
     gameScheduleBackendStatus = { error: true };
   }
+  applySyncButtonVisibility();
   renderGameScheduleCountdown();
+};
+
+// r2(FRIDAY P1-2):手動同步限管理員。isOmniplayAdmin() 在 app.js 目前寫死 true 不能用,
+// 改看後端狀態 API 回的 canTrigger(後端用同一套管理員判斷);明確回 false 才藏,其他情況照 canEditSchedule
+const applySyncButtonVisibility = () => {
+  if (!scheduleOnBackend()) return;
+  syncGameScheduleButton?.toggleAttribute('hidden', !canEditSchedule || gameScheduleBackendStatus?.canTrigger === false);
 };
 
 const syncGameSchedulesViaBackend = async () => {
@@ -718,6 +726,14 @@ const syncGameSchedulesViaBackend = async () => {
     subscribeLabels();
     setStatus(`遊戲排程同步完成：新增 ${num(stats.insert)} 筆、更新 ${num(stats.update)} 筆、移除 ${num(stats.delete)} 筆，記錄 ${num(stats.changes)} 項後續變更。`, 'success');
   } catch (error) {
+    if (error?.status === 403) {
+      // r2(FRIDAY P1-2):不是管理員 → 一般提示,不顯示紅字;順手把按鈕藏起來
+      gameScheduleLastFailed = false;
+      gameScheduleBackendStatus = { ...(gameScheduleBackendStatus || {}), canTrigger: false };
+      applySyncButtonVisibility();
+      setStatus('只有管理員可以手動同步遊戲排程；後端自動同步不受影響。', 'info');
+      return;
+    }
     gameScheduleLastFailed = true;
     console.error('後端同步遊戲排程失敗：', error);
     setStatus(`同步遊戲排程失敗：${error.message || error}`, 'error');
@@ -887,6 +903,7 @@ const syncGameSchedules = async () => {
 const startAutomaticGameScheduleSync = () => {
   // batch4:後端模式 = 同步由後端做(有沒有開自動、多久一次看後端設定),前端不開同步計時器,只每 2 分鐘讀一次狀態
   if (scheduleOnBackend()) {
+    applySyncButtonVisibility(); // 權限重算時(syncSchedulePermission)會先照 canEditSchedule 打開按鈕,這裡再套 canTrigger
     renderGameScheduleCountdown();
     if (canEditSchedule && !gameScheduleStatusTimer) {
       refreshBackendSyncStatus();
