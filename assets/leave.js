@@ -541,13 +541,15 @@ const queueSave = () => {
   saveTimer = setTimeout(saveMonthData, 280);
 };
 
-// FRIDAY 10/06 C2:「讓」只更新 flexibleOverrides 裡那一個鍵(update + 欄位路徑),不整份覆蓋文件;
+// FRIDAY 10/06 C2:「讓」只更新 flexibleOverrides 這一個欄位,不整份覆蓋文件;
 //   文件還不存在時 update 會失敗 → 改走原本的整份存檔。⚠️ 開著舊版頁面的人之後若整份存檔仍會洗掉「讓」→ 上線時請有編輯權的人 Ctrl+F5
+// 2026-10-07 batch3(休假表改走後端):後端的部分更新不支援「刪除」標記 ⇒ 改成整個 flexibleOverrides 物件一起寫
+//   (仍然只動這一個欄位;取消 = 物件裡少了那個鍵)。Firebase 與後端都適用。
 const saveFlexibleOverride = async (key, value) => {
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
   try {
     await leaveCollection.doc(monthKey(currentMonth)).update({
-      [`flexibleOverrides.${key}`]: value || firebase.firestore.FieldValue.delete(),
+      flexibleOverrides: { ...(leaveData.flexibleOverrides || {}) },
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     if (value) setStatus(`已把 ${key.split('_')[1]} 號的彈性早退讓給 ${value}。`, 'success');

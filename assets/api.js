@@ -45,7 +45,9 @@
     'knowledge', 'knowledge_schema',
     'ai_database', 'ai_database_schema',
     'kpi', 'kpi_schema',
-    'meeting', 'meetingSettings'
+    'meeting', 'meetingSettings',
+    // 2026-10-07 移除 Firebase 第 2 段 batch3:休假表(月份文件 + 班別文件;值機 / 讓 的手動調整都在月份文件裡)
+    'leave'
   ]);
 
   const realDb = window.omniplayDb; // Firebase 原本的 Firestore(未路由的 collection 繼續用)
