@@ -79,6 +79,9 @@ let activeSpecialMode = null;
 let saveTimer = null;
 let leaveSavePending = false;   // 2026-10-07 FRIDAY C1:有排隊中的整份存檔
 let leaveSaveInFlight = 0;      // 2026-10-07 FRIDAY C1:正在送出的存檔數
+let leaveMonthLoaded = false;    // 2026-10-07 FRIDAY B1:目前月份的資料載入了沒(還沒載入前的點擊不存,避免舊月份資料寫進新月份)
+let pendingSaveMonth = '';       // 2026-10-07 FRIDAY B1:排隊存檔當下的月份(第二道保險)
+let leaveSnapshotMissed = false; // 2026-10-07 FRIDAY P1-1:存檔期間跳過了一份伺服器資料 → 存完要主動重抓
 let lastSuccessfulLeaveSyncAt = null;
 let nextLeaveSyncAt = Date.now() + 5 * 60 * 1000;
 const LEAVE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -539,21 +542,27 @@ const loadExternalLeave = async () => {
 };
 
 const queueSave = () => {
+  if (!leaveMonthLoaded) {
+    setStatus('這個月份的資料還在載入,剛剛的修改沒有存,載入完成後請再點一次。', 'error');
+    return;   // 新月份資料到了會整份換掉 leaveData,剛剛的本機修改自然消失
+  }
   clearTimeout(saveTimer);
+  pendingSaveMonth = monthKey(currentMonth);
   leaveSavePending = true;
   saveTimer = setTimeout(saveMonthData, 280);
 };
 
 // FRIDAY 10/06 C2:「讓」只更新 flexibleOverrides 這一個欄位,不整份覆蓋文件;
 //   文件還不存在時 update 會失敗 → 改走原本的整份存檔。⚠️ 開著舊版頁面的人之後若整份存檔仍會洗掉「讓」→ 上線時請有編輯權的人 Ctrl+F5
-// 2026-10-07 batch3(休假表改走後端):後端的部分更新不支援「刪除」標記 ⇒ 改成整個 flexibleOverrides 物件一起寫
-//   (仍然只動這一個欄位;取消 = 物件裡少了那個鍵)。Firebase 與後端都適用。
+// 2026-10-07 batch3(休假表改走後端):後端的部分更新不支援「刪除」標記 ⇒ 取消時寫 null(effectiveFlexibleYield 把非組員的值當沒設定)。
+//   FRIDAY P1-2:用點路徑只寫「這一天」這一個鍵,不整個 flexibleOverrides 覆蓋(兩人 15 秒內各改不同天不會互蓋)。Firebase 與後端都支援點路徑。
 const saveFlexibleOverride = async (key, value) => {
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
+  if (!leaveMonthLoaded) return setStatus('這個月份的資料還在載入,剛剛的修改沒有存,載入完成後請再點一次。', 'error');
   leaveSaveInFlight += 1;
   try {
     await leaveCollection.doc(monthKey(currentMonth)).update({
-      flexibleOverrides: { ...(leaveData.flexibleOverrides || {}) },
+      [`flexibleOverrides.${key}`]: value || null,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     if (value) setStatus(`已把 ${key.split('_')[1]} 號的彈性早退讓給 ${value}。`, 'success');
@@ -562,20 +571,28 @@ const saveFlexibleOverride = async (key, value) => {
     queueSave();
   } finally {
     leaveSaveInFlight -= 1;
+    resyncIfMissed();
   }
 };
 
 const saveMonthData = async () => {
   leaveSavePending = false;
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
+  const key = monthKey(currentMonth);
+  // FRIDAY B1 第二道保險:排隊時的月份跟現在不同 → 不存(正常流程 flushPendingSave 已先送出,不會走到這)
+  if (pendingSaveMonth && pendingSaveMonth !== key) {
+    console.warn(`排隊存檔的月份 ${pendingSaveMonth} 跟目前 ${key} 不同,放棄這次存檔`);
+    return;
+  }
   leaveSaveInFlight += 1;
   try {
-    await leaveCollection.doc(monthKey(currentMonth)).set({
-      month: monthKey(currentMonth),
-      records: leaveData.records || {},
-      quotas: leaveData.quotas || {},
-      phoneOverrides: leaveData.phoneOverrides || {},
-      flexibleOverrides: leaveData.flexibleOverrides || {}, // 2026-10-06 彈性早退「讓」
+    // 存「當下的副本」:送出途中使用者再點,不會混進這一次
+    await leaveCollection.doc(key).set({
+      month: key,
+      records: { ...(leaveData.records || {}) },
+      quotas: { ...(leaveData.quotas || {}) },
+      phoneOverrides: { ...(leaveData.phoneOverrides || {}) },
+      flexibleOverrides: { ...(leaveData.flexibleOverrides || {}) }, // 2026-10-06 彈性早退「讓」
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     setStatus('已自動儲存休假表。', 'success');
@@ -584,7 +601,35 @@ const saveMonthData = async () => {
     setStatus('儲存休假表失敗，請稍後再試。', 'error');
   } finally {
     leaveSaveInFlight -= 1;
+    resyncIfMissed();
   }
+};
+
+// 2026-10-07 FRIDAY B1:切換月份前,把排隊中的存檔**用舊月份立刻送出**(否則 280ms 後會用新月份的 key 把舊月份資料寫進去)。
+//   saveMonthData 在第一個 await 之前就同步取好 month key 與資料,所以要在改 currentMonth 之前呼叫
+const flushPendingSave = () => {
+  if (!leaveSavePending) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  saveMonthData();
+};
+
+// 2026-10-07 FRIDAY P1-1:輪詢在存檔期間被跳過的那份資料不會再送一次 → 存檔都結束後主動重抓目前月份
+const applyLeaveDoc = (doc) => {
+  leaveMonthLoaded = true;
+  leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {} };
+  staffList = sortStaffForLeave(staffList);
+  render();
+  loadMonthlyShifts();
+};
+const resyncIfMissed = () => {
+  if (!leaveSnapshotMissed || leaveSavePending || leaveSaveInFlight > 0 || !leaveCollection) return;
+  leaveSnapshotMissed = false;
+  const key = monthKey(currentMonth);
+  leaveCollection.doc(key).get().then((doc) => {
+    if (key !== monthKey(currentMonth) || leaveSavePending || leaveSaveInFlight > 0) { leaveSnapshotMissed = true; return; }
+    applyLeaveDoc(doc);
+  }).catch((error) => console.warn('存檔後重抓休假表失敗(下一輪輪詢會再更新):', error));
 };
 
 const renderHeader = () => {
@@ -683,6 +728,8 @@ const loadMonthlyShifts = async () => {
 const subscribeMonth = () => {
   unsubscribeLeave?.();
   if (!leaveCollection) return;
+  leaveMonthLoaded = false;      // FRIDAY B1:新月份資料到之前不准存
+  leaveSnapshotMissed = false;
   setStatus('載入休假表資料中...', 'info');
   externalLeaveData = {};
   externalPayMakeupDays = null;
@@ -692,11 +739,9 @@ const subscribeMonth = () => {
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
     // 2026-10-07 FRIDAY C1:改走後端後「即時更新」變成每 15 秒輪詢。自己還有排隊中 / 存檔中的修改時,
     //   先不要用伺服器版本整份換掉 leaveData(否則剛點的那一格會被蓋回去);存完後下一輪輪詢自然會拿到最新版
-    if (leaveSavePending || leaveSaveInFlight > 0) return;
-    leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {} };
-    staffList = sortStaffForLeave(staffList);
-    render();
-    loadMonthlyShifts();
+    if (leaveSavePending || leaveSaveInFlight > 0) { leaveSnapshotMissed = true; return; }
+    leaveSnapshotMissed = false;
+    applyLeaveDoc(doc);
   }, (error) => {
     console.error('讀取休假表失敗：', error);
     setStatus('讀取休假表失敗，請稍後再試。', 'error');
@@ -704,6 +749,7 @@ const subscribeMonth = () => {
 };
 
 const changeMonth = (offset) => {
+  flushPendingSave();   // FRIDAY B1:一定要在改 currentMonth 之前
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
   setSpecialMode(null);
   subscribeMonth();
@@ -841,7 +887,7 @@ leaveTableBody?.addEventListener('change', (event) => {
 
 prevMonthButton?.addEventListener('click', () => changeMonth(-1));
 nextMonthButton?.addEventListener('click', () => changeMonth(1));
-todayMonthButton?.addEventListener('click', () => { currentMonth = new Date(); currentMonth.setDate(1); setSpecialMode(null); subscribeMonth(); });
+todayMonthButton?.addEventListener('click', () => { flushPendingSave(); currentMonth = new Date(); currentMonth.setDate(1); setSpecialMode(null); subscribeMonth(); });
 specialModeButtons.forEach((button) => {
   button.disabled = !canEditLeave;
   button.addEventListener('click', () => { if (canEditLeave) setSpecialMode(button.dataset.special); });

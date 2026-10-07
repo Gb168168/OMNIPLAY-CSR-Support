@@ -76,7 +76,8 @@
   const isServerTimestamp = (value) => {
     if (!value || typeof value !== 'object') return false;
     if (value.__serverTimestamp === true) return true;
-    const method = value._methodName || value.Hc || '';
+    // 2026-10-07 FRIDAY P1-5:compat SDK 把 FieldValue 包一層(_delegate._methodName),也要認得
+    const method = value._methodName || value._delegate?._methodName || value.Hc || '';
     if (String(method).toLowerCase().includes('servertimestamp')) return true;
     try {
       const FieldValue = window.firebase?.firestore?.FieldValue;
