@@ -77,6 +77,8 @@ let unsubscribeStaff = null;
 let unsubscribeLeave = null;
 let activeSpecialMode = null;
 let saveTimer = null;
+let leaveSavePending = false;   // 2026-10-07 FRIDAY C1:有排隊中的整份存檔
+let leaveSaveInFlight = 0;      // 2026-10-07 FRIDAY C1:正在送出的存檔數
 let lastSuccessfulLeaveSyncAt = null;
 let nextLeaveSyncAt = Date.now() + 5 * 60 * 1000;
 const LEAVE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -538,6 +540,7 @@ const loadExternalLeave = async () => {
 
 const queueSave = () => {
   clearTimeout(saveTimer);
+  leaveSavePending = true;
   saveTimer = setTimeout(saveMonthData, 280);
 };
 
@@ -547,6 +550,7 @@ const queueSave = () => {
 //   (仍然只動這一個欄位;取消 = 物件裡少了那個鍵)。Firebase 與後端都適用。
 const saveFlexibleOverride = async (key, value) => {
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
+  leaveSaveInFlight += 1;
   try {
     await leaveCollection.doc(monthKey(currentMonth)).update({
       flexibleOverrides: { ...(leaveData.flexibleOverrides || {}) },
@@ -556,11 +560,15 @@ const saveFlexibleOverride = async (key, value) => {
   } catch (error) {
     console.warn('單一欄位儲存失敗,改用整份存檔:', error);
     queueSave();
+  } finally {
+    leaveSaveInFlight -= 1;
   }
 };
 
 const saveMonthData = async () => {
+  leaveSavePending = false;
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
+  leaveSaveInFlight += 1;
   try {
     await leaveCollection.doc(monthKey(currentMonth)).set({
       month: monthKey(currentMonth),
@@ -574,6 +582,8 @@ const saveMonthData = async () => {
   } catch (error) {
     console.error('儲存休假表失敗：', error);
     setStatus('儲存休假表失敗，請稍後再試。', 'error');
+  } finally {
+    leaveSaveInFlight -= 1;
   }
 };
 
@@ -680,6 +690,9 @@ const subscribeMonth = () => {
   externalMaxDays = null;
   loadExternalLeave();
   unsubscribeLeave = leaveCollection.doc(monthKey(currentMonth)).onSnapshot((doc) => {
+    // 2026-10-07 FRIDAY C1:改走後端後「即時更新」變成每 15 秒輪詢。自己還有排隊中 / 存檔中的修改時,
+    //   先不要用伺服器版本整份換掉 leaveData(否則剛點的那一格會被蓋回去);存完後下一輪輪詢自然會拿到最新版
+    if (leaveSavePending || leaveSaveInFlight > 0) return;
     leaveData = doc.exists ? { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {}, ...doc.data() } : { records: {}, quotas: {}, shifts: {}, phoneOverrides: {}, flexibleOverrides: {} };
     staffList = sortStaffForLeave(staffList);
     render();
