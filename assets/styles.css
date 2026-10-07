@@ -7039,6 +7039,7 @@ body:has(.sidebar-toggle-btn.is-visible)
   border: 1px solid #dbe4f0;
   border-radius: 12px;
   background: #f8fafc;
+  color: #172033; /* 2026-10-07 中魁:卡片底色固定淺色,文字也要固定深色(深色模式原本沿用淺色字 → 標題看不見) */
 }
 .game-change-log-heading {
   display: flex;
