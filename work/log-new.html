@@ -1097,6 +1097,13 @@
       font-size: 12px !important;
       font-weight: 700 !important;
     }
+    /* 2026-10-07 澄希:檢視模式上方欄位的值,字級跟下方子表格(對話)一樣 14px。
+       原因:ragic-table.js 的 adjustFontSize 在欄位還沒排版時就量寬度(=0),把字縮到 11px(含內層 span)。
+       只動日誌 NEW 檢視的主表欄位值;欄位名稱維持 12px;勾選框(pair-toggle)不動。 */
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field:not(.ragic-view-field-pair-toggle) .ragic-view-value,
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field:not(.ragic-view-field-pair-toggle) .ragic-view-value * {
+      font-size: 14px !important;
+    }
     .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-textarea .ragic-view-value,
     .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-textarea .field-value {
       padding: 4px 0 !important;
