@@ -559,16 +559,19 @@ const queueSave = () => {
 const saveFlexibleOverride = async (key, value) => {
   if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
   if (!leaveMonthLoaded) return setStatus('這個月份的資料還在載入,剛剛的修改沒有存,載入完成後請再點一次。', 'error');
+  const savingMonth = monthKey(currentMonth);
   leaveSaveInFlight += 1;
   try {
-    await leaveCollection.doc(monthKey(currentMonth)).update({
+    await leaveCollection.doc(savingMonth).update({
       [`flexibleOverrides.${key}`]: value || null,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     if (value) setStatus(`已把 ${key.split('_')[1]} 號的彈性早退讓給 ${value}。`, 'success');
   } catch (error) {
     console.warn('單一欄位儲存失敗,改用整份存檔:', error);
-    queueSave();
+    // FRIDAY 複查建議 2:已經切到別的月份 → 不能用整份存檔補(會存成別的月份),明確告訴使用者沒存成功
+    if (savingMonth !== monthKey(currentMonth)) setStatus(`${savingMonth} 的彈性早退讓渡沒有存成功,請回到那個月份再設定一次。`, 'error');
+    else queueSave();
   } finally {
     leaveSaveInFlight -= 1;
     resyncIfMissed();
@@ -629,7 +632,12 @@ const resyncIfMissed = () => {
   leaveCollection.doc(key).get().then((doc) => {
     if (key !== monthKey(currentMonth) || leaveSavePending || leaveSaveInFlight > 0) { leaveSnapshotMissed = true; return; }
     applyLeaveDoc(doc);
-  }).catch((error) => console.warn('存檔後重抓休假表失敗(下一輪輪詢會再更新):', error));
+  }).catch((error) => {
+    // FRIDAY 複查 P1-A:被跳過的那份資料輪詢不會再送一次 → 重抓失敗不能就此放棄(否則這個月永遠「載入中」、不能存),3 秒後再試
+    console.warn('存檔後重抓休假表失敗,3 秒後重試:', error);
+    leaveSnapshotMissed = true;
+    setTimeout(resyncIfMissed, 3000);
+  });
 };
 
 const renderHeader = () => {
