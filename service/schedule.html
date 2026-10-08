@@ -205,8 +205,8 @@
                 <span><i style="--help-color:#ec4899"></i>粉色：⭐ 首發平台 PROD</span>
                 <span><i style="--help-color:#06b6d4"></i>青色：其他平台 UAT</span>
                 <span><i style="--help-color:#4f46e5"></i>靛藍：其他平台 PROD</span>
-                <span><i style="--help-color:#65a30d"></i>草綠：獨家平台 UAT</span>
-                <span><i style="--help-color:#ca8a04"></i>金色：獨家平台 PROD</span>
+                <span><i style="--help-color:#65a30d"></i>草綠：特選遊戲 UAT</span>
+                <span><i style="--help-color:#ca8a04"></i>金色：特選遊戲 PROD</span>
                 <span><i style="--help-color:#2563eb"></i>藍色：PROD</span>
                 <span><b class="help-line is-dashed"></b>虛線：尚未發生</span>
                 <span><b class="help-line"></b>實心：時間已到或已發生</span>
@@ -220,7 +220,7 @@
                 <li>只匯入預計上線日期為 2026/01/01（含）之後，且有有效上線時間的遊戲。</li>
                 <li>2026/01～2026/06 的遊戲只在預計上線當日建立一列藍色「遊戲上線」資料。</li>
                 <li>2026/07/01 起的一般遊戲會先建立 AM 確認（前 14 天）；勾選「AM 已確認」並儲存後，才建立行銷素材（前 8 天）、UAT／測試環境（前 7 天）及上線當日資料。</li>
-                <li>2026/08/01 起會參照「備註 1」：含「首發」或「獨家」時，先在上線前 14 天建立「向 AM 確認」。勾選「AM 已確認」並儲存後，首發遊戲會建立「首發平台 UAT」及「首發平台 PROD」；獨家遊戲會建立「獨家平台 UAT」及「獨家平台 PROD」。完整備註也會同步到排程內容。</li>
+                <li>2026/08/01 起會參照「備註 1」：含「首發」或「特選遊戲」時，先在上線前 14 天建立「向 AM 確認」。勾選「AM 已確認」並儲存後，首發遊戲會建立「首發平台 UAT」及「首發平台 PROD」；特選遊戲會建立「特選遊戲 UAT」及「特選遊戲 PROD」。完整備註也會同步到排程內容。</li>
                 <li>首次補入的歷史上線與流程資料不列入「試算表變更」；完成匯入後的新修改才會記錄。</li>
               </ol>
               <p class="schedule-help-note">同步只處理試算表中的遊戲上線日期，不影響手動建立的排程。</p>
@@ -312,6 +312,6 @@
   <script src="../assets/firebase-init.js?v=20261006-ts-shim"></script><script src="../assets/api.js?v=20261007-oldsite-retired"></script>
   <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
-  <script src="../assets/schedule.js?v=20261007-fb-batch4-schedule-r1"></script>
+  <script src="../assets/schedule.js?v=20261008-selected-games"></script>
 </body>
 </html>
